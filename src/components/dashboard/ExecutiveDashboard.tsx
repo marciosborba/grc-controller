@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import RiskMatrix from './RiskMatrix';
 import {
   BarChart,
   Bar,
@@ -247,45 +248,51 @@ export const ExecutiveDashboard = () => {
         </Card>
       </div>
 
-      {/* Performance Trends */}
-      <Card className="grc-card">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-success" />
-            <span>Tendências de Performance</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={kpiData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-              <YAxis stroke="hsl(var(--muted-foreground))" />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px'
-                }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="riskScore" 
-                stroke="#ef4444" 
-                strokeWidth={3}
-                name="Score de Risco"
-              />
-              <Line 
-                type="monotone" 
-                dataKey="complianceScore" 
-                stroke="#22c55e" 
-                strokeWidth={3}
-                name="Score de Compliance (%)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      {/* Risk Matrix and Performance Trends */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {/* Risk Matrix */}
+        <RiskMatrix />
+
+        {/* Performance Trends */}
+        <Card className="grc-card">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-success" />
+              <span>Tendências de Performance</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={kpiData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="riskScore" 
+                  stroke="#ef4444" 
+                  strokeWidth={3}
+                  name="Score de Risco"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="complianceScore" 
+                  stroke="#22c55e" 
+                  strokeWidth={3}
+                  name="Score de Compliance (%)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
