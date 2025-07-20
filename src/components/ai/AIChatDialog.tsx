@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,6 +46,18 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const getWelcomeMessage = useCallback((assistantType: string) => {
+    const welcomeMessages = {
+      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
+      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
+      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
+      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
+      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
+      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
+    };
+    return welcomeMessages[assistantType] || welcomeMessages.general;
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -64,21 +76,9 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
         timestamp: new Date()
       }]);
     }
-  }, [isOpen, type]);
+  }, [isOpen, getWelcomeMessage, type]);
 
-  const getWelcomeMessage = (assistantType: string) => {
-    const welcomeMessages = {
-      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
-      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
-      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
-      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
-      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
-      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
-    };
-    return welcomeMessages[assistantType] || welcomeMessages.general;
-  };
-
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -145,14 +145,14 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [inputValue, isLoading, type, context, toast]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
+  }, [sendMessage]);
 
   const getTypeLabel = () => {
     const labels = {
