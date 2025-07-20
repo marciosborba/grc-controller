@@ -165,7 +165,7 @@ export function AppSidebar() {
       collapsible="icon"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-border">
         {!collapsed && (
           <div className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-primary" />
