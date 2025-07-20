@@ -38,6 +38,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 
 interface Vendor {
   id: string;
@@ -1232,6 +1234,27 @@ const VendorsPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* AI Components */}
+      <AIChatAssistant
+        type="general"
+        context={{
+          module: 'Gestão de Fornecedores',
+          totalVendors: vendors.length,
+          highRiskVendors: vendors.filter(v => v.risk_level === 'high' || v.risk_level === 'critical').length,
+          activeVendors: vendors.filter(v => v.status === 'active').length,
+          categories: Array.from(new Set(vendors.map(v => v.category))),
+          totalAssessments: assessments.length,
+          currentFilters: { categoryFilter, riskFilter, searchTerm }
+        }}
+      />
+      
+      <AIContentGenerator
+        type="questionnaire"
+        onGenerated={(content) => {
+          console.log('Generated vendor assessment questionnaire:', content);
+        }}
+      />
     </div>
   );
 };

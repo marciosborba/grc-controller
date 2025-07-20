@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 
 interface SecurityIncident {
   id: string;
@@ -592,6 +594,26 @@ const SecurityIncidentsPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Components */}
+      <AIChatAssistant
+        type="general"
+        context={{
+          module: 'Incidentes de Segurança',
+          totalIncidents: incidents.length,
+          criticalIncidents: incidents.filter(i => i.severity === 'critical').length,
+          openIncidents: incidents.filter(i => i.status === 'open' || i.status === 'investigating').length,
+          incidentTypes: Array.from(new Set(incidents.map(i => i.incident_type))),
+          currentFilters: { severityFilter, statusFilter, searchTerm }
+        }}
+      />
+      
+      <AIContentGenerator
+        type="risk_assessment"
+        onGenerated={(content) => {
+          console.log('Generated security incident assessment:', content);
+        }}
+      />
     </div>
   );
 };

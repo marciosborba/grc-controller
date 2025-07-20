@@ -31,6 +31,8 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 
 interface EthicsReport {
   id: string;
@@ -898,6 +900,26 @@ const EthicsChannelPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* AI Components */}
+      <AIChatAssistant
+        type="general"
+        context={{
+          module: 'Canal de Ética',
+          totalReports: reports.length,
+          openReports: reports.filter(r => r.status === 'open' || r.status === 'investigating').length,
+          anonymousReports: reports.filter(r => r.is_anonymous).length,
+          categories: Array.from(new Set(reports.map(r => r.category))),
+          currentFilters: { categoryFilter, statusFilter, severityFilter, searchTerm }
+        }}
+      />
+      
+      <AIContentGenerator
+        type="policy"
+        onGenerated={(content) => {
+          console.log('Generated ethics policy:', content);
+        }}
+      />
     </div>
   );
 };

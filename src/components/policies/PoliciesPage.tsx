@@ -33,6 +33,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 
 interface Policy {
   id: string;
@@ -937,6 +939,33 @@ const PoliciesPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* AI Components */}
+      <AIChatAssistant
+        type="policy"
+        context={{
+          module: 'Políticas',
+          totalPolicies: policies.length,
+          pendingApprovals: policies.filter(p => p.status === 'pending_approval').length,
+          categories: Array.from(new Set(policies.map(p => p.category))),
+          currentFilters: { categoryFilter, statusFilter, searchTerm }
+        }}
+      />
+      
+      <AIContentGenerator
+        type="policy"
+        onGenerated={(content) => {
+          if (content.title) {
+            setFormData(prev => ({
+              ...prev,
+              title: content.title,
+              description: content.description || '',
+              category: content.category || prev.category
+            }));
+            setIsDialogOpen(true);
+          }
+        }}
+      />
     </div>
   );
 };

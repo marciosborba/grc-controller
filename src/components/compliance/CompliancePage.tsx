@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 
 interface ComplianceRecord {
   id: string;
@@ -565,6 +567,30 @@ const CompliancePage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Components */}
+      <AIChatAssistant
+        type="compliance"
+        context={{
+          module: 'Conformidade',
+          totalRecords: records.length,
+          complianceByStatus: {
+            compliant: records.filter(r => r.compliance_status === 'compliant').length,
+            non_compliant: records.filter(r => r.compliance_status === 'non_compliant').length,
+            partially_compliant: records.filter(r => r.compliance_status === 'partially_compliant').length,
+            not_assessed: records.filter(r => r.compliance_status === 'not_assessed').length
+          },
+          frameworks: Array.from(new Set(records.map(r => r.framework))),
+          currentFilters: { frameworkFilter, statusFilter, searchTerm }
+        }}
+      />
+      
+      <AIContentGenerator
+        type="questionnaire"
+        onGenerated={(content) => {
+          console.log('Generated compliance questionnaire:', content);
+        }}
+      />
     </div>
   );
 };
