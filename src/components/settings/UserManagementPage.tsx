@@ -85,7 +85,7 @@ const availableRoles = [
 ];
 
 export const UserManagementPage = () => {
-  const { user: currentUser, toggleTheme } = useAuth();
+  const { user: currentUser, toggleTheme, isLoading } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -118,6 +118,15 @@ export const UserManagementPage = () => {
       theme: 'light'
     });
   };
+
+  // Show loading state while authentication is being verified
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -351,22 +360,26 @@ export const UserManagementPage = () => {
             <div className="flex items-center space-x-4">
               <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
                 <span className="text-xl font-bold text-primary">
-                  {currentUser?.name.split(' ').map(n => n[0]).join('')}
+                  {currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
                 </span>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">{currentUser?.name}</h3>
+                <h3 className="text-lg font-semibold text-foreground">{currentUser?.name || 'Usuário'}</h3>
                 <p className="text-sm text-muted-foreground flex items-center space-x-2">
                   <Mail className="h-3 w-3" />
-                  <span>{currentUser?.email}</span>
+                  <span>{currentUser?.email || 'Carregando...'}</span>
                 </p>
-                <p className="text-sm text-muted-foreground">{currentUser?.jobTitle}</p>
+                <p className="text-sm text-muted-foreground">{currentUser?.jobTitle || 'Cargo não informado'}</p>
                 <div className="flex items-center space-x-2 mt-2">
-                  {currentUser?.roles.map((role) => (
+                  {currentUser?.roles?.map((role) => (
                     <Badge key={role} className="bg-primary/10 text-primary border-primary/30 text-xs">
                       {getRoleLabel(role)}
                     </Badge>
-                  ))}
+                  )) || (
+                    <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
+                      Carregando...
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
