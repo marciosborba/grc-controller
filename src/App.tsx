@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
+import RiskManagementPage from "@/components/risks/RiskManagementPage";
+import SecurityIncidentsPage from "@/components/incidents/SecurityIncidentsPage";
+import CompliancePage from "@/components/compliance/CompliancePage";
 import { UserManagementPage } from "@/components/settings/UserManagementPage";
 import NotFound from "./pages/NotFound";
 
@@ -63,11 +66,12 @@ const App = () => (
             }>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="risks" element={<div className="p-6"><h1 className="text-2xl font-bold">Gestão de Riscos</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
+              <Route path="risks" element={<RiskManagementPage />} />
+              <Route path="compliance" element={<CompliancePage />} />
+              <Route path="incidents" element={<SecurityIncidentsPage />} />
               <Route path="assessments" element={<div className="p-6"><h1 className="text-2xl font-bold">Assessments</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="policies" element={<div className="p-6"><h1 className="text-2xl font-bold">Políticas</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="audit" element={<div className="p-6"><h1 className="text-2xl font-bold">Auditoria</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
-              <Route path="incidents" element={<div className="p-6"><h1 className="text-2xl font-bold">Incidentes</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="vendors" element={<div className="p-6"><h1 className="text-2xl font-bold">Fornecedores</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="reports" element={<div className="p-6"><h1 className="text-2xl font-bold">Relatórios</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="settings" element={<UserManagementPage />} />
