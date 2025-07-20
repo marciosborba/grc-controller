@@ -10,6 +10,7 @@ import DashboardPage from "@/components/dashboard/DashboardPage";
 import RiskManagementPage from "@/components/risks/RiskManagementPage";
 import SecurityIncidentsPage from "@/components/incidents/SecurityIncidentsPage";
 import CompliancePage from "@/components/compliance/CompliancePage";
+import AuditReportsPage from "@/components/audit/AuditReportsPage";
 import { UserManagementPage } from "@/components/settings/UserManagementPage";
 import NotFound from "./pages/NotFound";
 
@@ -69,9 +70,9 @@ const App = () => (
               <Route path="risks" element={<RiskManagementPage />} />
               <Route path="compliance" element={<CompliancePage />} />
               <Route path="incidents" element={<SecurityIncidentsPage />} />
+              <Route path="audit" element={<AuditReportsPage />} />
               <Route path="assessments" element={<div className="p-6"><h1 className="text-2xl font-bold">Assessments</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="policies" element={<div className="p-6"><h1 className="text-2xl font-bold">Políticas</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
-              <Route path="audit" element={<div className="p-6"><h1 className="text-2xl font-bold">Auditoria</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="vendors" element={<div className="p-6"><h1 className="text-2xl font-bold">Fornecedores</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="reports" element={<div className="p-6"><h1 className="text-2xl font-bold">Relatórios</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
               <Route path="settings" element={<UserManagementPage />} />
