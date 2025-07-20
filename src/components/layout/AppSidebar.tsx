@@ -191,10 +191,10 @@ export function AppSidebar() {
         </div>
       )}
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 py-4">
         {navigationItems.map((group, groupIndex) => (
-          <SidebarGroup key={groupIndex}>
-            {!collapsed && <SidebarGroupLabel>{group.label}</SidebarGroupLabel>}
+          <SidebarGroup key={groupIndex} className="mb-6">
+            {!collapsed && <SidebarGroupLabel className="mb-3">{group.label}</SidebarGroupLabel>}
             
             <SidebarGroupContent>
               <SidebarMenu>
@@ -205,7 +205,7 @@ export function AppSidebar() {
                       <SidebarMenuButton asChild>
                         <NavLink 
                           to={item.url} 
-                          className={`${getNavCls(isActive(item.url))} flex items-center w-full p-3 rounded-lg transition-all duration-200 group`}
+                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-3 py-4 rounded-lg transition-all duration-200 group mb-2`}
                           title={collapsed ? item.title : ''}
                         >
                           <item.icon className="h-5 w-5 flex-shrink-0" />

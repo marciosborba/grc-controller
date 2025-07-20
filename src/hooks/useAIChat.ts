@@ -131,7 +131,7 @@ export const useAIChat = (config: AIChatConfig) => {
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         type: 'assistant',
-        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API está configurada corretamente.',
+        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API Hugging Face está configurada corretamente.',
         timestamp: new Date()
       };
 

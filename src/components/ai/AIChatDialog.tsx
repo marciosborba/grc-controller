@@ -242,7 +242,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Digite sua pergunta..."
               disabled={isLoading}
               className="flex-1"
