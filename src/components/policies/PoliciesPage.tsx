@@ -388,10 +388,10 @@ const PoliciesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Políticas</h1>
-          <p className="text-muted-foreground">Gerencie documentações e fluxos de aprovação para compliance</p>
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Políticas</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Gerencie documentações e fluxos de aprovação para compliance</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

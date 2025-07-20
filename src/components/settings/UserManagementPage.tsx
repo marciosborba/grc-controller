@@ -142,10 +142,10 @@ export const UserManagementPage = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestão de Usuários</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Gestão de Usuários</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Administração de usuários, papéis e permissões
           </p>
         </div>
