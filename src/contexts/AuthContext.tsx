@@ -1,6 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { cleanupAuthState, performSecureSignOut, validateEmailFormat, validatePassword, sanitizeInput } from '@/utils/authCleanup';
+import { logAuthEvent, logSuspiciousActivity } from '@/utils/securityLogger';
 
 interface UserProfile {
   id: string;
@@ -29,9 +32,10 @@ export interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
+  session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   toggleTheme: () => void;
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
 }
@@ -40,8 +44,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to get user permissions based on roles
   const getPermissions = (roles: string[]): string[] => {
@@ -68,7 +72,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Building user object for:', supabaseUser.id);
     try {
       // Get user profile
-      console.log('Fetching profile...');
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -77,12 +80,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (profileError) {
         console.error('Profile error:', profileError);
-      } else {
-        console.log('Profile data:', profile);
       }
 
       // Get user roles
-      console.log('Fetching roles...');
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
@@ -90,8 +90,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (rolesError) {
         console.error('Roles error:', rolesError);
-      } else {
-        console.log('Roles data:', userRoles);
       }
 
       const roles = userRoles?.map(r => r.role) || ['user'];
@@ -100,49 +98,79 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const authUser = {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
-        name: profile?.full_name || supabaseUser.email || '',
-        jobTitle: profile?.job_title,
-        tenantId: 'tenant-1', // Default tenant for now
+        name: sanitizeInput(profile?.full_name || supabaseUser.email || ''),
+        jobTitle: sanitizeInput(profile?.job_title || ''),
+        tenantId: 'tenant-1',
         roles,
         permissions,
-        theme: 'light' as const // Default theme
+        theme: 'light' as const
       };
 
-      console.log('Built auth user:', authUser);
+      await logAuthEvent('login_success', { user_id: supabaseUser.id });
       return authUser;
     } catch (error) {
       console.error('Error building user object:', error);
+      await logSuspiciousActivity('user_build_error', { user_id: supabaseUser.id, error: error.message });
+      
       // Return basic user object if profile/roles query fails
-      const basicUser = {
+      return {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
-        name: supabaseUser.email || '',
+        name: sanitizeInput(supabaseUser.email || ''),
         tenantId: 'tenant-1',
         roles: ['user'],
         permissions: ['read'],
         theme: 'light' as const
       };
-      console.log('Returning basic user:', basicUser);
-      return basicUser;
     }
   };
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
+    
     try {
+      // Validate inputs
+      if (!validateEmailFormat(email)) {
+        await logAuthEvent('login_failure', { reason: 'invalid_email_format', email });
+        throw new Error('Formato de email inválido');
+      }
+
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        await logAuthEvent('login_failure', { reason: 'invalid_password', email });
+        throw new Error('Senha não atende aos critérios de segurança');
+      }
+
+      await logAuthEvent('login_attempt', { email });
+
+      // Clean up existing state before new login
+      cleanupAuthState();
+      
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+        console.warn('Pre-login cleanup signout failed:', err);
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: sanitizeInput(email),
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        await logAuthEvent('login_failure', { reason: error.message, email });
+        throw error;
+      }
       
-      if (data.user) {
+      if (data.user && data.session) {
+        setSession(data.session);
         const authUser = await buildUserObject(data.user);
         setUser(authUser);
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Login failed');
+      await logAuthEvent('login_failure', { reason: error.message, email });
+      throw new Error(error.message || 'Falha no login');
     } finally {
       setIsLoading(false);
     }
@@ -150,29 +178,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signup = async (email: string, password: string, fullName: string, jobTitle?: string): Promise<void> => {
     setIsLoading(true);
+    
     try {
+      // Validate inputs
+      if (!validateEmailFormat(email)) {
+        await logAuthEvent('signup_failure', { reason: 'invalid_email_format', email });
+        throw new Error('Formato de email inválido');
+      }
+
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        await logAuthEvent('signup_failure', { reason: 'weak_password', email });
+        throw new Error(passwordValidation.errors.join(', '));
+      }
+
+      if (!fullName || fullName.trim().length < 2) {
+        throw new Error('Nome completo é obrigatório');
+      }
+
+      await logAuthEvent('signup_attempt', { email });
+
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: sanitizeInput(email),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            full_name: fullName,
-            job_title: jobTitle
+            full_name: sanitizeInput(fullName),
+            job_title: sanitizeInput(jobTitle || '')
           }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        await logAuthEvent('signup_failure', { reason: error.message, email });
+        throw error;
+      }
       
       if (data.user) {
         // Assign default user role
         await supabase
           .from('user_roles')
           .insert({ user_id: data.user.id, role: 'user' });
+
+        await logAuthEvent('signup_success', { user_id: data.user.id, email });
       }
     } catch (error: any) {
-      throw new Error(error.message || 'Signup failed');
+      await logAuthEvent('signup_failure', { reason: error.message, email });
+      throw new Error(error.message || 'Falha no registro');
     } finally {
       setIsLoading(false);
     }
@@ -180,11 +233,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      await logAuthEvent('logout', { user_id: user?.id });
+      
+      const result = await performSecureSignOut(supabase);
+      
       setUser(null);
       setSession(null);
+      
+      // Force page reload for clean state
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
     } catch (error) {
       console.error('Logout error:', error);
+      await logSuspiciousActivity('logout_error', { user_id: user?.id, error: error.message });
     }
   };
 
@@ -194,7 +256,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const updatedUser: AuthUser = { ...user, theme: newTheme };
       setUser(updatedUser);
       
-      // Apply theme to document
       if (newTheme === 'dark') {
         document.documentElement.classList.add('dark');
       } else {
@@ -205,30 +266,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     console.log('AuthContext: Starting initialization');
-    setIsLoading(false); // Force loading to false immediately for debugging
     
-    // Create a simple mock user for testing
-    const mockUser: AuthUser = {
-      id: 'mock-user',
-      email: 'admin@cyberguard.com',
-      name: 'Admin User',
-      jobTitle: 'CISO',
-      tenantId: 'tenant-1',
-      roles: ['admin'],
-      permissions: ['read', 'write', 'delete', 'admin'],
-      theme: 'light'
-    };
-    
-    console.log('Setting mock user:', mockUser);
-    setUser(mockUser);
-    
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event);
+        setSession(session);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Defer user data fetching to prevent deadlocks
+          setTimeout(async () => {
+            try {
+              const authUser = await buildUserObject(session.user);
+              setUser(authUser);
+            } catch (error) {
+              console.error('Error in auth state change:', error);
+              await logSuspiciousActivity('auth_state_error', { error: error.message });
+            }
+          }, 0);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          cleanupAuthState();
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session?.user) {
+        setTimeout(async () => {
+          try {
+            const authUser = await buildUserObject(session.user);
+            setUser(authUser);
+          } catch (error) {
+            console.error('Error loading existing session:', error);
+          }
+        }, 0);
+      }
+      setIsLoading(false);
+    });
+
     return () => {
+      subscription.unsubscribe();
       console.log('AuthContext cleanup');
     };
   }, []);
 
   const value: AuthContextType = {
     user,
+    session,
     isLoading,
     login,
     logout,
