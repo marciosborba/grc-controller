@@ -111,7 +111,8 @@ export function AppSidebar() {
         {!collapsed && <div className="flex items-center space-x-2">
             <Shield className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">Controller GRC</h1>
+              <h1 className="text-lg font-bold text-foreground">GRC Controller
+          </h1>
               <p className="text-xs text-muted-foreground">Governança • Riscos • Compliance</p>
             </div>
           </div>}
