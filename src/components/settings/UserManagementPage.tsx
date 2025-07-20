@@ -119,8 +119,11 @@ export const UserManagementPage = () => {
     });
   };
 
+  console.log('UserManagementPage - isLoading:', isLoading, 'currentUser:', currentUser);
+
   // Show loading state while authentication is being verified
   if (isLoading) {
+    console.log('Showing loading state');
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -131,6 +134,8 @@ export const UserManagementPage = () => {
       </div>
     );
   }
+
+  console.log('Rendering main interface');
 
   // Show basic interface even if user data is still loading
   return (
