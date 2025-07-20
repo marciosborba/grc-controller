@@ -124,10 +124,15 @@ export const UserManagementPage = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="ml-4">
+          <p className="text-lg font-medium">Carregando configurações...</p>
+          <p className="text-sm text-muted-foreground">Aguarde enquanto carregamos seus dados</p>
+        </div>
       </div>
     );
   }
 
+  // Show basic interface even if user data is still loading
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -348,67 +353,77 @@ export const UserManagementPage = () => {
       </div>
 
       {/* Current User Panel */}
-      <Card className="grc-card border-primary/30 bg-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Users className="h-5 w-5 text-primary" />
-            <span>Seu Perfil</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-xl font-bold text-primary">
-                  {currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
-                </span>
+      {currentUser && (
+        <Card className="grc-card border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-primary" />
+              <span>Seu Perfil</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-xl font-bold text-primary">
+                    {currentUser?.name ? currentUser.name.split(' ').map(n => n[0]).join('') : 'U'}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">{currentUser?.name || 'Usuário'}</h3>
+                  <p className="text-sm text-muted-foreground flex items-center space-x-2">
+                    <Mail className="h-3 w-3" />
+                    <span>{currentUser?.email || 'Carregando...'}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">{currentUser?.jobTitle || 'Cargo não informado'}</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    {currentUser?.roles?.map((role) => (
+                      <Badge key={role} className="bg-primary/10 text-primary border-primary/30 text-xs">
+                        {getRoleLabel(role)}
+                      </Badge>
+                    )) || (
+                      <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
+                        Carregando...
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">{currentUser?.name || 'Usuário'}</h3>
-                <p className="text-sm text-muted-foreground flex items-center space-x-2">
-                  <Mail className="h-3 w-3" />
-                  <span>{currentUser?.email || 'Carregando...'}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">{currentUser?.jobTitle || 'Cargo não informado'}</p>
-                <div className="flex items-center space-x-2 mt-2">
-                  {currentUser?.roles?.map((role) => (
-                    <Badge key={role} className="bg-primary/10 text-primary border-primary/30 text-xs">
-                      {getRoleLabel(role)}
-                    </Badge>
-                  )) || (
-                    <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
-                      Carregando...
-                    </Badge>
+              <div className="text-right space-y-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={toggleTheme}
+                  className="flex items-center space-x-2"
+                >
+                  {currentUser?.theme === 'dark' ? (
+                    <>
+                      <Sun className="h-4 w-4" />
+                      <span>Modo Claro</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="h-4 w-4" />
+                      <span>Modo Escuro</span>
+                    </>
                   )}
+                </Button>
+                <div className="text-xs text-muted-foreground">
+                  Tema atual: {currentUser?.theme === 'dark' ? 'Escuro' : 'Claro'}
                 </div>
               </div>
             </div>
-            <div className="text-right space-y-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={toggleTheme}
-                className="flex items-center space-x-2"
-              >
-                {currentUser?.theme === 'dark' ? (
-                  <>
-                    <Sun className="h-4 w-4" />
-                    <span>Modo Claro</span>
-                  </>
-                ) : (
-                  <>
-                    <Moon className="h-4 w-4" />
-                    <span>Modo Escuro</span>
-                  </>
-                )}
-              </Button>
-              <div className="text-xs text-muted-foreground">
-                Tema atual: {currentUser?.theme === 'dark' ? 'Escuro' : 'Claro'}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+      
+      {!currentUser && !isLoading && (
+        <Card className="grc-card border-orange-300 bg-orange-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-orange-800">Dados do usuário não foram carregados. Tente recarregar a página.</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

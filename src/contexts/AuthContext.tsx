@@ -65,24 +65,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Helper function to build user object from Supabase data
   const buildUserObject = async (supabaseUser: User): Promise<AuthUser> => {
+    console.log('Building user object for:', supabaseUser.id);
     try {
       // Get user profile
-      const { data: profile } = await supabase
+      console.log('Fetching profile...');
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', supabaseUser.id)
         .maybeSingle();
 
+      if (profileError) {
+        console.error('Profile error:', profileError);
+      } else {
+        console.log('Profile data:', profile);
+      }
+
       // Get user roles
-      const { data: userRoles } = await supabase
+      console.log('Fetching roles...');
+      const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', supabaseUser.id);
 
+      if (rolesError) {
+        console.error('Roles error:', rolesError);
+      } else {
+        console.log('Roles data:', userRoles);
+      }
+
       const roles = userRoles?.map(r => r.role) || ['user'];
       const permissions = getPermissions(roles);
 
-      return {
+      const authUser = {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: profile?.full_name || supabaseUser.email || '',
@@ -90,20 +105,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tenantId: 'tenant-1', // Default tenant for now
         roles,
         permissions,
-        theme: 'light' // Default theme
+        theme: 'light' as const // Default theme
       };
+
+      console.log('Built auth user:', authUser);
+      return authUser;
     } catch (error) {
       console.error('Error building user object:', error);
       // Return basic user object if profile/roles query fails
-      return {
+      const basicUser = {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: supabaseUser.email || '',
         tenantId: 'tenant-1',
         roles: ['user'],
         permissions: ['read'],
-        theme: 'light'
+        theme: 'light' as const
       };
+      console.log('Returning basic user:', basicUser);
+      return basicUser;
     }
   };
 
@@ -184,40 +204,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    console.log('AuthContext: Setting up auth state listener');
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, 'Session exists:', !!session);
         setSession(session);
         
         if (session?.user) {
+          console.log('User exists, building user object...');
           try {
             const authUser = await buildUserObject(session.user);
+            console.log('Setting user:', authUser);
             setUser(authUser);
           } catch (error) {
             console.error('Error building user object:', error);
             setUser(null);
           }
         } else {
+          console.log('No user in session, setting user to null');
           setUser(null);
         }
         
+        console.log('Setting loading to false');
         setIsLoading(false);
       }
     );
 
     // Check for existing session
+    console.log('AuthContext: Checking for existing session');
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Existing session check:', !!session);
       if (session?.user) {
+        console.log('Found existing session, building user object...');
         buildUserObject(session.user).then(authUser => {
+          console.log('Setting user from existing session:', authUser);
           setUser(authUser);
           setSession(session);
           setIsLoading(false);
-        }).catch(() => {
+        }).catch((error) => {
+          console.error('Error building user from existing session:', error);
           setIsLoading(false);
         });
       } else {
+        console.log('No existing session found');
         setIsLoading(false);
       }
+    }).catch((error) => {
+      console.error('Error getting session:', error);
+      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
