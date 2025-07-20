@@ -141,11 +141,12 @@ const LoginPage = () => {
           </Card>
 
           {/* Demo Accounts */}
-          <Card className="grc-card">
+          <Card className="grc-card bg-warning/5 border-warning/30">
             <CardHeader>
-              <h3 className="text-lg font-semibold">Contas de Demonstração</h3>
+              <h3 className="text-lg font-semibold text-warning">⚡ Contas de Demonstração</h3>
               <p className="text-sm text-muted-foreground">
-                Use uma das contas abaixo para testar a plataforma (senha: demo123)
+                <strong className="text-warning">SENHA PARA TODAS AS CONTAS: demo123</strong><br/>
+                Clique em uma conta abaixo para preencher automaticamente:
               </p>
             </CardHeader>
             <CardContent>

@@ -87,14 +87,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    console.log('Login attempt:', { email, password, hasUser: !!mockUsers[email] });
+    
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const mockUser = mockUsers[email];
+    console.log('Found user:', mockUser);
+    console.log('Password check:', { provided: password, expected: 'demo123', match: password === 'demo123' });
+    
     if (mockUser && password === 'demo123') {
       setUser(mockUser);
       localStorage.setItem('grc_user', JSON.stringify(mockUser));
+      console.log('Login successful');
     } else {
+      console.log('Login failed - invalid credentials');
       throw new Error('Credenciais inválidas');
     }
     setIsLoading(false);
