@@ -17,7 +17,7 @@ export type Database = {
       audit_reports: {
         Row: {
           audit_type: string
-          auditor_id: string
+          auditor_id: string | null
           created_at: string
           end_date: string | null
           findings: string | null
@@ -31,7 +31,7 @@ export type Database = {
         }
         Insert: {
           audit_type: string
-          auditor_id: string
+          auditor_id?: string | null
           created_at?: string
           end_date?: string | null
           findings?: string | null
@@ -45,7 +45,7 @@ export type Database = {
         }
         Update: {
           audit_type?: string
-          auditor_id?: string
+          auditor_id?: string | null
           created_at?: string
           end_date?: string | null
           findings?: string | null
@@ -65,7 +65,7 @@ export type Database = {
           control_description: string
           control_id: string
           created_at: string
-          created_by: string
+          created_by: string | null
           evidence_url: string | null
           framework: string
           id: string
@@ -79,7 +79,7 @@ export type Database = {
           control_description: string
           control_id: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           evidence_url?: string | null
           framework: string
           id?: string
@@ -93,7 +93,7 @@ export type Database = {
           control_description?: string
           control_id?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           evidence_url?: string | null
           framework?: string
           id?: string
@@ -109,7 +109,7 @@ export type Database = {
           control_id: string
           control_type: string
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           effectiveness: string | null
           id: string
@@ -124,7 +124,7 @@ export type Database = {
           control_id: string
           control_type: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           effectiveness?: string | null
           id?: string
@@ -139,7 +139,7 @@ export type Database = {
           control_id?: string
           control_type?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           effectiveness?: string | null
           id?: string
@@ -192,7 +192,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           description: string | null
           due_date: string | null
           id: string
@@ -209,7 +209,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -226,7 +226,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
@@ -251,7 +251,7 @@ export type Database = {
           detection_date: string
           id: string
           incident_type: string
-          reported_by: string
+          reported_by: string | null
           resolution_date: string | null
           severity: string
           status: string
@@ -266,7 +266,7 @@ export type Database = {
           detection_date: string
           id?: string
           incident_type: string
-          reported_by: string
+          reported_by?: string | null
           resolution_date?: string | null
           severity: string
           status?: string
@@ -281,7 +281,7 @@ export type Database = {
           detection_date?: string
           id?: string
           incident_type?: string
-          reported_by?: string
+          reported_by?: string | null
           resolution_date?: string | null
           severity?: string
           status?: string
