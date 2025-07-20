@@ -14,16 +14,324 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_reports: {
+        Row: {
+          audit_type: string
+          auditor_id: string
+          created_at: string
+          end_date: string | null
+          findings: string | null
+          id: string
+          recommendations: string | null
+          scope: string | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audit_type: string
+          auditor_id: string
+          created_at?: string
+          end_date?: string | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          scope?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audit_type?: string
+          auditor_id?: string
+          created_at?: string
+          end_date?: string | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          scope?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compliance_records: {
+        Row: {
+          compliance_status: string
+          control_description: string
+          control_id: string
+          created_at: string
+          created_by: string
+          evidence_url: string | null
+          framework: string
+          id: string
+          last_assessment_date: string | null
+          next_assessment_date: string | null
+          responsible_person: string | null
+          updated_at: string
+        }
+        Insert: {
+          compliance_status: string
+          control_description: string
+          control_id: string
+          created_at?: string
+          created_by: string
+          evidence_url?: string | null
+          framework: string
+          id?: string
+          last_assessment_date?: string | null
+          next_assessment_date?: string | null
+          responsible_person?: string | null
+          updated_at?: string
+        }
+        Update: {
+          compliance_status?: string
+          control_description?: string
+          control_id?: string
+          created_at?: string
+          created_by?: string
+          evidence_url?: string | null
+          framework?: string
+          id?: string
+          last_assessment_date?: string | null
+          next_assessment_date?: string | null
+          responsible_person?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      controls: {
+        Row: {
+          control_id: string
+          control_type: string
+          created_at: string
+          created_by: string
+          description: string | null
+          effectiveness: string | null
+          id: string
+          implementation_status: string
+          last_review_date: string | null
+          next_review_date: string | null
+          owner_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          control_id: string
+          control_type: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          effectiveness?: string | null
+          id?: string
+          implementation_status?: string
+          last_review_date?: string | null
+          next_review_date?: string | null
+          owner_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          control_id?: string
+          control_type?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          effectiveness?: string | null
+          id?: string
+          implementation_status?: string
+          last_review_date?: string | null
+          next_review_date?: string | null
+          owner_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          department: string | null
+          full_name: string
+          id: string
+          job_title: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          full_name: string
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          impact_score: number
+          likelihood_score: number
+          probability: string
+          risk_category: string
+          risk_score: number | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact_score: number
+          likelihood_score: number
+          probability: string
+          risk_category: string
+          risk_score?: number | null
+          severity: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact_score?: number
+          likelihood_score?: number
+          probability?: string
+          risk_category?: string
+          risk_score?: number | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      security_incidents: {
+        Row: {
+          affected_systems: string | null
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          detection_date: string
+          id: string
+          incident_type: string
+          reported_by: string
+          resolution_date: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          affected_systems?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          detection_date: string
+          id?: string
+          incident_type: string
+          reported_by: string
+          resolution_date?: string | null
+          severity: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          affected_systems?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          detection_date?: string
+          id?: string
+          incident_type?: string
+          reported_by?: string
+          resolution_date?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "admin"
+        | "ciso"
+        | "risk_manager"
+        | "compliance_officer"
+        | "auditor"
+        | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +458,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "admin",
+        "ciso",
+        "risk_manager",
+        "compliance_officer",
+        "auditor",
+        "user",
+      ],
+    },
   },
 } as const
