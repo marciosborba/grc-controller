@@ -40,16 +40,19 @@ serve(async (req) => {
       body: JSON.stringify({
         inputs: fullPrompt,
         parameters: {
-          max_length: 512,
+          max_length: 100,
           temperature: 0.7,
           do_sample: true,
-          return_full_text: false
+          return_full_text: false,
+          pad_token_id: 50256
         }
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Hugging Face API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Hugging Face API error: ${response.status} - ${errorText}`);
+      throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();

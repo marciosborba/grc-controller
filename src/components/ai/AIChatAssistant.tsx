@@ -20,15 +20,7 @@ import {
   Maximize2,
   X
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-
-interface Message {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { useAIChat } from '@/hooks/useAIChat';
 
 interface AIChatAssistantProps {
   type?: 'general' | 'assessment' | 'risk' | 'audit' | 'policy' | 'compliance';
@@ -43,25 +35,11 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
   trigger,
   defaultOpen = false
 }) => {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, isLoading, sendMessage, initializeChat } = useAIChat({ type, context });
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const getWelcomeMessage = useCallback((assistantType: string) => {
-    const messages = {
-      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
-      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
-      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
-      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
-      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
-      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
-    };
-    return messages[assistantType] || messages.general;
-  }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -73,91 +51,24 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const welcomeMessage = getWelcomeMessage(type);
-      setMessages([{
-        id: Date.now().toString(),
-        type: 'assistant',
-        content: welcomeMessage,
-        timestamp: new Date()
-      }]);
+      initializeChat();
     }
-  }, [isOpen, getWelcomeMessage, type]);
+  }, [isOpen, messages.length, initializeChat]);
 
-  const sendMessage = useCallback(async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputValue,
-      timestamp: new Date()
-    };
-
-    const messageToSend = inputValue;
-    setMessages(prev => [...prev, userMessage]);
+    
+    const messageContent = inputValue;
     setInputValue('');
-    setIsLoading(true);
-
-    console.log('Enviando mensagem para IA:', { prompt: messageToSend, type, context });
-
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
-        body: {
-          prompt: messageToSend,
-          type,
-          context
-        }
-      });
-
-      console.log('Resposta da IA - data:', data);
-      console.log('Resposta da IA - error:', error);
-
-      if (error) {
-        console.error('Erro específico da Edge Function:', error);
-        throw error;
-      }
-
-      if (!data || !data.response) {
-        console.error('Resposta inválida da IA:', data);
-        throw new Error('Resposta inválida da IA');
-      }
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: data.response,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Erro ao enviar mensagem para IA:', error);
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        type: 'assistant',
-        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API Hugging Face está configurada corretamente nas configurações do Supabase.',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-      
-      toast({
-        title: 'Erro',
-        description: 'Erro ao enviar mensagem para o assistente de IA. Verifique as configurações.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [inputValue, isLoading, type, context, toast]);
+    await sendMessage(messageContent);
+  }, [inputValue, isLoading, sendMessage]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
-  }, [sendMessage]);
+  }, [handleSendMessage]);
 
   const getTypeLabel = useCallback(() => {
     const labels = {
@@ -194,7 +105,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
             <div>
               <CardTitle className="text-sm font-medium">{getTypeLabel()}</CardTitle>
               <Badge variant="outline" className="text-xs">
-                Assistente IA
+                Assistente IA - Hugging Face
               </Badge>
             </div>
           </div>
@@ -267,7 +178,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
                 className="flex-1"
               />
               <Button 
-                onClick={sendMessage} 
+                onClick={handleSendMessage} 
                 disabled={isLoading || !inputValue.trim()}
                 size="sm"
               >
@@ -278,7 +189,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
         </CardContent>
       )}
     </Card>
-  ), [isMinimized, getTypeColor, getTypeLabel, messages, isLoading, messagesEndRef, inputValue, handleKeyPress, sendMessage]);
+  ), [isMinimized, getTypeColor, getTypeLabel, messages, isLoading, messagesEndRef, inputValue, handleKeyPress, handleSendMessage]);
 
   if (defaultOpen) {
     return <ChatContent />;
