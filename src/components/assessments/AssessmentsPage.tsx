@@ -13,7 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { 
   ClipboardCheck, 
-  Plus, 
+  Plus,
+  Wand2,
   Search, 
   Calendar as CalendarIcon, 
   Edit, 
@@ -31,6 +32,8 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 import { cn } from '@/lib/utils';
 
 interface Assessment {
@@ -443,13 +446,32 @@ const AssessmentsPage = () => {
           <p className="text-muted-foreground text-sm sm:text-base">Gerencie avaliações de risco e compliance</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Assessment
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center space-x-2 shrink-0">
+          <AIContentGenerator 
+            type="questionnaire"
+            onGenerated={(content) => {
+              if (content && typeof content === 'object') {
+                setFormData(prev => ({
+                  ...prev,
+                  questionnaire_data: { questions: Array.isArray(content) ? content : [content] }
+                }));
+              }
+            }}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Wand2 className="h-4 w-4 mr-2" />
+                Gerar com IA
+              </Button>
+            }
+          />
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="grc-button-primary">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Assessment
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -646,6 +668,7 @@ const AssessmentsPage = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -854,6 +877,9 @@ const AssessmentsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Assistant */}
+      <AIChatAssistant type="assessment" context={{ assessments: filteredAssessments }} />
     </div>
   );
 };

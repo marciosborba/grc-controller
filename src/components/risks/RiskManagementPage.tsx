@@ -10,12 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 import { cn } from '@/lib/utils';
 
 interface RiskAssessment {
@@ -237,12 +239,22 @@ const RiskManagementPage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Gerencie e monitore os riscos da organização</p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Risco
+        <div className="flex items-center space-x-2 shrink-0">
+          <AIContentGenerator 
+            type="risk_assessment"
+            trigger={
+              <Button variant="outline" size="sm">
+                <Brain className="h-4 w-4 mr-2" />
+                Avaliar com IA
+              </Button>
+            }
+          />
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="grc-button-primary">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Risco
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -410,6 +422,7 @@ const RiskManagementPage = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -594,6 +607,9 @@ const RiskManagementPage = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Assistant */}
+      <AIChatAssistant type="risk" context={{ risks: filteredRisks }} />
     </div>
   );
 };

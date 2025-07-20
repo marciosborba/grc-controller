@@ -10,12 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, ClipboardList, AlertCircle } from 'lucide-react';
+import { FileText, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, ClipboardList, AlertCircle, Brain } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
 import { cn } from '@/lib/utils';
 
 interface AuditReport {
@@ -245,12 +247,22 @@ const AuditReportsPage = () => {
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Relatórios de Auditoria</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Gerencie e monitore auditorias organizacionais</p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Relatório
+        <div className="flex items-center space-x-2 shrink-0">
+          <AIContentGenerator 
+            type="audit_plan"
+            trigger={
+              <Button variant="outline" size="sm">
+                <Brain className="h-4 w-4 mr-2" />
+                Planejar com IA
+              </Button>
+            }
+          />
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm} className="grc-button-primary">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Relatório
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -410,6 +422,7 @@ const AuditReportsPage = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -598,6 +611,9 @@ const AuditReportsPage = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Assistant */}
+      <AIChatAssistant type="audit" context={{ reports: filteredReports }} />
     </div>
   );
 };
