@@ -28,7 +28,8 @@ import {
   Key,
   Moon,
   Sun,
-  Search
+  Search,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -149,6 +150,15 @@ export const UserManagementPage = () => {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/settings/activity-logs'}
+            className="flex items-center space-x-2"
+          >
+            <Activity className="h-4 w-4" />
+            <span>Logs de Atividade</span>
+          </Button>
           <Button 
             variant="outline" 
             size="sm"
