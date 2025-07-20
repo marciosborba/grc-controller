@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AIChat } from '@/components/ai/AIChat';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -621,9 +622,8 @@ const RiskManagementPage = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* AI Assistant */}
-      <AIChatAssistant type="risk" context={{ risks: filteredRisks }} />
+      
+      <AIChat type="risk" mode="widget" />
     </div>
   );
 };

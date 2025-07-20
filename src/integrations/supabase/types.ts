@@ -50,6 +50,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_logs: {
+        Row: {
+          ai_type: string
+          content: string
+          context: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          message_type: string
+          response_time: number | null
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_type: string
+          content: string
+          context?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type: string
+          response_time?: number | null
+          session_id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_type?: string
+          content?: string
+          context?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          response_time?: number | null
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assessments: {
         Row: {
           assigned_to: string | null
