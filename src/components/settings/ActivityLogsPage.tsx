@@ -243,80 +243,90 @@ export const ActivityLogsPage = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Logs de Atividade</h1>
-          <p className="text-muted-foreground mt-1">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">
+            Logs de Atividade
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Auditoria e rastreabilidade de ações na plataforma
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-2 shrink-0">
           <Button 
             onClick={exportLogs}
             variant="outline"
-            className="flex items-center space-x-2"
+            size="sm"
+            className="flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <Download className="h-4 w-4" />
-            <span>Exportar CSV</span>
+            <span className="hidden sm:inline">Exportar CSV</span>
+            <span className="sm:hidden">CSV</span>
           </Button>
-          <Button onClick={fetchLogs} variant="outline">
-            <Activity className="h-4 w-4 mr-2" />
-            Atualizar
+          <Button 
+            onClick={fetchLogs} 
+            variant="outline"
+            size="sm"
+            className="flex items-center justify-center space-x-2 w-full sm:w-auto"
+          >
+            <Activity className="h-4 w-4" />
+            <span className="hidden sm:inline">Atualizar</span>
+            <span className="sm:hidden">Sync</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="grc-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center space-x-2">
-              <Activity className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">{logs.length}</p>
-                <p className="text-sm text-muted-foreground">Total de Atividades</p>
+              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground truncate">{logs.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total de Atividades</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="grc-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center space-x-2">
-              <User className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">
+              <User className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground truncate">
                   {new Set(logs.filter(l => l.user_id).map(l => l.user_id)).size}
                 </p>
-                <p className="text-sm text-muted-foreground">Usuários Ativos</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Usuários Ativos</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="grc-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground truncate">
                   {logs.filter(l => l.action === 'LOGIN_FAILED' || l.action === 'DELETE').length}
                 </p>
-                <p className="text-sm text-muted-foreground">Ações Críticas</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Ações Críticas</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="grc-card">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center space-x-2">
-              <Clock className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold text-foreground truncate">
                   {logs.length > 0 ? format(new Date(logs[0].created_at), 'HH:mm') : '--:--'}
                 </p>
-                <p className="text-sm text-muted-foreground">Última Atividade</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Última Atividade</p>
               </div>
             </div>
           </CardContent>
@@ -325,104 +335,113 @@ export const ActivityLogsPage = () => {
 
       {/* Filters */}
       <Card className="grc-card">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[200px]">
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por ação, recurso, usuário ou IP..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
             </div>
 
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Ação" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as Ações</SelectItem>
-                <SelectItem value="LOGIN">Login</SelectItem>
-                <SelectItem value="LOGOUT">Logout</SelectItem>
-                <SelectItem value="CREATE">Criar</SelectItem>
-                <SelectItem value="UPDATE">Atualizar</SelectItem>
-                <SelectItem value="DELETE">Excluir</SelectItem>
-                <SelectItem value="VIEW">Visualizar</SelectItem>
-                <SelectItem value="APPROVE">Aprovar</SelectItem>
-                <SelectItem value="EXPORT">Exportar</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="Ação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Ações</SelectItem>
+                  <SelectItem value="LOGIN">Login</SelectItem>
+                  <SelectItem value="LOGOUT">Logout</SelectItem>
+                  <SelectItem value="CREATE">Criar</SelectItem>
+                  <SelectItem value="UPDATE">Atualizar</SelectItem>
+                  <SelectItem value="DELETE">Excluir</SelectItem>
+                  <SelectItem value="VIEW">Visualizar</SelectItem>
+                  <SelectItem value="APPROVE">Aprovar</SelectItem>
+                  <SelectItem value="EXPORT">Exportar</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={resourceFilter} onValueChange={setResourceFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Recurso" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Recursos</SelectItem>
-                <SelectItem value="auth">Autenticação</SelectItem>
-                <SelectItem value="policy">Políticas</SelectItem>
-                <SelectItem value="assessment">Avaliações</SelectItem>
-                <SelectItem value="vendor">Fornecedores</SelectItem>
-                <SelectItem value="security_incident">Incidentes</SelectItem>
-                <SelectItem value="audit_report">Auditoria</SelectItem>
-                <SelectItem value="ethics_report">Ética</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={resourceFilter} onValueChange={setResourceFilter}>
+                <SelectTrigger className="w-full sm:w-[150px]">
+                  <SelectValue placeholder="Recurso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Recursos</SelectItem>
+                  <SelectItem value="auth">Autenticação</SelectItem>
+                  <SelectItem value="policy">Políticas</SelectItem>
+                  <SelectItem value="assessment">Avaliações</SelectItem>
+                  <SelectItem value="vendor">Fornecedores</SelectItem>
+                  <SelectItem value="security_incident">Incidentes</SelectItem>
+                  <SelectItem value="audit_report">Auditoria</SelectItem>
+                  <SelectItem value="ethics_report">Ética</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'Data Início'}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span className="truncate">
+                      {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'Data Início'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-[140px] justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span className="truncate">
+                      {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Data Fim'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(dateFrom || dateTo || actionFilter !== 'all' || resourceFilter !== 'all' || searchTerm) && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                    setActionFilter('all');
+                    setResourceFilter('all');
+                    setSearchTerm('');
+                  }}
+                  className="text-muted-foreground w-full sm:w-auto"
+                >
+                  Limpar Filtros
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'Data Fim'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-
-            {(dateFrom || dateTo || actionFilter !== 'all' || resourceFilter !== 'all') && (
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  setDateFrom(undefined);
-                  setDateTo(undefined);
-                  setActionFilter('all');
-                  setResourceFilter('all');
-                  setSearchTerm('');
-                }}
-                className="text-muted-foreground"
-              >
-                Limpar Filtros
-              </Button>
-            )}
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
