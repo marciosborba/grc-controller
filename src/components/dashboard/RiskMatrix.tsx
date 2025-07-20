@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface Risk {
   id: string;
@@ -26,9 +25,6 @@ const RiskMatrix = () => {
   const [loading, setLoading] = useState(true);
   const [matrix, setMatrix] = useState<MatrixCell[][]>([]);
 
-  const impactLabels = ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
-  const likelihoodLabels = ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
-
   const getRiskLevel = (impact: number, likelihood: number): 'low' | 'medium' | 'high' | 'critical' => {
     const score = impact * likelihood;
     if (score >= 20) return 'critical';
@@ -39,11 +35,11 @@ const RiskMatrix = () => {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'critical': return 'bg-red-500/20 border-red-500/40 text-red-600';
-      case 'high': return 'bg-orange-500/20 border-orange-500/40 text-orange-600';
-      case 'medium': return 'bg-yellow-500/20 border-yellow-500/40 text-yellow-600';
-      case 'low': return 'bg-green-500/20 border-green-500/40 text-green-600';
-      default: return 'bg-muted/20 border-muted/40 text-muted-foreground';
+      case 'critical': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-200';
     }
   };
 
@@ -83,7 +79,7 @@ const RiskMatrix = () => {
       const likelihoodIndex = risk.likelihood_score - 1;
       
       if (impactIndex >= 0 && impactIndex < 5 && likelihoodIndex >= 0 && likelihoodIndex < 5) {
-        const cell = newMatrix[4 - impactIndex][likelihoodIndex]; // Inverter impacto para mostrar maior no topo
+        const cell = newMatrix[4 - likelihoodIndex][impactIndex]; // Ajustar para coincidir com a imagem
         cell.risks.push(risk);
         cell.count = cell.risks.length;
         cell.level = getRiskLevel(risk.impact_score, risk.likelihood_score);
@@ -95,12 +91,9 @@ const RiskMatrix = () => {
 
   if (loading) {
     return (
-      <Card className="grc-card">
+      <Card className="w-full">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <AlertTriangle className="h-5 w-5 text-warning" />
-            <span>Matriz de Riscos 5x5</span>
-          </CardTitle>
+          <CardTitle>Matriz de Riscos</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -109,127 +102,95 @@ const RiskMatrix = () => {
     );
   }
 
+  const totalRisks = risks.length;
+
   return (
-    <Card className="grc-card">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <AlertTriangle className="h-5 w-5 text-warning" />
-          <span>Matriz de Riscos 5x5</span>
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Distribuição de riscos por impacto vs. probabilidade
-        </p>
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <CardTitle className="text-lg sm:text-xl">Matriz de Riscos</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            {totalRisks} risco{totalRisks !== 1 ? 's' : ''}
+          </div>
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="relative">
-          {/* Labels do eixo Y (Impacto) */}
-          <div className="absolute left-0 top-8 h-80 flex flex-col justify-between items-end pr-2">
-            <div className="text-xs text-muted-foreground writing-mode-vertical">
-              <span className="font-medium text-foreground">IMPACTO</span>
-            </div>
-            {impactLabels.slice().reverse().map((label, index) => (
-              <div key={index} className="text-xs text-muted-foreground text-right">
-                {index + 1}
+      <CardContent className="space-y-6">
+        {/* Labels dos números 1-5 no topo */}
+        <div className="flex justify-center">
+          <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
+            <div></div> {/* Espaço vazio para alinhamento */}
+            {[1, 2, 3, 4, 5].map((num) => (
+              <div key={num} className="text-center text-sm font-medium text-muted-foreground">
+                {num}
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Matriz */}
-          <div className="ml-20 mt-4">
-            <div className="grid grid-cols-5 gap-1 w-80 h-80">
-              {matrix.map((row, rowIndex) =>
-                row.map((cell, colIndex) => (
+        {/* Matriz Principal */}
+        <div className="flex justify-center">
+          <div className="grid grid-cols-6 gap-1 w-full max-w-lg">
+            {/* Linha por linha com labels laterais */}
+            {[5, 4, 3, 2, 1].map((rowNum, rowIndex) => (
+              <React.Fragment key={rowNum}>
+                {/* Label lateral */}
+                <div className="flex items-center justify-center text-sm font-medium text-muted-foreground">
+                  {rowNum}
+                </div>
+                
+                {/* Células da matriz */}
+                {matrix[rowIndex]?.map((cell, colIndex) => (
                   <div
                     key={`${rowIndex}-${colIndex}`}
                     className={`
-                      border-2 rounded-lg p-2 flex flex-col items-center justify-center
-                      cursor-pointer transition-all duration-200 hover:scale-105
+                      aspect-square rounded-lg flex items-center justify-center
+                      border-2 border-white transition-all duration-200
                       ${getRiskColor(cell.level)}
+                      hover:scale-105 cursor-pointer
                     `}
                     title={`${cell.count} risco(s) - ${cell.level.toUpperCase()}`}
                   >
-                    <div className="text-lg font-bold">
-                      {cell.count}
-                    </div>
                     {cell.count > 0 && (
-                      <div className="text-xs text-center space-y-1">
-                        {cell.risks.slice(0, 2).map((risk, index) => (
-                          <div key={index} className="truncate w-full text-xs" title={risk.title}>
-                            {risk.risk_category}
-                          </div>
-                        ))}
-                        {cell.count > 2 && (
-                          <div className="text-xs opacity-70">
-                            +{cell.count - 2} mais
-                          </div>
-                        )}
-                      </div>
+                      <span className="text-white font-semibold text-sm sm:text-base">
+                        {cell.count}
+                      </span>
                     )}
                   </div>
-                ))
-              )}
-            </div>
-
-            {/* Labels do eixo X (Probabilidade) */}
-            <div className="mt-2 flex justify-between w-80">
-              {likelihoodLabels.map((label, index) => (
-                <div key={index} className="text-xs text-muted-foreground text-center w-16">
-                  {index + 1}
-                </div>
-              ))}
-            </div>
-            <div className="mt-1 text-center text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">PROBABILIDADE</span>
-            </div>
+                )) || Array(5).fill(null).map((_, colIndex) => (
+                  <div
+                    key={`empty-${rowIndex}-${colIndex}`}
+                    className="aspect-square rounded-lg flex items-center justify-center border-2 border-white bg-green-500"
+                  />
+                ))}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
         {/* Legenda */}
-        <div className="mt-6 flex flex-wrap justify-center gap-4">
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 rounded border-2 bg-green-500/20 border-green-500/40"></div>
-            <span className="text-xs text-muted-foreground">Baixo (1-5)</span>
+        <div className="space-y-4">
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-green-500 border border-white"></div>
+              <span className="text-sm text-muted-foreground">Baixo</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-yellow-500 border border-white"></div>
+              <span className="text-sm text-muted-foreground">Médio</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-orange-500 border border-white"></div>
+              <span className="text-sm text-muted-foreground">Alto</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-500 border border-white"></div>
+              <span className="text-sm text-muted-foreground">Crítico</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 rounded border-2 bg-yellow-500/20 border-yellow-500/40"></div>
-            <span className="text-xs text-muted-foreground">Médio (6-11)</span>
+          
+          <div className="text-center text-sm text-muted-foreground">
+            Probabilidade (vertical) x Impacto (horizontal)
           </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 rounded border-2 bg-orange-500/20 border-orange-500/40"></div>
-            <span className="text-xs text-muted-foreground">Alto (12-19)</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-4 h-4 rounded border-2 bg-red-500/20 border-red-500/40"></div>
-            <span className="text-xs text-muted-foreground">Crítico (20-25)</span>
-          </div>
-        </div>
-
-        {/* Resumo por categoria */}
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {Array.from(new Set(risks.map(r => r.risk_category))).map(category => {
-            const categoryRisks = risks.filter(r => r.risk_category === category);
-            const criticalCount = categoryRisks.filter(r => getRiskLevel(r.impact_score, r.likelihood_score) === 'critical').length;
-            const highCount = categoryRisks.filter(r => getRiskLevel(r.impact_score, r.likelihood_score) === 'high').length;
-            
-            return (
-              <div key={category} className="bg-muted/50 rounded-lg p-3">
-                <div className="text-sm font-medium text-foreground mb-1">{category}</div>
-                <div className="text-xs text-muted-foreground">
-                  Total: {categoryRisks.length}
-                </div>
-                {(criticalCount > 0 || highCount > 0) && (
-                  <div className="flex space-x-1 mt-1">
-                    {criticalCount > 0 && (
-                      <Badge className="risk-critical text-xs">{criticalCount}</Badge>
-                    )}
-                    {highCount > 0 && (
-                      <Badge className="risk-high text-xs">{highCount}</Badge>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
         </div>
       </CardContent>
     </Card>
