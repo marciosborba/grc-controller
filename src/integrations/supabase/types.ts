@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessments: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completion_percentage: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          framework: string | null
+          id: string
+          max_score: number | null
+          questionnaire_data: Json | null
+          responses: Json | null
+          score: number | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completion_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          framework?: string | null
+          id?: string
+          max_score?: number | null
+          questionnaire_data?: Json | null
+          responses?: Json | null
+          score?: number | null
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completion_percentage?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          framework?: string | null
+          id?: string
+          max_score?: number | null
+          questionnaire_data?: Json | null
+          responses?: Json | null
+          score?: number | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_reports: {
         Row: {
           audit_type: string
@@ -151,6 +211,155 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      ethics_reports: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string
+          description: string
+          id: string
+          is_anonymous: boolean
+          reporter_email: string | null
+          reporter_name: string | null
+          reporter_phone: string | null
+          resolution: string | null
+          resolved_at: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          created_at?: string
+          description: string
+          id?: string
+          is_anonymous?: boolean
+          reporter_email?: string | null
+          reporter_name?: string | null
+          reporter_phone?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_anonymous?: boolean
+          reporter_email?: string | null
+          reporter_name?: string | null
+          reporter_phone?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      policies: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          document_type: string | null
+          document_url: string | null
+          effective_date: string | null
+          id: string
+          owner_id: string | null
+          review_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_type?: string | null
+          document_url?: string | null
+          effective_date?: string | null
+          id?: string
+          owner_id?: string | null
+          review_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_type?: string | null
+          document_url?: string | null
+          effective_date?: string | null
+          id?: string
+          owner_id?: string | null
+          review_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      policy_approvals: {
+        Row: {
+          approved_at: string | null
+          approver_id: string
+          comments: string | null
+          created_at: string
+          id: string
+          policy_id: string
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_id: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          policy_id: string
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approver_id?: string
+          comments?: string | null
+          created_at?: string
+          id?: string
+          policy_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_approvals_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -308,6 +517,116 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vendor_assessments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          questionnaire_data: Json | null
+          responses: Json | null
+          risk_rating: string | null
+          score: number | null
+          status: string
+          title: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          questionnaire_data?: Json | null
+          responses?: Json | null
+          risk_rating?: string | null
+          score?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          questionnaire_data?: Json | null
+          responses?: Json | null
+          risk_rating?: string | null
+          score?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendors: {
+        Row: {
+          address: string | null
+          category: string
+          contact_person: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          last_assessment_date: string | null
+          name: string
+          next_assessment_date: string | null
+          phone: string | null
+          risk_level: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          contact_person?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_assessment_date?: string | null
+          name: string
+          next_assessment_date?: string | null
+          phone?: string | null
+          risk_level?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          contact_person?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          last_assessment_date?: string | null
+          name?: string
+          next_assessment_date?: string | null
+          phone?: string | null
+          risk_level?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
