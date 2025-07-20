@@ -95,6 +95,8 @@ export const AIContentGenerator: React.FC<AIContentGeneratorProps> = ({
 
   const generateContent = async () => {
     setIsGenerating(true);
+    console.log('Gerando conteúdo com IA:', { type, parameters: params });
+    
     try {
       const { data, error } = await supabase.functions.invoke('ai-generator', {
         body: {
@@ -103,7 +105,18 @@ export const AIContentGenerator: React.FC<AIContentGeneratorProps> = ({
         }
       });
 
-      if (error) throw error;
+      console.log('Resposta do gerador - data:', data);
+      console.log('Resposta do gerador - error:', error);
+
+      if (error) {
+        console.error('Erro específico da Edge Function:', error);
+        throw error;
+      }
+
+      if (!data || !data.data) {
+        console.error('Resposta inválida do gerador:', data);
+        throw new Error('Resposta inválida do gerador de conteúdo');
+      }
 
       setGeneratedContent(data.data);
       if (onGenerated) {
@@ -115,10 +128,10 @@ export const AIContentGenerator: React.FC<AIContentGeneratorProps> = ({
         description: 'Conteúdo gerado com sucesso!',
       });
     } catch (error) {
-      console.error('Error generating content:', error);
+      console.error('Erro ao gerar conteúdo:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao gerar conteúdo. Tente novamente.',
+        description: 'Erro ao gerar conteúdo. Verifique se a chave da API OpenAI está configurada corretamente.',
         variant: 'destructive'
       });
     } finally {

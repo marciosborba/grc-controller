@@ -93,20 +93,34 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
       timestamp: new Date()
     };
 
+    const messageToSend = inputValue;
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
+    console.log('Enviando mensagem para IA:', { prompt: messageToSend, type, context });
+
     try {
       const { data, error } = await supabase.functions.invoke('ai-assistant', {
         body: {
-          prompt: inputValue,
+          prompt: messageToSend,
           type,
           context
         }
       });
 
-      if (error) throw error;
+      console.log('Resposta da IA - data:', data);
+      console.log('Resposta da IA - error:', error);
+
+      if (error) {
+        console.error('Erro específico da Edge Function:', error);
+        throw error;
+      }
+
+      if (!data || !data.response) {
+        console.error('Resposta inválida da IA:', data);
+        throw new Error('Resposta inválida da IA');
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -117,10 +131,20 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Erro ao enviar mensagem para IA:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        type: 'assistant',
+        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API OpenAI está configurada corretamente nas configurações do Supabase.',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+      
       toast({
         title: 'Erro',
-        description: 'Erro ao enviar mensagem para o assistente de IA',
+        description: 'Erro ao enviar mensagem para o assistente de IA. Verifique as configurações.',
         variant: 'destructive'
       });
     } finally {
@@ -288,7 +312,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
               </DialogTitle>
             </DialogHeader>
             <div className="h-96">
-              <AIChatAssistant type={type} context={context} defaultOpen={true} />
+              <ChatContent />
             </div>
           </DialogContent>
         </Dialog>
