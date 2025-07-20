@@ -240,7 +240,6 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
 
           <div className="mt-4 flex space-x-2">
             <Input
-              key={`input-${messages.length}`} // Key para forçar re-render
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
