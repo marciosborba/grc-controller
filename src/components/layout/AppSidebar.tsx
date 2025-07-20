@@ -67,24 +67,38 @@ const navigationItems = [
         description: 'Gestão de políticas corporativas'
       },
       {
-        title: 'Auditoria',
-        url: '/audit',
-        icon: Eye,
-        permissions: ['audit.read', 'all'],
-        description: 'Planejamento e execução de auditorias'
-      },
-      {
         title: 'Incidentes',
         url: '/incidents',
         icon: Zap,
         permissions: ['incident.read', 'all'],
-        description: 'Canal de ética e gestão de incidentes'
+        description: 'Gestão de incidentes de segurança'
+      },
+      {
+        title: 'Canal de Ética',
+        url: '/ethics',
+        icon: Shield,
+        permissions: ['all'],
+        description: 'Denúncias e questões éticas'
+      },
+      {
+        title: 'Conformidade',
+        url: '/compliance',
+        icon: FileCheck,
+        permissions: ['compliance.read', 'all'],
+        description: 'Controles de conformidade'
       }
     ]
   },
   {
     label: 'Gestão',
     items: [
+      {
+        title: 'Auditoria',
+        url: '/audit',
+        icon: Eye,
+        permissions: ['audit.read', 'all'],
+        description: 'Planejamento e execução de auditorias'
+      },
       {
         title: 'Fornecedores',
         url: '/vendors',
