@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,13 +51,25 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const getWelcomeMessage = useCallback((assistantType: string) => {
+    const messages = {
+      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
+      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
+      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
+      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
+      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
+      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
+    };
+    return messages[assistantType] || messages.general;
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -69,21 +81,9 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
         timestamp: new Date()
       }]);
     }
-  }, [isOpen, type]);
+  }, [isOpen, getWelcomeMessage, type]);
 
-  const getWelcomeMessage = (assistantType: string) => {
-    const messages = {
-      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
-      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
-      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
-      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
-      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
-      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
-    };
-    return messages[assistantType] || messages.general;
-  };
-
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -136,7 +136,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         type: 'assistant',
-        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API OpenAI está configurada corretamente nas configurações do Supabase.',
+        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API Hugging Face está configurada corretamente nas configurações do Supabase.',
         timestamp: new Date()
       };
 
@@ -150,16 +150,16 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [inputValue, isLoading, type, context, toast]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
+  }, [sendMessage]);
 
-  const getTypeLabel = () => {
+  const getTypeLabel = useCallback(() => {
     const labels = {
       general: 'Assistente Geral',
       assessment: 'Assessment',
@@ -169,9 +169,9 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
       compliance: 'Compliance'
     };
     return labels[type] || 'Assistente IA';
-  };
+  }, [type]);
 
-  const getTypeColor = () => {
+  const getTypeColor = useCallback(() => {
     const colors = {
       general: 'bg-blue-500',
       assessment: 'bg-purple-500',
@@ -181,9 +181,9 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
       compliance: 'bg-orange-500'
     };
     return colors[type] || 'bg-blue-500';
-  };
+  }, [type]);
 
-  const ChatContent = () => (
+  const ChatContent = useCallback(() => (
     <Card className={`grc-card border-primary/30 ${isMinimized ? 'h-16' : 'h-96'} transition-all duration-300`}>
       <CardHeader className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
@@ -278,7 +278,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
         </CardContent>
       )}
     </Card>
-  );
+  ), [isMinimized, getTypeColor, getTypeLabel, messages, isLoading, messagesEndRef, inputValue, handleKeyPress, sendMessage]);
 
   if (defaultOpen) {
     return <ChatContent />;
