@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const huggingFaceApiKey = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +15,13 @@ serve(async (req) => {
 
   try {
     const { type, parameters } = await req.json();
+
+    console.log('Received generator request:', { type, parameters });
+
+    if (!huggingFaceApiKey) {
+      console.error('HUGGING_FACE_ACCESS_TOKEN not configured');
+      throw new Error('Hugging Face API key not configured');
+    }
 
     let systemPrompt = '';
     let userPrompt = '';
@@ -95,30 +102,53 @@ serve(async (req) => {
         throw new Error('Tipo de geração não suportado');
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 3000,
-      }),
-    });
+    const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
 
-    const data = await response.json();
-    
+    console.log('Sending request to Hugging Face for generation:', fullPrompt);
+
+    // Usando o modelo Qwen/QwQ-32B-Preview que é gratuito e eficiente
+    const response = await fetch(
+      "https://api-inference.huggingface.co/models/Qwen/QwQ-32B-Preview",
+      {
+        headers: {
+          Authorization: `Bearer ${huggingFaceApiKey}`,
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({
+          inputs: fullPrompt,
+          parameters: {
+            max_new_tokens: 2000,
+            temperature: 0.3,
+            do_sample: true,
+            return_full_text: false
+          }
+        }),
+      }
+    );
+
+    console.log('Hugging Face generator response status:', response.status);
+
     if (!response.ok) {
-      throw new Error(data.error?.message || 'Erro na API OpenAI');
+      const errorText = await response.text();
+      console.error('Hugging Face generator API error:', errorText);
+      throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
     }
 
-    const aiResponse = data.choices[0].message.content;
+    const data = await response.json();
+    console.log('Hugging Face generator response data:', data);
+    
+    let aiResponse = '';
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      aiResponse = data[0].generated_text;
+    } else if (data.generated_text) {
+      aiResponse = data.generated_text;
+    } else {
+      console.error('Unexpected response format from Hugging Face:', data);
+      throw new Error('Formato de resposta inesperado da Hugging Face');
+    }
+
+    console.log('Final generator AI response:', aiResponse);
     
     try {
       // Tenta parsear como JSON
@@ -135,7 +165,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in ai-generator function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Erro interno do servidor',
+      details: 'Verifique se a chave da API Hugging Face está configurada corretamente'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

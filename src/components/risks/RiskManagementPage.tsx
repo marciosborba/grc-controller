@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
 import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
+import { AIChatDialog } from '@/components/ai/AIChatDialog';
 import { cn } from '@/lib/utils';
 
 interface RiskAssessment {
@@ -237,26 +238,39 @@ const RiskManagementPage = () => {
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Gerencie e monitore os riscos da organização</p>
+          <p className="text-muted-foreground text-sm sm:text-base">Monitore e avalie riscos corporativos</p>
         </div>
-        <div className="flex items-center space-x-2 shrink-0">
+        
+        <div className="flex items-center space-x-2">
+          <AIChatDialog 
+            type="risk" 
+            context={{ risks: filteredRisks }}
+            title="Assistente de Gestão de Riscos"
+            trigger={
+              <Button variant="outline" className="flex items-center space-x-2">
+                <Brain className="h-4 w-4" />
+                <span>Chat com IA</span>
+              </Button>
+            }
+          />
+          
           <AIContentGenerator 
             type="risk_assessment"
             trigger={
-              <Button variant="outline" size="sm">
-                <Brain className="h-4 w-4 mr-2" />
-                Avaliar com IA
+              <Button variant="outline" className="flex items-center space-x-2">
+                <Brain className="h-4 w-4" />
+                <span>Gerar com IA</span>
               </Button>
             }
           />
           
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={resetForm} className="grc-button-primary">
+              <Button onClick={resetForm}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Risco
-            </Button>
-          </DialogTrigger>
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
