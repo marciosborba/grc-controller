@@ -138,7 +138,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.filter(item => hasPermission(item.permissions)).map(item => <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink to={item.url} className={`${getNavCls(isActive(item.url))} flex items-center w-full px-30 py-40 rounded-lg transition-all duration-200 group mb-2`} title={collapsed ? item.title : ''}>
+                        <NavLink to={item.url} className={`${getNavCls(isActive(item.url))} flex items-center w-full px-5 py-4 rounded-lg transition-all duration-200 group mb-2`} title={collapsed ? item.title : ''}>
                           <item.icon className="h-5 w-5 flex-shrink-0" />
                           {!collapsed && <div className="ml-3 flex-1 min-w-0 py-[2px]">
                               <div className="flex items-center justify-between">
