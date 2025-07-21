@@ -16,6 +16,7 @@ import PoliciesPage from "@/components/policies/PoliciesPage";
 import VendorsPage from "@/components/vendors/VendorsPage";
 import AssessmentsPage from "@/components/assessments/AssessmentsPage";
 import EthicsChannelPage from "@/components/ethics/EthicsChannelPage";
+import { ReportsPage } from "@/components/reports/ReportsPage";
 import { UserManagementPage } from "@/components/settings/UserManagementPage";
 import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
 import NotFound from "./pages/NotFound";
@@ -98,7 +99,7 @@ const App = () => (
                 <Route path="assessments" element={<AssessmentsPage />} />
                 <Route path="policies" element={<PoliciesPage />} />
                 <Route path="vendors" element={<VendorsPage />} />
-                <Route path="reports" element={<div className="p-6"><h1 className="text-2xl font-bold">Relatórios</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
+                <Route path="reports" element={<ReportsPage />} />
                 <Route path="ethics" element={<EthicsChannelPage />} />
                 <Route path="settings" element={<UserManagementPage />} />
                 <Route path="settings/activity-logs" element={<ActivityLogsPage />} />

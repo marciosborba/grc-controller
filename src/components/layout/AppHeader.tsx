@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AppHeader = () => {
@@ -18,22 +19,30 @@ export const AppHeader = () => {
   return (
     <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="h-full px-4 sm:px-6 flex items-center justify-between">
-        {/* Search - Hidden on mobile */}
-        <div className="hidden sm:flex flex-1 max-w-md">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar riscos, políticas, assessments..."
-              className="pl-10 bg-muted/50 border-0 focus-visible:ring-1"
-            />
+        {/* Left side - Mobile menu and search */}
+        <div className="flex items-center space-x-2">
+          {/* Mobile menu trigger */}
+          <div className="md:hidden">
+            <SidebarTrigger />
           </div>
-        </div>
+          
+          {/* Search - Hidden on mobile */}
+          <div className="hidden sm:flex flex-1 max-w-md">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar riscos, políticas, assessments..."
+                className="pl-10 bg-muted/50 border-0 focus-visible:ring-1"
+              />
+            </div>
+          </div>
 
-        {/* Mobile search button */}
-        <div className="sm:hidden">
-          <Button variant="ghost" size="icon">
-            <Search className="h-5 w-5" />
-          </Button>
+          {/* Mobile search button */}
+          <div className="sm:hidden">
+            <Button variant="ghost" size="icon">
+              <Search className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Right side */}
