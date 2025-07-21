@@ -136,11 +136,11 @@ export const ReportsPage = () => {
       
       if (error) throw error;
 
-      downloadReport(data, `relatorio-${selectedModule}`);
+      generatePrintableReport(data, selectedModule);
       
       toast({
         title: "Sucesso",
-        description: "Relatório gerado com sucesso!",
+        description: "Relatório aberto para impressão!",
         variant: "default",
       });
     } catch (error) {
@@ -155,18 +155,400 @@ export const ReportsPage = () => {
     }
   };
 
-  const downloadReport = (data: any, filename: string) => {
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+  const generatePrintableReport = (data: any, moduleType: string) => {
+    const reportDate = new Date().toLocaleDateString('pt-BR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const moduleNames: { [key: string]: string } = {
+      'all': 'Relatório Consolidado - Todos os Módulos',
+      'risks': 'Gestão de Riscos',
+      'policies': 'Políticas Corporativas',
+      'assessments': 'Assessments e Avaliações',
+      'incidents': 'Incidentes de Segurança',
+      'vendors': 'Gestão de Fornecedores',
+      'audit': 'Relatórios de Auditoria',
+      'compliance': 'Registros de Conformidade'
+    };
+
+    let htmlContent = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Relatório GRC - ${moduleNames[moduleType] || moduleType}</title>
+        <style>
+          @media print {
+            @page {
+              margin: 1in;
+              size: A4;
+            }
+            body {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+          }
+          
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 100%;
+            margin: 0;
+            padding: 20px;
+          }
+          
+          .header {
+            text-align: center;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          
+          .header h1 {
+            color: #1e40af;
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+          }
+          
+          .header h2 {
+            color: #64748b;
+            margin: 5px 0;
+            font-size: 18px;
+            font-weight: normal;
+          }
+          
+          .header .date {
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 10px;
+          }
+          
+          .summary {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+          }
+          
+          .summary h3 {
+            color: #1e40af;
+            margin-top: 0;
+            margin-bottom: 15px;
+          }
+          
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+          }
+          
+          .stat-card {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+          }
+          
+          .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 5px;
+          }
+          
+          .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+          }
+          
+          .section {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+          }
+          
+          .section h3 {
+            color: #1e40af;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+          }
+          
+          .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+          }
+          
+          .data-table th {
+            background: #f1f5f9;
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+          }
+          
+          .data-table td {
+            border: 1px solid #d1d5db;
+            padding: 8px 10px;
+            vertical-align: top;
+          }
+          
+          .data-table tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          
+          .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+          }
+          
+          .status-active { background: #dcfce7; color: #166534; }
+          .status-inactive { background: #fee2e2; color: #991b1b; }
+          .status-pending { background: #fef3c7; color: #92400e; }
+          .status-draft { background: #e0e7ff; color: #3730a3; }
+          .status-approved { background: #dcfce7; color: #166534; }
+          
+          .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+          }
+          
+          .no-data {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            padding: 40px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>GRC Controller</h1>
+          <h2>${moduleNames[moduleType] || moduleType}</h2>
+          <div class="date">Relatório gerado em ${reportDate}</div>
+        </div>
+    `;
+
+    if (moduleType === 'all' && typeof data === 'object' && !Array.isArray(data)) {
+      // Relatório consolidado
+      const totalRecords = Object.values(data).reduce((total: number, arr: any) => 
+        total + (Array.isArray(arr) ? arr.length : 0), 0
+      );
+
+      htmlContent += `
+        <div class="summary">
+          <h3>Resumo Executivo</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-number">${totalRecords}</div>
+              <div class="stat-label">Total de Registros</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${data.risks?.length || 0}</div>
+              <div class="stat-label">Riscos</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${data.policies?.length || 0}</div>
+              <div class="stat-label">Políticas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">${data.incidents?.length || 0}</div>
+              <div class="stat-label">Incidentes</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Seções para cada módulo
+      const modules = [
+        { key: 'risks', title: 'Gestão de Riscos', data: data.risks },
+        { key: 'policies', title: 'Políticas', data: data.policies },
+        { key: 'assessments', title: 'Assessments', data: data.assessments },
+        { key: 'incidents', title: 'Incidentes', data: data.incidents },
+        { key: 'vendors', title: 'Fornecedores', data: data.vendors },
+        { key: 'auditReports', title: 'Auditoria', data: data.auditReports },
+        { key: 'complianceRecords', title: 'Conformidade', data: data.complianceRecords }
+      ];
+
+      modules.forEach(module => {
+        if (module.data && module.data.length > 0) {
+          htmlContent += `<div class="section">`;
+          htmlContent += `<h3>${module.title} (${module.data.length} registros)</h3>`;
+          htmlContent += formatDataTable(module.data, module.key);
+          htmlContent += `</div>`;
+        }
+      });
+    } else {
+      // Relatório de módulo específico
+      htmlContent += `
+        <div class="summary">
+          <h3>Resumo</h3>
+          <div class="stat-card" style="max-width: 300px; margin: 0 auto;">
+            <div class="stat-number">${Array.isArray(data) ? data.length : 0}</div>
+            <div class="stat-label">Total de Registros</div>
+          </div>
+        </div>
+      `;
+
+      if (Array.isArray(data) && data.length > 0) {
+        htmlContent += `<div class="section">`;
+        htmlContent += `<h3>Dados Detalhados</h3>`;
+        htmlContent += formatDataTable(data, moduleType);
+        htmlContent += `</div>`;
+      } else {
+        htmlContent += `<div class="no-data">Nenhum dado encontrado para este módulo.</div>`;
+      }
+    }
+
+    htmlContent += `
+        <div class="footer">
+          <p>Este relatório foi gerado automaticamente pelo Sistema GRC Controller</p>
+          <p>Data de geração: ${new Date().toLocaleString('pt-BR')}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Abrir em nova janela e imprimir
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Aguardar carregamento e então imprimir
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      };
+    }
+  };
+
+  const formatDataTable = (data: any[], moduleType: string): string => {
+    if (!Array.isArray(data) || data.length === 0) {
+      return '<div class="no-data">Nenhum dado disponível</div>';
+    }
+
+    const firstItem = data[0];
+    const columns = Object.keys(firstItem).filter(key => 
+      !['id', 'created_at', 'updated_at'].includes(key)
+    ).slice(0, 6); // Limitar a 6 colunas para caber na página
+
+    let tableHtml = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            ${columns.map(col => `<th>${formatColumnName(col)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    data.slice(0, 50).forEach(item => { // Limitar a 50 registros por página
+      tableHtml += '<tr>';
+      columns.forEach(col => {
+        let value = item[col];
+        
+        // Formatação especial para campos específicos
+        if (col.includes('status') || col.includes('severity') || col.includes('priority')) {
+          const statusClass = getStatusClass(value);
+          value = `<span class="status-badge ${statusClass}">${value || 'N/A'}</span>`;
+        } else if (col.includes('date')) {
+          value = value ? new Date(value).toLocaleDateString('pt-BR') : 'N/A';
+        } else if (typeof value === 'string' && value.length > 100) {
+          value = value.substring(0, 100) + '...';
+        } else if (value === null || value === undefined) {
+          value = 'N/A';
+        }
+        
+        tableHtml += `<td>${value}</td>`;
+      });
+      tableHtml += '</tr>';
+    });
+
+    tableHtml += `
+        </tbody>
+      </table>
+    `;
+
+    if (data.length > 50) {
+      tableHtml += `<p style="text-align: center; color: #6b7280; font-size: 12px;">
+        Mostrando os primeiros 50 registros de ${data.length} total.
+      </p>`;
+    }
+
+    return tableHtml;
+  };
+
+  const formatColumnName = (column: string): string => {
+    const columnNames: { [key: string]: string } = {
+      'title': 'Título',
+      'description': 'Descrição',
+      'status': 'Status',
+      'severity': 'Severidade',
+      'priority': 'Prioridade',
+      'category': 'Categoria',
+      'name': 'Nome',
+      'email': 'Email',
+      'phone': 'Telefone',
+      'risk_level': 'Nível de Risco',
+      'risk_category': 'Categoria de Risco',
+      'assigned_to': 'Responsável',
+      'due_date': 'Data Limite',
+      'completion_percentage': 'Progresso (%)',
+      'control_type': 'Tipo de Controle',
+      'implementation_status': 'Status de Implementação',
+      'framework': 'Framework',
+      'audit_type': 'Tipo de Auditoria',
+      'incident_type': 'Tipo de Incidente',
+      'affected_systems': 'Sistemas Afetados',
+      'detection_date': 'Data de Detecção',
+      'resolution_date': 'Data de Resolução'
+    };
     
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    return columnNames[column] || column.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const getStatusClass = (status: string): string => {
+    if (!status) return '';
+    
+    const lowerStatus = status.toLowerCase();
+    
+    if (lowerStatus.includes('ativo') || lowerStatus.includes('active') || 
+        lowerStatus.includes('aprovado') || lowerStatus.includes('approved') ||
+        lowerStatus.includes('implementado') || lowerStatus.includes('resolvido')) {
+      return 'status-active';
+    } else if (lowerStatus.includes('inativo') || lowerStatus.includes('inactive') ||
+               lowerStatus.includes('rejeitado') || lowerStatus.includes('rejected')) {
+      return 'status-inactive';
+    } else if (lowerStatus.includes('pendente') || lowerStatus.includes('pending') ||
+               lowerStatus.includes('aberto') || lowerStatus.includes('open')) {
+      return 'status-pending';
+    } else if (lowerStatus.includes('rascunho') || lowerStatus.includes('draft')) {
+      return 'status-draft';
+    }
+    
+    return '';
+  };
+
+  const downloadReport = (data: any, filename: string) => {
+    // Esta função não é mais usada, mas mantida para compatibilidade
   };
 
   const moduleOptions = [
@@ -313,7 +695,7 @@ export const ReportsPage = () => {
               className="flex items-center space-x-2"
             >
               <Download className="h-4 w-4" />
-              <span>{isLoading ? 'Gerando...' : 'Gerar Relatório'}</span>
+              <span>{isLoading ? 'Gerando...' : 'Gerar PDF'}</span>
             </Button>
           </div>
         </CardContent>
