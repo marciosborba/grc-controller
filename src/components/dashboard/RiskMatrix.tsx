@@ -40,8 +40,8 @@ const RiskMatrix = () => {
     const score = impact * likelihood;
     // CORREÇÃO: Alinhado com a função getRiskColor para consistência
     if (score >= 12) return 'critical';
-    if (score >= 9) return 'high';
-    if (score >= 4) return 'medium';
+    if (score >= 6) return 'high';
+    if (score >= 3) return 'medium';
     return 'low';
   };
 
@@ -135,7 +135,7 @@ const RiskMatrix = () => {
           {/* CORREÇÃO CIRÚRGICA: grid-cols-5 para 1 coluna de label + 4 de dados */}
           <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
             {/* CORREÇÃO CIRÚRGICA: Iterar de 4 a 1 para renderizar na ordem correta */}
-            {[4, 3, 2, 1].map((likelihoodValue) => (
+            {[1,2,3,4].map((likelihoodValue) => (
               <React.Fragment key={`row-${likelihoodValue}`}>
                 <div className="flex items-center justify-center text-sm font-medium text-gray-500">
                   {likelihoodValue}
