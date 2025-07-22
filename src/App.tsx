@@ -21,6 +21,7 @@ import { UserManagementPage } from "@/components/settings/UserManagementPage";
 import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="incidents" element={<SecurityIncidentsPage />} />
                 <Route path="audit" element={<AuditReportsPage />} />
                 <Route path="assessments" element={<AssessmentsPage />} />
+                <Route path="assessments/:id" element={<AssessmentDetailPage />} />
                 <Route path="policies" element={<PoliciesPage />} />
                 <Route path="vendors" element={<VendorsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
