@@ -122,7 +122,7 @@ const RiskMatrix = () => {
       <CardContent className="space-y-6">
         {/* Labels dos números 1-5 no topo */}
         <div className="flex-justify-center">
-          <div className="grid grid-cols-5 gap-10 w-full max-w-lg">
+          <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
             <div></div> {/* Espaço vazio para alinhamento */}
             {[1, 2, 3, 4, 5].map((num) => (
               <div key={num} className="text-center text-sm font-medium text-muted-foreground">
@@ -144,7 +144,7 @@ const RiskMatrix = () => {
                 </div>
                 
                 {/* Células da matriz */}
-                {Array(5).fill(null).map((_, colIndex) => {
+                {Array(50).fill(null).map((_, colIndex) => {
                   const impact = colIndex + 1;
                   const likelihood = 6 - rowNum; // 5,4,3,2,1 baseado no rowNum
                   const cellRisks = risks.filter(risk => 
