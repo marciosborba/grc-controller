@@ -802,14 +802,6 @@ const AssessmentsPage = () => {
                         {assessment.description && (
                           <p className="text-sm text-muted-foreground">{assessment.description.substring(0, 60)}...</p>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="mt-1"
-                          onClick={() => window.location.href = `/assessments/${assessment.id}`}
-                        >
-                          Ver Detalhes
-                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
