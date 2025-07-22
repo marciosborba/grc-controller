@@ -146,7 +146,7 @@ const RiskMatrix = () => {
                 {/* Células da matriz */}
                 {Array(5).fill(null).map((_, colIndex) => {
                   const impact = colIndex + 1;
-                  const likelihood = 5 - rowNum; // 5,4,3,2,1 baseado no rowNum
+                  const likelihood = 6 - rowNum; // 5,4,3,2,1 baseado no rowNum
                   const cellRisks = risks.filter(risk => 
                     risk.impact_score === impact && risk.likelihood_score === likelihood
                   );
