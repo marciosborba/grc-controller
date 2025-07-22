@@ -80,7 +80,7 @@ const RiskMatrix = () => {
       const likelihoodIndex = risk.likelihood_score - 1;
       
       if (impactIndex >= 0 && impactIndex < 4 && likelihoodIndex >= 0 && likelihoodIndex < 4) {
-        const cell = newMatrix[4 - likelihoodIndex][impactIndex]; // Ajustar para coincidir com a imagem
+        const cell = newMatrix[3 - likelihoodIndex][impactIndex]; // Ajustar para coincidir com a imagem
         cell.risks.push(risk);
         cell.count = cell.risks.length;
         cell.level = getRiskLevel(risk.impact_score, risk.likelihood_score);
