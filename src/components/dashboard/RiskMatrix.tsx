@@ -30,6 +30,7 @@ const RiskMatrix = () => {
     const product = impact * likelihood;
     
     // Matriz de cores para 4x4
+    if (product >= 16) return 'bg-red-900';
     if (product >= 12) return 'bg-red-700';  
     if (product >= 5) return 'bg-orange-400';
     if (product >= 3) return 'bg-yellow-300';
