@@ -31,7 +31,7 @@ const RiskMatrix = () => {
     
     // Matriz de cores para 4x4
     if (product >= 12) return 'bg-red-700';  
-    if (product >= 4) return 'bg-orange-400';
+    if (product >= 5) return 'bg-orange-400';
     if (product >= 3) return 'bg-yellow-300';
     return 'bg-green-500';  
   };
@@ -40,7 +40,7 @@ const RiskMatrix = () => {
     const score = impact * likelihood;
     // CORREÇÃO: Alinhado com a função getRiskColor para consistência
     if (score >= 12) return 'critical';
-    if (score >= 4) return 'high';
+    if (score >= 5) return 'high';
     if (score >= 3) return 'medium';
     return 'low';
   };
