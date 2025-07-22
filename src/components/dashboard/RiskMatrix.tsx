@@ -30,13 +30,13 @@ const RiskMatrix = () => {
     const product = impact * likelihood;
     
     // Matriz de cores corrigida: 1=verde (baixo risco), 5=vermelho escuro (alto risco)
-    if (product >= 20) return 'bg-red-900'; // 4x5 ou 5x4 ou 5x5 - Vermelho muito escuro
-    if (product >= 16) return 'bg-red-700'; // 4x4 - Vermelho escuro
-    if (product >= 12) return 'bg-red-500'; // 3x4, 4x3 - Vermelho
-    if (product >= 9) return 'bg-orange-600'; // 3x3 - Laranja escuro
-    if (product >= 6) return 'bg-orange-400'; // 2x3, 3x2 - Laranja
-    if (product >= 4) return 'bg-yellow-500'; // 2x2 - Amarelo
-    if (product >= 2) return 'bg-yellow-300'; // 1x2, 2x1 - Amarelo claro
+    if (product >= 20) return 'bg-red-700'; // 4x5 ou 5x4 ou 5x5 - Vermelho muito escuro
+    if (product >= 16) return 'bg-orange-400'; // 4x4 - Vermelho escuro
+    if (product >= 12) return 'bg-orange-400'; // 3x4, 4x3 - Vermelho
+    if (product >= 9) return 'bg-orange-400'; // 3x3 - Laranja escuro
+    if (product >= 6) return 'bg-yellow-300'; // 2x3, 3x2 - Laranja
+    if (product >= 4) return 'bg-yellow-300'; // 2x2 - Amarelo
+    if (product >= 2) return 'bg-green-500'; // 1x2, 2x1 - Amarelo claro
     return 'bg-green-500'; // 1x1 - Verde (menor risco)
   };
 
@@ -124,7 +124,7 @@ const RiskMatrix = () => {
         <div className="flex-justify-center">
           <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
             <div></div> {/* Espaço vazio para alinhamento */}
-            {[1, 2, 3, 4, 5].map((num) => (
+            {[1, 2, 3, 4].map((num) => (
               <div key={num} className="text-center text-sm font-medium text-muted-foreground">
                 {num}
               </div>
@@ -136,7 +136,7 @@ const RiskMatrix = () => {
         <div className="flex justify-center">
           <div className="grid grid-cols-6 gap-1 w-full max-w-lg">
             {/* Linha por linha com labels laterais */}
-            {[5, 4, 3, 2, 1].map((rowNum, rowIndex) => (
+            {[1,2,3,4].map((rowNum, rowIndex) => (
               <React.Fragment key={`row-${rowNum}`}>
                 {/* Label lateral */}
                 <div className="flex items-center justify-center text-sm font-medium text-muted-foreground">
@@ -146,7 +146,7 @@ const RiskMatrix = () => {
                 {/* Células da matriz */}
                 {Array(5).fill(null).map((_, colIndex) => {
                   const impact = colIndex + 1;
-                  const likelihood = 6 - rowNum; // 5,4,3,2,1 baseado no rowNum
+                  const likelihood = 4 - rowNum; // 5,4,3,2,1 baseado no rowNum
                   const cellRisks = risks.filter(risk => 
                     risk.impact_score === impact && risk.likelihood_score === likelihood
                   );
