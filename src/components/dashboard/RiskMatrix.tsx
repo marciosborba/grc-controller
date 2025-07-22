@@ -30,14 +30,10 @@ const RiskMatrix = () => {
     const product = impact * likelihood;
     
     // Matriz de cores corrigida: 1=verde (baixo risco), 5=vermelho escuro (alto risco)
-    if (product >= 20) return 'bg-red-700'; // 4x5 ou 5x4 ou 5x5 - Vermelho muito escuro
-    if (product >= 16) return 'bg-orange-400'; // 4x4 - Vermelho escuro
-    if (product >= 12) return 'bg-orange-400'; // 3x4, 4x3 - Vermelho
-    if (product >= 9) return 'bg-orange-400'; // 3x3 - Laranja escuro
-    if (product >= 6) return 'bg-yellow-300'; // 2x3, 3x2 - Laranja
-    if (product >= 4) return 'bg-yellow-300'; // 2x2 - Amarelo
-    if (product >= 2) return 'bg-green-500'; // 1x2, 2x1 - Amarelo claro
-    return 'bg-green-500'; // 1x1 - Verde (menor risco)
+    if (product >= 12) return 'bg-red-700'; 
+    if (product >= 9) return 'bg-orange-400';
+    if (product >= 4) return 'bg-yellow-300';
+    return 'bg-green-500'; 
   };
 
   const getRiskLevel = (impact: number, likelihood: number): 'low' | 'medium' | 'high' | 'critical' => {
