@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import RiskMatrix from './RiskMatrix';
+import DashboardCharts from './DashboardCharts';
+import ExecutiveReportButton from './ExecutiveReport';
+import { supabase } from '@/integrations/supabase/client';
 import {
   BarChart,
   Bar,
@@ -58,6 +61,63 @@ const kpiData = [
 ];
 
 export const ExecutiveDashboard = () => {
+  const [realTimeData, setRealTimeData] = useState({
+    riskScore: 0,
+    complianceScore: 0,
+    totalVendors: 0,
+    activeControls: 0,
+    criticalRisks: 0,
+    openIncidents: 0
+  });
+
+  useEffect(() => {
+    const fetchRealTimeData = async () => {
+      try {
+        const [
+          risksResult,
+          complianceResult,
+          vendorsResult,
+          incidentsResult
+        ] = await Promise.all([
+          supabase.from('risk_assessments').select('*'),
+          supabase.from('compliance_records').select('*'),
+          supabase.from('vendors').select('*').eq('status', 'active'),
+          supabase.from('security_incidents').select('*').eq('status', 'open')
+        ]);
+
+        const risks = risksResult.data || [];
+        const compliance = complianceResult.data || [];
+        
+        // Calcular score de risco baseado em dados reais
+        const criticalRisks = risks.filter(r => r.severity === 'critical').length;
+        const totalRisks = risks.length;
+        const riskScore = totalRisks > 0 ? Math.max(0, 5 - (criticalRisks / totalRisks) * 5) : 5;
+
+        // Calcular score de compliance
+        const compliantRecords = compliance.filter(r => r.compliance_status === 'compliant').length;
+        const complianceScore = compliance.length > 0 ? Math.round((compliantRecords / compliance.length) * 100) : 0;
+
+        setRealTimeData({
+          riskScore: Number(riskScore.toFixed(1)),
+          complianceScore,
+          totalVendors: vendorsResult.data?.length || 0,
+          activeControls: 1248, // Mock - pode ser implementado quando houver tabela de controles
+          criticalRisks,
+          openIncidents: incidentsResult.data?.length || 0
+        });
+      } catch (error) {
+        console.error('Erro ao carregar dados em tempo real:', error);
+      }
+    };
+
+    fetchRealTimeData();
+    
+    // Atualizar dados a cada 5 minutos
+    const interval = setInterval(fetchRealTimeData, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Header */}
@@ -74,10 +134,10 @@ export const ExecutiveDashboard = () => {
             <span className="hidden sm:inline">Insights IA</span>
             <span className="sm:hidden">IA</span>
           </Button>
-          <Button className="grc-button-primary text-xs sm:text-sm">
-            <span className="hidden sm:inline">Relatório Executivo</span>
-            <span className="sm:hidden">Relatório</span>
-          </Button>
+          <ExecutiveReportButton 
+            size="sm" 
+            className="grc-button-primary text-xs sm:text-sm"
+          />
         </div>
       </div>
 
@@ -118,10 +178,10 @@ export const ExecutiveDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground">Risco Residual</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">2.1</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.riskScore}</p>
                 <p className="text-xs sm:text-sm text-success flex items-center mt-1">
                   <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  -34% vs mês anterior
+                  {realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Requer atenção'}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-success/10 rounded-lg">
@@ -136,10 +196,10 @@ export const ExecutiveDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground">Score Compliance</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">93%</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.complianceScore}%</p>
                 <p className="text-xs sm:text-sm text-success flex items-center mt-1">
                   <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  +8% vs mês anterior
+                  {realTimeData.complianceScore >= 90 ? 'Meta atingida' : 'Em progresso'}
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
@@ -153,11 +213,11 @@ export const ExecutiveDashboard = () => {
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Fornecedores Avaliados</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">127</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Fornecedores Ativos</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.totalVendors}</p>
                 <p className="text-xs sm:text-sm text-primary flex items-center mt-1">
                   <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  12 pendentes
+                  Monitorados
                 </p>
               </div>
               <div className="p-2 sm:p-3 bg-accent/10 rounded-lg">
@@ -172,7 +232,7 @@ export const ExecutiveDashboard = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground">Controles Ativos</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">1,248</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.activeControls.toLocaleString()}</p>
                 <p className="text-xs sm:text-sm text-warning flex items-center mt-1">
                   <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   98% efetivos
@@ -186,71 +246,8 @@ export const ExecutiveDashboard = () => {
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Risk Trend */}
-        <Card className="grc-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
-              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
-              <span>Evolução dos Riscos</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={riskTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Bar dataKey="critical" stackId="a" fill="#ef4444" />
-                <Bar dataKey="high" stackId="a" fill="#f97316" />
-                <Bar dataKey="medium" stackId="a" fill="#eab308" />
-                <Bar dataKey="low" stackId="a" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Compliance Status */}
-        <Card className="grc-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
-              <FileCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <span>Status de Compliance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={complianceData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}%`}
-                  outerRadius={70}
-                  fill="#8884d8"
-                  dataKey="value"
-                  fontSize={10}
-                >
-                  {complianceData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Charts Row - Novos gráficos com dados reais */}
+      <DashboardCharts />
 
       {/* Risk Matrix and Performance Trends */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
@@ -308,7 +305,7 @@ export const ExecutiveDashboard = () => {
             </div>
             <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Riscos Críticos</h3>
             <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-              1 risco crítico requer atenção imediata
+              {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} requer{realTimeData.criticalRisks === 1 ? '' : 'em'} atenção imediata
             </p>
             <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
               Revisar Agora
@@ -323,7 +320,7 @@ export const ExecutiveDashboard = () => {
             </div>
             <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Assessments Pendentes</h3>
             <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-              3 avaliações aguardando revisão executiva
+              {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} de segurança em aberto
             </p>
             <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
               Analisar

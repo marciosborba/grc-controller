@@ -25,22 +25,27 @@ const RiskMatrix = () => {
   const [loading, setLoading] = useState(true);
   const [matrix, setMatrix] = useState<MatrixCell[][]>([]);
 
-  const getRiskLevel = (impact: number, likelihood: number): 'low' | 'medium' | 'high' | 'critical' => {
-    const score = impact * likelihood;
-    if (score >= 20) return 'critical';
-    if (score >= 12) return 'high';
-    if (score >= 6) return 'medium';
-    return 'low';
+
+  const getRiskColor = (impact: number, likelihood: number) => {
+    const product = impact * likelihood;
+    
+    // Cores baseadas na imagem fornecida
+    if (product >= 20) return 'bg-red-500'; // Critical - Vermelho
+    if (product >= 15) return 'bg-red-400'; // High-Critical - Vermelho claro
+    if (product >= 12) return 'bg-orange-500'; // High - Laranja
+    if (product >= 9) return 'bg-orange-400'; // Medium-High - Laranja claro  
+    if (product >= 6) return 'bg-yellow-500'; // Medium - Amarelo
+    if (product >= 4) return 'bg-yellow-400'; // Medium-Low - Amarelo claro
+    if (product >= 3) return 'bg-green-400'; // Low-Medium - Verde claro
+    return 'bg-green-500'; // Low - Verde
   };
 
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-green-500';
-      default: return 'bg-gray-200';
-    }
+  const getRiskLevel = (impact: number, likelihood: number): 'low' | 'medium' | 'high' | 'critical' => {
+    const score = impact * likelihood;
+    if (score >= 15) return 'critical';
+    if (score >= 9) return 'high';
+    if (score >= 4) return 'medium';
+    return 'low';
   };
 
   useEffect(() => {
@@ -132,36 +137,39 @@ const RiskMatrix = () => {
           <div className="grid grid-cols-6 gap-1 w-full max-w-lg">
             {/* Linha por linha com labels laterais */}
             {[5, 4, 3, 2, 1].map((rowNum, rowIndex) => (
-              <React.Fragment key={rowNum}>
+              <React.Fragment key={`row-${rowNum}`}>
                 {/* Label lateral */}
                 <div className="flex items-center justify-center text-sm font-medium text-muted-foreground">
                   {rowNum}
                 </div>
                 
                 {/* Células da matriz */}
-                {matrix[rowIndex]?.map((cell, colIndex) => (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`
-                      aspect-square rounded-lg flex items-center justify-center
-                      border-2 border-white transition-all duration-200
-                      ${getRiskColor(cell.level)}
-                      hover:scale-105 cursor-pointer
-                    `}
-                    title={`${cell.count} risco(s) - ${cell.level.toUpperCase()}`}
-                  >
-                    {cell.count > 0 && (
-                      <span className="text-white font-semibold text-sm sm:text-base">
-                        {cell.count}
-                      </span>
-                    )}
-                  </div>
-                )) || Array(5).fill(null).map((_, colIndex) => (
-                  <div
-                    key={`empty-${rowIndex}-${colIndex}`}
-                    className="aspect-square rounded-lg flex items-center justify-center border-2 border-white bg-green-500"
-                  />
-                ))}
+                {Array(5).fill(null).map((_, colIndex) => {
+                  const impact = colIndex + 1;
+                  const likelihood = 6 - rowNum; // 5,4,3,2,1 baseado no rowNum
+                  const cellRisks = risks.filter(risk => 
+                    risk.impact_score === impact && risk.likelihood_score === likelihood
+                  );
+                  
+                  return (
+                    <div
+                      key={`${rowIndex}-${colIndex}`}
+                      className={`
+                        aspect-square rounded-lg flex items-center justify-center
+                        border-2 border-white transition-all duration-200
+                        ${getRiskColor(impact, likelihood)}
+                        hover:scale-105 cursor-pointer
+                      `}
+                      title={`${cellRisks.length} risco(s) - Impacto: ${impact}, Probabilidade: ${likelihood}`}
+                    >
+                      {cellRisks.length > 0 && (
+                        <span className="text-white font-bold text-sm sm:text-base drop-shadow">
+                          {cellRisks.length}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </React.Fragment>
             ))}
           </div>
