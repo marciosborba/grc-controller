@@ -83,7 +83,7 @@ const RiskMatrix = () => {
       const impactIndex = risk.impact_score - 1;
       const likelihoodIndex = risk.likelihood_score - 1;
       
-      if (impactIndex >= 0 && impactIndex < 4 && likelihoodIndex >= 0 && likelihoodIndex < 4) {
+      if (impactIndex >= 0 && impactIndex < 5 && likelihoodIndex >= 0 && likelihoodIndex < 4) {
         const cell = newMatrix[4 - likelihoodIndex][impactIndex]; // Ajustar para coincidir com a imagem
         cell.risks.push(risk);
         cell.count = cell.risks.length;
@@ -124,7 +124,7 @@ const RiskMatrix = () => {
         <div className="flex-justify-center">
           <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
             <div></div> {/* Espaço vazio para alinhamento */}
-            {[1, 2, 3, 4].map((num) => (
+            {[1, 2, 3, 4, 5].map((num) => (
               <div key={num} className="text-center text-sm font-medium text-muted-foreground">
                 {num}
               </div>
@@ -136,7 +136,7 @@ const RiskMatrix = () => {
         <div className="flex justify-center">
           <div className="grid grid-cols-6 gap-1 w-full max-w-lg">
             {/* Linha por linha com labels laterais */}
-            {[1, 2, 3, 4].map((rowNum, rowIndex) => (
+            {[5, 4, 3, 2, 1].map((rowNum, rowIndex) => (
               <React.Fragment key={`row-${rowNum}`}>
                 {/* Label lateral */}
                 <div className="flex items-center justify-center text-sm font-medium text-muted-foreground">
@@ -146,7 +146,7 @@ const RiskMatrix = () => {
                 {/* Células da matriz */}
                 {Array(5).fill(null).map((_, colIndex) => {
                   const impact = colIndex + 1;
-                  const likelihood = 5 - rowNum; // 5,4,3,2,1 baseado no rowNum
+                  const likelihood = 6 - rowNum; // 5,4,3,2,1 baseado no rowNum
                   const cellRisks = risks.filter(risk => 
                     risk.impact_score === impact && risk.likelihood_score === likelihood
                   );
