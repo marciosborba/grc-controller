@@ -121,7 +121,7 @@ const RiskMatrix = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Labels dos números 1-5 no topo */}
-        <div className="flex justify-center">
+        <div className="justify-center">
           <div className="grid grid-cols-5 gap-1 w-full max-w-lg">
             <div></div> {/* Espaço vazio para alinhamento */}
             {[1, 2, 3, 4, 5].map((num) => (
