@@ -140,7 +140,7 @@ const RiskMatrix = () => {
                 </div>
                 
                 {/* Células da matriz */}
-                {Array(4).fill(null).map((_, colIndex) => {
+                {Array(5).fill(null).map((_, colIndex) => {
                   const impact = colIndex + 1;
                   const likelihood = 4 - rowNum; // 5,4,3,2,1 baseado no rowNum
                   const cellRisks = risks.filter(risk => 
