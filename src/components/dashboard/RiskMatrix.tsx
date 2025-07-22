@@ -70,7 +70,7 @@ const RiskMatrix = () => {
 
   useEffect(() => {
     // Criar matriz 5x5
-    const newMatrix: MatrixCell[][] = Array(5).fill(null).map(() => 
+    const newMatrix: MatrixCell[][] = Array(4).fill(null).map(() => 
       Array(5).fill(null).map(() => ({
         risks: [],
         level: 'low' as const,
@@ -83,7 +83,7 @@ const RiskMatrix = () => {
       const impactIndex = risk.impact_score - 1;
       const likelihoodIndex = risk.likelihood_score - 1;
       
-      if (impactIndex >= 0 && impactIndex < 4 && likelihoodIndex >= 0 && likelihoodIndex < 4) {
+      if (impactIndex >= 0 && impactIndex < 5 && likelihoodIndex >= 0 && likelihoodIndex < 5) {
         const cell = newMatrix[4 - likelihoodIndex][impactIndex]; // Ajustar para coincidir com a imagem
         cell.risks.push(risk);
         cell.count = cell.risks.length;
