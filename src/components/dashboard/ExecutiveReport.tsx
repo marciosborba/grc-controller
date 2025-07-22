@@ -12,6 +12,7 @@ interface ReportData {
   assessments: any[];
   compliance: any[];
   auditReports: any[];
+  ethics: any[];
 }
 
 export const generateExecutiveReport = async () => {
@@ -24,7 +25,8 @@ export const generateExecutiveReport = async () => {
       incidentsResult,
       assessmentsResult,
       complianceResult,
-      auditResult
+      auditResult,
+      ethicsResult
     ] = await Promise.all([
       supabase.from('risk_assessments').select('*'),
       supabase.from('policies').select('*'),
@@ -32,7 +34,8 @@ export const generateExecutiveReport = async () => {
       supabase.from('security_incidents').select('*'),
       supabase.from('assessments').select('*'),
       supabase.from('compliance_records').select('*'),
-      supabase.from('audit_reports').select('*')
+      supabase.from('audit_reports').select('*'),
+      supabase.from('ethics_reports').select('*')
     ]);
 
     const data: ReportData = {
@@ -42,7 +45,8 @@ export const generateExecutiveReport = async () => {
       incidents: incidentsResult.data || [],
       assessments: assessmentsResult.data || [],
       compliance: complianceResult.data || [],
-      auditReports: auditResult.data || []
+      auditReports: auditResult.data || [],
+      ethics: ethicsResult.data || []
     };
 
     // Calcular métricas
@@ -103,6 +107,14 @@ const calculateMetrics = (data: ReportData) => {
   const totalAssessments = data.assessments.length;
   const completedAssessments = data.assessments.filter(a => a.status === 'completed').length;
   
+  // Métricas de Ética
+  const totalEthicsReports = data.ethics.length;
+  const openEthicsReports = data.ethics.filter(e => e.status === 'open').length;
+  
+  // Métricas de Auditoria
+  const totalAudits = data.auditReports.length;
+  const completedAudits = data.auditReports.filter(a => a.status === 'completed').length;
+  
   // Score de Risco Geral (baseado em múltiplos fatores)
   const riskScore = calculateRiskScore(data);
   
@@ -122,6 +134,10 @@ const calculateMetrics = (data: ReportData) => {
     approvedPolicies,
     totalAssessments,
     completedAssessments,
+    totalEthicsReports,
+    openEthicsReports,
+    totalAudits,
+    completedAudits,
     riskScore
   };
 };
@@ -208,43 +224,43 @@ const generateReportHTML = (data: ReportData, metrics: any) => {
         
         .executive-summary {
             background: #f8f9fa;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 40px;
-            border-left: 5px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
         }
         
         .executive-summary h2 {
             color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
         }
         
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
         }
         
         .metric-card {
             background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             text-align: center;
-            border-top: 4px solid #667eea;
+            border-top: 3px solid #667eea;
         }
         
         .metric-value {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: bold;
             color: #667eea;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
         .metric-label {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             color: #7f8c8d;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -256,15 +272,15 @@ const generateReportHTML = (data: ReportData, metrics: any) => {
         .compliance-warning .metric-value { color: #f39c12; }
         
         .section {
-            margin-bottom: 40px;
+            margin-bottom: 25px;
         }
         
         .section h3 {
             color: #2c3e50;
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ecf0f1;
         }
         
         .data-table {
@@ -278,9 +294,10 @@ const generateReportHTML = (data: ReportData, metrics: any) => {
         
         .data-table th,
         .data-table td {
-            padding: 15px;
+            padding: 8px 12px;
             text-align: left;
             border-bottom: 1px solid #ecf0f1;
+            font-size: 0.85rem;
         }
         
         .data-table th {
@@ -391,13 +408,23 @@ const generateReportHTML = (data: ReportData, metrics: any) => {
             </div>
             
             <div class="metric-card">
-                <div class="metric-value">${metrics.totalVendors}</div>
-                <div class="metric-label">Fornecedores Ativos</div>
+                <div class="metric-value">${metrics.totalPolicies}</div>
+                <div class="metric-label">Políticas</div>
             </div>
             
             <div class="metric-card ${metrics.openIncidents > 0 ? 'risk-critical' : 'compliance-good'}">
                 <div class="metric-value">${metrics.openIncidents}</div>
                 <div class="metric-label">Incidentes Abertos</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value">${metrics.totalEthicsReports}</div>
+                <div class="metric-label">Canal de Ética</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="metric-value">${metrics.totalAudits}</div>
+                <div class="metric-label">Auditorias</div>
             </div>
         </div>
 
@@ -414,6 +441,21 @@ const generateReportHTML = (data: ReportData, metrics: any) => {
         <div class="section">
             <h3>Incidentes de Segurança Recentes</h3>
             ${generateIncidentTable(data.incidents.slice(0, 10))}
+        </div>
+
+        <div class="section">
+            <h3>Políticas e Documentos</h3>
+            ${generatePolicyTable(data.policies)}
+        </div>
+
+        <div class="section">
+            <h3>Canal de Ética - Relatórios</h3>
+            ${generateEthicsTable(data.ethics)}
+        </div>
+
+        <div class="section">
+            <h3>Auditorias</h3>
+            ${generateAuditTable(data.auditReports)}
         </div>
 
         <div class="section">
@@ -540,6 +582,99 @@ const generateIncidentTable = (incidents: any[]) => {
                     <td><span class="status-badge status-${incident.severity}">${incident.severity}</span></td>
                     <td><span class="status-badge status-${incident.status}">${incident.status}</span></td>
                     <td>${new Date(incident.detection_date).toLocaleDateString('pt-BR')}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+  `;
+};
+
+const generatePolicyTable = (policies: any[]) => {
+  if (policies.length === 0) {
+    return '<p>Nenhuma política registrada.</p>';
+  }
+  
+  return `
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Categoria</th>
+                <th>Status</th>
+                <th>Versão</th>
+                <th>Data Efetiva</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${policies.slice(0, 10).map(policy => `
+                <tr>
+                    <td>${policy.title}</td>
+                    <td>${policy.category}</td>
+                    <td><span class="status-badge status-${policy.status}">${policy.status}</span></td>
+                    <td>${policy.version}</td>
+                    <td>${policy.effective_date ? new Date(policy.effective_date).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+  `;
+};
+
+const generateEthicsTable = (ethics: any[]) => {
+  if (ethics.length === 0) {
+    return '<p>Nenhum relatório de ética registrado.</p>';
+  }
+  
+  return `
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Categoria</th>
+                <th>Severidade</th>
+                <th>Status</th>
+                <th>Data de Criação</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${ethics.slice(0, 10).map(report => `
+                <tr>
+                    <td>${report.title}</td>
+                    <td>${report.category}</td>
+                    <td><span class="status-badge status-${report.severity}">${report.severity}</span></td>
+                    <td><span class="status-badge status-${report.status}">${report.status}</span></td>
+                    <td>${new Date(report.created_at).toLocaleDateString('pt-BR')}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+  `;
+};
+
+const generateAuditTable = (audits: any[]) => {
+  if (audits.length === 0) {
+    return '<p>Nenhuma auditoria registrada.</p>';
+  }
+  
+  return `
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Data de Início</th>
+                <th>Data de Fim</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${audits.slice(0, 10).map(audit => `
+                <tr>
+                    <td>${audit.title}</td>
+                    <td>${audit.audit_type}</td>
+                    <td><span class="status-badge status-${audit.status}">${audit.status}</span></td>
+                    <td>${audit.start_date ? new Date(audit.start_date).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                    <td>${audit.end_date ? new Date(audit.end_date).toLocaleDateString('pt-BR') : 'N/A'}</td>
                 </tr>
             `).join('')}
         </tbody>
