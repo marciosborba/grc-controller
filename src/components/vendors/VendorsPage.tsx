@@ -30,7 +30,8 @@ import {
   Clock,
   Target,
   TrendingUp,
-  Shield
+  Shield,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -1038,6 +1039,7 @@ const VendorsPage = () => {
                       <TableHead>Classificação</TableHead>
                       <TableHead>Enviado em</TableHead>
                       <TableHead>Concluído em</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1077,6 +1079,16 @@ const VendorsPage = () => {
                             {assessment.completed_at ? (
                               format(new Date(assessment.completed_at), 'dd/MM/yyyy', { locale: ptBR })
                             ) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(`/assessment-detail/${assessment.id}`, '_blank')}
+                              title="Visualizar Questionário"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );

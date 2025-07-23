@@ -603,6 +603,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string | null
+          evidence_files: Json | null
           id: string
           questionnaire_data: Json | null
           responses: Json | null
@@ -617,6 +618,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          evidence_files?: Json | null
           id?: string
           questionnaire_data?: Json | null
           responses?: Json | null
@@ -631,6 +633,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          evidence_files?: Json | null
           id?: string
           questionnaire_data?: Json | null
           responses?: Json | null
