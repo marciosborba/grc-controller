@@ -19,9 +19,9 @@
     --popover-foreground: 225 71% 12%;
 
     /* Primary - Professional Blue */
-    --primary: 219 78% 46%;
+    --primary: 219 78% 26%;
     --primary-foreground: 210 40% 98%;
-    --primary-hover: 219 78% 42%;
+    --primary-hover: 219 78% 22%;
     --primary-glow: 219 95% 68%;
 
     /* Secondary - Elegant Gray */
@@ -54,7 +54,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 219 78% 46%;
+    --ring: 219 78% 26%;
 
     /* GRC-specific colors */
     --risk-critical: 0 84% 60%;
