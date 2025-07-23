@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ interface VendorAssessment {
 }
 
 const VendorsPage = () => {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [assessments, setAssessments] = useState<VendorAssessment[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
@@ -1084,7 +1086,7 @@ const VendorsPage = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => window.open(`/assessment-detail/${assessment.id}`, '_blank')}
+                              onClick={() => navigate(`/assessment-detail/${assessment.id}`)}
                               title="Visualizar Questionário"
                             >
                               <Eye className="h-4 w-4" />
