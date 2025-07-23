@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,8 @@ import {
   Clock,
   Target,
   TrendingUp,
-  Shield
+  Shield,
+  Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -76,6 +78,7 @@ interface VendorAssessment {
 }
 
 const VendorsPage = () => {
+  const navigate = useNavigate();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [assessments, setAssessments] = useState<VendorAssessment[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
@@ -1038,6 +1041,7 @@ const VendorsPage = () => {
                       <TableHead>Classificação</TableHead>
                       <TableHead>Enviado em</TableHead>
                       <TableHead>Concluído em</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1077,6 +1081,16 @@ const VendorsPage = () => {
                             {assessment.completed_at ? (
                               format(new Date(assessment.completed_at), 'dd/MM/yyyy', { locale: ptBR })
                             ) : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/assessment-detail/${assessment.id}`)}
+                              title="Visualizar Questionário"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
