@@ -3,9 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, Calendar, TrendingUp, Shield, AlertTriangle, FileCheck, Users, Eye } from 'lucide-react';
+import { Download, FileText, Calendar as CalendarIcon, TrendingUp, Shield, AlertTriangle, FileCheck, Users, Eye, BarChart as BarChartIcon, FileSpreadsheet, FileText as FileTextIcon } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { DateRange } from "react-day-picker";
+import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
+import { format } from 'date-fns';
 
 interface ReportData {
   risks: number;
@@ -29,11 +34,105 @@ export const ReportsPage = () => {
     complianceRecords: 0
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: undefined,
+    to: undefined,
+  });
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartTitle, setChartTitle] = useState<string>('');
+  const [exportType, setExportType] = useState<'pdf' | 'excel' | 'csv'>('pdf');
+
+  const processDataForChart = (data: any[], moduleType: string) => {
+    let processedData: any[] = [];
+    let title = '';
+
+    switch (moduleType) {
+      case 'risks':
+        title = 'Riscos por Severidade';
+        const risksBySeverity = data.reduce((acc, item) => {
+          const severity = item.severity || 'Não Definido';
+          acc[severity] = (acc[severity] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(risksBySeverity).map(key => ({ name: key, value: risksBySeverity[key] }));
+        break;
+      case 'incidents':
+        title = 'Incidentes por Tipo';
+        const incidentsByType = data.reduce((acc, item) => {
+          const type = item.incident_type || 'Não Definido';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(incidentsByType).map(key => ({ name: key, value: incidentsByType[key] }));
+        break;
+      case 'policies':
+        title = 'Políticas por Status';
+        const policiesByStatus = data.reduce((acc, item) => {
+          const status = item.status || 'Não Definido';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(policiesByStatus).map(key => ({ name: key, value: policiesByStatus[key] }));
+        break;
+      case 'assessments':
+        title = 'Assessments por Status';
+        const assessmentsByStatus = data.reduce((acc, item) => {
+          const status = item.status || 'Não Definido';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(assessmentsByStatus).map(key => ({ name: key, value: assessmentsByStatus[key] }));
+        break;
+      case 'vendors':
+        title = 'Fornecedores por Status';
+        const vendorsByStatus = data.reduce((acc, item) => {
+          const status = item.status || 'Não Definido';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(vendorsByStatus).map(key => ({ name: key, value: vendorsByStatus[key] }));
+        break;
+      case 'audit':
+        title = 'Auditorias por Tipo';
+        const auditsByType = data.reduce((acc, item) => {
+          const type = item.audit_type || 'Não Definido';
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(auditsByType).map(key => ({ name: key, value: auditsByType[key] }));
+        break;
+      case 'compliance':
+        title = 'Conformidade por Status';
+        const complianceByStatus = data.reduce((acc, item) => {
+          const status = item.status || 'Não Definido';
+          acc[status] = (acc[status] || 0) + 1;
+          return acc;
+        }, {});
+        processedData = Object.keys(complianceByStatus).map(key => ({ name: key, value: complianceByStatus[key] }));
+        break;
+      default:
+        title = 'Dados Consolidados';
+        processedData = [];
+        break;
+    }
+    setChartTitle(title);
+    setChartData(processedData);
+  };
   const { toast } = useToast();
 
   useEffect(() => {
     loadReportData();
-  }, []);
+  }, [dateRange]); // Recarrega dados quando o intervalo de datas muda
+
+  const applyDateFilters = (query: any) => {
+    if (dateRange?.from) {
+      query = query.gte('created_at', format(dateRange.from, 'yyyy-MM-dd'));
+    }
+    if (dateRange?.to) {
+      query = query.lte('created_at', format(dateRange.to, 'yyyy-MM-dd'));
+    }
+    return query;
+  };
 
   const loadReportData = async () => {
     setIsLoading(true);
@@ -47,13 +146,13 @@ export const ReportsPage = () => {
         { count: auditReports },
         { count: complianceRecords }
       ] = await Promise.all([
-        supabase.from('risk_assessments').select('*', { count: 'exact', head: true }),
-        supabase.from('policies').select('*', { count: 'exact', head: true }),
-        supabase.from('assessments').select('*', { count: 'exact', head: true }),
-        supabase.from('security_incidents').select('*', { count: 'exact', head: true }),
-        supabase.from('vendors').select('*', { count: 'exact', head: true }),
-        supabase.from('audit_reports').select('*', { count: 'exact', head: true }),
-        supabase.from('compliance_records').select('*', { count: 'exact', head: true })
+        applyDateFilters(supabase.from('risk_assessments')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('policies')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('assessments')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('security_incidents')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('vendors')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('audit_reports')).select('*', { count: 'exact', head: true }),
+        applyDateFilters(supabase.from('compliance_records')).select('*', { count: 'exact', head: true })
       ]);
 
       setReportData({
@@ -83,13 +182,13 @@ export const ReportsPage = () => {
       if (selectedModule === 'all') {
         // Para 'all', vamos gerar um relatório consolidado
         const allData = await Promise.all([
-          supabase.from('risk_assessments').select('*'),
-          supabase.from('policies').select('*'),
-          supabase.from('assessments').select('*'),
-          supabase.from('security_incidents').select('*'),
-          supabase.from('vendors').select('*'),
-          supabase.from('audit_reports').select('*'),
-          supabase.from('compliance_records').select('*')
+          applyDateFilters(supabase.from('risk_assessments')).select('*'),
+          applyDateFilters(supabase.from('policies')).select('*'),
+          applyDateFilters(supabase.from('assessments')).select('*'),
+          applyDateFilters(supabase.from('security_incidents')).select('*'),
+          applyDateFilters(supabase.from('vendors')).select('*'),
+          applyDateFilters(supabase.from('audit_reports')).select('*'),
+          applyDateFilters(supabase.from('compliance_records')).select('*')
         ]);
         
         const consolidatedData = {
@@ -102,7 +201,7 @@ export const ReportsPage = () => {
           complianceRecords: allData[6].data || []
         };
         
-        downloadReport(consolidatedData, 'relatorio-consolidado');
+        generatePrintableReport(consolidatedData, 'relatorio-consolidado');
         return;
       }
 
@@ -110,25 +209,25 @@ export const ReportsPage = () => {
 
       switch (selectedModule) {
         case 'risks':
-          ({ data, error } = await supabase.from('risk_assessments').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('risk_assessments')).select('*'));
           break;
         case 'policies':
-          ({ data, error } = await supabase.from('policies').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('policies')).select('*'));
           break;
         case 'assessments':
-          ({ data, error } = await supabase.from('assessments').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('assessments')).select('*'));
           break;
         case 'incidents':
-          ({ data, error } = await supabase.from('security_incidents').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('security_incidents')).select('*'));
           break;
         case 'vendors':
-          ({ data, error } = await supabase.from('vendors').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('vendors')).select('*'));
           break;
         case 'audit':
-          ({ data, error } = await supabase.from('audit_reports').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('audit_reports')).select('*'));
           break;
         case 'compliance':
-          ({ data, error } = await supabase.from('compliance_records').select('*'));
+          ({ data, error } = await applyDateFilters(supabase.from('compliance_records')).select('*'));
           break;
         default:
           throw new Error('Módulo não encontrado');
@@ -136,13 +235,20 @@ export const ReportsPage = () => {
       
       if (error) throw error;
 
-      generatePrintableReport(data, selectedModule);
+      if (exportType === 'pdf') {
+        generatePrintableReport(data, selectedModule);
+        toast({
+          title: "Sucesso",
+          description: "Relatório aberto para impressão!",
+          variant: "default",
+        });
+      } else if (exportType === 'excel') {
+        exportToExcel(data, selectedModule);
+      } else if (exportType === 'csv') {
+        exportToCsv(data, selectedModule);
+      }
       
-      toast({
-        title: "Sucesso",
-        description: "Relatório aberto para impressão!",
-        variant: "default",
-      });
+      processDataForChart(data, selectedModule);
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
       toast({
@@ -180,10 +286,11 @@ export const ReportsPage = () => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Relatório GRC - ${moduleNames[moduleType] || moduleType}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
         <style>
           @media print {
             @page {
-              margin: 1in;
+              margin: 0.75in;
               size: A4;
             }
             body {
@@ -193,80 +300,99 @@ export const ReportsPage = () => {
           }
           
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
             line-height: 1.6;
-            color: #333;
-            max-width: 100%;
+            color: #2d3748; /* Tailwind gray-800 */
             margin: 0;
-            padding: 20px;
+            padding: 30px;
+            background-color: #f7fafc; /* Tailwind gray-100 */
           }
           
+          .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+
           .header {
             text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
+            padding-bottom: 25px;
             margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0; /* Tailwind gray-200 */
           }
           
+          .header img {
+            max-width: 80px;
+            margin-bottom: 15px;
+          }
+
           .header h1 {
-            color: #1e40af;
+            color: #2b6cb0; /* Tailwind blue-700 */
             margin: 0;
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 32px;
+            font-weight: 700;
           }
           
           .header h2 {
-            color: #64748b;
-            margin: 5px 0;
-            font-size: 18px;
-            font-weight: normal;
+            color: #4a5568; /* Tailwind gray-700 */
+            margin: 8px 0 0;
+            font-size: 22px;
+            font-weight: 600;
           }
           
           .header .date {
-            color: #6b7280;
+            color: #718096; /* Tailwind gray-600 */
             font-size: 14px;
             margin-top: 10px;
           }
           
           .summary {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: #ebf8ff; /* Tailwind blue-50 */
+            border: 1px solid #bee3f8; /* Tailwind blue-200 */
             border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
+            padding: 25px;
+            margin-bottom: 35px;
           }
           
           .summary h3 {
-            color: #1e40af;
+            color: #2b6cb0; /* Tailwind blue-700 */
             margin-top: 0;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            border-bottom: 1px solid #90cdf4; /* Tailwind blue-300 */
+            padding-bottom: 10px;
           }
           
           .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
           }
           
           .stat-card {
-            background: white;
-            border: 1px solid #d1d5db;
+            background: #ffffff;
+            border: 1px solid #e2e8f0; /* Tailwind gray-200 */
             border-radius: 6px;
-            padding: 15px;
+            padding: 18px;
             text-align: center;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
           }
           
           .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1e40af;
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c5282; /* Tailwind blue-800 */
             margin-bottom: 5px;
           }
           
           .stat-label {
-            color: #6b7280;
+            color: #718096; /* Tailwind gray-600 */
             font-size: 14px;
+            font-weight: 400;
           }
           
           .section {
@@ -275,74 +401,87 @@ export const ReportsPage = () => {
           }
           
           .section h3 {
-            color: #1e40af;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            color: #2b6cb0; /* Tailwind blue-700 */
+            border-bottom: 2px solid #e2e8f0; /* Tailwind gray-200 */
+            padding-bottom: 12px;
+            margin-bottom: 25px;
+            font-size: 20px;
+            font-weight: 600;
           }
           
           .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
-            font-size: 12px;
+            font-size: 13px;
+            border: 1px solid #e2e8f0; /* Tailwind gray-200 */
+            border-radius: 8px;
+            overflow: hidden;
           }
           
           .data-table th {
-            background: #f1f5f9;
-            border: 1px solid #d1d5db;
-            padding: 10px;
+            background: #edf2f7; /* Tailwind gray-100 */
+            border: 1px solid #e2e8f0; /* Tailwind gray-200 */
+            padding: 12px 15px;
             text-align: left;
             font-weight: 600;
-            color: #374151;
+            color: #4a5568; /* Tailwind gray-700 */
           }
           
           .data-table td {
-            border: 1px solid #d1d5db;
-            padding: 8px 10px;
+            border: 1px solid #e2e8f0; /* Tailwind gray-200 */
+            padding: 10px 15px;
             vertical-align: top;
+            color: #2d3748; /* Tailwind gray-800 */
           }
           
           .data-table tr:nth-child(even) {
-            background: #f9fafb;
+            background: #f7fafc; /* Tailwind gray-50 */
           }
           
           .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 5px 10px;
+            border-radius: 20px;
             font-size: 11px;
-            font-weight: 500;
+            font-weight: 600;
+            display: inline-block;
+            text-transform: capitalize;
           }
           
-          .status-active { background: #dcfce7; color: #166534; }
-          .status-inactive { background: #fee2e2; color: #991b1b; }
-          .status-pending { background: #fef3c7; color: #92400e; }
-          .status-draft { background: #e0e7ff; color: #3730a3; }
-          .status-approved { background: #dcfce7; color: #166534; }
+          .status-active { background: #c6f6d5; color: #22543d; } /* Tailwind green-200 / green-900 */
+          .status-inactive { background: #fed7d7; color: #9b2c2c; } /* Tailwind red-200 / red-900 */
+          .status-pending { background: #fefcbf; color: #7b341e; } /* Tailwind yellow-200 / yellow-900 */
+          .status-draft { background: #e0e7ff; color: #3730a3; } /* Tailwind indigo-200 / indigo-900 */
+          .status-approved { background: #c6f6d5; color: #22543d; }
           
           .footer {
             margin-top: 50px;
             text-align: center;
-            color: #6b7280;
+            color: #718096; /* Tailwind gray-600 */
             font-size: 12px;
-            border-top: 1px solid #e2e8f0;
+            border-top: 1px solid #e2e8f0; /* Tailwind gray-200 */
             padding-top: 20px;
           }
           
           .no-data {
             text-align: center;
-            color: #6b7280;
+            color: #718096; /* Tailwind gray-600 */
             font-style: italic;
             padding: 40px;
+            background-color: #f7fafc;
+            border-radius: 8px;
+            border: 1px dashed #cbd5e0; /* Tailwind gray-300 */
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>GRC Controller</h1>
-          <h2>${moduleNames[moduleType] || moduleType}</h2>
-          <div class="date">Relatório gerado em ${reportDate}</div>
-        </div>
+        <div class="container">
+          <div class="header">
+            <img src="/placeholder.svg" alt="GRC Logo" />
+            <h1>GRC Controller</h1>
+            <h2>Relatório de ${moduleNames[moduleType] || moduleType}</h2>
+            <div class="date">Gerado em: ${reportDate}</div>
+          </div>
     `;
 
     if (moduleType === 'all' && typeof data === 'object' && !Array.isArray(data)) {
@@ -378,12 +517,12 @@ export const ReportsPage = () => {
       // Seções para cada módulo
       const modules = [
         { key: 'risks', title: 'Gestão de Riscos', data: data.risks },
-        { key: 'policies', title: 'Políticas', data: data.policies },
-        { key: 'assessments', title: 'Assessments', data: data.assessments },
-        { key: 'incidents', title: 'Incidentes', data: data.incidents },
-        { key: 'vendors', title: 'Fornecedores', data: data.vendors },
-        { key: 'auditReports', title: 'Auditoria', data: data.auditReports },
-        { key: 'complianceRecords', title: 'Conformidade', data: data.complianceRecords }
+        { key: 'policies', title: 'Políticas Corporativas', data: data.policies },
+        { key: 'assessments', title: 'Assessments e Avaliações', data: data.assessments },
+        { key: 'incidents', title: 'Incidentes de Segurança', data: data.incidents },
+        { key: 'vendors', title: 'Gestão de Fornecedores', data: data.vendors },
+        { key: 'auditReports', title: 'Relatórios de Auditoria', data: data.auditReports },
+        { key: 'complianceRecords', title: 'Registros de Conformidade', data: data.complianceRecords }
       ];
 
       modules.forEach(module => {
@@ -421,6 +560,7 @@ export const ReportsPage = () => {
           <p>Este relatório foi gerado automaticamente pelo Sistema GRC Controller</p>
           <p>Data de geração: ${new Date().toLocaleString('pt-BR')}</p>
         </div>
+        </div> <!-- Close container -->
       </body>
       </html>
     `;
@@ -448,7 +588,7 @@ export const ReportsPage = () => {
     const firstItem = data[0];
     const columns = Object.keys(firstItem).filter(key => 
       !['id', 'created_at', 'updated_at'].includes(key)
-    ).slice(0, 6); // Limitar a 6 colunas para caber na página
+    ).slice(0, 12); // Aumentado para 12 colunas para mais detalhes
 
     let tableHtml = `
       <table class="data-table">
@@ -547,8 +687,33 @@ export const ReportsPage = () => {
     return '';
   };
 
-  const downloadReport = (data: any, filename: string) => {
-    // Esta função não é mais usada, mas mantida para compatibilidade
+  const exportToExcel = (data: any[], moduleType: string) => {
+    const filename = `${moduleType}-report-${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+    XLSX.writeFile(wb, filename);
+    toast({
+      title: "Sucesso",
+      description: `Relatório ${moduleType} exportado para Excel!`, 
+    });
+  };
+
+  const exportToCsv = (data: any[], moduleType: string) => {
+    const filename = `${moduleType}-report-${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`;
+    const ws = XLSX.utils.json_to_sheet(data);
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Sucesso",
+      description: `Relatório ${moduleType} exportado para CSV!`, 
+    });
   };
 
   const moduleOptions = [
@@ -674,32 +839,77 @@ export const ReportsPage = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Registros Disponíveis</label>
-              <div className="h-10 flex items-center">
-                <Badge variant="secondary" className="text-lg px-3 py-1">
-                  {getModuleData(selectedModule)} registros
-                </Badge>
-              </div>
+              <label className="text-sm font-medium">Intervalo de Datas</label>
+              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4" />
               <span>Data: {new Date().toLocaleDateString('pt-BR')}</span>
             </div>
             
-            <Button 
-              onClick={generateReport} 
-              disabled={isLoading || getModuleData(selectedModule) === 0}
-              className="flex items-center space-x-2"
-            >
-              <Download className="h-4 w-4" />
-              <span>{isLoading ? 'Gerando...' : 'Gerar PDF'}</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Select value={exportType} onValueChange={setExportType}>
+                <SelectTrigger className="w-[120px]">
+                  <SelectValue placeholder="Formato" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pdf">PDF</SelectItem>
+                  <SelectItem value="excel">Excel</SelectItem>
+                  <SelectItem value="csv">CSV</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={generateReport} 
+                disabled={isLoading || getModuleData(selectedModule) === 0}
+                className="flex items-center space-x-2"
+              >
+                <Download className="h-4 w-4" />
+                <span>{isLoading ? 'Gerando...' : 'Gerar Relatório'}</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Gráfico do Relatório */}
+      {chartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BarChartIcon className="h-5 w-5" />
+              <span>{chartTitle}</span>
+            </CardTitle>
+            <CardDescription>
+              Visualização gráfica dos dados do módulo selecionado.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={chartData}
+                  margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="value" fill="#2563eb" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lista de Módulos */}
       <Card>
