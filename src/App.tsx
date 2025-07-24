@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
+import HelpPage from "./pages/HelpPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -106,7 +106,7 @@ const App = () => (
                 <Route path="ethics" element={<EthicsChannelPage />} />
                 <Route path="settings" element={<UserManagementPage />} />
                 <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
-                <Route path="help" element={<div className="p-6"><h1 className="text-2xl font-bold">Ajuda</h1><p className="text-muted-foreground">Em desenvolvimento...</p></div>} />
+                <Route path="help" element={<HelpPage />} />
               </Route>
               
               {/* Catch-all */}
