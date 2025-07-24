@@ -336,97 +336,216 @@ const AssessmentDetailPage = () => {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">#</TableHead>
-                      <TableHead>Pergunta</TableHead>
-                      <TableHead className="w-48">Resposta</TableHead>
-                      <TableHead className="w-32">Evidências</TableHead>
-                      <TableHead className="w-24 text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {questions.map((q: any, idx: number) => (
-                      <TableRow key={q.id}>
-                        <TableCell className="font-medium">{idx + 1}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{q.question}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Tipo: {q.type} | Nível: {getMaturityLabel(q.maturity_level)}
+              <div className="space-y-6">
+                {questions.map((q: any, idx: number) => (
+                  <div key={q.id} className="border rounded-lg p-4 space-y-4">
+                    {/* Header da pergunta com número, texto e dropdown de maturidade */}
+                    <div className="flex items-start gap-4">
+                      <div className="font-bold text-primary text-lg min-w-[2rem]">
+                        {idx + 1}.
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-lg mb-2">{q.question}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Tipo: {q.type === 'boolean' ? 'Sim/Não' : q.type === 'select' ? 'Seleção Única' : q.type === 'multiple' ? 'Múltipla Escolha' : q.type === 'text' ? 'Texto' : 'Número'}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm font-medium">Nível CMMI:</Label>
+                        <Select 
+                          value={q.maturity_level || 'initial'} 
+                          onValueChange={(value) => {
+                            const updatedQuestions = questions.map(question => 
+                              question.id === q.id ? { ...question, maturity_level: value } : question
+                            );
+                            setQuestions(updatedQuestions);
+                          }}
+                        >
+                          <SelectTrigger className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="initial">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 text-red-500" />
+                                Inicial
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="managed">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-orange-500" />
+                                Gerenciado
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="defined">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-yellow-500" />
+                                Definido
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="quantitatively_managed">
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-blue-500" />
+                                Quant. Gerenciado
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="optimized">
+                              <div className="flex items-center gap-2">
+                                <Star className="h-4 w-4 text-green-500" />
+                                Otimizado
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Campo de resposta */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Resposta:</Label>
+                      {q.type === 'boolean' && (
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant={responses[q.id] === true ? 'default' : 'outline'} 
+                            onClick={() => handleChange(q.id, true)}
+                          >
+                            Sim
+                          </Button>
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant={responses[q.id] === false ? 'default' : 'outline'} 
+                            onClick={() => handleChange(q.id, false)}
+                          >
+                            Não
+                          </Button>
+                        </div>
+                      )}
+                      {q.type === 'select' && (
+                        <Select onValueChange={(value) => handleChange(q.id, value)} value={responses[q.id] || ''}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma opção..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {q.options?.map((opt: string) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {q.type === 'multiple' && (
+                        <div className="space-y-2">
+                          {q.options?.map((opt: string) => (
+                            <label key={opt} className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={Array.isArray(responses[q.id]) && responses[q.id].includes(opt)}
+                                onCheckedChange={checked => {
+                                  const arr = Array.isArray(responses[q.id]) ? [...responses[q.id]] : [];
+                                  if (checked) arr.push(opt);
+                                  else arr.splice(arr.indexOf(opt), 1);
+                                  handleChange(q.id, arr);
+                                }}
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {q.type === 'number' && (
+                        <Input 
+                          type="number" 
+                          placeholder="Digite um número..."
+                          value={responses[q.id] || ''} 
+                          onChange={e => handleChange(q.id, Number(e.target.value))} 
+                        />
+                      )}
+                      {q.type === 'text' && (
+                        <Textarea 
+                          placeholder="Digite sua resposta..."
+                          value={responses[q.id] || ''} 
+                          onChange={e => handleChange(q.id, e.target.value)} 
+                          rows={3} 
+                        />
+                      )}
+                    </div>
+
+                    {/* Upload de evidências e ações */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-3">
+                        <Label className="text-sm font-medium">Evidências:</Label>
+                        <input
+                          type="file"
+                          multiple
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            files.forEach(file => handleFileUpload(q.id, file));
+                          }}
+                          className="hidden"
+                          id={`file-input-${q.id}`}
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => document.getElementById(`file-input-${q.id}`)?.click()}
+                          disabled={uploading}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploading ? 'Enviando...' : 'Upload'}
+                        </Button>
+                        <Badge variant="secondary" className="text-xs">
+                          {getQuestionEvidence(q.id).length} arquivo(s)
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditQuestion(q)}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Lista de evidências enviadas */}
+                    {getQuestionEvidence(q.id).length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Arquivos enviados:</Label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {getQuestionEvidence(q.id).map((file: any, fileIndex: number) => (
+                            <div key={fileIndex} className="flex items-center justify-between bg-muted/50 rounded-md p-2">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {getFileIcon(file.type)}
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium truncate">{file.name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatFileSize(file.size)}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleFileDelete(q.id, fileIndex, file.path)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {/* Resposta fields */}
-                          <div className="space-y-2">
-                            {q.type === 'boolean' && (
-                              <div className="flex gap-2">
-                                <Button type="button" size="sm" variant={responses[q.id] === true ? 'default' : 'outline'} onClick={() => handleChange(q.id, true)}>Sim</Button>
-                                <Button type="button" size="sm" variant={responses[q.id] === false ? 'default' : 'outline'} onClick={() => handleChange(q.id, false)}>Não</Button>
-                              </div>
-                            )}
-                            {q.type === 'select' && (
-                              <Select onValueChange={(value) => handleChange(q.id, value)} value={responses[q.id] || ''}>
-                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                <SelectContent>
-                                  {q.options?.map((opt: string) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                            )}
-                            {q.type === 'multiple' && (
-                              <div className="space-y-1">
-                                {q.options?.map((opt: string) => (
-                                  <label key={opt} className="flex items-center gap-2 text-sm">
-                                    <Checkbox
-                                      checked={Array.isArray(responses[q.id]) && responses[q.id].includes(opt)}
-                                      onCheckedChange={checked => {
-                                        const arr = Array.isArray(responses[q.id]) ? [...responses[q.id]] : [];
-                                        if (checked) arr.push(opt);
-                                        else arr.splice(arr.indexOf(opt), 1);
-                                        handleChange(q.id, arr);
-                                      }}
-                                    />
-                                    {opt}
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                            {q.type === 'number' && <Input type="number" value={responses[q.id] || ''} onChange={e => handleChange(q.id, Number(e.target.value))} />}
-                            {q.type === 'text' && <Textarea value={responses[q.id] || ''} onChange={e => handleChange(q.id, e.target.value)} rows={2} />}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {/* Evidências */}
-                          <div className="flex items-center gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm"><Upload className="h-4 w-4" /></Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader><DialogTitle>Enviar Evidências</DialogTitle></DialogHeader>
-                                {/* ... (conteúdo do dialog de upload) */}
-                              </DialogContent>
-                            </Dialog>
-                            <span className="text-xs text-muted-foreground">{getQuestionEvidence(q.id).length}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditQuestion(q)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteQuestion(q.id)}>
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
               
               <div className="flex gap-2 justify-end pt-6">

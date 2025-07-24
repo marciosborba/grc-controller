@@ -851,7 +851,7 @@ export const ReportsPage = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Select value={exportType} onValueChange={setExportType}>
+              <Select value={exportType} onValueChange={(value: "pdf" | "excel" | "csv") => setExportType(value)}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Formato" />
                 </SelectTrigger>
