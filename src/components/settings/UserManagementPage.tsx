@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -29,102 +30,225 @@ import {
   Moon,
   Sun,
   Search,
-  Activity
+  Activity,
+  Save
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const mockUsers = [
-  {
-    id: '1',
-    name: 'Ana Silva',
-    email: 'ana.silva@empresa.com',
-    jobTitle: 'CISO',
-    roles: ['admin', 'ciso'],
-    isActive: true,
-    lastLogin: '2024-07-20',
-    theme: 'light'
-  },
-  {
-    id: '2',
-    name: 'Carlos Santos',
-    email: 'carlos.santos@empresa.com',
-    jobTitle: 'Chief Risk Officer',
-    roles: ['risk_manager'],
-    isActive: true,
-    lastLogin: '2024-07-19',
-    theme: 'dark'
-  },
-  {
-    id: '3',
-    name: 'Maria Costa',
-    email: 'maria.costa@empresa.com',
-    jobTitle: 'Compliance Officer',
-    roles: ['compliance_officer'],
-    isActive: true,
-    lastLogin: '2024-07-18',
-    theme: 'light'
-  },
-  {
-    id: '4',
-    name: 'João Oliveira',
-    email: 'joao.oliveira@empresa.com',
-    jobTitle: 'Internal Auditor',
-    roles: ['auditor'],
-    isActive: false,
-    lastLogin: '2024-07-10',
-    theme: 'light'
-  }
-];
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  jobTitle?: string;
+  permissions: string[];
+  isActive: boolean;
+  theme: 'light' | 'dark';
+  lastLogin?: string;
+}
 
-const availableRoles = [
-  { value: 'admin', label: 'Administrador', description: 'Acesso completo ao sistema' },
-  { value: 'ciso', label: 'CISO', description: 'Chief Information Security Officer' },
-  { value: 'risk_manager', label: 'Gestor de Riscos', description: 'Gestão de riscos corporativos' },
-  { value: 'compliance_officer', label: 'Compliance Officer', description: 'Gestão de compliance e ética' },
-  { value: 'auditor', label: 'Auditor', description: 'Auditoria interna' },
-  { value: 'analyst', label: 'Analista', description: 'Análise e operação' }
+const availableModules = [
+  { value: 'dashboard', label: 'Dashboard', description: 'Acesso à visão geral e métricas' },
+  { value: 'risks', label: 'Gestão de Riscos', description: 'Gerenciar riscos e avaliações' },
+  { value: 'compliance', label: 'Conformidade', description: 'Acompanhar e gerenciar conformidade' },
+  { value: 'incidents', label: 'Incidentes', description: 'Registrar e gerenciar incidentes de segurança' },
+  { value: 'audit', label: 'Auditoria', description: 'Acessar relatórios e processos de auditoria' },
+  { value: 'policies', label: 'Políticas', description: 'Visualizar e gerenciar políticas' },
+  { value: 'vendors', label: 'Fornecedores', description: 'Gerenciar riscos de terceiros' },
+  { value: 'assessments', label: 'Assessments', description: 'Criar e gerenciar assessments' },
+  { value: 'ethics', label: 'Canal de Ética', description: 'Acessar o canal de denúncias éticas' },
+  { value: 'reports', label: 'Relatórios', description: 'Gerar e visualizar relatórios' },
+  { value: 'settings', label: 'Configurações', description: 'Acessar configurações do sistema' },
+  { value: 'admin', label: 'Administração Completa', description: 'Acesso total a todas as funcionalidades e configurações' },
 ];
 
 export const UserManagementPage = () => {
-  const { user: currentUser, toggleTheme, isLoading } = useAuth();
+  const { user: currentUser, isLoading: isAuthLoading } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     jobTitle: '',
-    roles: [] as string[],
-    theme: 'light' as 'light' | 'dark'
+    permissions: [] as string[],
+    isActive: true,
+    theme: 'light' as 'light' | 'dark',
+    password: '',
   });
+  const { toast } = useToast();
 
-  const filteredUsers = mockUsers.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.jobTitle.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+      console.error('Erro ao buscar usuários:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os usuários.",
+        variant: "destructive",
+      });
+    } else {
+      setUsers(data as User[]);
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.jobTitle && user.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getRoleLabel = (roleValue: string) => {
-    return availableRoles.find(role => role.value === roleValue)?.label || roleValue;
+  const getModuleLabel = (moduleValue: string) => {
+    return availableModules.find(module => module.value === moduleValue)?.label || moduleValue;
   };
 
-  const handleCreateUser = () => {
-    // Here you would typically make an API call to create the user
-    console.log('Creating user:', newUser);
-    setIsNewUserOpen(false);
-    setNewUser({
-      name: '',
-      email: '',
-      jobTitle: '',
-      roles: [],
-      theme: 'light'
+  const handleCreateUser = async () => {
+    const { email, password, name, jobTitle, permissions, isActive, theme } = newUser;
+
+    if (!email || !password || !name) {
+      toast({
+        title: "Erro",
+        description: "Email, senha e nome são obrigatórios para criar um novo usuário.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          job_title: jobTitle,
+          permissions: permissions,
+          is_active: isActive,
+          theme: theme,
+        },
+      },
     });
+
+    if (error) {
+      console.error('Erro ao criar usuário:', error); // Log do erro completo para depuração
+      let errorMessage = "Não foi possível criar o usuário.";
+
+      if (error.message.includes('User already registered') || error.message.includes('Email already registered')) {
+        errorMessage = "E-mail já cadastrado.";
+      } else if (error.message.includes('Invalid email')) {
+        errorMessage = "Formato de e-mail inválido. Por favor, verifique o e-mail digitado.";
+      } else if (error.message.includes('Password should be at least 6 characters')) {
+        errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+      }
+      
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } else if (data.user) {
+      // Supabase automatically creates a profile via trigger, so just refetch users
+      toast({
+        title: "Sucesso",
+        description: "Usuário criado com sucesso! Um email de confirmação foi enviado.",
+      });
+      setIsNewUserOpen(false);
+      setNewUser({
+        name: '',
+        email: '',
+        jobTitle: '',
+        permissions: [],
+        isActive: true,
+        theme: 'light',
+        password: '',
+      });
+      fetchUsers(); // Refresh the user list
+    } else {
+      toast({
+        title: "Atenção",
+        description: "Usuário criado, mas sem retorno de dados. Verifique o console.",
+        variant: "warning",
+      });
+      setIsNewUserOpen(false);
+      setNewUser({
+        name: '',
+        email: '',
+        jobTitle: '',
+        permissions: [],
+        isActive: true,
+        theme: 'light',
+        password: '',
+      });
+      fetchUsers(); // Refresh the user list
+    }
   };
 
-  console.log('UserManagementPage - isLoading:', isLoading, 'currentUser:', currentUser);
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    const { id, ...updates } = editingUser;
+    const { data, error } = await supabase.from('profiles').update(updates).eq('id', id).select();
+    if (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o usuário.",
+        variant: "destructive",
+      });
+    } else {
+      setUsers(users.map(user => (user.id === id ? data[0] as User : user)));
+      toast({
+        title: "Sucesso",
+        description: "Usuário atualizado com sucesso!",
+      });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+    }
+  };
 
-  // Show loading state while authentication is being verified
-  if (isLoading) {
-    console.log('Showing loading state');
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este usuário?')) return;
+    const { error } = await supabase.from('profiles').delete().eq('id', userId);
+    if (error) {
+      console.error('Erro ao excluir usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o usuário.",
+        variant: "destructive",
+      });
+    } else {
+      setUsers(users.filter(user => user.id !== userId));
+      toast({
+        title: "Sucesso",
+        description: "Usuário excluído com sucesso!",
+      });
+    }
+  };
+
+  const handleToggleActive = async (user: User) => {
+    const { data, error } = await supabase.from('profiles').update({ isActive: !user.isActive }).eq('id', user.id).select();
+    if (error) {
+      console.error('Erro ao alterar status do usuário:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar o status do usuário.",
+        variant: "destructive",
+      });
+    } else {
+      setUsers(users.map(u => (u.id === user.id ? data[0] as User : u)));
+      toast({
+        title: "Sucesso",
+        description: `Usuário ${data[0].isActive ? 'ativado' : 'desativado'} com sucesso!`, 
+      });
+    }
+  };
+
+  if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -136,9 +260,6 @@ export const UserManagementPage = () => {
     );
   }
 
-  console.log('Rendering main interface');
-
-  // Show basic interface even if user data is still loading
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -158,24 +279,6 @@ export const UserManagementPage = () => {
           >
             <Activity className="h-4 w-4" />
             <span>Logs de Atividade</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={toggleTheme}
-            className="flex items-center space-x-2"
-          >
-            {currentUser?.theme === 'dark' ? (
-              <>
-                <Sun className="h-4 w-4" />
-                <span>Modo Claro</span>
-              </>
-            ) : (
-              <>
-                <Moon className="h-4 w-4" />
-                <span>Modo Escuro</span>
-              </>
-            )}
           </Button>
           <Dialog open={isNewUserOpen} onOpenChange={setIsNewUserOpen}>
             <DialogTrigger asChild>
@@ -207,6 +310,15 @@ export const UserManagementPage = () => {
                   />
                 </div>
                 <div>
+                  <label className="text-sm font-medium mb-2 block">Senha</label>
+                  <Input
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    placeholder="Senha do usuário"
+                  />
+                </div>
+                <div>
                   <label className="text-sm font-medium mb-2 block">Cargo</label>
                   <Input
                     value={newUser.jobTitle}
@@ -230,26 +342,26 @@ export const UserManagementPage = () => {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Papéis</label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {availableRoles.map((role) => (
-                      <div key={role.value} className="flex items-center space-x-2">
+                  <label className="text-sm font-medium mb-2 block">Permissões de Módulo</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border p-2 rounded-md">
+                    {availableModules.map((module) => (
+                      <div key={module.value} className="flex items-center space-x-2">
                         <input
                           type="checkbox"
-                          id={role.value}
-                          checked={newUser.roles.includes(role.value)}
+                          id={`new-user-${module.value}`}
+                          checked={newUser.permissions.includes(module.value)}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setNewUser({ ...newUser, roles: [...newUser.roles, role.value] });
+                              setNewUser({ ...newUser, permissions: [...newUser.permissions, module.value] });
                             } else {
-                              setNewUser({ ...newUser, roles: newUser.roles.filter(r => r !== role.value) });
+                              setNewUser({ ...newUser, permissions: newUser.permissions.filter(p => p !== module.value) });
                             }
                           }}
                           className="rounded border-border"
                         />
-                        <label htmlFor={role.value} className="text-sm">
-                          <div className="font-medium">{role.label}</div>
-                          <div className="text-xs text-muted-foreground">{role.description}</div>
+                        <label htmlFor={`new-user-${module.value}`} className="text-sm">
+                          <div className="font-medium">{module.label}</div>
+                          <div className="text-xs text-muted-foreground">{module.description}</div>
                         </label>
                       </div>
                     ))}
@@ -296,8 +408,11 @@ export const UserManagementPage = () => {
                       {user.name.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{user.name}</h3>
+                  <div className="cursor-pointer" onClick={() => {
+                    setEditingUser(user);
+                    setIsEditUserOpen(true);
+                  }}>
+                    <h3 className="font-semibold text-foreground hover:underline">{user.name}</h3>
                     <p className="text-sm text-muted-foreground flex items-center space-x-2">
                       <Mail className="h-3 w-3" />
                       <span>{user.email}</span>
@@ -307,13 +422,13 @@ export const UserManagementPage = () => {
                 </div>
 
                 <div className="flex items-center space-x-6">
-                  {/* Roles */}
+                  {/* Permissions */}
                   <div className="text-right">
-                    <p className="text-sm font-medium text-foreground mb-1">Papéis</p>
+                    <p className="text-sm font-medium text-foreground mb-1">Permissões</p>
                     <div className="flex flex-wrap gap-1 justify-end">
-                      {user.roles.map((role) => (
-                        <Badge key={role} variant="outline" className="text-xs">
-                          {getRoleLabel(role)}
+                      {user.permissions.map((permission) => (
+                        <Badge key={permission} variant="outline" className="text-xs">
+                          {getModuleLabel(permission)}
                         </Badge>
                       ))}
                     </div>
@@ -322,12 +437,10 @@ export const UserManagementPage = () => {
                   {/* Status */}
                   <div className="text-center">
                     <p className="text-sm font-medium text-foreground mb-1">Status</p>
-                    <div className="flex items-center space-x-2">
-                      <Switch checked={user.isActive} />
-                      <span className="text-xs text-muted-foreground">
-                        {user.isActive ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </div>
+                    <Switch checked={user.isActive} onCheckedChange={() => handleToggleActive(user)} />
+                    <span className="text-xs text-muted-foreground block mt-1">
+                      {user.isActive ? 'Ativo' : 'Inativo'}
+                    </span>
                   </div>
 
                   {/* Theme */}
@@ -342,21 +455,21 @@ export const UserManagementPage = () => {
                     </div>
                   </div>
 
-                  {/* Last Login */}
+                  {/* Last Login (mocked for now) */}
                   <div className="text-right">
                     <p className="text-sm font-medium text-foreground mb-1">Último Login</p>
-                    <p className="text-xs text-muted-foreground">{user.lastLogin}</p>
+                    <p className="text-xs text-muted-foreground">{user.lastLogin || 'N/A'}</p>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setEditingUser(user);
+                      setIsEditUserOpen(true);
+                    }}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
-                      <Key className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-danger hover:text-danger">
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteUser(user.id)} className="text-danger hover:text-danger">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -366,6 +479,92 @@ export const UserManagementPage = () => {
           </Card>
         ))}
       </div>
+
+      {/* Edit User Dialog */}
+      {editingUser && (
+        <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Nome Completo</label>
+                <Input
+                  value={editingUser.name}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  placeholder="Nome do usuário"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Email</label>
+                <Input
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  placeholder="email@empresa.com"
+                  disabled // Email should not be editable for existing users
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Cargo</label>
+                <Input
+                  value={editingUser.jobTitle || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, jobTitle: e.target.value })}
+                  placeholder="Cargo do usuário"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tema</label>
+                <Select 
+                  value={editingUser.theme} 
+                  onValueChange={(value: 'light' | 'dark') => setEditingUser({ ...editingUser, theme: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Claro</SelectItem>
+                    <SelectItem value="dark">Escuro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Permissões de Módulo</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border p-2 rounded-md">
+                  {availableModules.map((module) => (
+                    <div key={module.value} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`edit-user-${module.value}`}
+                        checked={editingUser.permissions.includes(module.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditingUser({ ...editingUser, permissions: [...editingUser.permissions, module.value] });
+                          } else {
+                            setEditingUser({ ...editingUser, permissions: editingUser.permissions.filter(p => p !== module.value) });
+                          }
+                        }}
+                        className="rounded border-border"
+                      />
+                      <label htmlFor={`edit-user-${module.value}`} className="text-sm">
+                        <div className="font-medium">{module.label}</div>
+                        <div className="text-xs text-muted-foreground">{module.description}</div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditUserOpen(false)}>Cancelar</Button>
+              <Button onClick={handleUpdateUser} className="grc-button-primary">
+                <Save className="h-4 w-4 mr-2" /> Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Current User Panel */}
       {currentUser && (
@@ -392,9 +591,9 @@ export const UserManagementPage = () => {
                   </p>
                   <p className="text-sm text-muted-foreground">{currentUser?.jobTitle || 'Cargo não informado'}</p>
                   <div className="flex items-center space-x-2 mt-2">
-                    {currentUser?.roles?.map((role) => (
-                      <Badge key={role} className="bg-primary/10 text-primary border-primary/30 text-xs">
-                        {getRoleLabel(role)}
+                    {currentUser?.permissions?.map((permission) => (
+                      <Badge key={permission} className="bg-primary/10 text-primary border-primary/30 text-xs">
+                        {getModuleLabel(permission)}
                       </Badge>
                     )) || (
                       <Badge className="bg-primary/10 text-primary border-primary/30 text-xs">
@@ -408,7 +607,7 @@ export const UserManagementPage = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={toggleTheme}
+                  onClick={currentUser?.toggleTheme}
                   className="flex items-center space-x-2"
                 >
                   {currentUser?.theme === 'dark' ? (
@@ -432,7 +631,7 @@ export const UserManagementPage = () => {
         </Card>
       )}
       
-      {!currentUser && !isLoading && (
+      {!currentUser && !isAuthLoading && (
         <Card className="grc-card border-orange-300 bg-orange-50">
           <CardContent className="p-6 text-center">
             <p className="text-orange-800">Dados do usuário não foram carregados. Tente recarregar a página.</p>
