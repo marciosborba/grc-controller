@@ -25,7 +25,10 @@ import {
   AlertCircle,
   FileCheck,
   Eye,
-  Send
+  Send,
+  Archive,
+  UserPlus,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -65,20 +68,36 @@ interface PolicyApproval {
   created_at: string;
 }
 
+interface PolicyApprover {
+  id: string;
+  policy_id: string;
+  approver_id: string;
+  approver_role: string;
+  is_required: boolean;
+  order_sequence: number;
+  created_at: string;
+  created_by: string | null;
+}
+
 const PoliciesPage = () => {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [filteredPolicies, setFilteredPolicies] = useState<Policy[]>([]);
   const [approvals, setApprovals] = useState<PolicyApproval[]>([]);
+  const [approvers, setApprovers] = useState<PolicyApprover[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isApproversDialogOpen, setIsApproversDialogOpen] = useState(false);
+  const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<Policy | null>(null);
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
   const [effectiveDate, setEffectiveDate] = useState<Date>();
   const [reviewDate, setReviewDate] = useState<Date>();
   const [activeTab, setActiveTab] = useState('policies');
+  const [uploadingFile, setUploadingFile] = useState(false);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -98,9 +117,18 @@ const PoliciesPage = () => {
     comments: '',
   });
 
+  const [approverData, setApproverData] = useState({
+    approver_id: '',
+    approver_role: '',
+    is_required: true,
+    order_sequence: 1,
+  });
+
   useEffect(() => {
     fetchPolicies();
     fetchApprovals();
+    fetchApprovers();
+    fetchProfiles();
   }, []);
 
   useEffect(() => {
@@ -156,6 +184,41 @@ const PoliciesPage = () => {
       toast({
         title: 'Erro',
         description: 'Falha ao carregar aprovações',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchApprovers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('policy_approvers')
+        .select('*')
+        .order('order_sequence', { ascending: true });
+      
+      if (error) throw error;
+      setApprovers(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao carregar aprovadores',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao carregar perfis de usuários',
         variant: 'destructive',
       });
     }
@@ -353,6 +416,153 @@ const PoliciesPage = () => {
       status: 'approved',
       comments: '',
     });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedPolicy) return;
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Erro',
+        description: 'Apenas arquivos PDF e Word são permitidos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadingFile(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${selectedPolicy.id}/${Date.now()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('policy-documents')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Update policy with document URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('policy-documents')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('policies')
+        .update({ 
+          document_url: fileName,
+          document_type: fileExt === 'pdf' ? 'PDF' : 'Word'
+        })
+        .eq('id', selectedPolicy.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Documento arquivado com sucesso',
+      });
+
+      setIsArchiveDialogOpen(false);
+      fetchPolicies();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Falha ao arquivar documento',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleArchivePolicy = (policy: Policy) => {
+    setSelectedPolicy(policy);
+    setIsArchiveDialogOpen(true);
+  };
+
+  const handleAddApprover = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedPolicy) return;
+
+    try {
+      const { error } = await supabase
+        .from('policy_approvers')
+        .insert([{
+          policy_id: selectedPolicy.id,
+          approver_id: approverData.approver_id,
+          approver_role: approverData.approver_role,
+          is_required: approverData.is_required,
+          order_sequence: approverData.order_sequence,
+          created_by: user?.id,
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Aprovador adicionado com sucesso',
+      });
+
+      setApproverData({
+        approver_id: '',
+        approver_role: '',
+        is_required: true,
+        order_sequence: 1,
+      });
+
+      fetchApprovers();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Falha ao adicionar aprovador',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveApprover = async (approverId: string) => {
+    if (!confirm('Tem certeza que deseja remover este aprovador?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('policy_approvers')
+        .delete()
+        .eq('id', approverId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Aprovador removido com sucesso',
+      });
+
+      fetchApprovers();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Falha ao remover aprovador',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleManageApprovers = (policy: Policy) => {
+    setSelectedPolicy(policy);
+    setIsApproversDialogOpen(true);
+  };
+
+  const getProfileName = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile?.full_name || 'Usuário não encontrado';
   };
 
   const getStatusColor = (status: string) => {
@@ -575,7 +785,8 @@ const PoliciesPage = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
-          <TabsTrigger value="approvals">Aprovações</TabsTrigger>
+          <TabsTrigger value="approvers">Gestão de Aprovações</TabsTrigger>
+          <TabsTrigger value="approvals">Histórico</TabsTrigger>
           <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
         </TabsList>
 
@@ -752,8 +963,25 @@ const PoliciesPage = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(policy)}
+                              title="Editar"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleArchivePolicy(policy)}
+                              title="Arquivar documento"
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleManageApprovers(policy)}
+                              title="Gerenciar aprovadores"
+                            >
+                              <Users className="h-4 w-4" />
                             </Button>
                             {policy.status === 'draft' && (
                               <Button
@@ -775,10 +1003,26 @@ const PoliciesPage = () => {
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                             )}
+                            {policy.document_url && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const { data } = supabase.storage
+                                    .from('policy-documents')
+                                    .getPublicUrl(policy.document_url!);
+                                  window.open(data.publicUrl, '_blank');
+                                }}
+                                title="Download documento"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(policy.id)}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -887,7 +1131,237 @@ const PoliciesPage = () => {
             </Card>
           </div>
         </TabsContent>
+
+        {/* Add new tab for Approvers Management */}
+        <TabsContent value="approvers" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Painel de Gestão de Aprovações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {policies.map((policy) => {
+                  const policyApprovers = approvers.filter(a => a.policy_id === policy.id);
+                  return (
+                    <Card key={policy.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <CardTitle className="text-lg">{policy.title}</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              Categoria: {policy.category} | Status: {getStatusText(policy.status)}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleManageApprovers(policy)}
+                          >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Adicionar Aprovador
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {policyApprovers.length > 0 ? (
+                            policyApprovers.map((approver) => (
+                              <div key={approver.id} className="flex items-center justify-between p-3 border rounded-lg">
+                                <div>
+                                  <div className="font-medium">{getProfileName(approver.approver_id)}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    Função: {approver.approver_role} | 
+                                    Sequência: {approver.order_sequence} |
+                                    {approver.is_required ? ' Obrigatório' : ' Opcional'}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRemoveApprover(approver.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Nenhum aprovador configurado para esta política.
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Archive Document Dialog */}
+      <Dialog open={isArchiveDialogOpen} onOpenChange={setIsArchiveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Arquivar Documento</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Política: {selectedPolicy?.title}</Label>
+            </div>
+            
+            <div>
+              <Label htmlFor="document-file">Documento (PDF ou Word) *</Label>
+              <Input
+                id="document-file"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileUpload}
+                disabled={uploadingFile}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Formatos aceitos: PDF, DOC, DOCX
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsArchiveDialogOpen(false)}
+                disabled={uploadingFile}
+              >
+                Cancelar
+              </Button>
+              <Button disabled={uploadingFile}>
+                {uploadingFile ? 'Enviando...' : 'Arquivar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approvers Management Dialog */}
+      <Dialog open={isApproversDialogOpen} onOpenChange={setIsApproversDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Gerenciar Aprovadores</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <Label>Política: {selectedPolicy?.title}</Label>
+            </div>
+
+            {/* Add Approver Form */}
+            <form onSubmit={handleAddApprover} className="space-y-4 border rounded-lg p-4">
+              <h4 className="font-medium">Adicionar Novo Aprovador</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="approver_id">Aprovador *</Label>
+                  <Select
+                    value={approverData.approver_id}
+                    onValueChange={(value) => setApproverData({...approverData, approver_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.user_id} value={profile.user_id}>
+                          {profile.full_name} - {profile.job_title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="approver_role">Função</Label>
+                  <Input
+                    id="approver_role"
+                    value={approverData.approver_role}
+                    onChange={(e) => setApproverData({...approverData, approver_role: e.target.value})}
+                    placeholder="Ex: Gerente, Diretor..."
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="order_sequence">Sequência</Label>
+                  <Input
+                    id="order_sequence"
+                    type="number"
+                    min="1"
+                    value={approverData.order_sequence}
+                    onChange={(e) => setApproverData({...approverData, order_sequence: parseInt(e.target.value)})}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_required"
+                    checked={approverData.is_required}
+                    onChange={(e) => setApproverData({...approverData, is_required: e.target.checked})}
+                  />
+                  <Label htmlFor="is_required">Aprovação obrigatória</Label>
+                </div>
+              </div>
+              
+              <Button type="submit" className="w-full">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar Aprovador
+              </Button>
+            </form>
+
+            {/* Current Approvers List */}
+            <div className="space-y-3">
+              <h4 className="font-medium">Aprovadores Atuais</h4>
+              {selectedPolicy && approvers.filter(a => a.policy_id === selectedPolicy.id).length > 0 ? (
+                approvers
+                  .filter(a => a.policy_id === selectedPolicy.id)
+                  .sort((a, b) => a.order_sequence - b.order_sequence)
+                  .map((approver) => (
+                    <div key={approver.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-medium">{getProfileName(approver.approver_id)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Função: {approver.approver_role} | 
+                          Sequência: {approver.order_sequence} |
+                          {approver.is_required ? ' Obrigatório' : ' Opcional'}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveApprover(approver.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum aprovador configurado.
+                </p>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsApproversDialogOpen(false)}
+              >
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>

@@ -82,9 +82,9 @@ const AssessmentDetailPage = () => {
         return;
       }
       setAssessment(data);
-      setQuestions(data.questionnaire_data?.questions || []);
-      setResponses(data.responses || {});
-      setEvidenceFiles(data.evidence_files || []);
+      setQuestions((data.questionnaire_data as any)?.questions || []);
+      setResponses((data.responses as any) || {});
+      setEvidenceFiles((data.evidence_files as any) || []);
       setLoading(false);
     };
     if (id) fetchAssessment();

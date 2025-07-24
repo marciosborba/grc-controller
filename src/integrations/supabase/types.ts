@@ -439,6 +439,47 @@ export type Database = {
           },
         ]
       }
+      policy_approvers: {
+        Row: {
+          approver_id: string
+          approver_role: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_required: boolean
+          order_sequence: number
+          policy_id: string
+        }
+        Insert: {
+          approver_id: string
+          approver_role: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_required?: boolean
+          order_sequence?: number
+          policy_id: string
+        }
+        Update: {
+          approver_id?: string
+          approver_role?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_required?: boolean
+          order_sequence?: number
+          policy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_approvers_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
