@@ -1,275 +1,181 @@
+// =====================================================
+// UTILITÁRIOS DE LOGGING DE SEGURANÇA
+// =====================================================
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface SecurityEvent {
+// Tipos para logs de segurança
+interface SecurityLogData {
+  user_id?: string;
+  tenant_id?: string;
+  event_type: string;
+  severity?: 'info' | 'warning' | 'error' | 'critical';
+  ip_address?: string;
+  user_agent?: string;
+  geo_location?: Record<string, any>;
+  details?: Record<string, any>;
+}
+
+interface ActivityLogData {
+  user_id?: string;
   action: string;
   resource_type: string;
   resource_id?: string;
-  details?: any;
-  severity?: 'low' | 'medium' | 'high' | 'critical';
+  details?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  tenant_id?: string;
+  risk_level?: 'low' | 'medium' | 'high' | 'critical';
+  success?: boolean;
+  error_message?: string;
 }
 
-// Interface para métricas de segurança
-interface SecurityMetrics {
-  login_attempts: number;
-  failed_logins: number;
-  suspicious_activities: number;
-  last_activity: string;
-}
-
-class SecurityLogger {
-  private static instance: SecurityLogger;
-  private metricsCache: Map<string, SecurityMetrics> = new Map();
-  
-  private constructor() {}
-  
-  static getInstance(): SecurityLogger {
-    if (!SecurityLogger.instance) {
-      SecurityLogger.instance = new SecurityLogger();
-    }
-    return SecurityLogger.instance;
-  }
-
-  // Log de evento de segurança principal
-  async logSecurityEvent(event: SecurityEvent): Promise<void> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userAgent = navigator.userAgent;
-      
-      // Sanitizar dados sensíveis
-      const sanitizedDetails = this.sanitizeLogData(event.details);
-      
-      await supabase.rpc('log_activity', {
-        p_user_id: user?.id || null,
-        p_action: event.action,
-        p_resource_type: event.resource_type,
-        p_resource_id: event.resource_id || null,
-        p_details: {
-          ...sanitizedDetails,
-          severity: event.severity || 'medium',
-          timestamp: new Date().toISOString(),
-          url: window.location.href
-        },
-        p_user_agent: userAgent
-      });
-      
-      console.log(`Security event logged: ${event.action}`);
-    } catch (error) {
-      console.error('Failed to log security event:', error);
-    }
-  }
-
-  // Log específico para autenticação com métricas
-  async logAuthEvent(
-    action: 'login_attempt' | 'login_success' | 'login_failure' | 'logout' | 'signup_attempt' | 'signup_success' | 'signup_failure', 
-    details?: any
-  ): Promise<void> {
-    const success = action.includes('success');
-    const email = details?.email;
-    
-    await this.logSecurityEvent({
-      action,
-      resource_type: 'authentication',
-      details: this.sanitizeAuthDetails(details),
-      severity: action.includes('failure') ? 'high' : 'medium'
-    });
-
-    // Atualizar métricas de segurança
-    if (email) {
-      await this.updateSecurityMetrics(email, success);
-    }
-  }
-
-  // Log para acesso a dados
-  async logDataAccess(
-    resourceType: string, 
-    resourceId?: string, 
-    action: 'read' | 'create' | 'update' | 'delete' = 'read',
-    oldData?: Record<string, any>,
-    newData?: Record<string, any>
-  ): Promise<void> {
-    const details: Record<string, any> = {
-      timestamp: new Date().toISOString()
+// Função para registrar eventos de autenticação
+export const logAuthEvent = async (
+  event: string,
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    const logData: SecurityLogData = {
+      event_type: event,
+      severity: 'info',
+      details: {
+        timestamp: new Date().toISOString(),
+        ...details
+      }
     };
 
-    // Hash dos dados para auditoria sem expor conteúdo
-    if (oldData) {
-      details.old_data_hash = await this.hashData(oldData);
-    }
-    
-    if (newData) {
-      details.new_data_hash = await this.hashData(newData);
+    // Tentar obter informações do usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      logData.user_id = user.id;
     }
 
-    await this.logSecurityEvent({
-      action: `data_${action}`,
+    // Registrar no banco de dados
+    await supabase.from('security_logs').insert(logData);
+  } catch (error) {
+    console.error('Erro ao registrar evento de auth:', error);
+  }
+};
+
+// Função para registrar atividade suspeita
+export const logSuspiciousActivity = async (
+  activity: string,
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    const logData: SecurityLogData = {
+      event_type: 'suspicious_activity',
+      severity: 'warning',
+      details: {
+        activity,
+        timestamp: new Date().toISOString(),
+        ...details
+      }
+    };
+
+    // Tentar obter informações do usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      logData.user_id = user.id;
+    }
+
+    // Registrar no banco de dados
+    await supabase.from('security_logs').insert(logData);
+
+    // Log no console para desenvolvimento
+    console.warn(`Suspicious Activity: ${activity}`, details);
+  } catch (error) {
+    console.error('Erro ao registrar atividade suspeita:', error);
+  }
+};
+
+// Função para registrar atividades gerais
+export const logActivity = async (
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    const logData: ActivityLogData = {
+      action,
       resource_type: resourceType,
       resource_id: resourceId,
       details,
-      severity: action === 'delete' ? 'high' : 'low'
-    });
-  }
+      risk_level: 'low',
+      success: true
+    };
 
-  // Log para atividades suspeitas
-  async logSuspiciousActivity(activity: string, details?: any): Promise<void> {
-    await this.logSecurityEvent({
-      action: 'suspicious_activity',
-      resource_type: 'security',
-      details: { activity, ...details },
-      severity: 'critical'
-    });
-
-    // Alertar sobre atividades críticas
-    console.warn('Atividade suspeita detectada:', activity, details);
-  }
-
-  // Atualizar métricas de segurança
-  private async updateSecurityMetrics(email: string, loginSuccess: boolean): Promise<void> {
-    try {
-      const hashedEmail = await this.hashEmail(email);
-      let metrics = this.metricsCache.get(hashedEmail) || {
-        login_attempts: 0,
-        failed_logins: 0,
-        suspicious_activities: 0,
-        last_activity: new Date().toISOString()
-      };
-
-      metrics.login_attempts++;
-      if (!loginSuccess) {
-        metrics.failed_logins++;
-      }
-      metrics.last_activity = new Date().toISOString();
-
-      this.metricsCache.set(hashedEmail, metrics);
-
-      // Detectar atividade suspeita
-      if (metrics.failed_logins >= 5) {
-        await this.logSuspiciousActivity(
-          'MULTIPLE_FAILED_LOGINS',
-          { failed_attempts: metrics.failed_logins, email_hash: hashedEmail }
-        );
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar métricas:', error);
-    }
-  }
-
-  // Sanitizar dados de autenticação
-  private sanitizeAuthDetails(details?: any): any {
-    if (!details) return details;
-    
-    const sanitized = { ...details };
-    delete sanitized.password;
-    delete sanitized.token;
-    delete sanitized.secret;
-    
-    if (sanitized.email) {
-      sanitized.email = '[REDACTED]';
-    }
-    
-    return sanitized;
-  }
-
-  // Sanitizar dados gerais de log
-  private sanitizeLogData(data?: Record<string, any>): Record<string, any> | null {
-    if (!data) return null;
-
-    const sensitiveFields = ['password', 'token', 'secret', 'key', 'auth'];
-    const sanitized: Record<string, any> = {};
-
-    for (const [key, value] of Object.entries(data)) {
-      if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
-        sanitized[key] = '[REDACTED]';
-      } else if (typeof value === 'string' && value.length > 1000) {
-        sanitized[key] = value.substring(0, 1000) + '...';
-      } else {
-        sanitized[key] = value;
-      }
+    // Tentar obter informações do usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      logData.user_id = user.id;
     }
 
-    return sanitized;
+    // Registrar no banco de dados
+    await supabase.from('activity_logs').insert(logData);
+  } catch (error) {
+    console.error('Erro ao registrar atividade:', error);
   }
-
-  // Hash de email para logs
-  private async hashEmail(email: string): Promise<string> {
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(email.toLowerCase());
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (error) {
-      console.error('Erro ao fazer hash do email:', error);
-      return 'hash_error';
-    }
-  }
-
-  // Hash de dados para logs
-  private async hashData(data: Record<string, any>): Promise<string> {
-    try {
-      const encoder = new TextEncoder();
-      const dataString = JSON.stringify(data);
-      const dataEncoded = encoder.encode(dataString);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', dataEncoded);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch (error) {
-      console.error('Erro ao fazer hash dos dados:', error);
-      return 'hash_error';
-    }
-  }
-
-  // Obter métricas de segurança
-  getSecurityMetrics(emailHash: string): SecurityMetrics | null {
-    return this.metricsCache.get(emailHash) || null;
-  }
-
-  // Limpar cache de métricas antigas
-  cleanupMetrics(): void {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    
-    for (const [key, metrics] of this.metricsCache.entries()) {
-      if (new Date(metrics.last_activity) < oneHourAgo) {
-        this.metricsCache.delete(key);
-      }
-    }
-  }
-}
-
-// Instância singleton
-const securityLogger = SecurityLogger.getInstance();
-
-// Cleanup automático a cada hora
-if (typeof window !== 'undefined') {
-  setInterval(() => {
-    securityLogger.cleanupMetrics();
-  }, 60 * 60 * 1000);
-}
-
-// Funções de conveniência para compatibilidade
-export const logSecurityEvent = (event: SecurityEvent) => {
-  return securityLogger.logSecurityEvent(event);
 };
 
-export const logAuthEvent = (
-  action: 'login_attempt' | 'login_success' | 'login_failure' | 'logout' | 'signup_attempt' | 'signup_success' | 'signup_failure', 
-  details?: any
-) => {
-  return securityLogger.logAuthEvent(action, details);
+// Função para registrar falhas de segurança
+export const logSecurityFailure = async (
+  event: string,
+  error: string,
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    const logData: SecurityLogData = {
+      event_type: event,
+      severity: 'error',
+      details: {
+        error,
+        timestamp: new Date().toISOString(),
+        ...details
+      }
+    };
+
+    // Tentar obter informações do usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      logData.user_id = user.id;
+    }
+
+    // Registrar no banco de dados
+    await supabase.from('security_logs').insert(logData);
+  } catch (error) {
+    console.error('Erro ao registrar falha de segurança:', error);
+  }
 };
 
-export const logDataAccess = (
-  resourceType: string, 
-  resourceId?: string, 
-  action: 'read' | 'create' | 'update' | 'delete' = 'read',
-  oldData?: Record<string, any>,
-  newData?: Record<string, any>
-) => {
-  return securityLogger.logDataAccess(resourceType, resourceId, action, oldData, newData);
+// Função para obter informações do navegador
+export const getBrowserInfo = (): Record<string, any> => {
+  try {
+    return {
+      user_agent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      cookie_enabled: navigator.cookieEnabled,
+      online: navigator.onLine,
+      screen_resolution: `${screen.width}x${screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+  } catch (error) {
+    console.error('Erro ao obter informações do navegador:', error);
+    return {};
+  }
 };
 
-export const logSuspiciousActivity = (activity: string, details?: any) => {
-  return securityLogger.logSuspiciousActivity(activity, details);
+// Função para obter IP do usuário (simulada)
+export const getUserIP = async (): Promise<string | null> => {
+  try {
+    // Em produção, usar um serviço real para obter IP
+    // Por enquanto, retornar null
+    return null;
+  } catch (error) {
+    console.error('Erro ao obter IP do usuário:', error);
+    return null;
+  }
 };
-
-export { securityLogger };

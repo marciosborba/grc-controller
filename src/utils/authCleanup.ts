@@ -1,97 +1,127 @@
+// =====================================================
+// UTILITÁRIOS DE LIMPEZA E SEGURANÇA DE AUTENTICAÇÃO
+// =====================================================
 
-/**
- * Utility functions for cleaning up authentication state and preventing limbo states
- */
+import { SupabaseClient } from '@supabase/supabase-js';
 
-export const cleanupAuthState = () => {
+// Função para limpar estado de autenticação
+export const cleanupAuthState = (): void => {
   try {
-    // Remove standard auth tokens
-    localStorage.removeItem('supabase.auth.token');
+    // Limpar localStorage
+    const keysToRemove = [
+      'supabase.auth.token',
+      'sb-auth-token',
+      'user-session',
+      'auth-state'
+    ];
     
-    // Remove all Supabase auth keys from localStorage
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-        localStorage.removeItem(key);
-      }
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
     });
-    
-    // Remove from sessionStorage if in use
-    if (typeof sessionStorage !== 'undefined') {
-      Object.keys(sessionStorage).forEach((key) => {
-        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-    }
-    
-    console.log('Auth state cleaned up successfully');
+
+    // Limpar sessionStorage
+    sessionStorage.clear();
   } catch (error) {
-    console.error('Error cleaning auth state:', error);
+    console.warn('Erro ao limpar estado de autenticação:', error);
   }
 };
 
-export const performSecureSignOut = async (supabase: any) => {
+// Função para logout seguro
+export const performSecureSignOut = async (supabase: SupabaseClient): Promise<boolean> => {
   try {
-    // Clean up auth state first
-    cleanupAuthState();
+    // Fazer logout no Supabase
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
     
-    // Attempt global sign out with fallback
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (err) {
-      console.warn('Global signout failed, continuing with cleanup:', err);
-      // Continue even if this fails
+    if (error) {
+      console.error('Erro no logout do Supabase:', error);
     }
-    
-    // Additional cleanup for edge cases
-    setTimeout(() => {
-      cleanupAuthState();
-    }, 100);
-    
-    return { success: true };
+
+    // Limpar estado local
+    cleanupAuthState();
+
+    return true;
   } catch (error) {
-    console.error('Error during secure sign out:', error);
-    return { success: false, error };
+    console.error('Erro no logout seguro:', error);
+    return false;
   }
 };
 
+// Validação de formato de email
 export const validateEmailFormat = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email) && email.length <= 254;
+  return emailRegex.test(email);
 };
 
+// Validação de senha
 export const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
   
-  if (password.length < 6) {
-    errors.push('Senha deve ter pelo menos 6 caracteres');
+  if (password.length < 8) {
+    errors.push('Senha deve ter pelo menos 8 caracteres');
   }
   
-  if (password.length > 128) {
-    errors.push('Senha muito longa');
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Senha deve conter pelo menos uma letra maiúscula');
   }
   
-  if (!/[A-Za-z]/.test(password)) {
-    errors.push('Senha deve conter pelo menos uma letra');
+  if (!/[a-z]/.test(password)) {
+    errors.push('Senha deve conter pelo menos uma letra minúscula');
   }
   
-  if (!/[0-9]/.test(password)) {
+  if (!/\d/.test(password)) {
     errors.push('Senha deve conter pelo menos um número');
   }
   
+  if (!/[!@#$%^&*(),.?\":{}|<>]/.test(password)) {
+    errors.push('Senha deve conter pelo menos um caractere especial');
+  }
+
   return {
     valid: errors.length === 0,
     errors
   };
 };
 
-export const sanitizeInput = (input: string, maxLength: number = 1000): string => {
-  if (typeof input !== 'string') return '';
+// Sanitização de input
+export const sanitizeInput = (input: string): string => {
+  if (!input) return '';
   
   return input
     .trim()
-    .slice(0, maxLength)
-    .replace(/[<>]/g, '') // Remove basic HTML chars
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, ''); // Remove event handlers
+    .replace(/[<>\"']/g, '') // Remove caracteres perigosos
+    .substring(0, 255); // Limita tamanho
+};
+
+// Log de eventos de autenticação
+export const logAuthEvent = async (
+  event: string, 
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    // Em produção, enviar para serviço de logging
+    console.log(`Auth Event: ${event}`, {
+      timestamp: new Date().toISOString(),
+      ...details
+    });
+  } catch (error) {
+    console.error('Erro ao registrar evento de auth:', error);
+  }
+};
+
+// Log de atividade suspeita
+export const logSuspiciousActivity = async (
+  activity: string,
+  details: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    console.warn(`Suspicious Activity: ${activity}`, {
+      timestamp: new Date().toISOString(),
+      severity: 'warning',
+      ...details
+    });
+    
+    // Em produção, alertar equipe de segurança
+  } catch (error) {
+    console.error('Erro ao registrar atividade suspeita:', error);
+  }
 };
