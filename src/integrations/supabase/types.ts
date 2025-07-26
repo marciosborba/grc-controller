@@ -487,8 +487,12 @@ export type Database = {
           department: string | null
           full_name: string
           id: string
+          is_active: boolean | null
           job_title: string | null
+          last_login: string | null
           phone: string | null
+          tenant_id: string | null
+          theme: string | null
           updated_at: string
           user_id: string
         }
@@ -498,8 +502,12 @@ export type Database = {
           department?: string | null
           full_name: string
           id?: string
+          is_active?: boolean | null
           job_title?: string | null
+          last_login?: string | null
           phone?: string | null
+          tenant_id?: string | null
+          theme?: string | null
           updated_at?: string
           user_id: string
         }
@@ -509,8 +517,12 @@ export type Database = {
           department?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean | null
           job_title?: string | null
+          last_login?: string | null
           phone?: string | null
+          tenant_id?: string | null
+          theme?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -757,6 +769,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_user: {
+        Args: { _manager_id: string; _target_user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _user_id: string
