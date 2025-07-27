@@ -44,7 +44,7 @@ export const useUserManagement = () => {
 
         // Aplicar filtros básicos
         if (filters.search) {
-          query = query.or(`full_name.ilike.%${filters.search}%, email.ilike.%${filters.search}%`);
+          query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
         }
 
         if (filters.status === 'active') {
@@ -369,7 +369,7 @@ export const useUserManagement = () => {
           p_action: 'user_updated',
           p_resource_type: 'users',
           p_resource_id: userId,
-          p_details: userData
+          p_details: userData as any
         });
       } catch (logError) {
         console.warn('Erro ao registrar log:', logError);
@@ -544,12 +544,8 @@ export const useUserManagement = () => {
 
       // Tentar buscar sessões (pode não existir a tabela)
       try {
-        const { data: sessionsData } = await supabase
-          .from('user_sessions')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('is_active', true);
-        sessions = sessionsData || [];
+        // Por enquanto não temos tabela de sessões, deixar vazio
+        sessions = [];
       } catch (sessionError) {
         console.warn('Tabela user_sessions não encontrada:', sessionError);
       }

@@ -167,6 +167,8 @@ export interface UpdateUserRequest {
   must_change_password?: boolean;
   timezone?: string;
   language?: string;
+  locked_until?: string;
+  failed_login_attempts?: number;
   notification_preferences?: {
     email?: boolean;
     push?: boolean;

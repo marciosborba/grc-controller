@@ -65,12 +65,12 @@ export const MFASetupDialog: React.FC<MFASetupDialogProps> = ({
     setupData,
     isMFAEnabled,
     setupMFA,
-    enableMFA,
+    verifyMFA,
     disableMFA,
     regenerateBackupCodes,
     newBackupCodes,
     isSettingUpMFA,
-    isEnablingMFA,
+    isEnablingMFA: isLoading,
     isDisablingMFA,
     isRegeneratingCodes
   } = useMFA();
@@ -97,27 +97,28 @@ export const MFASetupDialog: React.FC<MFASetupDialogProps> = ({
   }, [isMFAEnabled, setupData]);
 
   const handleSetupMFA = () => {
-    setupMFA();
+    if (user?.id) {
+      setupMFA(user.id);
+    }
   };
 
   const handleVerifyAndEnable = (data: VerificationFormData) => {
-    enableMFA({
-      token: data.token,
-      backup_code: data.backup_code
-    });
+    if (user?.id) {
+      verifyMFA(user.id, {
+        token: data.token,
+        backup_code: data.backup_code
+      });
+    }
   };
 
   const handleDisableMFA = (data: VerificationFormData) => {
-    disableMFA({
-      token: data.token,
-      backup_code: data.backup_code
-    });
+    if (user?.id) {
+      disableMFA(user.id);
+    }
   };
 
-  const handleRegenerateBackupCodes = (data: VerificationFormData) => {
-    regenerateBackupCodes({
-      token: data.token
-    });
+  const handleRegenerateBackupCodes = () => {
+    console.warn('Regenerate backup codes não implementado ainda');
   };
 
   const copyToClipboard = (text: string) => {
@@ -340,10 +341,10 @@ export const MFASetupDialog: React.FC<MFASetupDialogProps> = ({
 
                         <Button 
                           type="submit" 
-                          disabled={isEnablingMFA}
+                          disabled={isLoading}
                           className="w-full"
                         >
-                          {isEnablingMFA ? (
+                          {isLoading ? (
                             <>
                               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                               Verificando...

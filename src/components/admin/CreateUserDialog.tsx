@@ -127,9 +127,16 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
 
   const onSubmit = (data: CreateUserFormData) => {
     const userData: CreateUserRequest = {
-      ...data,
+      email: data.email,
+      full_name: data.full_name,
+      job_title: data.job_title,
+      department: data.department,
+      phone: data.phone,
+      roles: data.roles as AppRole[],
       tenant_id: 'tenant-1', // Em produção, pegar do contexto do usuário
-      roles: data.roles as AppRole[]
+      send_invitation: data.send_invitation,
+      must_change_password: data.must_change_password,
+      permissions: data.permissions
     };
     onCreateUser(userData);
   };

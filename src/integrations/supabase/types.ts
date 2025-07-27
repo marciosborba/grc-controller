@@ -485,14 +485,27 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           department: string | null
+          email: string | null
+          email_verified: boolean | null
+          failed_login_attempts: number | null
           full_name: string
           id: string
           is_active: boolean | null
           job_title: string | null
+          language: string | null
           last_login: string | null
+          last_login_at: string | null
+          locked_until: string | null
+          login_count: number | null
+          must_change_password: boolean | null
+          notification_preferences: Json | null
+          password_changed_at: string | null
+          permissions: string[] | null
           phone: string | null
           tenant_id: string | null
           theme: string | null
+          timezone: string | null
+          two_factor_enabled: boolean | null
           updated_at: string
           user_id: string
         }
@@ -500,14 +513,27 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          email_verified?: boolean | null
+          failed_login_attempts?: number | null
           full_name: string
           id?: string
           is_active?: boolean | null
           job_title?: string | null
+          language?: string | null
           last_login?: string | null
+          last_login_at?: string | null
+          locked_until?: string | null
+          login_count?: number | null
+          must_change_password?: boolean | null
+          notification_preferences?: Json | null
+          password_changed_at?: string | null
+          permissions?: string[] | null
           phone?: string | null
           tenant_id?: string | null
           theme?: string | null
+          timezone?: string | null
+          two_factor_enabled?: boolean | null
           updated_at?: string
           user_id: string
         }
@@ -515,14 +541,27 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           department?: string | null
+          email?: string | null
+          email_verified?: boolean | null
+          failed_login_attempts?: number | null
           full_name?: string
           id?: string
           is_active?: boolean | null
           job_title?: string | null
+          language?: string | null
           last_login?: string | null
+          last_login_at?: string | null
+          locked_until?: string | null
+          login_count?: number | null
+          must_change_password?: boolean | null
+          notification_preferences?: Json | null
+          password_changed_at?: string | null
+          permissions?: string[] | null
           phone?: string | null
           tenant_id?: string | null
           theme?: string | null
+          timezone?: string | null
+          two_factor_enabled?: boolean | null
           updated_at?: string
           user_id?: string
         }
@@ -789,6 +828,16 @@ export type Database = {
           p_details?: Json
           p_ip_address?: unknown
           p_user_agent?: string
+        }
+        Returns: string
+      }
+      rpc_log_activity: {
+        Args: {
+          p_user_id: string
+          p_action: string
+          p_resource_type: string
+          p_resource_id?: string
+          p_details?: Json
         }
         Returns: string
       }
