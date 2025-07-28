@@ -831,6 +831,10 @@ export type Database = {
         }
         Returns: string
       }
+      make_user_admin: {
+        Args: { email_to_promote: string }
+        Returns: boolean
+      }
       rpc_log_activity: {
         Args: {
           p_user_id: string
