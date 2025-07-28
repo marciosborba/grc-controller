@@ -28,19 +28,57 @@ export interface ActivityLogData {
   error_message?: string;
 }
 
-// Temporariamente desabilitado até que as tabelas de segurança sejam criadas
+// Implementação real do sistema de logging de segurança
+import { supabase } from '@/integrations/supabase/client';
+
 export const logAuthEvent = async (
   event: string,
   details: Record<string, any> = {}
 ): Promise<void> => {
-  console.warn('Security logger ainda não implementado - tabelas não existem');
+  try {
+    const { error } = await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: details.user_id || null,
+        action: event,
+        resource_type: 'auth',
+        resource_id: details.user_id || null,
+        details: details,
+        ip_address: details.ip_address || null,
+        user_agent: details.user_agent || null
+      });
+    
+    if (error) {
+      console.error('Erro ao registrar evento de autenticação:', error);
+    }
+  } catch (error) {
+    console.error('Erro ao registrar evento de autenticação:', error);
+  }
 };
 
 export const logSuspiciousActivity = async (
   activity: string,
   details: Record<string, any> = {}
 ): Promise<void> => {
-  console.warn('Security logger ainda não implementado - tabelas não existem');
+  try {
+    const { error } = await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: details.user_id || null,
+        action: activity,
+        resource_type: 'security',
+        resource_id: details.resource_id || null,
+        details: { ...details, severity: 'warning' },
+        ip_address: details.ip_address || null,
+        user_agent: details.user_agent || null
+      });
+    
+    if (error) {
+      console.error('Erro ao registrar atividade suspeita:', error);
+    }
+  } catch (error) {
+    console.error('Erro ao registrar atividade suspeita:', error);
+  }
 };
 
 export const logActivity = async (
@@ -49,7 +87,25 @@ export const logActivity = async (
   resourceId?: string,
   details: Record<string, any> = {}
 ): Promise<void> => {
-  console.warn('Security logger ainda não implementado - tabelas não existem');
+  try {
+    const { error } = await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: details.user_id || null,
+        action: action,
+        resource_type: resourceType,
+        resource_id: resourceId || null,
+        details: details,
+        ip_address: details.ip_address || null,
+        user_agent: details.user_agent || null
+      });
+    
+    if (error) {
+      console.error('Erro ao registrar atividade:', error);
+    }
+  } catch (error) {
+    console.error('Erro ao registrar atividade:', error);
+  }
 };
 
 export const logSecurityFailure = async (
@@ -57,7 +113,25 @@ export const logSecurityFailure = async (
   error: string,
   details: Record<string, any> = {}
 ): Promise<void> => {
-  console.warn('Security logger ainda não implementado - tabelas não existem');
+  try {
+    const { error: dbError } = await supabase
+      .from('activity_logs')
+      .insert({
+        user_id: details.user_id || null,
+        action: event,
+        resource_type: 'security',
+        resource_id: details.resource_id || null,
+        details: { ...details, error_message: error, severity: 'error' },
+        ip_address: details.ip_address || null,
+        user_agent: details.user_agent || null
+      });
+    
+    if (dbError) {
+      console.error('Erro ao registrar falha de segurança:', dbError);
+    }
+  } catch (dbError) {
+    console.error('Erro ao registrar falha de segurança:', dbError);
+  }
 };
 
 export const getBrowserInfo = (): Record<string, any> => {
