@@ -522,35 +522,35 @@ const SecurityIncidentsPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Título</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Severidade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Sistemas Afetados</TableHead>
-                <TableHead>Detecção</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead className="text-xs">Título</TableHead>
+                <TableHead className="text-xs">Tipo</TableHead>
+                <TableHead className="text-xs">Severidade</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs">Sistemas Afetados</TableHead>
+                <TableHead className="text-xs">Detecção</TableHead>
+                <TableHead className="text-xs">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredIncidents.map((incident) => (
                 <TableRow key={incident.id}>
-                  <TableCell>
+                  <TableCell className="text-xs">
                     <div>
                       <p className="font-medium">{incident.title}</p>
-                      <p className="text-sm text-muted-foreground truncate max-w-xs">
+                      <p className="text-xs text-muted-foreground truncate max-w-xs">
                         {incident.description}
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell>{incident.incident_type}</TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs">{incident.incident_type}</TableCell>
+                  <TableCell className="text-xs">
                     <Badge className={getSeverityColor(incident.severity)}>
                       {incident.severity === 'critical' ? 'Crítica' :
                        incident.severity === 'high' ? 'Alta' :
                        incident.severity === 'medium' ? 'Média' : 'Baixa'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs">
                     <Badge className={getStatusColor(incident.status)}>
                       {incident.status === 'open' ? 'Aberto' :
                        incident.status === 'investigating' ? 'Investigando' :
@@ -558,13 +558,13 @@ const SecurityIncidentsPage = () => {
                        incident.status === 'resolved' ? 'Resolvido' : 'Fechado'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs">
                     {incident.affected_systems || '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs">
                     {format(new Date(incident.detection_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-xs">
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"

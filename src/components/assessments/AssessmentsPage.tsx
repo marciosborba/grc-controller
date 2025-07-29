@@ -784,23 +784,23 @@ const AssessmentsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Framework</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progresso</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="text-xs">Título</TableHead>
+                  <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs">Framework</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Progresso</TableHead>
+                  <TableHead className="text-xs">Vencimento</TableHead>
+                  <TableHead className="text-xs">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAssessments.map((assessment) => (
                   <TableRow key={assessment.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="text-xs font-medium">
                       <div>
                         <p className="font-semibold">{assessment.title}</p>
                         {assessment.description && (
-                          <p className="text-sm text-muted-foreground">{assessment.description.substring(0, 60)}...</p>
+                          <p className="text-xs text-muted-foreground">{assessment.description.substring(0, 60)}...</p>
                         )}
                         <Button
                           size="sm"
@@ -812,15 +812,15 @@ const AssessmentsPage = () => {
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <Badge variant="outline">{getTypeText(assessment.type)}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       {assessment.framework ? (
                         <Badge variant="outline">{assessment.framework}</Badge>
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <Badge className={getStatusColor(assessment.status)}>
                         <div className="flex items-center gap-1">
                           {getStatusIcon(assessment.status)}
@@ -828,18 +828,18 @@ const AssessmentsPage = () => {
                         </div>
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <div className="flex items-center space-x-2">
                         <Progress value={assessment.completion_percentage} className="w-16" />
-                        <span className="text-sm font-medium">{assessment.completion_percentage}%</span>
+                        <span className="text-xs font-medium">{assessment.completion_percentage}%</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       {assessment.due_date ? (
                         format(new Date(assessment.due_date), 'dd/MM/yyyy', { locale: ptBR })
                       ) : '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <div className="flex space-x-2">
                         <Button
                           variant="ghost"
