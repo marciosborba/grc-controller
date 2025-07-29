@@ -567,6 +567,88 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_action_activities: {
+        Row: {
+          action_plan_id: string
+          created_at: string
+          deadline: string | null
+          description: string
+          evidence_description: string | null
+          evidence_url: string | null
+          id: string
+          responsible_person: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          action_plan_id: string
+          created_at?: string
+          deadline?: string | null
+          description: string
+          evidence_description?: string | null
+          evidence_url?: string | null
+          id?: string
+          responsible_person: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          action_plan_id?: string
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          evidence_description?: string | null
+          evidence_url?: string | null
+          id?: string
+          responsible_person?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_action_activities_action_plan_id_fkey"
+            columns: ["action_plan_id"]
+            isOneToOne: false
+            referencedRelation: "risk_action_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_action_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          risk_id: string
+          treatment_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          risk_id: string
+          treatment_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          risk_id?: string
+          treatment_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_action_plans_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_assessments: {
         Row: {
           assigned_to: string | null
@@ -579,6 +661,7 @@ export type Database = {
           likelihood_score: number
           probability: string
           risk_category: string
+          risk_level: string | null
           risk_score: number | null
           severity: string
           status: string
@@ -596,6 +679,7 @@ export type Database = {
           likelihood_score: number
           probability: string
           risk_category: string
+          risk_level?: string | null
           risk_score?: number | null
           severity: string
           status?: string
@@ -613,6 +697,7 @@ export type Database = {
           likelihood_score?: number
           probability?: string
           risk_category?: string
+          risk_level?: string | null
           risk_score?: number | null
           severity?: string
           status?: string
@@ -620,6 +705,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      risk_communications: {
+        Row: {
+          communication_date: string
+          created_at: string
+          created_by: string | null
+          decision: string | null
+          id: string
+          justification: string | null
+          notified_at: string | null
+          person_email: string
+          person_name: string
+          risk_id: string
+          updated_at: string
+        }
+        Insert: {
+          communication_date?: string
+          created_at?: string
+          created_by?: string | null
+          decision?: string | null
+          id?: string
+          justification?: string | null
+          notified_at?: string | null
+          person_email: string
+          person_name: string
+          risk_id: string
+          updated_at?: string
+        }
+        Update: {
+          communication_date?: string
+          created_at?: string
+          created_by?: string | null
+          decision?: string | null
+          id?: string
+          justification?: string | null
+          notified_at?: string | null
+          person_email?: string
+          person_name?: string
+          risk_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_communications_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "risk_assessments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_incidents: {
         Row: {
@@ -808,6 +943,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_risk_level: {
+        Args: { impact_score: number; likelihood_score: number }
+        Returns: string
+      }
       can_manage_user: {
         Args: { _manager_id: string; _target_user_id: string }
         Returns: boolean
