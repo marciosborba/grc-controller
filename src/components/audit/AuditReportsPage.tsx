@@ -539,43 +539,43 @@ const AuditReportsPage = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="text-xs">Título</TableHead>
+                  <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Período</TableHead>
+                  <TableHead className="text-xs">Criado em</TableHead>
+                  <TableHead className="text-xs">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredReports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell className="font-medium">{report.title}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs font-medium">{report.title}</TableCell>
+                    <TableCell className="text-xs">
                       <Badge variant="outline">
                         {getTypeText(report.audit_type)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <Badge className={getStatusColor(report.status)}>
                         {getStatusText(report.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       {report.start_date && report.end_date ? (
-                        <span className="text-sm">
+                        <span className="text-xs">
                           {format(new Date(report.start_date), 'dd/MM/yy', { locale: ptBR })} - {format(new Date(report.end_date), 'dd/MM/yy', { locale: ptBR })}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
+                    <TableCell className="text-xs">
+                      <span className="text-xs text-muted-foreground">
                         {format(new Date(report.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       <div className="flex space-x-2">
                         <Button
                           variant="ghost"

@@ -926,59 +926,59 @@ const VendorsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Risco</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Próximo Assessment</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-xs">Empresa</TableHead>
+                      <TableHead className="text-xs">Categoria</TableHead>
+                      <TableHead className="text-xs">Contato</TableHead>
+                      <TableHead className="text-xs">Risco</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Próximo Assessment</TableHead>
+                      <TableHead className="text-xs">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredVendors.map((vendor) => (
                       <TableRow key={vendor.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="text-xs font-medium">
                           <div>
                             <p className="font-semibold">{vendor.name}</p>
-                            <p className="text-sm text-muted-foreground">{vendor.contact_person}</p>
+                            <p className="text-xs text-muted-foreground">{vendor.contact_person}</p>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge variant="outline">{vendor.category}</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <div className="flex flex-col space-y-1">
                             {vendor.email && (
-                              <div className="flex items-center text-sm">
+                              <div className="flex items-center text-xs">
                                 <Mail className="h-3 w-3 mr-1" />
                                 {vendor.email}
                               </div>
                             )}
                             {vendor.phone && (
-                              <div className="flex items-center text-sm">
+                              <div className="flex items-center text-xs">
                                 <Phone className="h-3 w-3 mr-1" />
                                 {vendor.phone}
                               </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge className={getRiskColor(vendor.risk_level)}>
                             {getRiskText(vendor.risk_level)}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge className={getStatusColor(vendor.status)}>
                             {getStatusText(vendor.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           {vendor.next_assessment_date ? (
                             format(new Date(vendor.next_assessment_date), 'dd/MM/yyyy', { locale: ptBR })
                           ) : '-'}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <div className="flex space-x-2">
                             <Button
                               variant="ghost"
@@ -1034,14 +1034,14 @@ const VendorsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Fornecedor</TableHead>
-                      <TableHead>Título</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Classificação</TableHead>
-                      <TableHead>Enviado em</TableHead>
-                      <TableHead>Concluído em</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-xs">Fornecedor</TableHead>
+                      <TableHead className="text-xs">Título</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Score</TableHead>
+                      <TableHead className="text-xs">Classificação</TableHead>
+                      <TableHead className="text-xs">Enviado em</TableHead>
+                      <TableHead className="text-xs">Concluído em</TableHead>
+                      <TableHead className="text-xs">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1050,39 +1050,39 @@ const VendorsPage = () => {
                       const score = assessment.score || calculateRiskScore(assessment);
                       return (
                         <TableRow key={assessment.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="text-xs font-medium">
                             {vendor?.name || 'Fornecedor não encontrado'}
                           </TableCell>
-                          <TableCell>{assessment.title}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">{assessment.title}</TableCell>
+                          <TableCell className="text-xs">
                             <Badge className={getAssessmentStatusColor(assessment.status)}>
                               {getAssessmentStatusText(assessment.status)}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             {score ? (
                               <div className="flex items-center space-x-2">
                                 <Progress value={score} className="w-16" />
-                                <span className="text-sm font-medium">{score}%</span>
+                                <span className="text-xs font-medium">{score}%</span>
                               </div>
                             ) : '-'}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             {assessment.risk_rating && (
                               <Badge className={getRiskColor(assessment.risk_rating)}>
                                 {getRiskText(assessment.risk_rating)}
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             {format(new Date(assessment.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             {assessment.completed_at ? (
                               format(new Date(assessment.completed_at), 'dd/MM/yyyy', { locale: ptBR })
                             ) : '-'}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             <Button
                               variant="ghost"
                               size="sm"

@@ -667,58 +667,58 @@ const EthicsChannelPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Título</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Gravidade</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-xs">Título</TableHead>
+                      <TableHead className="text-xs">Categoria</TableHead>
+                      <TableHead className="text-xs">Gravidade</TableHead>
+                      <TableHead className="text-xs">Tipo</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">Data</TableHead>
+                      <TableHead className="text-xs">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredReports.map((report) => (
                       <TableRow key={report.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="text-xs font-medium">
                           <div>
                             <p className="font-semibold">{report.title}</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {report.description.substring(0, 60)}...
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge variant="outline">{getCategoryText(report.category)}</Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge className={getSeverityColor(report.severity)}>
                             {getSeverityText(report.severity)}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <div className="flex items-center">
                             {report.is_anonymous ? (
                               <>
                                 <UserX className="h-4 w-4 mr-1" />
-                                <span className="text-sm">Anônima</span>
+                                <span className="text-xs">Anônima</span>
                               </>
                             ) : (
                               <>
                                 <User className="h-4 w-4 mr-1" />
-                                <span className="text-sm">Identificada</span>
+                                <span className="text-xs">Identificada</span>
                               </>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <Badge className={getStatusColor(report.status)}>
                             {getStatusText(report.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           {format(new Date(report.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-xs">
                           <div className="flex space-x-2">
                             <Button
                               variant="ghost"

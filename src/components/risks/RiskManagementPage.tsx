@@ -1047,19 +1047,19 @@ const RiskManagementPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-sm">Título</TableHead>
-                <TableHead className="text-sm">Categoria</TableHead>
-                <TableHead className="text-sm">Risco</TableHead>
-                <TableHead className="text-sm">Status</TableHead>
-                <TableHead className="text-sm">Score</TableHead>
-                <TableHead className="text-sm">Vencimento</TableHead>
-                <TableHead className="text-sm">Ações</TableHead>
+                <TableHead className="text-xs">Título</TableHead>
+                <TableHead className="text-xs">Categoria</TableHead>
+                <TableHead className="text-xs">Risco</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs">Score</TableHead>
+                <TableHead className="text-xs">Vencimento</TableHead>
+                <TableHead className="text-xs">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRisks.map((risk) => (
                 <TableRow key={risk.id}>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-xs">
                     <div>
                       <p className="font-medium">{risk.title}</p>
                       <p className="text-xs text-muted-foreground truncate max-w-xs">
@@ -1067,23 +1067,23 @@ const RiskManagementPage = () => {
                       </p>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{risk.risk_category}</TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-xs">{risk.risk_category}</TableCell>
+                  <TableCell className="text-xs">
                     <Badge className={getRiskLevelColor(risk.risk_level)}>
                       {risk.risk_level}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-xs">
                     <Badge className={getStatusColor(risk.status)}>
                       {risk.status === 'open' ? 'Aberto' :
                        risk.status === 'in_progress' ? 'Em Progresso' :
                        risk.status === 'mitigated' ? 'Mitigado' : 'Fechado'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-xs">
                     <span className="font-mono">{risk.risk_score}</span>
                   </TableCell>
-                  <TableCell className="text-sm">
+                  <TableCell className="text-xs">
                     {risk.due_date ? format(new Date(risk.due_date), "dd/MM/yyyy", { locale: ptBR }) : '-'}
                   </TableCell>
                   <TableCell>
