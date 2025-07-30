@@ -92,7 +92,191 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_evidence: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          response_id: string
+          uploaded_at: string
+          uploaded_by_user_id: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          response_id: string
+          uploaded_at?: string
+          uploaded_by_user_id?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          response_id?: string
+          uploaded_at?: string
+          uploaded_by_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_evidence_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_responses: {
+        Row: {
+          assessee_response: string | null
+          assessment_id: string
+          assessor_analysis: string | null
+          control_id: string
+          created_at: string
+          id: string
+          last_updated_by_user_id: string | null
+          maturity_level: number | null
+          updated_at: string
+        }
+        Insert: {
+          assessee_response?: string | null
+          assessment_id: string
+          assessor_analysis?: string | null
+          control_id: string
+          created_at?: string
+          id?: string
+          last_updated_by_user_id?: string | null
+          maturity_level?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assessee_response?: string | null
+          assessment_id?: string
+          assessor_analysis?: string | null
+          control_id?: string
+          created_at?: string
+          id?: string
+          last_updated_by_user_id?: string | null
+          maturity_level?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_responses_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_responses_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "framework_controls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessments: {
+        Row: {
+          created_at: string
+          created_by_user_id: string | null
+          due_date: string | null
+          framework_id_on_creation: string
+          id: string
+          name: string
+          progress: number | null
+          status: Database["public"]["Enums"]["assessment_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id?: string | null
+          due_date?: string | null
+          framework_id_on_creation: string
+          id?: string
+          name: string
+          progress?: number | null
+          status?: Database["public"]["Enums"]["assessment_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string | null
+          due_date?: string | null
+          framework_id_on_creation?: string
+          id?: string
+          name?: string
+          progress?: number | null
+          status?: Database["public"]["Enums"]["assessment_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_framework_id_on_creation_fkey"
+            columns: ["framework_id_on_creation"]
+            isOneToOne: false
+            referencedRelation: "frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_reports: {
+        Row: {
+          audit_type: string
+          auditor_id: string | null
+          created_at: string
+          end_date: string | null
+          findings: string | null
+          id: string
+          recommendations: string | null
+          scope: string | null
+          start_date: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audit_type: string
+          auditor_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          scope?: string | null
+          start_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audit_type?: string
+          auditor_id?: string | null
+          created_at?: string
+          end_date?: string | null
+          findings?: string | null
+          id?: string
+          recommendations?: string | null
+          scope?: string | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      compliance_assessments: {
         Row: {
           assigned_to: string | null
           completed_at: string | null
@@ -148,51 +332,6 @@ export type Database = {
           status?: string
           title?: string
           type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      audit_reports: {
-        Row: {
-          audit_type: string
-          auditor_id: string | null
-          created_at: string
-          end_date: string | null
-          findings: string | null
-          id: string
-          recommendations: string | null
-          scope: string | null
-          start_date: string | null
-          status: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          audit_type: string
-          auditor_id?: string | null
-          created_at?: string
-          end_date?: string | null
-          findings?: string | null
-          id?: string
-          recommendations?: string | null
-          scope?: string | null
-          start_date?: string | null
-          status?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          audit_type?: string
-          auditor_id?: string | null
-          created_at?: string
-          end_date?: string | null
-          findings?: string | null
-          id?: string
-          recommendations?: string | null
-          scope?: string | null
-          start_date?: string | null
-          status?: string
-          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -341,6 +480,86 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      framework_controls: {
+        Row: {
+          control_code: string
+          control_reference: string | null
+          control_text: string
+          created_at: string
+          domain: string | null
+          framework_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          control_code: string
+          control_reference?: string | null
+          control_text: string
+          created_at?: string
+          domain?: string | null
+          framework_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          control_code?: string
+          control_reference?: string | null
+          control_text?: string
+          created_at?: string
+          domain?: string | null
+          framework_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_controls_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      frameworks: {
+        Row: {
+          category: string
+          created_at: string
+          created_by_user_id: string | null
+          description: string | null
+          id: string
+          name: string
+          short_name: string
+          tenant_id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          short_name: string
+          tenant_id?: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by_user_id?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          short_name?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: string
         }
         Relationships: []
       }
@@ -943,6 +1162,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_assessment_progress: {
+        Args: { assessment_id_param: string }
+        Returns: number
+      }
       calculate_risk_level: {
         Args: { impact_score: number; likelihood_score: number }
         Returns: string
@@ -993,6 +1216,12 @@ export type Database = {
         | "compliance_officer"
         | "auditor"
         | "user"
+      assessment_status:
+        | "Não Iniciado"
+        | "Em Andamento"
+        | "Em Revisão"
+        | "Concluído"
+      maturity_level: "1" | "2" | "3" | "4" | "5"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1128,6 +1357,13 @@ export const Constants = {
         "auditor",
         "user",
       ],
+      assessment_status: [
+        "Não Iniciado",
+        "Em Andamento",
+        "Em Revisão",
+        "Concluído",
+      ],
+      maturity_level: ["1", "2", "3", "4", "5"],
     },
   },
 } as const
