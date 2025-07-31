@@ -14,6 +14,7 @@ import AuditReportsPage from "@/components/audit/AuditReportsPage";
 import PoliciesPage from "@/components/policies/PoliciesPage";
 import VendorsPage from "@/components/vendors/VendorsPage";
 import AssessmentsPage from "@/components/assessments/AssessmentsPage";
+import { FrameworkManagementPage } from "@/components/assessments/FrameworkManagementPage";
 import EthicsChannelPage from "@/components/ethics/EthicsChannelPage";
 import { ReportsPage } from "@/components/reports/ReportsPage";
 import { UserManagementPage } from "@/components/settings/UserManagementPage";
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="incidents" element={<SecurityIncidentsPage />} />
                 <Route path="audit" element={<AuditReportsPage />} />
                 <Route path="assessments" element={<AssessmentsPage />} />
+                <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
                 <Route path="assessments/:id" element={<AssessmentDetailPage />} />
                 <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
                 <Route path="policies" element={<PoliciesPage />} />
