@@ -22,6 +22,8 @@ import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
+import FrameworkDetailPage from "@/components/assessments/FrameworkDetailPage";
+import CreateFrameworkPage from "@/components/assessments/CreateFrameworkPage";
 import HelpPage from "./pages/HelpPage";
 
 // Configure React Query with secure defaults
@@ -100,6 +102,8 @@ const App = () => (
                 <Route path="audit" element={<AuditReportsPage />} />
                 <Route path="assessments" element={<AssessmentsPage />} />
                 <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
+                <Route path="assessments/frameworks/create" element={<CreateFrameworkPage />} />
+                <Route path="assessments/frameworks/:id" element={<FrameworkDetailPage />} />
                 <Route path="assessments/:id" element={<AssessmentDetailPage />} />
                 <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
                 <Route path="policies" element={<PoliciesPage />} />

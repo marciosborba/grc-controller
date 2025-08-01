@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CreateFrameworkDialog } from './CreateFrameworkDialog';
+
 import { useAssessments } from '@/hooks/useAssessments';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,7 +30,6 @@ export const FrameworkManagementPage: React.FC = () => {
   const { frameworks, isLoading } = useAssessments();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const filteredFrameworks = frameworks.filter(framework =>
     framework.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -90,7 +89,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
             Baixar Template
           </Button>
           <Button
-            onClick={() => setShowCreateDialog(true)}
+            onClick={() => navigate('/assessments/frameworks/create')}
             className="flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
@@ -168,7 +167,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
                     <div className="mt-2">
                       <Button
                         variant="outline"
-                        onClick={() => setShowCreateDialog(true)}
+                        onClick={() => navigate('/assessments/frameworks/create')}
                         className="flex items-center gap-2"
                       >
                         <Plus className="h-4 w-4" />
@@ -235,18 +234,6 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
         </CardContent>
       </Card>
 
-      {/* Create Framework Dialog */}
-      <CreateFrameworkDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={() => {
-          setShowCreateDialog(false);
-          toast({
-            title: "Sucesso",
-            description: "Framework criado com sucesso.",
-          });
-        }}
-      />
     </div>
   );
 };
