@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, Edit3 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,17 +35,27 @@ interface FrameworkControl {
   control_reference?: string;
 }
 
+interface EditingControl {
+  id: string;
+  control_code: string;
+  control_text: string;
+  domain: string;
+  control_reference: string;
+}
+
 const FrameworkDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { frameworks, refetchFrameworks } = useAssessments();
+  const isMobile = useIsMobile();
   
   const [framework, setFramework] = useState<Framework | null>(null);
   const [controls, setControls] = useState<FrameworkControl[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddControlDialog, setShowAddControlDialog] = useState(false);
+  const [editingControl, setEditingControl] = useState<EditingControl | null>(null);
   const [newControl, setNewControl] = useState({
     control_code: '',
     control_text: '',
@@ -162,6 +173,62 @@ const FrameworkDetailPage: React.FC = () => {
     }
   };
 
+  const updateControl = async (controlId: string, updatedData: Partial<FrameworkControl>) => {
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('framework_controls')
+        .update(updatedData)
+        .eq('id', controlId);
+
+      if (error) throw error;
+
+      setControls(prev => prev.map(c => 
+        c.id === controlId ? { ...c, ...updatedData } : c
+      ));
+
+      toast({
+        title: 'Sucesso',
+        description: 'Controle atualizado com sucesso.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar controle.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditing = (control: FrameworkControl) => {
+    setEditingControl({
+      id: control.id,
+      control_code: control.control_code,
+      control_text: control.control_text,
+      domain: control.domain,
+      control_reference: control.control_reference || ''
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingControl) return;
+
+    await updateControl(editingControl.id, {
+      control_code: editingControl.control_code,
+      control_text: editingControl.control_text,
+      domain: editingControl.domain,
+      control_reference: editingControl.control_reference || null
+    });
+
+    setEditingControl(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingControl(null);
+  };
+
   const deleteControl = async (controlId: string) => {
     try {
       setIsSaving(true);
@@ -225,7 +292,7 @@ const FrameworkDetailPage: React.FC = () => {
           <CardTitle>Informações do Framework</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div>
               <label className="text-sm font-medium">Nome</label>
               <Input
@@ -273,24 +340,26 @@ const FrameworkDetailPage: React.FC = () => {
 
       {/* Controls Section */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={`flex ${isMobile ? 'flex-col space-y-2' : 'flex-row'} items-center justify-between`}>
           <CardTitle>Controles ({controls.length})</CardTitle>
           <Button
             onClick={() => setShowAddControlDialog(true)}
             className="flex items-center gap-2"
+            size={isMobile ? "sm" : "default"}
           >
             <Plus className="h-4 w-4" />
-            Adicionar Controle
+            {isMobile ? 'Adicionar' : 'Adicionar Controle'}
           </Button>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className={isMobile ? "p-2" : "p-0"}>
+          <div className={isMobile ? "overflow-x-auto" : ""}>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Controle</TableHead>
-                <TableHead>Domínio</TableHead>
-                <TableHead>Referência</TableHead>
+                {!isMobile && <TableHead>Domínio</TableHead>}
+                {!isMobile && <TableHead>Referência</TableHead>}
                 <TableHead className="w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -315,32 +384,142 @@ const FrameworkDetailPage: React.FC = () => {
                 controls.map((control) => (
                   <TableRow key={control.id}>
                     <TableCell className="font-medium">
-                      {control.control_code}
+                      {editingControl?.id === control.id ? (
+                        <Input
+                          value={editingControl.control_code}
+                          onChange={(e) => setEditingControl(prev => 
+                            prev ? { ...prev, control_code: e.target.value } : null
+                          )}
+                          className="w-24"
+                        />
+                      ) : (
+                        control.control_code
+                      )}
                     </TableCell>
                     <TableCell className="max-w-md">
-                      <div className="text-sm">
-                        {control.control_text}
-                      </div>
+                      {editingControl?.id === control.id ? (
+                        <Textarea
+                          value={editingControl.control_text}
+                          onChange={(e) => setEditingControl(prev => 
+                            prev ? { ...prev, control_text: e.target.value } : null
+                          )}
+                          className="min-h-[60px] text-sm"
+                        />
+                      ) : (
+                        <div className="text-sm">
+                          {control.control_text}
+                        </div>
+                      )}
+                      {isMobile && (
+                        <div className="mt-1 space-y-1">
+                          {editingControl?.id === control.id ? (
+                            <Input
+                              value={editingControl.domain}
+                              onChange={(e) => setEditingControl(prev => 
+                                prev ? { ...prev, domain: e.target.value } : null
+                              )}
+                              placeholder="Domínio"
+                              className="text-xs"
+                            />
+                          ) : (
+                            <Badge variant="outline" className="mr-1 text-xs">
+                              {control.domain}
+                            </Badge>
+                          )}
+                          {editingControl?.id === control.id ? (
+                            <Input
+                              value={editingControl.control_reference}
+                              onChange={(e) => setEditingControl(prev => 
+                                prev ? { ...prev, control_reference: e.target.value } : null
+                              )}
+                              placeholder="Referência"
+                              className="text-xs"
+                            />
+                          ) : (
+                            control.control_reference && (
+                              <div className="text-xs text-muted-foreground">
+                                Ref: {control.control_reference}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
                     </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        {editingControl?.id === control.id ? (
+                          <Input
+                            value={editingControl.domain}
+                            onChange={(e) => setEditingControl(prev => 
+                              prev ? { ...prev, domain: e.target.value } : null
+                            )}
+                            className="w-32"
+                          />
+                        ) : (
+                          <Badge variant="outline">{control.domain}</Badge>
+                        )}
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell>
+                        {editingControl?.id === control.id ? (
+                          <Input
+                            value={editingControl.control_reference}
+                            onChange={(e) => setEditingControl(prev => 
+                              prev ? { ...prev, control_reference: e.target.value } : null
+                            )}
+                            className="w-32"
+                          />
+                        ) : (
+                          control.control_reference || '-'
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <Badge variant="outline">{control.domain}</Badge>
-                    </TableCell>
-                    <TableCell>{control.control_reference || '-'}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteControl(control.id)}
-                        disabled={isSaving}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {editingControl?.id === control.id ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={saveEdit}
+                            disabled={isSaving}
+                          >
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={cancelEdit}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditing(control)}
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteControl(control.id)}
+                            disabled={isSaving}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -354,7 +533,7 @@ const FrameworkDetailPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
               <div>
                 <label className="text-sm font-medium">Código do Controle *</label>
                 <Input

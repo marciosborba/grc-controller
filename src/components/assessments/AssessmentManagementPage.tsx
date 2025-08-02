@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileText, Search, MoreHorizontal, Trash2, Edit3 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ export const AssessmentManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { assessments, isLoading, deleteAssessment } = useAssessments();
+  const isMobile = useIsMobile();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -110,34 +112,38 @@ export const AssessmentManagementPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'items-center justify-between'}`}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Assessments</h1>
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>
+            Gestão de Assessments
+          </h1>
           <p className="text-muted-foreground">
             Gerencie o ciclo de vida completo dos seus assessments de conformidade
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
           <Button
             variant="outline"
             onClick={() => navigate('/assessments/frameworks')}
             className="flex items-center gap-2"
+            size={isMobile ? "sm" : "default"}
           >
             <FileText className="h-4 w-4" />
-            Gerenciar Frameworks
+            {isMobile ? 'Frameworks' : 'Gerenciar Frameworks'}
           </Button>
           <Button
             onClick={() => setShowCreateDialog(true)}
             className="flex items-center gap-2"
+            size={isMobile ? "sm" : "default"}
           >
             <Plus className="h-4 w-4" />
-            Novo Assessment
+            {isMobile ? 'Novo' : 'Novo Assessment'}
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-4'}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -193,15 +199,16 @@ export const AssessmentManagementPage: React.FC = () => {
 
       {/* Assessments Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className={isMobile ? "p-2" : "p-0"}>
+          <div className={isMobile ? "overflow-x-auto" : ""}>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Assessment</TableHead>
-                <TableHead>Framework</TableHead>
+                {!isMobile && <TableHead>Framework</TableHead>}
                 <TableHead>Status</TableHead>
-                <TableHead>Progresso</TableHead>
-                <TableHead>Prazo</TableHead>
+                {!isMobile && <TableHead>Progresso</TableHead>}
+                {!isMobile && <TableHead>Prazo</TableHead>}
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -222,31 +229,55 @@ export const AssessmentManagementPage: React.FC = () => {
                 filteredAssessments.map((assessment) => (
                   <TableRow key={assessment.id}>
                     <TableCell className="font-medium">
-                      {assessment.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {assessment.framework?.short_name || 'N/A'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(assessment.status)}>
-                        {assessment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Progress value={assessment.progress || 0} className="w-[60px]" />
-                        <span className="text-sm text-muted-foreground">
-                          {assessment.progress || 0}%
-                        </span>
+                      <div>
+                        <div className="font-semibold">{assessment.name}</div>
+                        {isMobile && (
+                          <div className="mt-1 space-y-1">
+                            <Badge variant="secondary" className="mr-1 text-xs">
+                              {assessment.framework?.short_name || 'N/A'}
+                            </Badge>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Progress value={assessment.progress || 0} className="w-[60px]" />
+                              <span className="text-xs text-muted-foreground">
+                                {assessment.progress || 0}%
+                              </span>
+                            </div>
+                            <div className={`text-xs ${isOverdue(assessment.due_date) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+                              {formatDate(assessment.due_date)}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {assessment.framework?.short_name || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <span className={isOverdue(assessment.due_date) ? 'text-destructive font-medium' : ''}>
-                        {formatDate(assessment.due_date)}
-                      </span>
+                      <Badge className={getStatusColor(assessment.status)}>
+                        {isMobile ? assessment.status.substring(0, 10) : assessment.status}
+                      </Badge>
                     </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Progress value={assessment.progress || 0} className="w-[60px]" />
+                          <span className="text-sm text-muted-foreground">
+                            {assessment.progress || 0}%
+                          </span>
+                        </div>
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell>
+                        <span className={isOverdue(assessment.due_date) ? 'text-destructive font-medium' : ''}>
+                          {formatDate(assessment.due_date)}
+                        </span>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -281,6 +312,7 @@ export const AssessmentManagementPage: React.FC = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

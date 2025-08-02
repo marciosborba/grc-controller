@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,6 +44,7 @@ const AssessmentDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { assessments, isLoading } = useAssessments();
+  const isMobile = useIsMobile();
   
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [responses, setResponses] = useState<AssessmentResponse[]>([]);
@@ -170,8 +172,10 @@ const AssessmentDetailPage: React.FC = () => {
           Voltar
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{assessment.name}</h1>
-          <div className="flex items-center gap-4 mt-2">
+          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>
+            {assessment.name}
+          </h1>
+          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center'} gap-4 mt-2`}>
             <Badge variant="secondary">{assessment.framework?.short_name}</Badge>
             <Badge className={
               assessment.status === 'Concluído' ? 'bg-green-100 text-green-800' :
@@ -194,7 +198,7 @@ const AssessmentDetailPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
             <div className="text-center">
               <div className="text-2xl font-bold">{progressPercentage}%</div>
               <div className="text-sm text-muted-foreground">Progresso</div>
@@ -216,16 +220,17 @@ const AssessmentDetailPage: React.FC = () => {
         <CardHeader>
           <CardTitle>Controles do Framework</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table>
+        <CardContent className={isMobile ? "p-2" : "p-0"}>
+          <div className={isMobile ? "overflow-x-auto" : ""}>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Controle</TableHead>
-                <TableHead>Domínio</TableHead>
-                <TableHead>Nível de Maturidade</TableHead>
-                <TableHead>Resposta</TableHead>
-                <TableHead>Análise</TableHead>
+                {!isMobile && <TableHead>Domínio</TableHead>}
+                <TableHead>Maturidade</TableHead>
+                {!isMobile && <TableHead>Resposta</TableHead>}
+                {!isMobile && <TableHead>Análise</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -254,17 +259,40 @@ const AssessmentDetailPage: React.FC = () => {
                           : response.control?.control_text
                         }
                       </div>
+                      {isMobile && (
+                        <div className="mt-2 space-y-2">
+                          <Badge variant="outline" className="text-xs">
+                            {response.control?.domain}
+                          </Badge>
+                          <Textarea
+                            value={response.assessee_response || ''}
+                            onChange={(e) => updateResponse(response.id, 'assessee_response', e.target.value)}
+                            placeholder="Descreva a implementação..."
+                            className="min-h-[60px] text-xs"
+                            disabled={isSaving}
+                          />
+                          <Textarea
+                            value={response.assessor_analysis || ''}
+                            onChange={(e) => updateResponse(response.id, 'assessor_analysis', e.target.value)}
+                            placeholder="Análise do auditor..."
+                            className="min-h-[60px] text-xs"
+                            disabled={isSaving}
+                          />
+                        </div>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{response.control?.domain}</Badge>
-                    </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <Badge variant="outline">{response.control?.domain}</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Select
                         value={response.maturity_level?.toString() || ''}
                         onValueChange={(value) => updateResponse(response.id, 'maturity_level', parseInt(value))}
                         disabled={isSaving}
                       >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className={isMobile ? "w-32" : "w-40"}>
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -277,33 +305,38 @@ const AssessmentDetailPage: React.FC = () => {
                       </Select>
                       {response.maturity_level && (
                         <Badge className={`mt-1 ${getMaturityLevelColor(response.maturity_level)}`}>
-                          {getMaturityLevelText(response.maturity_level)}
+                          {isMobile ? response.maturity_level : getMaturityLevelText(response.maturity_level)}
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Textarea
-                        value={response.assessee_response || ''}
-                        onChange={(e) => updateResponse(response.id, 'assessee_response', e.target.value)}
-                        placeholder="Descreva a implementação do controle..."
-                        className="min-h-[60px]"
-                        disabled={isSaving}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Textarea
-                        value={response.assessor_analysis || ''}
-                        onChange={(e) => updateResponse(response.id, 'assessor_analysis', e.target.value)}
-                        placeholder="Análise do auditor..."
-                        className="min-h-[60px]"
-                        disabled={isSaving}
-                      />
-                    </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <Textarea
+                          value={response.assessee_response || ''}
+                          onChange={(e) => updateResponse(response.id, 'assessee_response', e.target.value)}
+                          placeholder="Descreva a implementação do controle..."
+                          className="min-h-[60px]"
+                          disabled={isSaving}
+                        />
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell>
+                        <Textarea
+                          value={response.assessor_analysis || ''}
+                          onChange={(e) => updateResponse(response.id, 'assessor_analysis', e.target.value)}
+                          placeholder="Análise do auditor..."
+                          className="min-h-[60px]"
+                          disabled={isSaving}
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

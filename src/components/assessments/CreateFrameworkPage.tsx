@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Plus, Trash2, Upload } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +30,7 @@ interface NewControl {
 const CreateFrameworkPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [isLoading, setIsLoading] = useState(false);
   const [framework, setFramework] = useState({
@@ -214,7 +216,7 @@ const CreateFrameworkPage: React.FC = () => {
           <CardTitle>Informações do Framework</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
             <div>
               <label className="text-sm font-medium">Nome *</label>
               <Input
@@ -279,7 +281,7 @@ const CreateFrameworkPage: React.FC = () => {
             
             <TabsContent value="manual" className="space-y-4">
               <div className="grid gap-4 p-4 border rounded-lg">
-                <div className="grid grid-cols-2 gap-4">
+                <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                   <div>
                     <label className="text-sm font-medium">Código do Controle *</label>
                     <Input
