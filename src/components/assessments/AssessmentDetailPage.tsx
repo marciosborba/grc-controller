@@ -85,11 +85,18 @@ const AssessmentDetailPage: React.FC = () => {
             domain
           )
         `)
-        .eq('assessment_id', id)
-        .order('control.control_code');
+        .eq('assessment_id', id);
 
       if (error) throw error;
-      setResponses(data || []);
+      
+      // Sort responses by control_code after fetching
+      const sortedData = (data || []).sort((a, b) => {
+        const codeA = a.control?.control_code || '';
+        const codeB = b.control?.control_code || '';
+        return codeA.localeCompare(codeB);
+      });
+      
+      setResponses(sortedData);
     } catch (error: any) {
       toast({
         title: 'Erro',
