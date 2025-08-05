@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Search, MoreHorizontal, Trash2, Edit3 } from 'lucide-react';
+import { Plus, FileText, Search, MoreHorizontal, Trash2, Edit3, Filter, Copy } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,7 +38,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreateAssessmentDialog } from './CreateAssessmentDialog';
+import { AssessmentStats } from './AssessmentStats';
 import { useAssessments } from '@/hooks/useAssessments';
 import { useToast } from '@/hooks/use-toast';
 
@@ -58,10 +67,11 @@ const isOverdue = (dueDate: string | null) => {
 export const AssessmentManagementPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { assessments, isLoading, deleteAssessment } = useAssessments();
+  const { assessments, isLoading, deleteAssessment, createAssessment } = useAssessments();
   const isMobile = useIsMobile();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -73,10 +83,12 @@ export const AssessmentManagementPage: React.FC = () => {
     confirmText: '',
   });
 
-  const filteredAssessments = assessments?.filter(assessment =>
-    assessment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assessment.framework?.short_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredAssessments = assessments?.filter(assessment => {
+    const matchesSearch = assessment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assessment.framework?.short_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || assessment.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }) || [];
 
   const handleDelete = async () => {
     if (deleteDialog.confirmText !== deleteDialog.assessment?.name) {
@@ -99,6 +111,26 @@ export const AssessmentManagementPage: React.FC = () => {
       toast({
         title: "Erro",
         description: "Erro ao excluir assessment.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicate = async (assessment: any) => {
+    try {
+      await createAssessment({
+        name: `${assessment.name} (Cópia)`,
+        framework_id_on_creation: assessment.framework_id_on_creation,
+        due_date: assessment.due_date,
+      });
+      toast({
+        title: "Sucesso",
+        description: "Assessment duplicado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao duplicar assessment.",
         variant: "destructive",
       });
     }
@@ -142,50 +174,21 @@ export const AssessmentManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-4'}`}>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assessments?.length || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {assessments?.filter(a => a.status === 'Em Andamento').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {assessments?.filter(a => a.status === 'Concluído').length || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atrasados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {assessments?.filter(a => isOverdue(a.due_date)).length || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main Content with Tabs */}
+      <Tabs defaultValue="list" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="list">Lista de Assessments</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+        </TabsList>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2">
+        <TabsContent value="dashboard" className="space-y-4">
+          <AssessmentStats assessments={assessments || []} />
+        </TabsContent>
+
+        <TabsContent value="list" className="space-y-4">
+
+      {/* Search and Filters */}
+      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center space-x-2'}`}>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -194,6 +197,21 @@ export const AssessmentManagementPage: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-8"
           />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="Não Iniciado">Não Iniciado</SelectItem>
+              <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+              <SelectItem value="Em Revisão">Em Revisão</SelectItem>
+              <SelectItem value="Concluído">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -294,6 +312,13 @@ export const AssessmentManagementPage: React.FC = () => {
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
+                            onClick={() => handleDuplicate(assessment)}
+                            className="cursor-pointer"
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => setDeleteDialog({
                               isOpen: true,
                               assessment,
@@ -315,6 +340,9 @@ export const AssessmentManagementPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+        </TabsContent>
+      </Tabs>
 
       {/* Create Assessment Dialog */}
       <CreateAssessmentDialog
