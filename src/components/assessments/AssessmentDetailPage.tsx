@@ -1,38 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { useParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAssessments, Assessment } from '@/hooks/useAssessments';
+import AssessmentHeader from './AssessmentHeader';
+import AssessmentProgress from './AssessmentProgress';
+import AssessmentResponsesTable from './AssessmentResponsesTable';
 
 interface AssessmentResponse {
   id: string;
@@ -49,10 +22,8 @@ interface AssessmentResponse {
 
 const AssessmentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { assessments, isLoading } = useAssessments();
-  const isMobile = useIsMobile();
   
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [responses, setResponses] = useState<AssessmentResponse[]>([]);
@@ -140,27 +111,6 @@ const AssessmentDetailPage: React.FC = () => {
     }
   };
 
-  const getMaturityLevelText = (level: number | null) => {
-    const levels = {
-      1: 'Inexistente',
-      2: 'Ad Hoc',
-      3: 'Definido',
-      4: 'Gerenciado',
-      5: 'Otimizado'
-    };
-    return level ? levels[level as keyof typeof levels] : 'Não avaliado';
-  };
-
-  const getMaturityLevelColor = (level: number | null) => {
-    const colors = {
-      1: 'bg-red-100 text-red-800',
-      2: 'bg-orange-100 text-orange-800',
-      3: 'bg-yellow-100 text-yellow-800',
-      4: 'bg-blue-100 text-blue-800',
-      5: 'bg-green-100 text-green-800'
-    };
-    return level ? colors[level as keyof typeof colors] : 'bg-gray-100 text-gray-800';
-  };
 
   if (isLoading || !assessment) {
     return (
@@ -176,199 +126,20 @@ const AssessmentDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate('/assessments')} className="cursor-pointer">
-              Assessments
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{assessment.name}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <AssessmentHeader assessment={assessment} />
+      
+      <AssessmentProgress
+        completedResponses={completedResponses}
+        totalResponses={totalResponses}
+        progressPercentage={progressPercentage}
+      />
 
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/assessments')}
-          className="flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Button>
-        <div className="flex-1">
-          <h1 className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold tracking-tight`}>
-            {assessment.name}
-          </h1>
-          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center'} gap-4 mt-2`}>
-            <Badge variant="secondary">{assessment.framework?.short_name}</Badge>
-            <Badge className={
-              assessment.status === 'Concluído' ? 'bg-green-100 text-green-800' :
-              assessment.status === 'Em Andamento' ? 'bg-blue-100 text-blue-800' :
-              assessment.status === 'Em Revisão' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-gray-100 text-gray-800'
-            }>
-              {assessment.status}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Progresso do Assessment
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className={`grid ${isMobile ? 'grid-cols-1' : 'grid-cols-3'} gap-4`}>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{progressPercentage}%</div>
-              <div className="text-sm text-muted-foreground">Progresso</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{completedResponses}</div>
-              <div className="text-sm text-muted-foreground">Controles Avaliados</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{totalResponses}</div>
-              <div className="text-sm text-muted-foreground">Total de Controles</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Assessment Responses */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Controles do Framework</CardTitle>
-        </CardHeader>
-        <CardContent className={isMobile ? "p-2" : "p-0"}>
-          <div className={isMobile ? "overflow-x-auto" : ""}>
-            <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Controle</TableHead>
-                {!isMobile && <TableHead>Domínio</TableHead>}
-                <TableHead>Maturidade</TableHead>
-                {!isMobile && <TableHead>Resposta</TableHead>}
-                {!isMobile && <TableHead>Análise</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoadingResponses ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    Carregando controles...
-                  </TableCell>
-                </TableRow>
-              ) : responses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    Nenhum controle encontrado para este assessment.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                responses.map((response) => (
-                  <TableRow key={response.id}>
-                    <TableCell className="font-medium">
-                      {response.control?.control_code}
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="text-sm">
-                        {response.control?.control_text?.length > 100 
-                          ? `${response.control.control_text.substring(0, 100)}...`
-                          : response.control?.control_text
-                        }
-                      </div>
-                      {isMobile && (
-                        <div className="mt-2 space-y-2">
-                          <Badge variant="outline" className="text-xs">
-                            {response.control?.domain}
-                          </Badge>
-                          <Textarea
-                            value={response.assessee_response || ''}
-                            onChange={(e) => updateResponse(response.id, 'assessee_response', e.target.value)}
-                            placeholder="Descreva a implementação..."
-                            className="min-h-[60px] text-xs"
-                            disabled={isSaving}
-                          />
-                          <Textarea
-                            value={response.assessor_analysis || ''}
-                            onChange={(e) => updateResponse(response.id, 'assessor_analysis', e.target.value)}
-                            placeholder="Análise do auditor..."
-                            className="min-h-[60px] text-xs"
-                            disabled={isSaving}
-                          />
-                        </div>
-                      )}
-                    </TableCell>
-                    {!isMobile && (
-                      <TableCell>
-                        <Badge variant="outline">{response.control?.domain}</Badge>
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <Select
-                        value={response.maturity_level?.toString() || ''}
-                        onValueChange={(value) => updateResponse(response.id, 'maturity_level', parseInt(value))}
-                        disabled={isSaving}
-                      >
-                        <SelectTrigger className={isMobile ? "w-32" : "w-40"}>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 - Inexistente</SelectItem>
-                          <SelectItem value="2">2 - Ad Hoc</SelectItem>
-                          <SelectItem value="3">3 - Definido</SelectItem>
-                          <SelectItem value="4">4 - Gerenciado</SelectItem>
-                          <SelectItem value="5">5 - Otimizado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {response.maturity_level && (
-                        <Badge className={`mt-1 ${getMaturityLevelColor(response.maturity_level)}`}>
-                          {isMobile ? response.maturity_level : getMaturityLevelText(response.maturity_level)}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    {!isMobile && (
-                      <TableCell>
-                        <Textarea
-                          value={response.assessee_response || ''}
-                          onChange={(e) => updateResponse(response.id, 'assessee_response', e.target.value)}
-                          placeholder="Descreva a implementação do controle..."
-                          className="min-h-[60px]"
-                          disabled={isSaving}
-                        />
-                      </TableCell>
-                    )}
-                    {!isMobile && (
-                      <TableCell>
-                        <Textarea
-                          value={response.assessor_analysis || ''}
-                          onChange={(e) => updateResponse(response.id, 'assessor_analysis', e.target.value)}
-                          placeholder="Análise do auditor..."
-                          className="min-h-[60px]"
-                          disabled={isSaving}
-                        />
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <AssessmentResponsesTable
+        responses={responses}
+        isLoadingResponses={isLoadingResponses}
+        isSaving={isSaving}
+        onUpdateResponse={updateResponse}
+      />
     </div>
   );
 };
