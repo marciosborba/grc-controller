@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
 import FrameworkDetailPage from "@/components/assessments/FrameworkDetailPage";
+import FrameworkEvaluationPage from "@/components/assessments/FrameworkEvaluationPage";
 import CreateFrameworkPage from "@/components/assessments/CreateFrameworkPage";
 import HelpPage from "./pages/HelpPage";
 
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
                 <Route path="assessments/frameworks/create" element={<CreateFrameworkPage />} />
                 <Route path="assessments/frameworks/:id" element={<FrameworkDetailPage />} />
+                <Route path="assessments/frameworks/:id/evaluate" element={<FrameworkEvaluationPage />} />
                 <Route path="assessments/:id" element={<AssessmentDetailPage />} />
                 <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
                 <Route path="policies" element={<PoliciesPage />} />

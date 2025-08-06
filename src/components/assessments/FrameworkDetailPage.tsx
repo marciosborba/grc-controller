@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Edit3, FileText } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -342,14 +342,25 @@ const FrameworkDetailPage: React.FC = () => {
       <Card>
         <CardHeader className={`flex ${isMobile ? 'flex-col space-y-2' : 'flex-row'} items-center justify-between`}>
           <CardTitle>Controles ({controls.length})</CardTitle>
-          <Button
-            onClick={() => setShowAddControlDialog(true)}
-            className="flex items-center gap-2"
-            size={isMobile ? "sm" : "default"}
-          >
-            <Plus className="h-4 w-4" />
-            {isMobile ? 'Adicionar' : 'Adicionar Controle'}
-          </Button>
+          <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/assessments/frameworks/${id}/evaluate`)}
+              className="flex items-center gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <FileText className="h-4 w-4" />
+              {isMobile ? 'Avaliar' : 'Avaliar Controles'}
+            </Button>
+            <Button
+              onClick={() => setShowAddControlDialog(true)}
+              className="flex items-center gap-2"
+              size={isMobile ? "sm" : "default"}
+            >
+              <Plus className="h-4 w-4" />
+              {isMobile ? 'Adicionar' : 'Adicionar Controle'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className={isMobile ? "p-2" : "p-0"}>
           <div className={isMobile ? "overflow-x-auto" : ""}>
