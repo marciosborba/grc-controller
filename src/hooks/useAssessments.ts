@@ -21,6 +21,16 @@ export interface Assessment {
   };
 }
 
+export interface AssessmentUserRole {
+  id: string;
+  assessment_id: string;
+  user_id: string;
+  role: 'respondent' | 'auditor';
+  assigned_by: string | null;
+  assigned_at: string;
+  created_at: string;
+}
+
 export interface Framework {
   id: string;
   name: string;
@@ -148,12 +158,66 @@ export const useAssessments = () => {
     fetchFrameworks();
   }, []);
 
+  const assignUserRole = async (assessmentId: string, userId: string, role: 'respondent' | 'auditor') => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from('assessment_user_roles')
+        .insert({
+          assessment_id: assessmentId,
+          user_id: userId,
+          role,
+          assigned_by: userData.user?.id,
+        });
+
+      if (error) throw error;
+      
+      toast({
+        title: 'Sucesso',
+        description: `Usuário atribuído como ${role === 'respondent' ? 'respondente' : 'auditor'}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atribuir papel ao usuário.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const removeUserRole = async (roleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('assessment_user_roles')
+        .delete()
+        .eq('id', roleId);
+
+      if (error) throw error;
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Papel removido com sucesso.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao remover papel do usuário.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   return {
     assessments,
     frameworks,
     isLoading,
     createAssessment,
     deleteAssessment,
+    assignUserRole,
+    removeUserRole,
     refetchAssessments: fetchAssessments,
     refetchFrameworks: fetchFrameworks,
   };

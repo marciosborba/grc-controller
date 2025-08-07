@@ -135,36 +135,63 @@ export type Database = {
       }
       assessment_responses: {
         Row: {
+          answered_at: string | null
+          answered_by_user_id: string | null
           assessee_response: string | null
           assessment_id: string
           assessor_analysis: string | null
+          auditor_comments: string | null
+          auditor_maturity_level: number | null
           control_id: string
           created_at: string
+          evaluated_at: string | null
+          evaluated_by_user_id: string | null
           id: string
           last_updated_by_user_id: string | null
           maturity_level: number | null
+          question_status: string | null
+          respondent_comments: string | null
+          respondent_maturity_level: number | null
           updated_at: string
         }
         Insert: {
+          answered_at?: string | null
+          answered_by_user_id?: string | null
           assessee_response?: string | null
           assessment_id: string
           assessor_analysis?: string | null
+          auditor_comments?: string | null
+          auditor_maturity_level?: number | null
           control_id: string
           created_at?: string
+          evaluated_at?: string | null
+          evaluated_by_user_id?: string | null
           id?: string
           last_updated_by_user_id?: string | null
           maturity_level?: number | null
+          question_status?: string | null
+          respondent_comments?: string | null
+          respondent_maturity_level?: number | null
           updated_at?: string
         }
         Update: {
+          answered_at?: string | null
+          answered_by_user_id?: string | null
           assessee_response?: string | null
           assessment_id?: string
           assessor_analysis?: string | null
+          auditor_comments?: string | null
+          auditor_maturity_level?: number | null
           control_id?: string
           created_at?: string
+          evaluated_at?: string | null
+          evaluated_by_user_id?: string | null
           id?: string
           last_updated_by_user_id?: string | null
           maturity_level?: number | null
+          question_status?: string | null
+          respondent_comments?: string | null
+          respondent_maturity_level?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -180,6 +207,44 @@ export type Database = {
             columns: ["control_id"]
             isOneToOne: false
             referencedRelation: "framework_controls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_user_roles: {
+        Row: {
+          assessment_id: string
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          assessment_id: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          assessment_id?: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_user_roles_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
             referencedColumns: ["id"]
           },
         ]
@@ -1163,6 +1228,10 @@ export type Database = {
     }
     Functions: {
       calculate_assessment_progress: {
+        Args: { assessment_id_param: string }
+        Returns: number
+      }
+      calculate_cmmi_average: {
         Args: { assessment_id_param: string }
         Returns: number
       }

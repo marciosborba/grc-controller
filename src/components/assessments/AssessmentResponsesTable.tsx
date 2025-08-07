@@ -14,9 +14,20 @@ import AssessmentResponseRow from './AssessmentResponseRow';
 interface AssessmentResponse {
   id: string;
   control_id: string;
+  assessment_id: string;
   maturity_level: number | null;
+  respondent_maturity_level: number | null;
+  auditor_maturity_level: number | null;
   assessee_response: string | null;
   assessor_analysis: string | null;
+  respondent_comments: string | null;
+  auditor_comments: string | null;
+  question_status: 'pending' | 'answered' | 'under_review' | 'evaluated';
+  answered_by_user_id: string | null;
+  answered_at: string | null;
+  evaluated_by_user_id: string | null;
+  evaluated_at: string | null;
+  last_updated_by_user_id: string | null;
   control: {
     control_code: string;
     control_text: string;
@@ -28,6 +39,7 @@ interface AssessmentResponsesTableProps {
   responses: AssessmentResponse[];
   isLoadingResponses: boolean;
   isSaving: boolean;
+  userRole: 'respondent' | 'auditor' | null;
   onUpdateResponse: (responseId: string, field: string, value: any) => void;
 }
 
@@ -35,6 +47,7 @@ const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
   responses,
   isLoadingResponses,
   isSaving,
+  userRole,
   onUpdateResponse,
 }) => {
   const isMobile = useIsMobile();
@@ -52,9 +65,10 @@ const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
                 <TableHead>Código</TableHead>
                 <TableHead>Controle</TableHead>
                 {!isMobile && <TableHead>Domínio</TableHead>}
+                <TableHead>Status</TableHead>
                 <TableHead>Maturidade</TableHead>
-                {!isMobile && <TableHead>Resposta</TableHead>}
-                {!isMobile && <TableHead>Análise</TableHead>}
+                {!isMobile && <TableHead>{userRole === 'respondent' ? 'Sua Resposta' : 'Resposta'}</TableHead>}
+                {!isMobile && <TableHead>{userRole === 'auditor' ? 'Sua Análise' : 'Análise'}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,6 +90,7 @@ const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
                     key={response.id}
                     response={response}
                     isSaving={isSaving}
+                    userRole={userRole}
                     onUpdateResponse={onUpdateResponse}
                   />
                 ))

@@ -14,9 +14,20 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface AssessmentResponse {
   id: string;
   control_id: string;
+  assessment_id: string;
   maturity_level: number | null;
+  respondent_maturity_level: number | null;
+  auditor_maturity_level: number | null;
   assessee_response: string | null;
   assessor_analysis: string | null;
+  respondent_comments: string | null;
+  auditor_comments: string | null;
+  question_status: 'pending' | 'answered' | 'under_review' | 'evaluated';
+  answered_by_user_id: string | null;
+  answered_at: string | null;
+  evaluated_by_user_id: string | null;
+  evaluated_at: string | null;
+  last_updated_by_user_id: string | null;
   control: {
     control_code: string;
     control_text: string;
@@ -27,6 +38,7 @@ interface AssessmentResponse {
 interface AssessmentResponseRowProps {
   response: AssessmentResponse;
   isSaving: boolean;
+  userRole: 'respondent' | 'auditor' | null;
   onUpdateResponse: (responseId: string, field: string, value: any) => void;
 }
 
@@ -52,12 +64,37 @@ const getMaturityLevelColor = (level: number | null) => {
   return level ? colors[level as keyof typeof colors] : 'bg-gray-100 text-gray-800';
 };
 
+const getStatusText = (status: string) => {
+  const statusMap = {
+    pending: 'Pendente',
+    answered: 'Respondido',
+    under_review: 'Em Revisão',
+    evaluated: 'Avaliado'
+  };
+  return statusMap[status as keyof typeof statusMap] || status;
+};
+
+const getStatusColor = (status: string) => {
+  const colorMap = {
+    pending: 'bg-gray-100 text-gray-800',
+    answered: 'bg-blue-100 text-blue-800',
+    under_review: 'bg-yellow-100 text-yellow-800',
+    evaluated: 'bg-green-100 text-green-800'
+  };
+  return colorMap[status as keyof typeof colorMap] || 'bg-gray-100 text-gray-800';
+};
+
 const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
   response,
   isSaving,
+  userRole,
   onUpdateResponse,
 }) => {
   const isMobile = useIsMobile();
+  
+  const currentMaturity = response.auditor_maturity_level || response.respondent_maturity_level;
+  const isRespondent = userRole === 'respondent';
+  const isAuditor = userRole === 'auditor';
 
   return (
     <TableRow>
@@ -76,20 +113,27 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
             <Badge variant="outline" className="text-xs">
               {response.control?.domain}
             </Badge>
-            <Textarea
-              value={response.assessee_response || ''}
-              onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
-              placeholder="Descreva a implementação..."
-              className="min-h-[60px] text-xs"
-              disabled={isSaving}
-            />
-            <Textarea
-              value={response.assessor_analysis || ''}
-              onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
-              placeholder="Análise do auditor..."
-              className="min-h-[60px] text-xs"
-              disabled={isSaving}
-            />
+            <Badge className={`text-xs ${getStatusColor(response.question_status)}`}>
+              {getStatusText(response.question_status)}
+            </Badge>
+            {(isRespondent || !userRole) && (
+              <Textarea
+                value={response.assessee_response || ''}
+                onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
+                placeholder="Descreva a implementação..."
+                className="min-h-[60px] text-xs"
+                disabled={isSaving || (isAuditor && response.question_status === 'evaluated')}
+              />
+            )}
+            {(isAuditor || !userRole) && (
+              <Textarea
+                value={response.assessor_analysis || ''}
+                onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
+                placeholder="Análise do auditor..."
+                className="min-h-[60px] text-xs"
+                disabled={isSaving || (isRespondent)}
+              />
+            )}
           </div>
         )}
       </TableCell>
@@ -99,10 +143,23 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
         </TableCell>
       )}
       <TableCell>
+        <Badge className={getStatusColor(response.question_status)}>
+          {getStatusText(response.question_status)}
+        </Badge>
+      </TableCell>
+      <TableCell>
         <Select
-          value={response.maturity_level?.toString() || ''}
-          onValueChange={(value) => onUpdateResponse(response.id, 'maturity_level', parseInt(value))}
-          disabled={isSaving}
+          value={isRespondent 
+            ? (response.respondent_maturity_level?.toString() || '') 
+            : isAuditor 
+            ? (response.auditor_maturity_level?.toString() || '')
+            : (currentMaturity?.toString() || '')
+          }
+          onValueChange={(value) => {
+            const field = isRespondent ? 'respondent_maturity_level' : 'auditor_maturity_level';
+            onUpdateResponse(response.id, field, parseInt(value));
+          }}
+          disabled={isSaving || !userRole}
         >
           <SelectTrigger className={isMobile ? "w-32" : "w-40"}>
             <SelectValue placeholder="Selecione..." />
@@ -115,10 +172,16 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
             <SelectItem value="5">5 - Otimizado</SelectItem>
           </SelectContent>
         </Select>
-        {response.maturity_level && (
-          <Badge className={`mt-1 ${getMaturityLevelColor(response.maturity_level)}`}>
-            {isMobile ? response.maturity_level : getMaturityLevelText(response.maturity_level)}
+        {currentMaturity && (
+          <Badge className={`mt-1 ${getMaturityLevelColor(currentMaturity)}`}>
+            {isMobile ? currentMaturity : getMaturityLevelText(currentMaturity)}
           </Badge>
+        )}
+        {!isMobile && response.respondent_maturity_level && response.auditor_maturity_level && 
+         response.respondent_maturity_level !== response.auditor_maturity_level && (
+          <div className="text-xs text-amber-600 mt-1">
+            Respondente: {response.respondent_maturity_level} | Auditor: {response.auditor_maturity_level}
+          </div>
         )}
       </TableCell>
       {!isMobile && (
@@ -126,9 +189,10 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
           <Textarea
             value={response.assessee_response || ''}
             onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
-            placeholder="Descreva a implementação do controle..."
+            placeholder={isRespondent ? "Descreva a implementação do controle..." : "Resposta do respondente"}
             className="min-h-[60px]"
-            disabled={isSaving}
+            disabled={isSaving || (isAuditor && response.question_status === 'evaluated') || (!isRespondent && !isAuditor)}
+            readOnly={isAuditor}
           />
         </TableCell>
       )}
@@ -137,9 +201,10 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
           <Textarea
             value={response.assessor_analysis || ''}
             onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
-            placeholder="Análise do auditor..."
+            placeholder={isAuditor ? "Sua análise..." : "Análise do auditor"}
             className="min-h-[60px]"
-            disabled={isSaving}
+            disabled={isSaving || isRespondent || (!isRespondent && !isAuditor)}
+            readOnly={isRespondent}
           />
         </TableCell>
       )}
