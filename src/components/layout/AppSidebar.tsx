@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 const navigationItems = [{
@@ -75,6 +75,12 @@ const navigationItems = [{
 }, {
   label: 'Sistema',
   items: [{
+    title: 'Tenants',
+    url: '/admin/tenants',
+    icon: Building2,
+    permissions: ['platform_admin'],
+    description: 'Gestão de organizações e limites'
+  }, {
     title: 'Configurações',
     url: '/settings',
     icon: Settings,
@@ -101,7 +107,17 @@ export function AppSidebar() {
   const hasPermission = (permissions: string[]) => {
     if (!user) return false;
     if (permissions.includes('all')) return true;
-    return permissions.some(permission => user.permissions.includes(permission) || user.permissions.includes('all'));
+    
+    // Verificar permissão especial para platform_admin
+    if (permissions.includes('platform_admin')) {
+      console.log(`[Sidebar] Checking platform_admin permission: isPlatformAdmin=${user.isPlatformAdmin}`);
+      return user.isPlatformAdmin;
+    }
+    
+    const hasDirectPermission = permissions.some(permission => user.permissions?.includes(permission) || user.permissions?.includes('all'));
+    console.log(`[Sidebar] Checking permissions ${JSON.stringify(permissions)}: hasDirectPermission=${hasDirectPermission}, userPermissions=${JSON.stringify(user.permissions)}`);
+    
+    return hasDirectPermission;
   };
   const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + '/');
   const getNavCls = (isActiveItem: boolean) => isActiveItem ? "bg-primary/10 text-primary font-medium border border-primary/20" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";

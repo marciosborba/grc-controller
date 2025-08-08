@@ -19,6 +19,9 @@ import EthicsChannelPage from "@/components/ethics/EthicsChannelPage";
 import { ReportsPage } from "@/components/reports/ReportsPage";
 import { UserManagementPage } from "@/components/settings/UserManagementPage";
 import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
+import TenantManagement from "@/components/admin/TenantManagement";
+import DebugUserInfo from "@/components/admin/DebugUserInfo";
+import UserDebugInfo from "@/components/admin/UserDebugInfo";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
@@ -57,6 +60,28 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return user ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (!user.isPlatformAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -112,6 +137,13 @@ const App = () => (
                 <Route path="vendors" element={<VendorsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="ethics" element={<EthicsChannelPage />} />
+                <Route path="admin/tenants" element={
+                  <PlatformAdminRoute>
+                    <TenantManagement />
+                  </PlatformAdminRoute>
+                } />
+                <Route path="debug-user" element={<DebugUserInfo />} />
+                <Route path="user-debug" element={<UserDebugInfo />} />
                 <Route path="settings" element={<UserManagementPage />} />
                 <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
                 <Route path="help" element={<HelpPage />} />

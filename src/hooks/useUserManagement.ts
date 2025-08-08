@@ -21,7 +21,18 @@ export const useUserManagement = () => {
 
   // Verificar permissões do usuário
   const hasPermission = (permission: string): boolean => {
-    return user?.permissions?.includes(permission) || user?.roles?.includes('admin') || false;
+    // Admins da plataforma têm todas as permissões
+    if (user?.isPlatformAdmin) {
+      console.log(`[hasPermission] Platform admin has permission: ${permission}`);
+      return true;
+    }
+    
+    const hasDirectPermission = user?.permissions?.includes(permission);
+    const isSystemAdmin = user?.roles?.includes('admin');
+    
+    console.log(`[hasPermission] Checking permission "${permission}": direct=${hasDirectPermission}, isAdmin=${isSystemAdmin}, roles=${JSON.stringify(user?.roles)}`);
+    
+    return hasDirectPermission || isSystemAdmin || false;
   };
 
   // Buscar usuários com filtros
@@ -41,6 +52,11 @@ export const useUserManagement = () => {
         let query = supabase
           .from('profiles')
           .select('*');
+
+        // Filtrar por tenant se não for admin da plataforma
+        if (!user?.isPlatformAdmin) {
+          query = query.eq('tenant_id', user?.tenantId);
+        }
 
         // Aplicar filtros básicos
         if (filters.search) {
@@ -158,9 +174,16 @@ export const useUserManagement = () => {
       }
 
       try {
-        const { data: profiles, error } = await supabase
+        let query = supabase
           .from('profiles')
-          .select('is_active, locked_until, two_factor_enabled, last_login_at, failed_login_attempts, user_id');
+          .select('is_active, locked_until, two_factor_enabled, last_login_at, failed_login_attempts, user_id, tenant_id');
+
+        // Filtrar por tenant se não for admin da plataforma
+        if (!user?.isPlatformAdmin) {
+          query = query.eq('tenant_id', user?.tenantId);
+        }
+
+        const { data: profiles, error } = await query;
 
         if (error) {
           console.error('Erro ao buscar estatísticas:', error);
@@ -249,70 +272,111 @@ export const useUserManagement = () => {
   // Criar usuário
   const createUserMutation = useMutation({
     mutationFn: async (userData: CreateUserRequest) => {
+      console.log(`[createUser] Checking permissions - isPlatformAdmin: ${user?.isPlatformAdmin}`);
+      console.log(`[createUser] User roles: ${JSON.stringify(user?.roles)}`);
+      console.log(`[createUser] User permissions: ${JSON.stringify(user?.permissions)}`);
+      
       if (!hasPermission('users.create')) {
-        throw new Error('Sem permissão para criar usuários');
+        console.error('[createUser] Permission denied - missing users.create permission');
+        throw new Error('Sem permissão para criar usuários. Verifique se você é administrador da plataforma ou possui a role admin.');
       }
 
-      // Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Determinar tenant_id
+      let targetTenantId = userData.tenant_id;
+      
+      // Se não for admin da plataforma, usar o tenant do usuário atual
+      if (!user?.isPlatformAdmin) {
+        targetTenantId = user?.tenantId;
+      }
+
+      if (!targetTenantId) {
+        throw new Error('Tenant ID é obrigatório');
+      }
+
+      // Verificar limite de usuários do tenant (apenas para não-admins da plataforma)
+      if (!user?.isPlatformAdmin) {
+        const { data: tenant, error: tenantError } = await supabase
+          .from('tenants')
+          .select('max_users, current_users_count')
+          .eq('id', targetTenantId)
+          .single();
+
+        if (tenantError) throw new Error('Erro ao verificar limites do tenant');
+
+        if (tenant.current_users_count >= tenant.max_users) {
+          throw new Error(`Limite de usuários atingido (${tenant.max_users}). Contate o administrador da plataforma.`);
+        }
+      }
+
+      // Preparar dados para Edge Function
+      const functionData = {
         email: userData.email,
         password: userData.send_invitation ? undefined : 'temp-password-123',
-        email_confirm: !userData.send_invitation,
-        user_metadata: {
-          full_name: userData.full_name,
-          job_title: userData.job_title
-        }
+        full_name: userData.full_name,
+        job_title: userData.job_title,
+        department: userData.department,
+        phone: userData.phone,
+        tenant_id: targetTenantId,
+        roles: userData.roles,
+        permissions: userData.permissions || [],
+        send_invitation: userData.send_invitation,
+        must_change_password: userData.must_change_password
+      };
+      
+      console.log('[createUser] Calling Edge Function with data:', {
+        email: functionData.email,
+        full_name: functionData.full_name,
+        tenant_id: functionData.tenant_id,
+        roles: functionData.roles,
+        send_invitation: functionData.send_invitation
       });
 
-      if (authError) throw authError;
+      // Criar usuário usando Edge Function (necessário para auth.admin.createUser)
+      const { data: result, error: functionError } = await supabase.functions.invoke('create-user-admin', {
+        body: functionData
+      });
 
-      // Criar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          full_name: userData.full_name,
-          job_title: userData.job_title,
-          department: userData.department,
-          phone: userData.phone,
-          tenant_id: userData.tenant_id,
-          permissions: userData.permissions || [],
-          must_change_password: userData.must_change_password || userData.send_invitation
-        });
-
-      if (profileError) throw profileError;
-
-      // Atribuir roles
-      if (userData.roles.length > 0) {
-        const roleInserts = userData.roles.map(role => ({
-          user_id: authData.user.id,
-          role
-        }));
-
-        const { error: rolesError } = await supabase
-          .from('user_roles')
-          .insert(roleInserts);
-
-        if (rolesError) throw rolesError;
-      }
-
-      // Log da atividade
-      try {
-        await supabase.rpc('rpc_log_activity', {
-          p_user_id: user?.id,
-          p_action: 'user_created',
-          p_resource_type: 'users',
-          p_resource_id: authData.user.id,
-          p_details: {
-            created_user_email: userData.email,
-            roles: userData.roles
+      if (functionError) {
+        console.error('[createUser] Edge function error:', functionError);
+        console.error('[createUser] Error type:', typeof functionError);
+        console.error('[createUser] Error properties:', Object.keys(functionError));
+        
+        if (functionError.context) {
+          console.error('[createUser] Error context status:', functionError.context.status);
+          console.error('[createUser] Error context statusText:', functionError.context.statusText);
+          
+          // Tentar ler corpo da resposta
+          try {
+            if (functionError.context.clone) {
+              const errorBody = await functionError.context.clone().text();
+              console.error('[createUser] Error response body:', errorBody);
+              
+              // Tentar parsear como JSON
+              try {
+                const errorJson = JSON.parse(errorBody);
+                if (errorJson.error) {
+                  throw new Error(`Erro na criação do usuário: ${errorJson.error}`);
+                }
+              } catch (parseError) {
+                // Se não conseguir parsear, usar mensagem padrão
+              }
+            }
+          } catch (bodyError) {
+            console.error('[createUser] Erro ao ler corpo da resposta:', bodyError);
           }
-        });
-      } catch (logError) {
-        console.warn('Erro ao registrar log:', logError);
+        }
+        
+        throw new Error(`Erro na criação do usuário: ${functionError.message || 'Edge Function retornou erro'}`);
       }
 
-      return authData.user;
+      if (!result?.success) {
+        const errorMsg = result?.error || 'Erro desconhecido na criação do usuário';
+        console.error('[createUser] Edge function returned error:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('[createUser] Usuário criado com sucesso via Edge Function:', result.user);
+      return result.user;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
