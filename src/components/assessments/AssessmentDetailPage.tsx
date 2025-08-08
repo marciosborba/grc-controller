@@ -8,6 +8,7 @@ import AssessmentProgress from './AssessmentProgress';
 import AssessmentResponsesTable from './AssessmentResponsesTable';
 import AddControlDialog from './AddControlDialog';
 import UserRoleIndicator from './UserRoleIndicator';
+import { AssessmentUserRolesDialog } from './AssessmentUserRolesDialog';
 
 interface AssessmentResponse {
   id: string;
@@ -44,6 +45,8 @@ const AssessmentDetailPage: React.FC = () => {
   const [isLoadingResponses, setIsLoadingResponses] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddControlDialog, setShowAddControlDialog] = useState(false);
+  const [showUserRolesDialog, setShowUserRolesDialog] = useState(false);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
 
   useEffect(() => {
     if (assessments.length > 0 && id) {
@@ -64,6 +67,22 @@ const AssessmentDetailPage: React.FC = () => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return;
 
+      // Primeiro verificar se o usuário é admin
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id);
+
+      const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'ciso');
+      setIsSystemAdmin(isAdmin || false);
+      
+      if (isAdmin) {
+        // Administradores têm acesso total como auditor
+        setUserRole('auditor');
+        return;
+      }
+
+      // Se não é admin, verificar role específica do assessment
       const { data, error } = await supabase
         .from('assessment_user_roles')
         .select('role')
@@ -188,7 +207,7 @@ const AssessmentDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <AssessmentHeader assessment={assessment} />
+      <AssessmentHeader assessment={assessment} isSystemAdmin={isSystemAdmin} onManageUsers={() => setShowUserRolesDialog(true)} />
       
       <UserRoleIndicator userRole={userRole} />
       
@@ -214,6 +233,13 @@ const AssessmentDetailPage: React.FC = () => {
         onOpenChange={setShowAddControlDialog}
         assessmentId={id!}
         onControlAdded={fetchResponses}
+      />
+
+      <AssessmentUserRolesDialog
+        open={showUserRolesDialog}
+        onOpenChange={setShowUserRolesDialog}
+        assessmentId={id!}
+        assessmentName={assessment.name}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -16,9 +16,15 @@ import type { Assessment } from '@/hooks/useAssessments';
 
 interface AssessmentHeaderProps {
   assessment: Assessment;
+  isSystemAdmin?: boolean;
+  onManageUsers?: () => void;
 }
 
-const AssessmentHeader: React.FC<AssessmentHeaderProps> = ({ assessment }) => {
+const AssessmentHeader: React.FC<AssessmentHeaderProps> = ({ 
+  assessment, 
+  isSystemAdmin = false, 
+  onManageUsers 
+}) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -65,6 +71,18 @@ const AssessmentHeader: React.FC<AssessmentHeaderProps> = ({ assessment }) => {
             </Badge>
           </div>
         </div>
+        
+        {/* Botão para gerenciar usuários (apenas administradores) */}
+        {isSystemAdmin && onManageUsers && (
+          <Button
+            variant="outline"
+            onClick={onManageUsers}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            {isMobile ? 'Usuários' : 'Gerenciar Usuários'}
+          </Button>
+        )}
       </div>
     </>
   );

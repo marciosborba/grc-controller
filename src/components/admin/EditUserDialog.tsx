@@ -73,7 +73,7 @@ interface EditUserDialogProps {
   isLoading: boolean;
 }
 
-const AVAILABLE_ROLES: AppRole[] = ['user', 'auditor', 'compliance_officer', 'risk_manager', 'ciso', 'admin'];
+const AVAILABLE_ROLES: AppRole[] = ['user', 'compliance_officer', 'risk_manager', 'ciso', 'admin'];
 
 const DEPARTMENTS = [
   'Tecnologia da Informação',
@@ -521,7 +521,10 @@ export const EditUserDialog: React.FC<EditUserDialogProps> = ({
                       Roles do Sistema
                     </CardTitle>
                     <CardDescription>
-                      Selecione as roles que definem o nível de acesso do usuário.
+                      Selecione as roles que definem o nível de acesso geral do usuário no sistema.
+                      <br />
+                      <strong>Nota:</strong> Para atribuir papéis específicos em assessments (respondente/auditor), 
+                      use o botão "Gerenciar Usuários" dentro do assessment específico.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

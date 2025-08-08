@@ -1,13 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserCheck, UserCog, AlertCircle } from 'lucide-react';
+import { UserCheck, UserCog, AlertCircle, Shield } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserRoleIndicatorProps {
   userRole: 'respondent' | 'auditor' | null;
 }
 
 const UserRoleIndicator: React.FC<UserRoleIndicatorProps> = ({ userRole }) => {
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) return;
+
+        const { data: userRoles } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id);
+
+        const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'ciso');
+        setIsSystemAdmin(isAdmin || false);
+      } catch (error) {
+        console.error('Erro ao verificar status admin:', error);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
+
   if (!userRole) {
     return (
       <Card className="border-amber-200 bg-amber-50">
@@ -36,11 +60,20 @@ const UserRoleIndicator: React.FC<UserRoleIndicatorProps> = ({ userRole }) => {
       ]
     },
     auditor: {
-      label: 'Auditor',
-      icon: UserCog,
-      color: 'bg-green-100 text-green-800',
-      description: 'Você pode revisar respostas, fazer análises e dar avaliação final.',
-      permissions: [
+      label: isSystemAdmin ? 'Auditor (Administrador)' : 'Auditor',
+      icon: isSystemAdmin ? Shield : UserCog,
+      color: isSystemAdmin ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800',
+      description: isSystemAdmin 
+        ? 'Como administrador do sistema, você tem acesso total para revisão e avaliação.'
+        : 'Você pode revisar respostas, fazer análises e dar avaliação final.',
+      permissions: isSystemAdmin ? [
+        'Acesso total como administrador do sistema',
+        'Revisar respostas dos respondentes',
+        'Fazer análises e recomendações',
+        'Dar avaliação final de maturidade',
+        'Finalizar avaliação de controles',
+        'Gerenciar roles de usuários no assessment'
+      ] : [
         'Revisar respostas dos respondentes',
         'Fazer análises e recomendações',
         'Dar avaliação final de maturidade',
