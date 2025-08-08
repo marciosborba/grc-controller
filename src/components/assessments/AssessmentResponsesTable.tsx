@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -41,6 +43,7 @@ interface AssessmentResponsesTableProps {
   isSaving: boolean;
   userRole: 'respondent' | 'auditor' | null;
   onUpdateResponse: (responseId: string, field: string, value: any) => void;
+  onAddControl?: () => void;
 }
 
 const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
@@ -49,13 +52,20 @@ const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
   isSaving,
   userRole,
   onUpdateResponse,
+  onAddControl,
 }) => {
   const isMobile = useIsMobile();
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle>Controles do Framework</CardTitle>
+        {onAddControl && userRole && (
+          <Button onClick={onAddControl} size="sm" className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Adicionar Controle
+          </Button>
+        )}
       </CardHeader>
       <CardContent className={isMobile ? "p-2" : "p-0"}>
         <div className={isMobile ? "overflow-x-auto" : ""}>

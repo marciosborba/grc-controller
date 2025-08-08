@@ -117,22 +117,34 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
               {getStatusText(response.question_status)}
             </Badge>
             {(isRespondent || !userRole) && (
-              <Textarea
-                value={response.assessee_response || ''}
-                onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
-                placeholder="Descreva a implementação..."
-                className="min-h-[60px] text-xs"
-                disabled={isSaving || (isAuditor && response.question_status === 'evaluated')}
-              />
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {isRespondent ? 'Sua Resposta:' : 'Resposta do Respondente:'}
+                </div>
+                <Textarea
+                  value={response.assessee_response || ''}
+                  onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
+                  placeholder={isRespondent ? "Descreva como este controle está implementado..." : "Resposta do respondente"}
+                  className="min-h-[60px] text-xs"
+                  disabled={isSaving || (isAuditor && response.question_status === 'evaluated') || (!isRespondent && !isAuditor)}
+                  readOnly={isAuditor}
+                />
+              </div>
             )}
             {(isAuditor || !userRole) && (
-              <Textarea
-                value={response.assessor_analysis || ''}
-                onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
-                placeholder="Análise do auditor..."
-                className="min-h-[60px] text-xs"
-                disabled={isSaving || (isRespondent)}
-              />
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {isAuditor ? 'Sua Análise:' : 'Análise do Auditor:'}
+                </div>
+                <Textarea
+                  value={response.assessor_analysis || ''}
+                  onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
+                  placeholder={isAuditor ? "Sua análise e recomendações..." : "Análise do auditor"}
+                  className="min-h-[60px] text-xs"
+                  disabled={isSaving || isRespondent || (!isRespondent && !isAuditor)}
+                  readOnly={isRespondent}
+                />
+              </div>
             )}
           </div>
         )}
@@ -148,30 +160,37 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
         </Badge>
       </TableCell>
       <TableCell>
-        <Select
-          value={isRespondent 
-            ? (response.respondent_maturity_level?.toString() || '') 
-            : isAuditor 
-            ? (response.auditor_maturity_level?.toString() || '')
-            : (currentMaturity?.toString() || '')
-          }
-          onValueChange={(value) => {
-            const field = isRespondent ? 'respondent_maturity_level' : 'auditor_maturity_level';
-            onUpdateResponse(response.id, field, parseInt(value));
-          }}
-          disabled={isSaving || !userRole}
-        >
-          <SelectTrigger className={isMobile ? "w-32" : "w-40"}>
-            <SelectValue placeholder="Selecione..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">1 - Inexistente</SelectItem>
-            <SelectItem value="2">2 - Ad Hoc</SelectItem>
-            <SelectItem value="3">3 - Definido</SelectItem>
-            <SelectItem value="4">4 - Gerenciado</SelectItem>
-            <SelectItem value="5">5 - Otimizado</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          {userRole && (
+            <div className="text-xs font-medium text-muted-foreground">
+              {isRespondent ? 'Sua Avaliação:' : isAuditor ? 'Avaliação Final:' : 'Avaliação:'}
+            </div>
+          )}
+          <Select
+            value={isRespondent 
+              ? (response.respondent_maturity_level?.toString() || '') 
+              : isAuditor 
+              ? (response.auditor_maturity_level?.toString() || '')
+              : (currentMaturity?.toString() || '')
+            }
+            onValueChange={(value) => {
+              const field = isRespondent ? 'respondent_maturity_level' : 'auditor_maturity_level';
+              onUpdateResponse(response.id, field, parseInt(value));
+            }}
+            disabled={isSaving || !userRole}
+          >
+            <SelectTrigger className={isMobile ? "w-32" : "w-40"}>
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 - Inexistente</SelectItem>
+              <SelectItem value="2">2 - Ad Hoc</SelectItem>
+              <SelectItem value="3">3 - Definido</SelectItem>
+              <SelectItem value="4">4 - Gerenciado</SelectItem>
+              <SelectItem value="5">5 - Otimizado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         {currentMaturity && (
           <Badge className={`mt-1 ${getMaturityLevelColor(currentMaturity)}`}>
             {isMobile ? currentMaturity : getMaturityLevelText(currentMaturity)}
@@ -186,26 +205,36 @@ const AssessmentResponseRow: React.FC<AssessmentResponseRowProps> = ({
       </TableCell>
       {!isMobile && (
         <TableCell>
-          <Textarea
-            value={response.assessee_response || ''}
-            onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
-            placeholder={isRespondent ? "Descreva a implementação do controle..." : "Resposta do respondente"}
-            className="min-h-[60px]"
-            disabled={isSaving || (isAuditor && response.question_status === 'evaluated') || (!isRespondent && !isAuditor)}
-            readOnly={isAuditor}
-          />
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">
+              {isRespondent ? 'Sua Resposta:' : 'Resposta do Respondente:'}
+            </div>
+            <Textarea
+              value={response.assessee_response || ''}
+              onChange={(e) => onUpdateResponse(response.id, 'assessee_response', e.target.value)}
+              placeholder={isRespondent ? "Descreva como este controle está implementado..." : "Resposta do respondente"}
+              className="min-h-[60px]"
+              disabled={isSaving || (isAuditor && response.question_status === 'evaluated') || (!isRespondent && !isAuditor)}
+              readOnly={isAuditor}
+            />
+          </div>
         </TableCell>
       )}
       {!isMobile && (
         <TableCell>
-          <Textarea
-            value={response.assessor_analysis || ''}
-            onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
-            placeholder={isAuditor ? "Sua análise..." : "Análise do auditor"}
-            className="min-h-[60px]"
-            disabled={isSaving || isRespondent || (!isRespondent && !isAuditor)}
-            readOnly={isRespondent}
-          />
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">
+              {isAuditor ? 'Sua Análise:' : 'Análise do Auditor:'}
+            </div>
+            <Textarea
+              value={response.assessor_analysis || ''}
+              onChange={(e) => onUpdateResponse(response.id, 'assessor_analysis', e.target.value)}
+              placeholder={isAuditor ? "Sua análise e recomendações..." : "Análise do auditor"}
+              className="min-h-[60px]"
+              disabled={isSaving || isRespondent || (!isRespondent && !isAuditor)}
+              readOnly={isRespondent}
+            />
+          </div>
         </TableCell>
       )}
     </TableRow>

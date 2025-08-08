@@ -6,6 +6,8 @@ import { useAssessments, Assessment } from '@/hooks/useAssessments';
 import AssessmentHeader from './AssessmentHeader';
 import AssessmentProgress from './AssessmentProgress';
 import AssessmentResponsesTable from './AssessmentResponsesTable';
+import AddControlDialog from './AddControlDialog';
+import UserRoleIndicator from './UserRoleIndicator';
 
 interface AssessmentResponse {
   id: string;
@@ -41,6 +43,7 @@ const AssessmentDetailPage: React.FC = () => {
   const [userRole, setUserRole] = useState<'respondent' | 'auditor' | null>(null);
   const [isLoadingResponses, setIsLoadingResponses] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAddControlDialog, setShowAddControlDialog] = useState(false);
 
   useEffect(() => {
     if (assessments.length > 0 && id) {
@@ -187,6 +190,8 @@ const AssessmentDetailPage: React.FC = () => {
     <div className="space-y-6">
       <AssessmentHeader assessment={assessment} />
       
+      <UserRoleIndicator userRole={userRole} />
+      
       <AssessmentProgress
         completedResponses={completedResponses}
         totalResponses={totalResponses}
@@ -201,6 +206,14 @@ const AssessmentDetailPage: React.FC = () => {
         isSaving={isSaving}
         userRole={userRole}
         onUpdateResponse={updateResponse}
+        onAddControl={() => setShowAddControlDialog(true)}
+      />
+
+      <AddControlDialog
+        open={showAddControlDialog}
+        onOpenChange={setShowAddControlDialog}
+        assessmentId={id!}
+        onControlAdded={fetchResponses}
       />
     </div>
   );
