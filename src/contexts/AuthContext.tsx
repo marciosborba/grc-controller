@@ -19,14 +19,27 @@ interface UserRole {
   role: 'admin' | 'ciso' | 'risk_manager' | 'compliance_officer' | 'auditor' | 'user';
 }
 
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  contact_email: string;
+  max_users: number;
+  current_users_count: number;
+  subscription_plan: string;
+  is_active: boolean;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   jobTitle?: string;
   tenantId: string;
+  tenant?: Tenant;
   roles: string[];
   permissions: string[];
+  isPlatformAdmin: boolean;
   theme: 'light' | 'dark';
 }
 
@@ -48,10 +61,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   // Helper function to get user permissions based on roles
-  const getPermissions = (roles: string[]): string[] => {
+  const getPermissions = (roles: string[], isPlatformAdmin: boolean = false): string[] => {
+    // Platform admins have all permissions
+    if (isPlatformAdmin) {
+      return ['read', 'write', 'delete', 'admin', 'platform_admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage'];
+    }
+
     const permissionMap: Record<string, string[]> = {
-      admin: ['read', 'write', 'delete', 'admin'],
-      ciso: ['read', 'write', 'admin'],
+      admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete'],
+      ciso: ['read', 'write', 'admin', 'users.read', 'users.update'],
       risk_manager: ['read', 'write'],
       compliance_officer: ['read', 'write'],
       auditor: ['read'],
@@ -71,10 +89,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const buildUserObject = async (supabaseUser: User): Promise<AuthUser> => {
     console.log('Building user object for:', supabaseUser.id);
     try {
-      // Get user profile
+      // Get user profile with tenant information
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          tenants:tenant_id (
+            id,
+            name,
+            slug,
+            contact_email,
+            max_users,
+            current_users_count,
+            subscription_plan,
+            is_active
+          )
+        `)
         .eq('user_id', supabaseUser.id)
         .maybeSingle();
 
@@ -82,7 +112,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Profile error:', profileError);
       }
 
-      // Get user roles
+      // Check if user is platform admin
+      const { data: platformAdmin, error: platformAdminError } = await supabase
+        .from('platform_admins')
+        .select('role, permissions')
+        .eq('user_id', supabaseUser.id)
+        .maybeSingle();
+
+      if (platformAdminError && platformAdminError.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('Platform admin check error:', platformAdminError);
+      }
+
+      const isPlatformAdmin = !!platformAdmin;
+      console.log(`[AuthContext] Platform admin check for user ${supabaseUser.id}: found=${!!platformAdmin}, isPlatformAdmin=${isPlatformAdmin}`);
+      if (platformAdmin) {
+        console.log(`[AuthContext] Platform admin data:`, platformAdmin);
+      }
+
+      // Get user roles (system roles)
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('role')
@@ -93,18 +140,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       const roles = userRoles?.map(r => r.role) || ['user'];
-      const permissions = getPermissions(roles);
+      const permissions = getPermissions(roles, isPlatformAdmin);
+
+      // Extract tenant data
+      const tenant = profile?.tenants ? {
+        id: profile.tenants.id,
+        name: profile.tenants.name,
+        slug: profile.tenants.slug,
+        contact_email: profile.tenants.contact_email,
+        max_users: profile.tenants.max_users,
+        current_users_count: profile.tenants.current_users_count,
+        subscription_plan: profile.tenants.subscription_plan,
+        is_active: profile.tenants.is_active
+      } : undefined;
 
       const authUser = {
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: sanitizeInput(profile?.full_name || supabaseUser.email || ''),
         jobTitle: sanitizeInput(profile?.job_title || ''),
-        tenantId: 'tenant-1',
+        tenantId: profile?.tenant_id || '46b1c048-85a1-423b-96fc-776007c8de1f',
+        tenant,
         roles,
         permissions,
+        isPlatformAdmin,
         theme: 'light' as const
       };
+
+      console.log(`[AuthContext] Final user object:`, {
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.name,
+        isPlatformAdmin: authUser.isPlatformAdmin,
+        roles: authUser.roles,
+        permissions: authUser.permissions
+      });
 
       await logAuthEvent('login_success', { user_id: supabaseUser.id });
       return authUser;
@@ -117,9 +187,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         id: supabaseUser.id,
         email: supabaseUser.email || '',
         name: sanitizeInput(supabaseUser.email || ''),
-        tenantId: 'tenant-1',
+        tenantId: '46b1c048-85a1-423b-96fc-776007c8de1f',
         roles: ['user'],
         permissions: ['read'],
+        isPlatformAdmin: false,
         theme: 'light' as const
       };
     }

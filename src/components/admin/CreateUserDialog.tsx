@@ -35,6 +35,7 @@ import { Separator } from '@/components/ui/separator';
 import { UserPlus, Mail, Shield, Users } from 'lucide-react';
 import type { CreateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
+import { useAuth } from '@/contexts/AuthContext';
 
 const createUserSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -43,6 +44,7 @@ const createUserSchema = z.object({
   department: z.string().optional(),
   phone: z.string().optional(),
   roles: z.array(z.string()).min(1, 'Selecione pelo menos uma role'),
+  tenant_id: z.string().optional(),
   send_invitation: z.boolean().default(true),
   must_change_password: z.boolean().default(false),
   permissions: z.array(z.string()).default([])
@@ -85,6 +87,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   onCreateUser,
   isLoading
 }) => {
+  const { user } = useAuth();
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
@@ -97,6 +100,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       department: '',
       phone: '',
       roles: [],
+      tenant_id: user?.tenantId || '',
       send_invitation: true,
       must_change_password: false,
       permissions: []
@@ -133,7 +137,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       department: data.department,
       phone: data.phone,
       roles: data.roles as AppRole[],
-      tenant_id: 'tenant-1', // Em produção, pegar do contexto do usuário
+      tenant_id: data.tenant_id || user?.tenantId || '',
       send_invitation: data.send_invitation,
       must_change_password: data.must_change_password,
       permissions: data.permissions

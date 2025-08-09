@@ -190,6 +190,11 @@ export const UserManagementPage: React.FC = () => {
           <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold">Acesso Negado</h3>
           <p className="text-gray-600">Você não tem permissão para visualizar usuários.</p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Debug - isPlatformAdmin: {currentUser?.isPlatformAdmin ? 'Sim' : 'Não'}</p>
+            <p>Roles: {JSON.stringify(currentUser?.roles)}</p>
+            <p>Permissions: {JSON.stringify(currentUser?.permissions)}</p>
+          </div>
         </div>
       </div>
     );
@@ -204,6 +209,11 @@ export const UserManagementPage: React.FC = () => {
           <p className="text-gray-600">
             Gerencie usuários, permissões e configurações de segurança
           </p>
+          <div className="mt-2 text-xs text-gray-500">
+            Platform Admin: {currentUser?.isPlatformAdmin ? 'Sim' : 'Não'} | 
+            Roles: {currentUser?.roles?.join(', ') || 'Nenhuma'} |
+            Can Create: {hasPermission('users.create') ? 'Sim' : 'Não'}
+          </div>
         </div>
         <div className="flex gap-2">
           {hasPermission('users.create') && (
