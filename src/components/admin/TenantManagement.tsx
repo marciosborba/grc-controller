@@ -274,7 +274,7 @@ const TenantManagement: React.FC = () => {
     };
     
     return (
-      <Badge variant={planColors[plan as keyof typeof planColors] || 'outline'}>
+      <Badge variant={(planColors[plan as keyof typeof planColors] || 'outline') as 'default' | 'destructive' | 'outline' | 'secondary'}>
         {plan.charAt(0).toUpperCase() + plan.slice(1)}
       </Badge>
     );

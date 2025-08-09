@@ -286,7 +286,7 @@ export const UserManagementPage: React.FC = () => {
         <CardContent>
           {/* Tabela de usuários */}
           <div className="rounded-md border">
-            <Table>
+            <Table className="text-xs [&_th]:px-2 [&_td]:px-2 [&_th]:py-2 [&_td]:py-2 [&_th]:text-xs [&_td]:text-xs [&_td]:leading-tight">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
@@ -337,8 +337,8 @@ export const UserManagementPage: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-medium">
                                 {user.profile.full_name.charAt(0).toUpperCase()}
                               </span>
