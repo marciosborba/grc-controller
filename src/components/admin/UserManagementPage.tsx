@@ -274,6 +274,7 @@ export const UserManagementPage: React.FC = () => {
         </CardHeader>
 
         <CardContent>
+
           {/* Grid de Cards de usuários */}
           {isLoadingUsers ? (
             <div className="text-center py-12">

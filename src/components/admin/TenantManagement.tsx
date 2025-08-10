@@ -165,6 +165,7 @@ const TenantManagement: React.FC = () => {
   // Verificar permissão
   if (!hasPermission) {
     return (
+
       <Card>
         <CardContent className="p-6">
           <div className="text-center text-muted-foreground">
