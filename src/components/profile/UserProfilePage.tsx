@@ -89,7 +89,7 @@ interface UserPreferences {
 }
 
 export const UserProfilePage: React.FC = () => {
-  const { user, refreshUserData } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -166,7 +166,7 @@ export const UserProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const fetchUserActivities = useCallback(async () => {
     if (!user?.id) return;
@@ -190,7 +190,7 @@ export const UserProfilePage: React.FC = () => {
         variant: 'destructive'
       });
     }
-  }, [user?.id, toast]);
+  }, [user?.id]);
 
   const handleProfileUpdate = async () => {
     if (!user?.id || !profile) return;
@@ -300,11 +300,10 @@ export const UserProfilePage: React.FC = () => {
       // Refresh all data to reflect changes
       await Promise.all([
         fetchProfile(),
-        fetchUserActivities(),
-        refreshUserData()
+        fetchUserActivities()
       ]);
       
-      console.log('Profile update completed, user data refreshed');
+      console.log('Profile update completed');
       setEditingProfile(false);
 
     } catch (error) {

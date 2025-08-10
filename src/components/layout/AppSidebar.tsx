@@ -1,8 +1,9 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 const navigationItems = [{
   label: 'Principal',
   items: [{
@@ -99,6 +100,7 @@ export function AppSidebar() {
     state
   } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     user
   } = useAuth();
@@ -121,6 +123,10 @@ export function AppSidebar() {
   };
   const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + '/');
   const getNavCls = (isActiveItem: boolean) => isActiveItem ? "bg-primary/10 text-primary font-medium border border-primary/20" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
   return <Sidebar className={`${collapsed ? "w-16" : "w-72"} transition-all duration-300 border-r border-border`} collapsible="icon">
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-border">
@@ -175,14 +181,20 @@ export function AppSidebar() {
 
       {/* User Info */}
       {!collapsed && user && <div className="mt-auto p-4 border-t border-border">
-          <div className="flex items-center space-x-3">
+          <div 
+            className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 transition-colors"
+            onClick={handleProfileClick}
+            title="Ir para configurações de perfil"
+          >
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-sm font-medium text-primary">
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {user.name ? getUserInitials(user.name) : 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+              <p className="text-sm font-medium text-foreground truncate">
+                {getUserDisplayName(user.name, user.email)}
+              </p>
               <p className="text-xs text-muted-foreground truncate">{user.jobTitle}</p>
             </div>
           </div>

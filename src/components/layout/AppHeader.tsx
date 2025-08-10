@@ -1,5 +1,6 @@
 import React from 'react';
-import { Bell, Search, Moon, Sun, LogOut, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Search, Moon, Sun, LogOut, User, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -12,9 +13,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 
 export const AppHeader = () => {
   const { user, logout, toggleTheme } = useAuth();
+  const navigate = useNavigate();
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+  };
 
   return (
     <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -75,24 +82,36 @@ export const AppHeader = () => {
               <Button variant="ghost" className="h-10 px-3 space-x-2">
                 <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="text-sm font-medium text-primary">
-                    {user?.name.split(' ').map(n => n[0]).join('')}
+                    {user?.name ? getUserInitials(user.name) : 'U'}
                   </span>
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-sm font-medium">
+                    {getUserDisplayName(user?.name, user?.email)}
+                  </p>
                   <p className="text-xs text-muted-foreground">{user?.jobTitle}</p>
                 </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="flex items-center space-x-2">
+              <DropdownMenuItem 
+                onClick={handleProfileClick}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
                 <User className="h-4 w-4" />
                 <span>Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleProfileClick}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Configurações</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={logout}
-                className="flex items-center space-x-2 text-danger focus:text-danger"
+                className="flex items-center space-x-2 text-danger focus:text-danger cursor-pointer"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Sair</span>

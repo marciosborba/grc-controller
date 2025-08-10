@@ -10,16 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -38,30 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { 
   Plus, 
-  Edit, 
-  Trash2, 
-  Users, 
   Building2, 
-  Mail, 
-  Phone,
-  CreditCard,
-  Eye,
-  Search
+  Search,
+  Users2
 } from 'lucide-react';
+import TenantCard from './TenantCard';
 
 interface Tenant {
   id: string;
@@ -75,6 +49,7 @@ interface Tenant {
   subscription_plan: string;
   subscription_status: string;
   is_active: boolean;
+  settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -94,8 +69,6 @@ const TenantManagement: React.FC = () => {
   const queryClient = useQueryClient();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<TenantFormData>({
     name: '',
@@ -107,19 +80,7 @@ const TenantManagement: React.FC = () => {
     subscription_plan: 'basic',
   });
 
-  // Verificar se usuário tem permissão
-  if (!user?.isPlatformAdmin) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center text-muted-foreground">
-            <Building2 className="mx-auto h-12 w-12 mb-4" />
-            <p>Acesso restrito a administradores da plataforma.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const hasPermission = user?.isPlatformAdmin || false;
 
   // Buscar tenants
   const {
@@ -129,6 +90,8 @@ const TenantManagement: React.FC = () => {
   } = useQuery({
     queryKey: ['tenants', searchTerm],
     queryFn: async (): Promise<Tenant[]> => {
+      if (!hasPermission) return [];
+
       let query = supabase
         .from('tenants')
         .select('*')
@@ -141,8 +104,13 @@ const TenantManagement: React.FC = () => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data || [];
-    }
+      // Garantir que settings sempre existe
+      return (data || []).map(tenant => ({
+        ...tenant,
+        settings: tenant.settings || {}
+      }));
+    },
+    enabled: hasPermission
   });
 
   // Criar tenant
@@ -162,7 +130,7 @@ const TenantManagement: React.FC = () => {
       setIsCreateDialogOpen(false);
       resetForm();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao criar tenant: ${error.message}`);
     }
   });
@@ -182,11 +150,8 @@ const TenantManagement: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast.success('Tenant atualizado com sucesso');
-      setIsEditDialogOpen(false);
-      setSelectedTenant(null);
-      resetForm();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao atualizar tenant: ${error.message}`);
     }
   });
@@ -206,7 +171,7 @@ const TenantManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast.success('Tenant excluído com sucesso');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao excluir tenant: ${error.message}`);
     }
   });
@@ -223,62 +188,24 @@ const TenantManagement: React.FC = () => {
     });
   };
 
-  const openEditDialog = (tenant: Tenant) => {
-    setSelectedTenant(tenant);
-    setFormData({
-      name: tenant.name,
-      slug: tenant.slug,
-      contact_email: tenant.contact_email,
-      contact_phone: tenant.contact_phone || '',
-      billing_email: tenant.billing_email || '',
-      max_users: tenant.max_users,
-      subscription_plan: tenant.subscription_plan,
-    });
-    setIsEditDialogOpen(true);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedTenant) {
-      updateTenantMutation.mutate({ id: selectedTenant.id, data: formData });
-    } else {
-      createTenantMutation.mutate(formData);
-    }
+    createTenantMutation.mutate(formData);
   };
 
-  const getStatusBadge = (tenant: Tenant) => {
-    if (!tenant.is_active) {
-      return <Badge variant="destructive">Inativo</Badge>;
-    }
-    
-    switch (tenant.subscription_status) {
-      case 'active':
-        return <Badge variant="default">Ativo</Badge>;
-      case 'trial':
-        return <Badge variant="secondary">Trial</Badge>;
-      case 'suspended':
-        return <Badge variant="destructive">Suspenso</Badge>;
-      case 'cancelled':
-        return <Badge variant="outline">Cancelado</Badge>;
-      default:
-        return <Badge variant="outline">Desconhecido</Badge>;
-    }
-  };
-
-  const getPlanBadge = (plan: string) => {
-    const planColors = {
-      basic: 'default',
-      professional: 'secondary',
-      enterprise: 'destructive',
-      trial: 'outline'
-    };
-    
+  // Verificar permissão
+  if (!hasPermission) {
     return (
-      <Badge variant={planColors[plan as keyof typeof planColors] || 'outline'}>
-        {plan.charAt(0).toUpperCase() + plan.slice(1)}
-      </Badge>
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            <Building2 className="mx-auto h-12 w-12 mb-4" />
+            <p>Acesso restrito a administradores da plataforma.</p>
+          </div>
+        </CardContent>
+      </Card>
     );
-  };
+  }
 
   if (isLoading) {
     return (
@@ -442,211 +369,34 @@ const TenantManagement: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Usuários</TableHead>
-                  <TableHead>Plano</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{tenant.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {tenant.slug}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {tenant.contact_email}
-                        </div>
-                        {tenant.contact_phone && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Phone className="h-3 w-3" />
-                            {tenant.contact_phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        <span className="font-medium">{tenant.current_users_count}</span>
-                        <span className="text-muted-foreground">/ {tenant.max_users}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getPlanBadge(tenant.subscription_plan)}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(tenant)}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center gap-2 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(tenant)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={tenant.current_users_count > 0}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir o tenant "{tenant.name}"? 
-                                Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteTenantMutation.mutate(tenant.id)}
-                                className="bg-destructive hover:bg-destructive/90"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                
-                {tenants.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      {searchTerm ? 'Nenhum tenant encontrado.' : 'Nenhum tenant cadastrado.'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          {/* Grid de Cards dos Tenants */}
+          <div className="space-y-4">
+            {tenants.length === 0 ? (
+              <Card>
+                <CardContent className="py-8">
+                  <div className="text-center text-muted-foreground">
+                    <Users2 className="mx-auto h-12 w-12 mb-4" />
+                    <p>{searchTerm ? 'Nenhum tenant encontrado.' : 'Nenhum tenant cadastrado.'}</p>
+                    {!searchTerm && (
+                      <p className="text-sm mt-2">Clique em "Novo Tenant" para começar.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              tenants.map((tenant) => (
+                <TenantCard
+                  key={tenant.id}
+                  tenant={tenant}
+                  onDelete={(tenantId) => deleteTenantMutation.mutate(tenantId)}
+                  isDeleting={deleteTenantMutation.isPending}
+                />
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Dialog de Edição */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <form onSubmit={handleSubmit}>
-            <DialogHeader>
-              <DialogTitle>Editar Tenant</DialogTitle>
-              <DialogDescription>
-                Atualize as informações do tenant.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit_name">Nome da Empresa</Label>
-                <Input
-                  id="edit_name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_contact_email">Email de Contato</Label>
-                <Input
-                  id="edit_contact_email"
-                  type="email"
-                  value={formData.contact_email}
-                  onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_contact_phone">Telefone de Contato</Label>
-                <Input
-                  id="edit_contact_phone"
-                  value={formData.contact_phone}
-                  onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_billing_email">Email de Faturamento</Label>
-                <Input
-                  id="edit_billing_email"
-                  type="email"
-                  value={formData.billing_email}
-                  onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_max_users">Limite de Usuários</Label>
-                <Input
-                  id="edit_max_users"
-                  type="number"
-                  min="1"
-                  value={formData.max_users}
-                  onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) })}
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="edit_subscription_plan">Plano de Assinatura</Label>
-                <Select
-                  value={formData.subscription_plan}
-                  onValueChange={(value) => setFormData({ ...formData, subscription_plan: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="basic">Básico</SelectItem>
-                    <SelectItem value="professional">Profissional</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={updateTenantMutation.isPending}>
-                {updateTenantMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
