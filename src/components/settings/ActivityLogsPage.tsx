@@ -252,7 +252,7 @@ export const ActivityLogsPage = () => {
             Auditoria e rastreabilidade de ações na plataforma
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-2 shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-2 shrink-0 w-full sm:w-auto">
           <Button 
             onClick={exportLogs}
             variant="outline"

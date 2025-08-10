@@ -588,7 +588,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </div>
                       <div>
                         <span className="font-medium">Nível:</span> 
-                        <Badge className={getRiskLevelColor(risk.riskLevel)} size="sm">
+                        <Badge className={getRiskLevelColor(risk.riskLevel)}>
                           {risk.riskLevel} (Score: {risk.riskScore})
                         </Badge>
                       </div>

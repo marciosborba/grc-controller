@@ -148,12 +148,12 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const [companyData, setCompanyData] = useState<TenantCompanyData>({
     corporate_name: tenant.name,
     trading_name: tenant.name,
-    ...tenant.settings?.company_data || {}
+    ...(tenant.settings?.company_data as Record<string, unknown> || {})
   });
 
   // Estados para matriz de riscos
   const [riskMatrix, setRiskMatrix] = useState<RiskMatrixConfig>(
-    tenant.settings?.risk_matrix || DEFAULT_RISK_MATRIX_4X4
+    (tenant.settings?.risk_matrix as RiskMatrixConfig) || DEFAULT_RISK_MATRIX_4X4
   );
 
   // Estados para configuração de usuários
@@ -182,7 +182,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   };
 
   const getPlanBadge = () => {
-    const planColors = {
+    const planColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
       basic: 'default',
       professional: 'secondary',
       enterprise: 'destructive',

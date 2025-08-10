@@ -193,7 +193,7 @@ export const UserManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Administração de Usuários</h1>
           <p className="text-gray-600">
@@ -205,14 +205,14 @@ export const UserManagementPage: React.FC = () => {
             Can Create: {hasPermission('users.create') ? 'Sim' : 'Não'}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {hasPermission('users.create') && (
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={() => setShowCreateDialog(true)} className="flex-1 sm:flex-none">
               <UserPlus className="w-4 h-4 mr-2" />
               Novo Usuário
             </Button>
           )}
-          <Button variant="outline">
+          <Button variant="outline" className="flex-1 sm:flex-none">
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>

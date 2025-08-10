@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+
 
 interface CompanyInfo {
   name: string;
@@ -37,7 +37,7 @@ interface RiskData {
 }
 
 export class PDFGenerator {
-  private doc: jsPDF;
+  protected doc: jsPDF;
 
   constructor() {
     this.doc = new jsPDF('p', 'mm', 'a4');
@@ -70,7 +70,7 @@ export class PDFGenerator {
     }
   }
 
-  private addHeader(companyInfo: CompanyInfo) {
+  protected addHeader(companyInfo: CompanyInfo) {
     let hasLogo = false;
     
     // Tentar adicionar logo da empresa apenas se existir e for válida
@@ -112,7 +112,7 @@ export class PDFGenerator {
     return 60; // Retorna a posição Y após o header
   }
 
-  private addTitle(title: string, yPosition: number): number {
+  protected addTitle(title: string, yPosition: number): number {
     this.doc.setFontSize(18);
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(title, 15, yPosition);
@@ -120,7 +120,7 @@ export class PDFGenerator {
     return yPosition + 15;
   }
 
-  private addSection(title: string, content: string, yPosition: number): number {
+  protected addSection(title: string, content: string, yPosition: number): number {
     // Título da seção
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
@@ -136,7 +136,7 @@ export class PDFGenerator {
     return yPosition + 8 + (lines.length * 4) + 5;
   }
 
-  private addRiskMatrix(risk: RiskData, yPosition: number): number {
+  protected addRiskMatrix(risk: RiskData, yPosition: number): number {
     const matrixTitle = "MATRIZ DE RISCOS";
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
@@ -260,7 +260,7 @@ export class PDFGenerator {
     return dataY + 10;
   }
 
-  private addFooter() {
+  protected addFooter() {
     const pageHeight = this.doc.internal.pageSize.height;
     const footerY = pageHeight - 20;
     
