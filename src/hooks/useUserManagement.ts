@@ -101,6 +101,14 @@ export const useUserManagement = () => {
           .select('user_id, role')
           .in('user_id', userIds);
 
+        // Buscar dados de tenant para os usuários
+        const uniqueTenantIds = [...new Set(profiles.map(p => p.tenant_id).filter(Boolean))];
+        const { data: tenants } = uniqueTenantIds.length > 0 ? await supabase
+          .from('tenants')
+          .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active')
+          .in('id', uniqueTenantIds)
+        : { data: [] };
+
         // Transformar dados para o formato ExtendedUser
         return profiles.map((profile: any) => {
           const roles = userRoles?.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role) || [];
@@ -109,6 +117,11 @@ export const useUserManagement = () => {
           if (filters.role && !roles.includes(filters.role)) {
             return null;
           }
+
+          // Encontrar tenant correspondente
+          const tenant = profile.tenant_id 
+            ? tenants?.find(t => t.id === profile.tenant_id) || null
+            : null;
 
           return {
             id: profile.user_id,
@@ -133,7 +146,7 @@ export const useUserManagement = () => {
             permissions: profile.permissions || [],
             mfa: null, // Será carregado separadamente se necessário
             sessions: [], // Será carregado separadamente se necessário
-            tenant: null, // Será carregado separadamente se necessário
+            tenant,
             last_activity: profile.last_login_at,
             is_online: false
           };

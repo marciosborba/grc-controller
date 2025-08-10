@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,9 +29,28 @@ import { EditUserDialog } from './EditUserDialog';
 import { UserDetailsDialog } from './UserDetailsDialog';
 import { BulkActionsDialog } from './BulkActionsDialog';
 import { UserFilters } from './UserFilters';
-import UserCard from './UserCard';
+import SortableUserCard from './SortableUserCard';
 import type { ExtendedUser, UserManagementFilters, AppRole } from '@/types/user-management';
 import { USER_ROLES, USER_STATUS } from '@/types/user-management';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -61,6 +80,59 @@ export const UserManagementPage: React.FC = () => {
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ExtendedUser | null>(null);
+  const [orderedUsers, setOrderedUsers] = useState<ExtendedUser[]>([]);
+
+  // Configure drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Update ordered users when users data changes
+  useEffect(() => {
+    if (users.length > 0) {
+      setOrderedUsers(users);
+    }
+  }, [users]);
+
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setOrderedUsers((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Save order to localStorage
+        localStorage.setItem('userCardsOrder', JSON.stringify(newOrder.map(u => u.id)));
+        
+        return newOrder;
+      });
+    }
+  };
+
+  // Load saved order from localStorage
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('userCardsOrder');
+    if (savedOrder && users.length > 0) {
+      try {
+        const orderIds = JSON.parse(savedOrder);
+        const reorderedUsers = orderIds
+          .map((id: string) => users.find(user => user.id === id))
+          .filter(Boolean)
+          .concat(users.filter(user => !orderIds.includes(user.id)));
+        setOrderedUsers(reorderedUsers);
+      } catch (error) {
+        console.warn('Failed to load saved user order:', error);
+        setOrderedUsers(users);
+      }
+    }
+  }, [users]);
 
   // Aplicar filtros
   const handleSearch = (value: string) => {
@@ -83,7 +155,7 @@ export const UserManagementPage: React.FC = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedUsers(users.map(user => user.id));
+      setSelectedUsers(orderedUsers.map(user => user.id));
     } else {
       setSelectedUsers([]);
     }
@@ -156,7 +228,7 @@ export const UserManagementPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Usuários ({users.length})
+              Usuários ({orderedUsers.length})
             </CardTitle>
             <div className="flex gap-2">
               <Button
@@ -223,32 +295,44 @@ export const UserManagementPage: React.FC = () => {
               {/* Seleção em massa */}
               <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                 <Checkbox
-                  checked={selectedUsers.length === users.length && users.length > 0}
+                  checked={selectedUsers.length === orderedUsers.length && orderedUsers.length > 0}
                   onCheckedChange={handleSelectAll}
                 />
                 <span className="text-sm text-gray-600">
                   {selectedUsers.length > 0 
                     ? `${selectedUsers.length} usuário(s) selecionado(s)`
-                    : `Selecionar todos os ${users.length} usuários`
+                    : `Selecionar todos os ${orderedUsers.length} usuários`
                   }
                 </span>
               </div>
 
-              {/* Grid de Cards */}
-              <div className="space-y-3 max-w-full overflow-hidden">
-                {users.map((user) => (
-                  <UserCard
-                    key={user.id}
-                    user={user}
-                    onUpdate={handleUserUpdate}
-                    onDelete={handleUserDelete}
-                    isUpdating={isUpdatingUser}
-                    isDeleting={isDeletingUser}
-                    canEdit={hasPermission('users.update') || currentUser?.id === user.id}
-                    canDelete={hasPermission('users.delete') && currentUser?.id !== user.id}
-                  />
-                ))}
-              </div>
+              {/* Grid de Cards with Drag & Drop */}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              >
+                <SortableContext
+                  items={orderedUsers.map(user => user.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3 max-w-full overflow-hidden">
+                    {orderedUsers.map((user) => (
+                      <SortableUserCard
+                        key={user.id}
+                        user={user}
+                        onUpdate={handleUserUpdate}
+                        onDelete={handleUserDelete}
+                        isUpdating={isUpdatingUser}
+                        isDeleting={isDeletingUser}
+                        canEdit={hasPermission('users.update') || currentUser?.id === user.id}
+                        canDelete={hasPermission('users.delete') && currentUser?.id !== user.id}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </>
           )}
         </CardContent>

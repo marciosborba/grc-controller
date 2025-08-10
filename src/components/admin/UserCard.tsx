@@ -102,6 +102,7 @@ const UserCard: React.FC<UserCardProps> = ({
   const [isEditingRoles, setIsEditingRoles] = useState(false);
   const [isEditingSecurity, setIsEditingSecurity] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [availableTenants, setAvailableTenants] = useState<Array<{id: string; name: string}>>([]);
 
   const displayInfo = getUserDisplayInfo(user.profile.full_name);
   const isCurrentUser = currentUser?.id === user.id;
@@ -113,7 +114,8 @@ const UserCard: React.FC<UserCardProps> = ({
     email: user.email,
     job_title: user.profile.job_title || '',
     department: user.profile.department || '',
-    phone: user.profile.phone || ''
+    phone: user.profile.phone || '',
+    tenant_id: user.profile.tenant_id || ''
   });
 
   // Estados para edição de roles
@@ -175,9 +177,15 @@ const UserCard: React.FC<UserCardProps> = ({
   const saveProfileData = async () => {
     setIsSaving(true);
     try {
-      await onUpdate(user.id, {
-        profile_data: profileData
-      });
+      const updateData = {
+        full_name: profileData.full_name,
+        job_title: profileData.job_title,
+        department: profileData.department,
+        phone: profileData.phone,
+        ...(currentUser?.isPlatformAdmin && profileData.tenant_id && { tenant_id: profileData.tenant_id })
+      };
+      
+      await onUpdate(user.id, updateData);
       
       toast.success('Perfil atualizado com sucesso');
       setIsEditingProfile(false);
@@ -192,10 +200,12 @@ const UserCard: React.FC<UserCardProps> = ({
   const saveRolesData = async () => {
     setIsSaving(true);
     try {
-      await onUpdate(user.id, {
+      const updateData = {
         roles: rolesData.roles,
         is_active: rolesData.is_active
-      });
+      };
+      
+      await onUpdate(user.id, updateData);
       
       toast.success('Permissões atualizadas com sucesso');
       setIsEditingRoles(false);
@@ -254,11 +264,33 @@ const UserCard: React.FC<UserCardProps> = ({
     }
   };
 
+  // Buscar tenants disponíveis para platform admins
+  React.useEffect(() => {
+    if (currentUser?.isPlatformAdmin && isEditingProfile) {
+      const fetchTenants = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('tenants')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name');
+          
+          if (error) throw error;
+          setAvailableTenants(data || []);
+        } catch (error) {
+          console.error('Erro ao buscar tenants:', error);
+        }
+      };
+      
+      fetchTenants();
+    }
+  }, [currentUser?.isPlatformAdmin, isEditingProfile]);
+
   return (
-    <Card className="w-full max-w-4xl mx-auto">
+    <Card className={`w-full max-w-4xl mx-auto transition-all duration-300 ${isExpanded ? 'bg-gray-200 dark:bg-gray-700 shadow-xl ring-2 ring-gray-400 dark:ring-gray-500 border-gray-400 dark:border-gray-500' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${isExpanded ? 'bg-gray-300 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -677,6 +709,28 @@ const UserCard: React.FC<UserCardProps> = ({
                 placeholder="+55 11 99999-9999"
               />
             </div>
+
+            {/* Seleção de tenant - apenas para platform admins */}
+            {currentUser?.isPlatformAdmin && (
+              <div>
+                <Label htmlFor="tenant">Organização</Label>
+                <Select
+                  value={profileData.tenant_id}
+                  onValueChange={(value) => setProfileData({ ...profileData, tenant_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma organização" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

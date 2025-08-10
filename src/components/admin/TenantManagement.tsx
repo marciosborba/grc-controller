@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenantManagement } from '@/hooks/useTenantManagement';
 import { toast } from 'sonner';
 import {
   Card,
@@ -35,42 +34,44 @@ import {
   Search,
   Users2
 } from 'lucide-react';
-import TenantCard from './TenantCard';
-
-interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  contact_email: string;
-  contact_phone?: string;
-  billing_email?: string;
-  max_users: number;
-  current_users_count: number;
-  subscription_plan: string;
-  subscription_status: string;
-  is_active: boolean;
-  settings: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-interface TenantFormData {
-  name: string;
-  slug: string;
-  contact_email: string;
-  contact_phone: string;
-  billing_email: string;
-  max_users: number;
-  subscription_plan: string;
-}
+import SortableTenantCard from './SortableTenantCard';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
+import type { Tenant, CreateTenantRequest } from '@/hooks/useTenantManagement';
 
 const TenantManagement: React.FC = () => {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const {
+    tenants,
+    isLoading,
+    error,
+    createTenant,
+    deleteTenant,
+    isCreating,
+    isDeleting
+  } = useTenantManagement();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState<TenantFormData>({
+  const [orderedTenants, setOrderedTenants] = useState<Tenant[]>([]);
+  const [formData, setFormData] = useState<CreateTenantRequest>({
     name: '',
     slug: '',
     contact_email: '',
@@ -80,101 +81,67 @@ const TenantManagement: React.FC = () => {
     subscription_plan: 'basic',
   });
 
+  // Configure drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const hasPermission = user?.isPlatformAdmin || false;
 
-  // Buscar tenants
-  const {
-    data: tenants = [],
-    isLoading,
-    error
-  } = useQuery({
-    queryKey: ['tenants', searchTerm],
-    queryFn: async (): Promise<Tenant[]> => {
-      if (!hasPermission) return [];
+  // Filter tenants based on search term
+  const filteredTenants = tenants.filter(tenant => 
+    !searchTerm || 
+    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tenant.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tenant.contact_email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      let query = supabase
-        .from('tenants')
-        .select('*')
-        .order('created_at', { ascending: false });
+  // Update ordered tenants when tenants data changes
+  useEffect(() => {
+    if (filteredTenants.length > 0) {
+      setOrderedTenants(filteredTenants);
+    }
+  }, [filteredTenants]);
 
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%,contact_email.ilike.%${searchTerm}%`);
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setOrderedTenants((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Save order to localStorage
+        localStorage.setItem('tenantCardsOrder', JSON.stringify(newOrder.map(t => t.id)));
+        
+        return newOrder;
+      });
+    }
+  };
+
+  // Load saved order from localStorage
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('tenantCardsOrder');
+    if (savedOrder && filteredTenants.length > 0) {
+      try {
+        const orderIds = JSON.parse(savedOrder);
+        const reorderedTenants = orderIds
+          .map((id: string) => filteredTenants.find(tenant => tenant.id === id))
+          .filter(Boolean)
+          .concat(filteredTenants.filter(tenant => !orderIds.includes(tenant.id)));
+        setOrderedTenants(reorderedTenants);
+      } catch (error) {
+        console.warn('Failed to load saved tenant order:', error);
+        setOrderedTenants(filteredTenants);
       }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      // Garantir que settings sempre existe
-      return (data || []).map(tenant => ({
-        ...tenant,
-        settings: tenant.settings || {}
-      }));
-    },
-    enabled: hasPermission
-  });
-
-  // Criar tenant
-  const createTenantMutation = useMutation({
-    mutationFn: async (data: TenantFormData) => {
-      const { data: result, error } = await supabase.rpc('rpc_manage_tenant', {
-        action: 'create',
-        tenant_data: data
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('Tenant criado com sucesso');
-      setIsCreateDialogOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao criar tenant: ${error.message}`);
     }
-  });
-
-  // Atualizar tenant
-  const updateTenantMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<TenantFormData> }) => {
-      const { data: result, error } = await supabase.rpc('rpc_manage_tenant', {
-        action: 'update',
-        tenant_data: data,
-        tenant_id_param: id
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('Tenant atualizado com sucesso');
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao atualizar tenant: ${error.message}`);
-    }
-  });
-
-  // Excluir tenant
-  const deleteTenantMutation = useMutation({
-    mutationFn: async (tenantId: string) => {
-      const { data: result, error } = await supabase.rpc('rpc_manage_tenant', {
-        action: 'delete',
-        tenant_id_param: tenantId
-      });
-      
-      if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('Tenant excluído com sucesso');
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao excluir tenant: ${error.message}`);
-    }
-  });
+  }, [filteredTenants]);
 
   const resetForm = () => {
     setFormData({
@@ -190,7 +157,9 @@ const TenantManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createTenantMutation.mutate(formData);
+    createTenant(formData);
+    setIsCreateDialogOpen(false);
+    resetForm();
   };
 
   // Verificar permissão
@@ -346,8 +315,8 @@ const TenantManagement: React.FC = () => {
                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={createTenantMutation.isPending}>
-                      {createTenantMutation.isPending ? 'Criando...' : 'Criar Tenant'}
+                    <Button type="submit" disabled={isCreating}>
+                      {isCreating ? 'Criando...' : 'Criar Tenant'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -369,31 +338,43 @@ const TenantManagement: React.FC = () => {
             </div>
           </div>
 
-          {/* Grid de Cards dos Tenants */}
-          <div className="space-y-4">
-            {tenants.length === 0 ? (
-              <Card>
-                <CardContent className="py-8">
-                  <div className="text-center text-muted-foreground">
-                    <Users2 className="mx-auto h-12 w-12 mb-4" />
-                    <p>{searchTerm ? 'Nenhum tenant encontrado.' : 'Nenhum tenant cadastrado.'}</p>
-                    {!searchTerm && (
-                      <p className="text-sm mt-2">Clique em "Novo Tenant" para começar.</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              tenants.map((tenant) => (
-                <TenantCard
-                  key={tenant.id}
-                  tenant={tenant}
-                  onDelete={(tenantId) => deleteTenantMutation.mutate(tenantId)}
-                  isDeleting={deleteTenantMutation.isPending}
-                />
-              ))
-            )}
-          </div>
+          {/* Grid de Cards dos Tenants with Drag & Drop */}
+          {orderedTenants.length === 0 ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">
+                  <Users2 className="mx-auto h-12 w-12 mb-4" />
+                  <p>{searchTerm ? 'Nenhum tenant encontrado.' : 'Nenhum tenant cadastrado.'}</p>
+                  {!searchTerm && (
+                    <p className="text-sm mt-2">Clique em "Novo Tenant" para começar.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+            >
+              <SortableContext
+                items={orderedTenants.map(tenant => tenant.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {orderedTenants.map((tenant) => (
+                    <SortableTenantCard
+                      key={tenant.id}
+                      tenant={tenant}
+                      onDelete={(tenantId) => deleteTenant(tenantId)}
+                      isDeleting={isDeleting}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
         </CardContent>
       </Card>
 
