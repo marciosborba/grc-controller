@@ -89,28 +89,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const buildUserObject = async (supabaseUser: User): Promise<AuthUser> => {
     console.log('Building user object for:', supabaseUser.id);
     try {
-      // Get user profile with tenant information
+      // Get user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          tenants:tenant_id (
-            id,
-            name,
-            slug,
-            contact_email,
-            max_users,
-            current_users_count,
-            subscription_plan,
-            is_active
-          )
-        `)
+        .select('*')
         .eq('user_id', supabaseUser.id)
         .maybeSingle();
 
       if (profileError) {
         console.error('Profile error:', profileError);
       }
+      
+      console.log(`[AuthContext] Profile loaded:`, !!profile, profile?.full_name || 'No name found');
 
       // Check if user is platform admin
       const { data: platformAdmin, error: platformAdminError } = await supabase
@@ -142,17 +132,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const roles = userRoles?.map(r => r.role) || ['user'];
       const permissions = getPermissions(roles, isPlatformAdmin);
 
-      // Extract tenant data
-      const tenant = profile?.tenants ? {
-        id: profile.tenants.id,
-        name: profile.tenants.name,
-        slug: profile.tenants.slug,
-        contact_email: profile.tenants.contact_email,
-        max_users: profile.tenants.max_users,
-        current_users_count: profile.tenants.current_users_count,
-        subscription_plan: profile.tenants.subscription_plan,
-        is_active: profile.tenants.is_active
-      } : undefined;
+      // Get tenant information if tenant_id exists
+      let tenant: Tenant | undefined;
+      if (profile?.tenant_id) {
+        try {
+          const { data: tenantData } = await supabase
+            .from('tenants')
+            .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active')
+            .eq('id', profile.tenant_id)
+            .maybeSingle();
+          
+          if (tenantData) {
+            tenant = tenantData;
+          }
+        } catch (tenantError) {
+          console.warn('Error loading tenant:', tenantError);
+        }
+      }
 
       const authUser = {
         id: supabaseUser.id,
@@ -167,13 +163,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         theme: 'light' as const
       };
 
-      console.log(`[AuthContext] Final user object:`, {
-        id: authUser.id,
-        email: authUser.email,
+      console.log(`[AuthContext] User object created:`, {
         name: authUser.name,
-        isPlatformAdmin: authUser.isPlatformAdmin,
-        roles: authUser.roles,
-        permissions: authUser.permissions
+        email: authUser.email,
+        isPlatformAdmin: authUser.isPlatformAdmin
       });
 
       await logAuthEvent('login_success', { user_id: supabaseUser.id });

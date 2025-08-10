@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,44 +11,15 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Users, 
   UserPlus, 
   Search, 
   Filter, 
-  MoreHorizontal,
-  Shield,
-  ShieldCheck,
-  ShieldX,
-  Clock,
-  Activity,
-  Download,
-  Upload,
-  Settings,
-  Eye,
-  Edit,
-  Trash2,
-  Lock,
-  Unlock,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,8 +29,28 @@ import { EditUserDialog } from './EditUserDialog';
 import { UserDetailsDialog } from './UserDetailsDialog';
 import { BulkActionsDialog } from './BulkActionsDialog';
 import { UserFilters } from './UserFilters';
+import SortableUserCard from './SortableUserCard';
 import type { ExtendedUser, UserManagementFilters, AppRole } from '@/types/user-management';
 import { USER_ROLES, USER_STATUS } from '@/types/user-management';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -89,6 +80,59 @@ export const UserManagementPage: React.FC = () => {
   const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ExtendedUser | null>(null);
+  const [orderedUsers, setOrderedUsers] = useState<ExtendedUser[]>([]);
+
+  // Configure drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Update ordered users when users data changes
+  useEffect(() => {
+    if (users.length > 0) {
+      setOrderedUsers(users);
+    }
+  }, [users]);
+
+  // Handle drag end event
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setOrderedUsers((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Save order to localStorage
+        localStorage.setItem('userCardsOrder', JSON.stringify(newOrder.map(u => u.id)));
+        
+        return newOrder;
+      });
+    }
+  };
+
+  // Load saved order from localStorage
+  useEffect(() => {
+    const savedOrder = localStorage.getItem('userCardsOrder');
+    if (savedOrder && users.length > 0) {
+      try {
+        const orderIds = JSON.parse(savedOrder);
+        const reorderedUsers = orderIds
+          .map((id: string) => users.find(user => user.id === id))
+          .filter(Boolean)
+          .concat(users.filter(user => !orderIds.includes(user.id)));
+        setOrderedUsers(reorderedUsers);
+      } catch (error) {
+        console.warn('Failed to load saved user order:', error);
+        setOrderedUsers(users);
+      }
+    }
+  }, [users]);
 
   // Aplicar filtros
   const handleSearch = (value: string) => {
@@ -111,76 +155,22 @@ export const UserManagementPage: React.FC = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedUsers(users.map(user => user.id));
+      setSelectedUsers(orderedUsers.map(user => user.id));
     } else {
       setSelectedUsers([]);
     }
   };
 
-  // Ações individuais
-  const handleViewUser = (user: ExtendedUser) => {
-    setSelectedUser(user);
-    setShowDetailsDialog(true);
-  };
-
-  const handleEditUser = (user: ExtendedUser) => {
-    setSelectedUser(user);
-    setShowEditDialog(true);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      deleteUser(userId);
-    }
-  };
-
-  const handleToggleUserStatus = (user: ExtendedUser) => {
-    updateUser({
-      userId: user.id,
-      userData: { is_active: !user.profile.is_active }
-    });
-  };
-
-  const handleUnlockUser = (userId: string) => {
+  // Funções para o UserCard
+  const handleUserUpdate = (userId: string, userData: unknown) => {
     updateUser({
       userId,
-      userData: { locked_until: null, failed_login_attempts: 0 }
+      userData
     });
   };
 
-  // Status do usuário
-  const getUserStatus = (user: ExtendedUser) => {
-    if (user.profile.locked_until && new Date(user.profile.locked_until) > new Date()) {
-      return 'locked';
-    }
-    return user.profile.is_active ? 'active' : 'inactive';
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Ativo</Badge>;
-      case 'inactive':
-        return <Badge variant="secondary">Inativo</Badge>;
-      case 'locked':
-        return <Badge variant="destructive">Bloqueado</Badge>;
-      default:
-        return <Badge variant="outline">Desconhecido</Badge>;
-    }
-  };
-
-  const getMFABadge = (enabled: boolean) => {
-    return enabled ? (
-      <Badge variant="default" className="bg-blue-100 text-blue-800">
-        <ShieldCheck className="w-3 h-3 mr-1" />
-        MFA
-      </Badge>
-    ) : (
-      <Badge variant="outline" className="text-gray-500">
-        <ShieldX className="w-3 h-3 mr-1" />
-        Sem MFA
-      </Badge>
-    );
+  const handleUserDelete = (userId: string) => {
+    deleteUser(userId);
   };
 
   if (!hasPermission('users.read')) {
@@ -201,7 +191,7 @@ export const UserManagementPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -238,7 +228,7 @@ export const UserManagementPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Usuários ({users.length})
+              Usuários ({orderedUsers.length})
             </CardTitle>
             <div className="flex gap-2">
               <Button
@@ -284,182 +274,68 @@ export const UserManagementPage: React.FC = () => {
         </CardHeader>
 
         <CardContent>
-          {/* Tabela de usuários */}
-          <div className="rounded-md border">
-            <Table className="text-xs [&_th]:px-2 [&_td]:px-2 [&_th]:py-2 [&_td]:py-2 [&_th]:text-xs [&_td]:text-xs [&_td]:leading-tight">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedUsers.length === users.length && users.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Cargo/Departamento</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>MFA</TableHead>
-                  <TableHead>Último Login</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingUsers ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="flex items-center justify-center">
-                        <RefreshCw className="w-4 h-4 animate-spin mr-2" />
-                        Carregando usuários...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : users.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="text-gray-500">
-                        <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Nenhum usuário encontrado</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  users.map((user) => {
-                    const status = getUserStatus(user);
-                    return (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedUsers.includes(user.id)}
-                            onCheckedChange={(checked) => 
-                              handleSelectUser(user.id, checked as boolean)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-medium">
-                                {user.profile.full_name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="font-medium">{user.profile.full_name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{user.profile.job_title || '-'}</div>
-                            <div className="text-sm text-gray-500">
-                              {user.profile.department || '-'}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles.map((role) => (
-                              <Badge key={role} variant="outline" className="text-xs">
-                                {USER_ROLES[role]}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(status)}
-                        </TableCell>
-                        <TableCell>
-                          {getMFABadge(user.profile.two_factor_enabled)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {user.profile.last_login_at ? (
-                              <>
-                                <div>
-                                  {new Date(user.profile.last_login_at).toLocaleDateString()}
-                                </div>
-                                <div className="text-gray-500">
-                                  {new Date(user.profile.last_login_at).toLocaleTimeString()}
-                                </div>
-                              </>
-                            ) : (
-                              <span className="text-gray-500">Nunca</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              
-                              <DropdownMenuItem onClick={() => handleViewUser(user)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Visualizar
-                              </DropdownMenuItem>
-                              
-                              {hasPermission('users.update') && (
-                                <>
-                                  <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Editar
-                                  </DropdownMenuItem>
-                                  
-                                  <DropdownMenuItem 
-                                    onClick={() => handleToggleUserStatus(user)}
-                                  >
-                                    {user.profile.is_active ? (
-                                      <>
-                                        <Lock className="w-4 h-4 mr-2" />
-                                        Desativar
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Unlock className="w-4 h-4 mr-2" />
-                                        Ativar
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                  
-                                  {status === 'locked' && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleUnlockUser(user.id)}
-                                    >
-                                      <Unlock className="w-4 h-4 mr-2" />
-                                      Desbloquear
-                                    </DropdownMenuItem>
-                                  )}
-                                </>
-                              )}
-                              
-                              {hasPermission('users.delete') && user.id !== currentUser?.id && (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Excluir
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+
+          {/* Grid de Cards de usuários */}
+          {isLoadingUsers ? (
+            <div className="text-center py-12">
+              <div className="flex items-center justify-center">
+                <RefreshCw className="w-6 h-6 animate-spin mr-3" />
+                <span className="text-lg">Carregando usuários...</span>
+              </div>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-500">
+                <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhum usuário encontrado</h3>
+                <p className="text-sm">Tente ajustar os filtros ou criar um novo usuário.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Seleção em massa */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+                <Checkbox
+                  checked={selectedUsers.length === orderedUsers.length && orderedUsers.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-gray-600">
+                  {selectedUsers.length > 0 
+                    ? `${selectedUsers.length} usuário(s) selecionado(s)`
+                    : `Selecionar todos os ${orderedUsers.length} usuários`
+                  }
+                </span>
+              </div>
+
+              {/* Grid de Cards with Drag & Drop */}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+              >
+                <SortableContext
+                  items={orderedUsers.map(user => user.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-3 max-w-full overflow-hidden">
+                    {orderedUsers.map((user) => (
+                      <SortableUserCard
+                        key={user.id}
+                        user={user}
+                        onUpdate={handleUserUpdate}
+                        onDelete={handleUserDelete}
+                        isUpdating={isUpdatingUser}
+                        isDeleting={isDeletingUser}
+                        canEdit={hasPermission('users.update') || currentUser?.id === user.id}
+                        canDelete={hasPermission('users.delete') && currentUser?.id !== user.id}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
         </CardContent>
       </Card>
 

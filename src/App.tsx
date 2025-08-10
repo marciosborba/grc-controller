@@ -29,6 +29,7 @@ import FrameworkDetailPage from "@/components/assessments/FrameworkDetailPage";
 import FrameworkEvaluationPage from "@/components/assessments/FrameworkEvaluationPage";
 import CreateFrameworkPage from "@/components/assessments/CreateFrameworkPage";
 import HelpPage from "./pages/HelpPage";
+import { UserProfilePage } from "@/components/profile/UserProfilePage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -144,6 +145,7 @@ const App = () => (
                 } />
                 <Route path="debug-user" element={<DebugUserInfo />} />
                 <Route path="user-debug" element={<UserDebugInfo />} />
+                <Route path="profile" element={<UserProfilePage />} />
                 <Route path="settings" element={<UserManagementPage />} />
                 <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
                 <Route path="help" element={<HelpPage />} />
