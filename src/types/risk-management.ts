@@ -18,6 +18,48 @@ export type RiskCategory =
   | 'Ambiental' 
   | 'Recursos Humanos';
 
+// Tipos específicos para análise de risco
+export type RiskAnalysisType = 
+  | 'Técnico' 
+  | 'Fornecedor' 
+  | 'Processo' 
+  | 'Incidente' 
+  | 'Estratégico' 
+  | 'Operacional';
+
+export type MatrixSize = '4x4' | '5x5';
+
+export interface RiskAssessmentQuestion {
+  id: string;
+  question: string;
+  category: 'probability' | 'impact';
+}
+
+export interface RiskAssessmentAnswer {
+  questionId: string;
+  value: number; // 1-5
+  label: string;
+}
+
+export interface RiskAnalysisData {
+  riskType: RiskAnalysisType;
+  matrixSize: MatrixSize;
+  probabilityAnswers: RiskAssessmentAnswer[];
+  impactAnswers: RiskAssessmentAnswer[];
+  probabilityScore: number; // média calculada
+  impactScore: number; // média calculada
+  qualitativeRiskLevel: RiskLevel;
+  gutAnalysis?: GUTAnalysis;
+}
+
+export interface GUTAnalysis {
+  gravity: number; // 1-5
+  urgency: number; // 1-5
+  tendency: number; // 1-5
+  gutScore: number; // gravity * urgency * tendency
+  priority: 'Muito Alta' | 'Alta' | 'Média' | 'Baixa' | 'Muito Baixa';
+}
+
 export type ActivityStatus = 'TBD' | 'Em Andamento' | 'Aguardando' | 'Concluído' | 'Cancelado' | 'Atrasado';
 export type CommunicationDecision = 'Aceitar' | 'Rejeitar' | 'Pendente';
 
@@ -39,6 +81,9 @@ export interface Risk {
   impact: number; // 1-5
   riskScore: number; // Calculado: probability * impact
   riskLevel: RiskLevel; // Calculado baseado no score
+  
+  // Análise Estruturada de Risco (nova funcionalidade)
+  analysisData?: RiskAnalysisData;
   
   // Gestão
   status: RiskStatus;

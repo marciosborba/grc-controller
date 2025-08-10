@@ -49,7 +49,7 @@ const SortableRiskCard: React.FC<SortableRiskCardProps> = (props) => {
     >
       {/* Drag Handle - Ícone no canto superior direito */}
       <div
-        className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing bg-white dark:bg-gray-800 rounded p-1 shadow-sm border border-gray-200 dark:border-gray-600"
+        className="absolute right-2 top-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing bg-white dark:bg-gray-800 rounded p-1 shadow-sm border border-gray-200 dark:border-gray-600"
         {...attributes}
         {...listeners}
         title="Arrastar para reordenar"

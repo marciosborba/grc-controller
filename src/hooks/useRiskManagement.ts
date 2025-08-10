@@ -130,10 +130,11 @@ export const useRiskManagement = () => {
           probability: riskData.probability.toString(),
           likelihood_score: riskData.probability,
           impact_score: riskData.impact,
-          risk_score: riskScore,
+          // Remover risk_score pois é coluna gerada
+          // risk_score: riskScore,
           risk_level: riskLevel,
           status: 'Identificado',
-          assigned_to: riskData.assignedTo,
+          assigned_to: riskData.assignedTo || null,
           due_date: riskData.dueDate?.toISOString(),
           created_by: user?.id,
           severity: 'medium' // valor padrão para compatibilidade
@@ -177,7 +178,7 @@ export const useRiskManagement = () => {
       if (data.description) updateData.description = data.description;
       if (data.category) updateData.risk_category = data.category;
       if (data.status) updateData.status = data.status;
-      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo;
+      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo || null;
       if (data.dueDate !== undefined) updateData.due_date = data.dueDate?.toISOString();
 
       // Recalcular score se probabilidade ou impacto mudaram
@@ -194,10 +195,12 @@ export const useRiskManagement = () => {
 
         updateData.likelihood_score = probability;
         updateData.impact_score = impact;
-        updateData.risk_score = riskScore;
+        // Remover risk_score pois é coluna gerada
+        // updateData.risk_score = riskScore;
         updateData.risk_level = calculateRiskLevel(riskScore);
       }
 
+      // Atualizar o risco principal
       const { data: result, error } = await supabase
         .from('risk_assessments')
         .update(updateData)
@@ -206,6 +209,42 @@ export const useRiskManagement = () => {
         .single();
 
       if (error) throw error;
+
+      // Atualizar tipo de tratamento se fornecido
+      if (data.treatmentType) {
+        // Verificar se já existe um plano de ação
+        const { data: existingPlan, error: planQueryError } = await supabase
+          .from('risk_action_plans')
+          .select('id')
+          .eq('risk_id', riskId)
+          .maybeSingle();
+
+        if (planQueryError) {
+          throw planQueryError;
+        }
+
+        if (existingPlan) {
+          // Atualizar plano existente
+          const { error: planError } = await supabase
+            .from('risk_action_plans')
+            .update({ treatment_type: data.treatmentType })
+            .eq('risk_id', riskId);
+
+          if (planError) throw planError;
+        } else {
+          // Criar novo plano de ação
+          const { error: planError } = await supabase
+            .from('risk_action_plans')
+            .insert([{
+              risk_id: riskId,
+              treatment_type: data.treatmentType,
+              created_by: user?.id
+            }]);
+
+          if (planError) throw planError;
+        }
+      }
+
       return result;
     },
     onSuccess: () => {
@@ -214,7 +253,8 @@ export const useRiskManagement = () => {
       toast.success('Risco atualizado com sucesso');
     },
     onError: (error: any) => {
-      toast.error(`Erro ao atualizar risco: ${error.message}`);
+      console.error('Erro detalhado ao atualizar risco:', error);
+      toast.error(`Erro ao atualizar risco: ${error.message || 'Erro desconhecido'}`);
     }
   });
 

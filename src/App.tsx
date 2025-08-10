@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
-import RiskManagementPage from "@/components/risks/RiskManagementPage";
+import NewRiskManagementPage from "@/components/risks/NewRiskManagementPage";
 import SecurityIncidentsPage from "@/components/incidents/SecurityIncidentsPage";
 import CompliancePage from "@/components/compliance/CompliancePage";
 import AuditReportsPage from "@/components/audit/AuditReportsPage";
@@ -123,7 +123,7 @@ const App = () => (
               }>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="risks" element={<RiskManagementPage />} />
+                <Route path="risks" element={<NewRiskManagementPage />} />
                 <Route path="compliance" element={<CompliancePage />} />
                 <Route path="incidents" element={<SecurityIncidentsPage />} />
                 <Route path="audit" element={<AuditReportsPage />} />
