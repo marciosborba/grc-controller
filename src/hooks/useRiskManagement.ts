@@ -180,6 +180,15 @@ export const useRiskManagement = () => {
       if (data.status) updateData.status = data.status;
       if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo || null;
       if (data.dueDate !== undefined) updateData.due_date = data.dueDate?.toISOString();
+      
+      // Temporariamente salvar analysisData em um campo existente até termos a coluna analysis_data
+      if (data.analysisData !== undefined) {
+        // Preservar descrição existente mas adicionar analysis_data como um campo separado
+        const currentDesc = data.description || '';
+        const analysisJson = JSON.stringify(data.analysisData);
+        // Usar um padrão reconhecível para extrair depois
+        updateData.description = currentDesc.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '') + '\n---ANALYSIS_DATA---\n' + analysisJson;
+      }
 
       // Recalcular score se probabilidade ou impacto mudaram
       if (data.probability || data.impact) {
@@ -376,10 +385,25 @@ export const useRiskManagement = () => {
   };
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
+    // Extrair analysisData da descrição (solução temporária)
+    let description = supabaseRisk.description || '';
+    let analysisData = null;
+    
+    const analysisMatch = description.match(/\n---ANALYSIS_DATA---\n([\s\S]*)$/);
+    if (analysisMatch) {
+      try {
+        analysisData = JSON.parse(analysisMatch[1]);
+        // Remover analysis data da descrição
+        description = description.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '');
+      } catch (e) {
+        console.warn('Erro ao parsear analysis data:', e);
+      }
+    }
+
     return {
       id: supabaseRisk.id,
       name: supabaseRisk.title,
-      description: supabaseRisk.description,
+      description: description,
       category: supabaseRisk.risk_category,
       probability: supabaseRisk.likelihood_score,
       impact: supabaseRisk.impact_score,
@@ -393,7 +417,8 @@ export const useRiskManagement = () => {
       dueDate: supabaseRisk.due_date ? new Date(supabaseRisk.due_date) : undefined,
       createdBy: supabaseRisk.created_by || '',
       createdAt: new Date(supabaseRisk.created_at),
-      updatedAt: new Date(supabaseRisk.updated_at)
+      updatedAt: new Date(supabaseRisk.updated_at),
+      analysisData: analysisData
     };
   };
 

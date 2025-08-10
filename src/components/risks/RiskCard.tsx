@@ -67,7 +67,8 @@ import {
   BarChart3,
   TrendingUp,
   Zap,
-  Save
+  Save,
+  X
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
@@ -142,6 +143,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
     treatmentType: risk.treatmentType,
     probability: risk.probability,
     impact: risk.impact,
+    riskLevel: risk.riskLevel,
     owner: risk.owner,
     assignedTo: risk.assignedTo || '',
     dueDate: risk.dueDate?.toISOString().split('T')[0] || ''
@@ -158,6 +160,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
       treatmentType: risk.treatmentType,
       probability: risk.probability,
       impact: risk.impact,
+      riskLevel: risk.riskLevel,
       owner: risk.owner,
       assignedTo: risk.assignedTo || '',
       dueDate: risk.dueDate?.toISOString().split('T')[0] || ''
@@ -213,6 +216,12 @@ const RiskCard: React.FC<RiskCardProps> = ({
 
   // Calcular nível de risco
   const calculateRiskLevel = () => {
+    // Priorizar nível da análise estruturada se disponível
+    if (generalData.riskLevel) {
+      return generalData.riskLevel;
+    }
+    
+    // Fallback para cálculo tradicional
     const score = generalData.probability * generalData.impact;
     if (score >= 20) return 'Muito Alto';
     if (score >= 15) return 'Alto';
@@ -441,11 +450,13 @@ const RiskCard: React.FC<RiskCardProps> = ({
     setAnalysisData(analysis);
     setShowMatrix(true);
     
-    // Atualizar os scores no formulário geral
+    // Atualizar os scores e nível de risco no formulário geral
     setGeneralData(prev => ({
       ...prev,
       probability: Math.round(analysis.probabilityScore),
-      impact: Math.round(analysis.impactScore)
+      impact: Math.round(analysis.impactScore),
+      // Adicionar o nível de risco calculado
+      riskLevel: analysis.qualitativeRiskLevel
     }));
   };
 
@@ -474,7 +485,11 @@ const RiskCard: React.FC<RiskCardProps> = ({
   const saveAnalysis = async () => {
     if (analysisData && onUpdate) {
       try {
-        await onUpdate(risk.id, { analysisData });
+        await onUpdate(risk.id, { 
+          analysisData,
+          probability: Math.round(analysisData.probabilityScore),
+          impact: Math.round(analysisData.impactScore)
+        });
         toast.success('Análise de risco salva com sucesso');
         setIsAnalysisMode(false);
       } catch (error) {
@@ -529,8 +544,8 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <CardTitle className="text-sm font-semibold truncate">{risk.name}</CardTitle>
-                    <Badge className={getRiskLevelColor(risk.riskLevel)}>
-                      {risk.riskLevel}
+                    <Badge className={getRiskLevelColor(currentRiskLevel)}>
+                      {currentRiskLevel}
                     </Badge>
                     <Badge className={getStatusColor(risk.status)}>
                       {risk.status}

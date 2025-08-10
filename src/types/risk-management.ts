@@ -335,6 +335,7 @@ export interface CreateRiskRequest {
   assignedTo?: string;
   dueDate?: Date;
   technicalDetails?: string;
+  analysisData?: RiskAnalysisData;
 }
 
 export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {

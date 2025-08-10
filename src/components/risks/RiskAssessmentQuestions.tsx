@@ -41,20 +41,17 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
 
   // Reset seleção quando mudar de questão
   React.useEffect(() => {
-    console.log('Resetando seleção para questão:', currentQuestionIndex, currentAssessmentType);
     setSelectedValue(null);
   }, [currentQuestionIndex, currentAssessmentType]);
-
-  // Garantir que o selectedValue está sincronizado
-  React.useEffect(() => {
-    console.log('Estado atual selectedValue:', selectedValue);
-  }, [selectedValue]);
   
   // Calcular progresso
   const totalQuestions = RISK_ASSESSMENT_QUESTIONS[riskType].probability.length + 
                         RISK_ASSESSMENT_QUESTIONS[riskType].impact.length;
   const answeredQuestions = probabilityAnswers.length + impactAnswers.length;
-  const progress = (answeredQuestions / totalQuestions) * 100;
+  // Incluir a pergunta atual no progresso (pergunta sendo respondida conta como +1)
+  const currentProgress = answeredQuestions + 1; // +1 para a pergunta atual
+  const progress = Math.min((currentProgress / totalQuestions) * 100, 100);
+  
 
   const handleAnswer = () => {
     if (selectedValue !== null && currentQuestion) {
@@ -65,7 +62,6 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
           value: selectedValue,
           label: selectedOption.label
         };
-        console.log('Enviando resposta:', answer);
         // Reset imediato antes de enviar a resposta
         setSelectedValue(null);
         onAnswer(answer);
@@ -102,7 +98,7 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
         
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Questão {answeredQuestions + 1} de {totalQuestions}</span>
+            <span>Questão {currentProgress} de {totalQuestions}</span>
             <span>{Math.round(progress)}% concluído</span>
           </div>
           <Progress value={progress} className="h-2" />
