@@ -298,11 +298,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   };
 
   return (
-    <Card className={`w-full transition-all duration-300 ${isExpanded ? 'bg-gray-200 dark:bg-gray-700 shadow-xl ring-2 ring-gray-400 dark:ring-gray-500 border-gray-400 dark:border-gray-500' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
+    <Card className={`w-full transition-all duration-300 ${isExpanded ? 'bg-muted/70 dark:bg-muted/60 shadow-lg ring-1 ring-border border-border' : 'bg-card hover:bg-muted/30 border-border'}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${isExpanded ? 'bg-gray-300 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-            <div className="flex items-center justify-between">
+          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${isExpanded ? 'bg-muted' : 'hover:bg-muted/40'}`}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 <div>
@@ -310,7 +310,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                   <p className="text-sm text-muted-foreground mt-1">{tenant.slug}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <div className="text-right">
                   <div className={`flex items-center gap-1 ${getUsersUsageColor()}`}>
                     <Users className="h-4 w-4" />
