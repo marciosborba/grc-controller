@@ -55,12 +55,12 @@ const SortableTenantCard: React.FC<SortableTenantCardProps> = (props) => {
     >
       {/* Drag Handle */}
       <div
-        className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing bg-white rounded p-1 shadow-sm border"
+        className="absolute right-1 top-1 sm:right-2 sm:top-2 z-10 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-grab active:cursor-grabbing bg-background rounded p-1.5 shadow-sm border border-border" aria-label="Arrastar para reordenar"
         {...attributes}
         {...listeners}
         title="Arrastar para reordenar"
       >
-        <GripVertical className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+        <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground" />
       </div>
       
       <TenantCard {...props} />

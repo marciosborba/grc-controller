@@ -60,12 +60,12 @@ const TenantManagement: React.FC = () => {
   const { user } = useAuth();
   const {
     tenants,
-    isLoading,
-    error,
+    isLoadingTenants,
+    tenantsError,
     createTenant,
     deleteTenant,
-    isCreating,
-    isDeleting
+    isCreatingTenant,
+    isDeletingTenant
   } = useTenantManagement();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -177,7 +177,7 @@ const TenantManagement: React.FC = () => {
     );
   }
 
-  if (isLoading) {
+  if (isLoadingTenants) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -187,12 +187,12 @@ const TenantManagement: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (tenantsError) {
     return (
       <Card>
         <CardContent className="p-6">
           <div className="text-center text-destructive">
-            Erro ao carregar tenants: {error.message}
+            Erro ao carregar tenants: {tenantsError.message}
           </div>
         </CardContent>
       </Card>
@@ -203,7 +203,7 @@ const TenantManagement: React.FC = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
@@ -316,8 +316,8 @@ const TenantManagement: React.FC = () => {
                     <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={isCreating}>
-                      {isCreating ? 'Criando...' : 'Criar Tenant'}
+                    <Button type="submit" disabled={isCreatingTenant}>
+                      {isCreatingTenant ? 'Criando...' : 'Criar Tenant'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -369,7 +369,7 @@ const TenantManagement: React.FC = () => {
                       key={tenant.id}
                       tenant={tenant}
                       onDelete={(tenantId) => deleteTenant(tenantId)}
-                      isDeleting={isDeleting}
+                      isDeleting={isDeletingTenant}
                     />
                   ))}
                 </div>

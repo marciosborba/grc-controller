@@ -75,6 +75,7 @@ interface SecurityEvent {
   severity: 'info' | 'warning' | 'error' | 'critical';
   details: Record<string, unknown>;
   ip_address?: string;
+  user_agent?: string;
   created_at: string;
   profiles?: {
     full_name: string;
@@ -421,7 +422,7 @@ export const AdminAuditPage: React.FC = () => {
             const userRow = row as ActiveUser;
             return `"${activityRow.profiles?.email || userRow.email || 'N/A'}"`;
           }
-          const value = (row as Record<string, unknown>)[header];
+          const value = (row as unknown as Record<string, unknown>)[header];
           if (typeof value === 'object' && value !== null) {
             return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
           }
