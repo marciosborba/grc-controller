@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run fix-errors` - Run auto-fix script
 
 **Testing:**
-- No specific test commands found in package.json. Check with team for testing approach.
+- No test framework currently configured. The project uses manual testing and validation scripts.
 
 ## Architecture Overview
 
@@ -92,6 +92,8 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 - ESLint configuration with React hooks rules
 - Component composition with shadcn/ui patterns
 - Custom hooks for feature-specific logic (useAssessments, useUserManagement, etc.)
+- Drag-and-drop functionality using @dnd-kit for sortable interfaces
+- Form handling with react-hook-form + Zod validation
 
 ## Key File Locations
 
@@ -113,4 +115,12 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 
 **Documentation:**
 - `docs/ROLES_SISTEMA.md` - Detailed role system documentation
+- `docs/USER_MANAGEMENT_SYSTEM.md` - User management system details
+- `docs/RISK_MANAGEMENT_SYSTEM.md` - Risk management implementation guide
 - `README.md` - Project setup and deployment info
+
+**Scripts & Utilities:**
+- `scripts/check-user-management.js` - User management system validation
+- `scripts/auto-fix.js` - Automated error fixing script
+- `scripts/create-platform-admin.js` - Platform admin user creation
+- Various SQL migration files in `supabase/migrations/`

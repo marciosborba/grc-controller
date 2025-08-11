@@ -63,12 +63,33 @@ import {
   Activity,
   Send,
   Eye,
-  Users
+  Users,
+  BarChart3,
+  TrendingUp,
+  Zap,
+  Save,
+  X
 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskPDF } from '@/hooks/useRiskPDF';
 import { toast } from 'sonner';
+import { 
+  RISK_ASSESSMENT_QUESTIONS, 
+  ASSESSMENT_RESPONSE_OPTIONS, 
+  GUT_RESPONSE_OPTIONS,
+  GUT_QUESTIONS 
+} from '@/data/risk-assessment-questions';
+import { 
+  processRiskAnalysis, 
+  generateMatrixData, 
+  findRiskPositionInMatrix 
+} from '@/utils/risk-analysis';
+import RiskAssessmentQuestions from './RiskAssessmentQuestions';
+import GUTMatrixSection from './GUTMatrixSection';
+import RiskMatrix from './RiskMatrix';
 import type { 
   Risk, 
   Activity as RiskActivity, 
@@ -76,7 +97,12 @@ import type {
   TreatmentType,
   ActivityStatus,
   CommunicationDecision,
-  RiskCategory
+  RiskCategory,
+  RiskAnalysisType,
+  RiskAnalysisData,
+  RiskAssessmentAnswer,
+  MatrixSize,
+  GUTAnalysis
 } from '@/types/risk-management';
 import { RISK_CATEGORIES, TREATMENT_TYPES, ACTIVITY_STATUSES } from '@/types/risk-management';
 
@@ -104,7 +130,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
   const { generateAcceptanceLetter, generateActionPlan, isGenerating } = useRiskPDF();
   
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeSection, setActiveSection] = useState<'general' | 'action' | 'acceptance' | 'communication'>('general');
+  const [activeSection, setActiveSection] = useState<'general' | 'analysis' | 'action' | 'acceptance' | 'communication'>('general');
   
   // Estados para edição de informações gerais
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
@@ -117,10 +143,29 @@ const RiskCard: React.FC<RiskCardProps> = ({
     treatmentType: risk.treatmentType,
     probability: risk.probability,
     impact: risk.impact,
+    riskLevel: risk.riskLevel,
     owner: risk.owner,
     assignedTo: risk.assignedTo || '',
     dueDate: risk.dueDate?.toISOString().split('T')[0] || ''
   });
+
+  // Sincronizar estado local com as mudanças do prop risk
+  useEffect(() => {
+    setGeneralData({
+      name: risk.name,
+      description: risk.description || '',
+      executiveSummary: risk.executiveSummary || '',
+      technicalDetails: risk.technicalDetails || '',
+      category: risk.category,
+      treatmentType: risk.treatmentType,
+      probability: risk.probability,
+      impact: risk.impact,
+      riskLevel: risk.riskLevel,
+      owner: risk.owner,
+      assignedTo: risk.assignedTo || '',
+      dueDate: risk.dueDate?.toISOString().split('T')[0] || ''
+    });
+  }, [risk]);
 
   // Estados para plano de ação
   const [activities, setActivities] = useState<RiskActivity[]>(risk.actionPlan?.activities || []);
@@ -155,8 +200,28 @@ const RiskCard: React.FC<RiskCardProps> = ({
     isUrgent: false
   });
 
+  // Estados para análise de risco
+  const [analysisData, setAnalysisData] = useState<RiskAnalysisData | null>(
+    risk.analysisData || null
+  );
+  const [selectedRiskType, setSelectedRiskType] = useState<RiskAnalysisType>('Técnico');
+  const [matrixSize, setMatrixSize] = useState<MatrixSize>('5x5'); // Padrão 5x5
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentAssessmentType, setCurrentAssessmentType] = useState<'probability' | 'impact'>('probability');
+  const [probabilityAnswers, setProbabilityAnswers] = useState<RiskAssessmentAnswer[]>([]);
+  const [impactAnswers, setImpactAnswers] = useState<RiskAssessmentAnswer[]>([]);
+  const [gutAnalysis, setGutAnalysis] = useState<GUTAnalysis | null>(null);
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [isAnalysisMode, setIsAnalysisMode] = useState(false);
+
   // Calcular nível de risco
   const calculateRiskLevel = () => {
+    // Priorizar nível da análise estruturada se disponível
+    if (generalData.riskLevel) {
+      return generalData.riskLevel;
+    }
+    
+    // Fallback para cálculo tradicional
     const score = generalData.probability * generalData.impact;
     if (score >= 20) return 'Muito Alto';
     if (score >= 15) return 'Alto';
@@ -208,12 +273,19 @@ const RiskCard: React.FC<RiskCardProps> = ({
         probability: generalData.probability,
         impact: generalData.impact,
         owner: generalData.owner,
-        assignedTo: generalData.assignedTo,
+        assignedTo: generalData.assignedTo || undefined,
         dueDate: generalData.dueDate ? new Date(generalData.dueDate) : undefined
       };
       
-      await onUpdate(risk.id, updates);
-      setIsEditingGeneral(false);
+      try {
+        await onUpdate(risk.id, updates);
+        // Aguardar um pouco para que o React Query invalide as queries
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setIsEditingGeneral(false);
+      } catch (error) {
+        // Em caso de erro, manter o modo de edição
+        console.error('Erro ao salvar:', error);
+      }
     }
   };
 
@@ -324,19 +396,146 @@ const RiskCard: React.FC<RiskCardProps> = ({
     }
   };
 
+  // ============================================================================
+  // FUNÇÕES DA ANÁLISE DE RISCO
+  // ============================================================================
+
+  const handleStartAnalysis = (riskType: RiskAnalysisType) => {
+    setSelectedRiskType(riskType);
+    setCurrentQuestionIndex(0);
+    setCurrentAssessmentType('probability');
+    setProbabilityAnswers([]);
+    setImpactAnswers([]);
+    setGutAnalysis(null);
+    setShowMatrix(false);
+    setIsAnalysisMode(true);
+  };
+
+  const handleQuestionAnswer = (answer: RiskAssessmentAnswer) => {
+    const currentQuestions = RISK_ASSESSMENT_QUESTIONS[selectedRiskType][currentAssessmentType];
+    
+    if (currentAssessmentType === 'probability') {
+      const newAnswers = [...probabilityAnswers, answer];
+      setProbabilityAnswers(newAnswers);
+      
+      if (newAnswers.length === currentQuestions.length) {
+        // Todas as questões de probabilidade respondidas, passar para impacto
+        setCurrentAssessmentType('impact');
+        setCurrentQuestionIndex(0);
+      } else {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+    } else {
+      const newAnswers = [...impactAnswers, answer];
+      setImpactAnswers(newAnswers);
+      
+      if (newAnswers.length === currentQuestions.length) {
+        // Todas as questões respondidas, processar análise
+        processAnalysis(probabilityAnswers, newAnswers);
+        setIsAnalysisMode(false); // Sair do modo de questões
+      } else {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+    }
+  };
+
+  const processAnalysis = (probAnswers: RiskAssessmentAnswer[], impAnswers: RiskAssessmentAnswer[]) => {
+    const analysis = processRiskAnalysis(
+      selectedRiskType,
+      matrixSize,
+      probAnswers,
+      impAnswers
+    );
+    
+    setAnalysisData(analysis);
+    setShowMatrix(true);
+    
+    // Atualizar os scores e nível de risco no formulário geral
+    setGeneralData(prev => ({
+      ...prev,
+      probability: Math.round(analysis.probabilityScore),
+      impact: Math.round(analysis.impactScore),
+      // Adicionar o nível de risco calculado
+      riskLevel: analysis.qualitativeRiskLevel
+    }));
+  };
+
+  const handleGUTAnalysis = (gravity: number, urgency: number, tendency: number) => {
+    const gutScore = gravity * urgency * tendency;
+    const analysis: GUTAnalysis = {
+      gravity,
+      urgency,
+      tendency,
+      gutScore,
+      priority: gutScore >= 100 ? 'Muito Alta' : 
+                gutScore >= 64 ? 'Alta' : 
+                gutScore >= 27 ? 'Média' : 
+                gutScore >= 8 ? 'Baixa' : 'Muito Baixa'
+    };
+    
+    setGutAnalysis(analysis);
+    
+    // Atualizar analysisData
+    if (analysisData) {
+      const updatedAnalysis = { ...analysisData, gutAnalysis: analysis };
+      setAnalysisData(updatedAnalysis);
+    }
+  };
+
+  const saveAnalysis = async () => {
+    if (analysisData && onUpdate) {
+      try {
+        await onUpdate(risk.id, { 
+          analysisData,
+          probability: Math.round(analysisData.probabilityScore),
+          impact: Math.round(analysisData.impactScore)
+        });
+        toast.success('Análise de risco salva com sucesso');
+        setIsAnalysisMode(false);
+      } catch (error) {
+        toast.error('Erro ao salvar análise de risco');
+      }
+    }
+  };
+
+  const resetAnalysis = () => {
+    setAnalysisData(null);
+    setProbabilityAnswers([]);
+    setImpactAnswers([]);
+    setGutAnalysis(null);
+    setShowMatrix(false);
+    setIsAnalysisMode(false);
+    setCurrentQuestionIndex(0);
+    setCurrentAssessmentType('probability');
+  };
+
   const currentRiskLevel = calculateRiskLevel();
   const showAcceptanceSection = generalData.treatmentType === 'Aceitar';
   const showActionSection = generalData.treatmentType !== 'Aceitar';
+  
+  // Quando o tipo de tratamento mudar, ajustar a seção ativa
+  useEffect(() => {
+    if (showAcceptanceSection && activeSection === 'action') {
+      setActiveSection('acceptance');
+    } else if (showActionSection && activeSection === 'acceptance') {
+      setActiveSection('action');
+    }
+  }, [showAcceptanceSection, showActionSection, activeSection]);
 
   return (
     <Card className={`w-full transition-all duration-300 ${isExpanded ? 'bg-gray-200 dark:bg-gray-700 shadow-xl ring-2 ring-gray-400 dark:ring-gray-500 border-gray-400 dark:border-gray-500' : 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${isExpanded ? 'bg-gray-300 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${isExpanded ? 'bg-gray-300 dark:bg-gray-600' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`} title={isExpanded ? "Clique para recolher" : "Clique para expandir"}>
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+                <div className="flex-shrink-0 p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                  {isExpanded ? 
+                    <ChevronDown className="h-4 w-4 text-gray-700 dark:text-gray-300 font-bold" /> : 
+                    <ChevronRight className="h-4 w-4 text-gray-700 dark:text-gray-300 font-bold" />
+                  }
+                </div>
                 
                 <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
                   <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -345,8 +544,8 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <CardTitle className="text-sm font-semibold truncate">{risk.name}</CardTitle>
-                    <Badge className={getRiskLevelColor(risk.riskLevel)}>
-                      {risk.riskLevel}
+                    <Badge className={getRiskLevelColor(currentRiskLevel)}>
+                      {currentRiskLevel}
                     </Badge>
                     <Badge className={getStatusColor(risk.status)}>
                       {risk.status}
@@ -369,7 +568,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
               {/* Center Section - Treatment */}
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
-                  {risk.treatmentType}
+                  {isEditingGeneral ? generalData.treatmentType : risk.treatmentType}
                 </Badge>
               </div>
               
@@ -403,6 +602,18 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 >
                   <Shield className="h-4 w-4" />
                   Informações Gerais
+                </button>
+                
+                <button
+                  onClick={() => setActiveSection('analysis')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'analysis' 
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Análise de Risco
                 </button>
                 
                 {showActionSection && (
@@ -603,7 +814,181 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 </div>
               )}
 
-              {/* 2. PLANO DE AÇÃO */}
+              {/* 2. ANÁLISE DE RISCO */}
+              {activeSection === 'analysis' && (
+                <div className="space-y-6">
+                  <h4 className="text-lg font-medium text-muted-foreground">ANÁLISE ESTRUTURADA DE RISCO</h4>
+                  
+                  {!isAnalysisMode ? (
+                    // Tela inicial - seleção de tipo e resultados anteriores
+                    <div className="space-y-4">
+                      {/* Matriz GUT - aparece após análise principal mas fora do modo questão */}
+                      {showMatrix && analysisData && !analysisData.gutAnalysis && !isAnalysisMode && (
+                        <GUTMatrixSection
+                          onComplete={handleGUTAnalysis}
+                          onSkip={() => saveAnalysis()}
+                        />
+                      )}
+                      
+                      {analysisData ? (
+                        // Mostrar análise existente
+                        <div className="space-y-4">
+                          <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="font-semibold text-green-800 dark:text-green-200">Análise Concluída</h5>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setIsAnalysisMode(true)}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Refazer
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={resetAnalysis}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Limpar
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                <div className="text-sm text-muted-foreground">Tipo de Risco</div>
+                                <div className="font-medium">{analysisData.riskType}</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                <div className="text-sm text-muted-foreground">Probabilidade</div>
+                                <div className="font-medium">{analysisData.probabilityScore.toFixed(1)}/5</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
+                                <div className="text-sm text-muted-foreground">Impacto</div>
+                                <div className="font-medium">{analysisData.impactScore.toFixed(1)}/5</div>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4">
+                              <Badge className={`text-base px-3 py-1 ${getRiskLevelColor(analysisData.qualitativeRiskLevel)}`}>
+                                {analysisData.qualitativeRiskLevel}
+                              </Badge>
+                            </div>
+                            
+                            {analysisData.gutAnalysis && (
+                              <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
+                                <h6 className="font-medium mb-2">Matriz GUT</h6>
+                                <div className="grid grid-cols-4 gap-3 text-sm">
+                                  <div>Gravidade: <span className="font-medium">{analysisData.gutAnalysis.gravity}</span></div>
+                                  <div>Urgência: <span className="font-medium">{analysisData.gutAnalysis.urgency}</span></div>
+                                  <div>Tendência: <span className="font-medium">{analysisData.gutAnalysis.tendency}</span></div>
+                                  <div>
+                                    Prioridade: <Badge variant="outline" className="ml-1">{analysisData.gutAnalysis.priority}</Badge>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Matriz Visual */}
+                          <RiskMatrix 
+                            probabilityScore={analysisData.probabilityScore} 
+                            impactScore={analysisData.impactScore}
+                            matrixSize={analysisData.matrixSize}
+                            qualitativeLevel={analysisData.qualitativeRiskLevel}
+                          />
+                        </div>
+                      ) : (
+                        // Tela para iniciar nova análise
+                        <div className="bg-blue-50 dark:bg-blue-950/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                          <div className="text-center mb-4">
+                            <BarChart3 className="h-12 w-12 text-blue-600 mx-auto mb-3" />
+                            <h5 className="text-lg font-semibold mb-2">Iniciar Análise de Risco</h5>
+                            <p className="text-muted-foreground mb-4">
+                              Realize uma análise estruturada para avaliar este risco com precisão
+                            </p>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="riskType">Selecione o Tipo de Risco</Label>
+                              <Select
+                                value={selectedRiskType}
+                                onValueChange={(value) => setSelectedRiskType(value as RiskAnalysisType)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Técnico">Técnico</SelectItem>
+                                  <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                                  <SelectItem value="Processo">Processo</SelectItem>
+                                  <SelectItem value="Incidente">Incidente</SelectItem>
+                                  <SelectItem value="Estratégico">Estratégico</SelectItem>
+                                  <SelectItem value="Operacional">Operacional</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="matrixSize">Matriz de Risco</Label>
+                              <Select
+                                value={matrixSize}
+                                onValueChange={(value) => setMatrixSize(value as MatrixSize)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="4x4">4x4 (Padrão)</SelectItem>
+                                  <SelectItem value="5x5">5x5 (Detalhado)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <Button 
+                              onClick={() => handleStartAnalysis(selectedRiskType)}
+                              className="w-full"
+                            >
+                              <TrendingUp className="h-4 w-4 mr-2" />
+                              Iniciar Análise
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Modo de análise - questões
+                    <RiskAssessmentQuestions
+                      riskType={selectedRiskType}
+                      currentQuestionIndex={currentQuestionIndex}
+                      currentAssessmentType={currentAssessmentType}
+                      onAnswer={handleQuestionAnswer}
+                      probabilityAnswers={probabilityAnswers}
+                      impactAnswers={impactAnswers}
+                      onCancel={() => setIsAnalysisMode(false)}
+                    />
+                  )}
+                  
+                  {/* Botões de ação */}
+                  {analysisData && analysisData.gutAnalysis && (
+                    <div className="flex gap-2 pt-4">
+                      <Button onClick={saveAnalysis}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar Análise
+                      </Button>
+                      <Button variant="outline" onClick={resetAnalysis}>
+                        <X className="h-4 w-4 mr-2" />
+                        Cancelar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. PLANO DE AÇÃO */}
               {activeSection === 'action' && showActionSection && (
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium text-muted-foreground">PLANO DE AÇÃO</h4>

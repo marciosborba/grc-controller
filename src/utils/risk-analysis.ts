@@ -1,0 +1,146 @@
+import type { 
+  RiskAnalysisData, 
+  RiskAssessmentAnswer, 
+  RiskLevel, 
+  MatrixSize,
+  GUTAnalysis 
+} from '@/types/risk-management';
+
+// Calcula a média das respostas
+export const calculateAverageScore = (answers: RiskAssessmentAnswer[]): number => {
+  if (answers.length === 0) return 0;
+  const total = answers.reduce((sum, answer) => sum + answer.value, 0);
+  return Math.round((total / answers.length) * 100) / 100; // Arredondar para 2 casas decimais
+};
+
+// Determina o nível qualitativo baseado na matriz de risco
+export const calculateQualitativeRiskLevel = (
+  probabilityScore: number,
+  impactScore: number,
+  matrixSize: MatrixSize
+): RiskLevel => {
+  // Arredondar scores para inteiros para mapear na matriz
+  const prob = Math.round(probabilityScore);
+  const impact = Math.round(impactScore);
+  
+  if (matrixSize === '4x4') {
+    // Matriz 4x4 (valores de 1 a 4)
+    const score = prob * impact;
+    if (score >= 16) return 'Muito Alto';
+    if (score >= 12) return 'Alto';
+    if (score >= 8) return 'Médio';
+    if (score >= 4) return 'Baixo';
+    return 'Muito Baixo';
+  } else {
+    // Matriz 5x5 (valores de 1 a 5)
+    const score = prob * impact;
+    if (score >= 20) return 'Muito Alto';
+    if (score >= 15) return 'Alto';
+    if (score >= 9) return 'Médio';
+    if (score >= 4) return 'Baixo';
+    return 'Muito Baixo';
+  }
+};
+
+// Calcula a prioridade GUT
+export const calculateGUTPriority = (gutScore: number): GUTAnalysis['priority'] => {
+  if (gutScore >= 100) return 'Muito Alta';
+  if (gutScore >= 64) return 'Alta';
+  if (gutScore >= 27) return 'Média';
+  if (gutScore >= 8) return 'Baixa';
+  return 'Muito Baixa';
+};
+
+// Processa a análise completa do risco
+export const processRiskAnalysis = (
+  riskType: RiskAnalysisData['riskType'],
+  matrixSize: MatrixSize,
+  probabilityAnswers: RiskAssessmentAnswer[],
+  impactAnswers: RiskAssessmentAnswer[],
+  gutGravity?: number,
+  gutUrgency?: number,
+  gutTendency?: number
+): RiskAnalysisData => {
+  const probabilityScore = calculateAverageScore(probabilityAnswers);
+  const impactScore = calculateAverageScore(impactAnswers);
+  const qualitativeRiskLevel = calculateQualitativeRiskLevel(
+    probabilityScore, 
+    impactScore, 
+    matrixSize
+  );
+
+  let gutAnalysis: GUTAnalysis | undefined;
+  if (gutGravity && gutUrgency && gutTendency) {
+    const gutScore = gutGravity * gutUrgency * gutTendency;
+    gutAnalysis = {
+      gravity: gutGravity,
+      urgency: gutUrgency,
+      tendency: gutTendency,
+      gutScore,
+      priority: calculateGUTPriority(gutScore)
+    };
+  }
+
+  return {
+    riskType,
+    matrixSize,
+    probabilityAnswers,
+    impactAnswers,
+    probabilityScore,
+    impactScore,
+    qualitativeRiskLevel,
+    gutAnalysis
+  };
+};
+
+// Gera dados para visualização da matriz de risco
+export interface MatrixCell {
+  probability: number;
+  impact: number;
+  level: RiskLevel;
+  color: string;
+}
+
+export const generateMatrixData = (matrixSize: MatrixSize): MatrixCell[][] => {
+  const size = matrixSize === '4x4' ? 4 : 5;
+  const matrix: MatrixCell[][] = [];
+
+  // Cores por nível de risco
+  const colorMap: Record<RiskLevel, string> = {
+    'Muito Baixo': '#22c55e', // Verde
+    'Baixo': '#84cc16',       // Verde claro
+    'Médio': '#eab308',       // Amarelo
+    'Alto': '#f97316',        // Laranja
+    'Muito Alto': '#ef4444'   // Vermelho
+  };
+
+  for (let impact = size; impact >= 1; impact--) {
+    const row: MatrixCell[] = [];
+    for (let probability = 1; probability <= size; probability++) {
+      const level = calculateQualitativeRiskLevel(probability, impact, matrixSize);
+      row.push({
+        probability,
+        impact,
+        level,
+        color: colorMap[level]
+      });
+    }
+    matrix.push(row);
+  }
+
+  return matrix;
+};
+
+// Encontra a posição do risco na matriz
+export const findRiskPositionInMatrix = (
+  probabilityScore: number,
+  impactScore: number
+): { x: number; y: number } => {
+  const prob = Math.max(1, Math.min(5, Math.round(probabilityScore)));
+  const impact = Math.max(1, Math.min(5, Math.round(impactScore)));
+  
+  return {
+    x: prob - 1, // Converter para índice baseado em 0
+    y: 5 - impact // Inverter porque a matriz é exibida de cima para baixo
+  };
+};

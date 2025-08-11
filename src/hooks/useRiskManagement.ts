@@ -130,10 +130,11 @@ export const useRiskManagement = () => {
           probability: riskData.probability.toString(),
           likelihood_score: riskData.probability,
           impact_score: riskData.impact,
-          risk_score: riskScore,
+          // Remover risk_score pois é coluna gerada
+          // risk_score: riskScore,
           risk_level: riskLevel,
           status: 'Identificado',
-          assigned_to: riskData.assignedTo,
+          assigned_to: riskData.assignedTo || null,
           due_date: riskData.dueDate?.toISOString(),
           created_by: user?.id,
           severity: 'medium' // valor padrão para compatibilidade
@@ -177,8 +178,17 @@ export const useRiskManagement = () => {
       if (data.description) updateData.description = data.description;
       if (data.category) updateData.risk_category = data.category;
       if (data.status) updateData.status = data.status;
-      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo;
+      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo || null;
       if (data.dueDate !== undefined) updateData.due_date = data.dueDate?.toISOString();
+      
+      // Temporariamente salvar analysisData em um campo existente até termos a coluna analysis_data
+      if (data.analysisData !== undefined) {
+        // Preservar descrição existente mas adicionar analysis_data como um campo separado
+        const currentDesc = data.description || '';
+        const analysisJson = JSON.stringify(data.analysisData);
+        // Usar um padrão reconhecível para extrair depois
+        updateData.description = currentDesc.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '') + '\n---ANALYSIS_DATA---\n' + analysisJson;
+      }
 
       // Recalcular score se probabilidade ou impacto mudaram
       if (data.probability || data.impact) {
@@ -194,10 +204,12 @@ export const useRiskManagement = () => {
 
         updateData.likelihood_score = probability;
         updateData.impact_score = impact;
-        updateData.risk_score = riskScore;
+        // Remover risk_score pois é coluna gerada
+        // updateData.risk_score = riskScore;
         updateData.risk_level = calculateRiskLevel(riskScore);
       }
 
+      // Atualizar o risco principal
       const { data: result, error } = await supabase
         .from('risk_assessments')
         .update(updateData)
@@ -206,6 +218,42 @@ export const useRiskManagement = () => {
         .single();
 
       if (error) throw error;
+
+      // Atualizar tipo de tratamento se fornecido
+      if (data.treatmentType) {
+        // Verificar se já existe um plano de ação
+        const { data: existingPlan, error: planQueryError } = await supabase
+          .from('risk_action_plans')
+          .select('id')
+          .eq('risk_id', riskId)
+          .maybeSingle();
+
+        if (planQueryError) {
+          throw planQueryError;
+        }
+
+        if (existingPlan) {
+          // Atualizar plano existente
+          const { error: planError } = await supabase
+            .from('risk_action_plans')
+            .update({ treatment_type: data.treatmentType })
+            .eq('risk_id', riskId);
+
+          if (planError) throw planError;
+        } else {
+          // Criar novo plano de ação
+          const { error: planError } = await supabase
+            .from('risk_action_plans')
+            .insert([{
+              risk_id: riskId,
+              treatment_type: data.treatmentType,
+              created_by: user?.id
+            }]);
+
+          if (planError) throw planError;
+        }
+      }
+
       return result;
     },
     onSuccess: () => {
@@ -214,7 +262,8 @@ export const useRiskManagement = () => {
       toast.success('Risco atualizado com sucesso');
     },
     onError: (error: any) => {
-      toast.error(`Erro ao atualizar risco: ${error.message}`);
+      console.error('Erro detalhado ao atualizar risco:', error);
+      toast.error(`Erro ao atualizar risco: ${error.message || 'Erro desconhecido'}`);
     }
   });
 
@@ -336,10 +385,25 @@ export const useRiskManagement = () => {
   };
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
+    // Extrair analysisData da descrição (solução temporária)
+    let description = supabaseRisk.description || '';
+    let analysisData = null;
+    
+    const analysisMatch = description.match(/\n---ANALYSIS_DATA---\n([\s\S]*)$/);
+    if (analysisMatch) {
+      try {
+        analysisData = JSON.parse(analysisMatch[1]);
+        // Remover analysis data da descrição
+        description = description.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '');
+      } catch (e) {
+        console.warn('Erro ao parsear analysis data:', e);
+      }
+    }
+
     return {
       id: supabaseRisk.id,
       name: supabaseRisk.title,
-      description: supabaseRisk.description,
+      description: description,
       category: supabaseRisk.risk_category,
       probability: supabaseRisk.likelihood_score,
       impact: supabaseRisk.impact_score,
@@ -353,7 +417,8 @@ export const useRiskManagement = () => {
       dueDate: supabaseRisk.due_date ? new Date(supabaseRisk.due_date) : undefined,
       createdBy: supabaseRisk.created_by || '',
       createdAt: new Date(supabaseRisk.created_at),
-      updatedAt: new Date(supabaseRisk.updated_at)
+      updatedAt: new Date(supabaseRisk.updated_at),
+      analysisData: analysisData
     };
   };
 
