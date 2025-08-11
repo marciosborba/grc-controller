@@ -279,6 +279,9 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         can_delegate: approverData.can_delegate,
         notification_days_before: approverData.notification_days_before,
         escalation_days: approverData.escalation_days,
+        notify_on_assignment: true,
+        notify_on_decision: true,
+        notify_on_changes: true,
         created_by: user.id
       });
       

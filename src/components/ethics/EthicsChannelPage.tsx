@@ -7,9 +7,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
+import { 
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { 
   Shield, 
   Plus, 
@@ -24,17 +38,21 @@ import {
   User,
   UserX,
   MessageSquare,
-  FileText
+  FileText,
+  BarChart3,
+  Activity,
+  Filter,
+  Download,
+  Upload
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
-import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
+import EthicsReportCard from './EthicsReportCard';
 
-interface EthicsReport {
+export interface EthicsReport {
   id: string;
   title: string;
   description: string;
@@ -52,21 +70,37 @@ interface EthicsReport {
   updated_at: string;
 }
 
+interface EthicsFilters {
+  search_term: string;
+  categories: string[];
+  statuses: string[];
+  severities: string[];
+  show_anonymous_only: boolean;
+  show_resolved: boolean;
+}
+
 const EthicsChannelPage = () => {
   const [reports, setReports] = useState<EthicsReport[]>([]);
-  const [filteredReports, setFilteredReports] = useState<EthicsReport[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [sortedReports, setSortedReports] = useState<EthicsReport[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isResolutionDialogOpen, setIsResolutionDialogOpen] = useState(false);
   const [editingReport, setEditingReport] = useState<EthicsReport | null>(null);
   const [selectedReport, setSelectedReport] = useState<EthicsReport | null>(null);
   const [activeTab, setActiveTab] = useState('reports');
+  const [isCardView, setIsCardView] = useState(true);
   
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Estados de filtro
+  const [filters, setFilters] = useState<EthicsFilters>({
+    search_term: '',
+    categories: [],
+    statuses: [],
+    severities: [],
+    show_anonymous_only: false,
+    show_resolved: true
+  });
 
   const [formData, setFormData] = useState({
     title: '',
@@ -85,35 +119,51 @@ const EthicsChannelPage = () => {
     assigned_to: '',
   });
 
+  // Configuração do drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     fetchReports();
   }, []);
 
   useEffect(() => {
-    let filtered = reports;
+    let filtered = [...reports];
     
-    if (searchTerm) {
+    if (filters.search_term) {
       filtered = filtered.filter(report => 
-        report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.category.toLowerCase().includes(searchTerm.toLowerCase())
+        report.title.toLowerCase().includes(filters.search_term.toLowerCase()) ||
+        report.description.toLowerCase().includes(filters.search_term.toLowerCase()) ||
+        report.category.toLowerCase().includes(filters.search_term.toLowerCase())
       );
     }
     
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(report => report.category === categoryFilter);
+    if (filters.categories.length > 0) {
+      filtered = filtered.filter(report => filters.categories.includes(report.category));
     }
     
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(report => report.status === statusFilter);
+    if (filters.statuses.length > 0) {
+      filtered = filtered.filter(report => filters.statuses.includes(report.status));
     }
     
-    if (severityFilter !== 'all') {
-      filtered = filtered.filter(report => report.severity === severityFilter);
+    if (filters.severities.length > 0) {
+      filtered = filtered.filter(report => filters.severities.includes(report.severity));
+    }
+
+    if (filters.show_anonymous_only) {
+      filtered = filtered.filter(report => report.is_anonymous);
+    }
+
+    if (!filters.show_resolved) {
+      filtered = filtered.filter(report => report.status !== 'resolved');
     }
     
-    setFilteredReports(filtered);
-  }, [reports, searchTerm, categoryFilter, statusFilter, severityFilter]);
+    setSortedReports(filtered);
+  }, [reports, filters]);
 
   const fetchReports = async () => {
     try {
@@ -268,6 +318,19 @@ const EthicsChannelPage = () => {
     }
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSortedReports((reports) => {
+        const oldIndex = reports.findIndex((report) => report.id === active.id);
+        const newIndex = reports.findIndex((report) => report.id === over.id);
+
+        return arrayMove(reports, oldIndex, newIndex);
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: '',
@@ -290,562 +353,441 @@ const EthicsChannelPage = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-red-100 text-red-800 border-red-200';
-      case 'investigating': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'resolved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'closed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const updateFilter = (key: keyof EthicsFilters, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'open': return 'Aberto';
-      case 'investigating': return 'Investigando';
-      case 'in_review': return 'Em Análise';
-      case 'resolved': return 'Resolvido';
-      case 'closed': return 'Fechado';
-      default: return status;
-    }
+  const clearFilters = () => {
+    setFilters({
+      search_term: '',
+      categories: [],
+      statuses: [],
+      severities: [],
+      show_anonymous_only: false,
+      show_resolved: true
+    });
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const hasActiveFilters = () => {
+    return !!(
+      filters.search_term ||
+      filters.categories.length > 0 ||
+      filters.statuses.length > 0 ||
+      filters.severities.length > 0 ||
+      filters.show_anonymous_only ||
+      !filters.show_resolved
+    );
   };
 
-  const getSeverityText = (severity: string) => {
-    switch (severity) {
-      case 'low': return 'Baixa';
-      case 'medium': return 'Média';
-      case 'high': return 'Alta';
-      case 'critical': return 'Crítica';
-      default: return severity;
-    }
+  const getMetrics = () => {
+    return {
+      total_reports: reports.length,
+      anonymous_reports: reports.filter(r => r.is_anonymous).length,
+      pending_reports: reports.filter(r => ['open', 'investigating', 'in_review'].includes(r.status)).length,
+      resolved_reports: reports.filter(r => r.status === 'resolved').length,
+      critical_reports: reports.filter(r => r.severity === 'critical').length,
+      reports_by_category: reports.reduce((acc, r) => {
+        acc[r.category] = (acc[r.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    };
   };
 
-  const getCategoryText = (category: string) => {
-    switch (category) {
-      case 'discrimination': return 'Discriminação';
-      case 'harassment': return 'Assédio';
-      case 'corruption': return 'Corrupção';
-      case 'fraud': return 'Fraude';
-      case 'safety': return 'Segurança';
-      case 'environment': return 'Meio Ambiente';
-      case 'conflict_interest': return 'Conflito de Interesse';
-      case 'data_protection': return 'Proteção de Dados';
-      case 'other': return 'Outros';
-      default: return category;
-    }
-  };
+  const metrics = getMetrics();
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Canal de Ética</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Sistema de denúncias anônimas e identificadas</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Sistema de denúncias anônimas e identificadas para promoção da ética corporativa
+          </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Denúncia
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingReport ? 'Editar Relatório' : 'Nova Denúncia'}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label htmlFor="title">Título *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                    placeholder="Título da denúncia"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="description">Descrição Detalhada *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    required
-                    rows={4}
-                    placeholder="Descreva detalhadamente o ocorrido, incluindo datas, locais e pessoas envolvidas..."
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCardView(!isCardView)}
+          >
+            {isCardView ? <BarChart3 className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+            {isCardView ? 'Visão Lista' : 'Visão Cards'}
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Denúncia
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingReport ? 'Editar Relatório' : 'Nova Denúncia'}
+                </DialogTitle>
+              </DialogHeader>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <Label htmlFor="category">Categoria *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({...formData, category: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="discrimination">Discriminação</SelectItem>
-                        <SelectItem value="harassment">Assédio</SelectItem>
-                        <SelectItem value="corruption">Corrupção</SelectItem>
-                        <SelectItem value="fraud">Fraude</SelectItem>
-                        <SelectItem value="safety">Segurança no Trabalho</SelectItem>
-                        <SelectItem value="environment">Meio Ambiente</SelectItem>
-                        <SelectItem value="conflict_interest">Conflito de Interesse</SelectItem>
-                        <SelectItem value="data_protection">Proteção de Dados</SelectItem>
-                        <SelectItem value="other">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="title">Título *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      required
+                      placeholder="Título da denúncia"
+                    />
                   </div>
                   
                   <div>
-                    <Label htmlFor="severity">Gravidade *</Label>
-                    <Select
-                      value={formData.severity}
-                      onValueChange={(value) => setFormData({...formData, severity: value})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low">Baixa</SelectItem>
-                        <SelectItem value="medium">Média</SelectItem>
-                        <SelectItem value="high">Alta</SelectItem>
-                        <SelectItem value="critical">Crítica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="border rounded-lg p-4 bg-blue-50">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="anonymous"
-                      checked={formData.is_anonymous}
-                      onCheckedChange={(checked) => setFormData({...formData, is_anonymous: checked})}
+                    <Label htmlFor="description">Descrição Detalhada *</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      required
+                      rows={4}
+                      placeholder="Descreva detalhadamente o ocorrido, incluindo datas, locais e pessoas envolvidas..."
                     />
-                    <Label htmlFor="anonymous" className="flex items-center space-x-2">
-                      {formData.is_anonymous ? (
-                        <>
-                          <EyeOff className="h-4 w-4" />
-                          <span>Denúncia Anônima</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="h-4 w-4" />
-                          <span>Denúncia Identificada</span>
-                        </>
-                      )}
-                    </Label>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {formData.is_anonymous 
-                      ? 'Sua identidade será mantida em sigilo absoluto.' 
-                      : 'Suas informações de contato serão utilizadas para acompanhamento do caso.'}
-                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="category">Categoria *</Label>
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) => setFormData({...formData, category: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="discrimination">Discriminação</SelectItem>
+                          <SelectItem value="harassment">Assédio</SelectItem>
+                          <SelectItem value="corruption">Corrupção</SelectItem>
+                          <SelectItem value="fraud">Fraude</SelectItem>
+                          <SelectItem value="safety">Segurança no Trabalho</SelectItem>
+                          <SelectItem value="environment">Meio Ambiente</SelectItem>
+                          <SelectItem value="conflict_interest">Conflito de Interesse</SelectItem>
+                          <SelectItem value="data_protection">Proteção de Dados</SelectItem>
+                          <SelectItem value="other">Outros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="severity">Gravidade *</Label>
+                      <Select
+                        value={formData.severity}
+                        onValueChange={(value) => setFormData({...formData, severity: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Baixa</SelectItem>
+                          <SelectItem value="medium">Média</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                          <SelectItem value="critical">Crítica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950/30">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="anonymous"
+                        checked={formData.is_anonymous}
+                        onCheckedChange={(checked) => setFormData({...formData, is_anonymous: checked})}
+                      />
+                      <Label htmlFor="anonymous" className="flex items-center space-x-2">
+                        {formData.is_anonymous ? (
+                          <>
+                            <EyeOff className="h-4 w-4" />
+                            <span>Denúncia Anônima</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4" />
+                            <span>Denúncia Identificada</span>
+                          </>
+                        )}
+                      </Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {formData.is_anonymous 
+                        ? 'Sua identidade será mantida em sigilo absoluto.' 
+                        : 'Suas informações de contato serão utilizadas para acompanhamento do caso.'}
+                    </p>
+                  </div>
+                  
+                  {!formData.is_anonymous && (
+                    <div className="space-y-4 border rounded-lg p-4">
+                      <h4 className="font-medium">Informações do Denunciante</h4>
+                      
+                      <div>
+                        <Label htmlFor="reporter_name">Nome Completo</Label>
+                        <Input
+                          id="reporter_name"
+                          value={formData.reporter_name}
+                          onChange={(e) => setFormData({...formData, reporter_name: e.target.value})}
+                          placeholder="Seu nome completo"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="reporter_email">Email</Label>
+                        <Input
+                          id="reporter_email"
+                          type="email"
+                          value={formData.reporter_email}
+                          onChange={(e) => setFormData({...formData, reporter_email: e.target.value})}
+                          placeholder="seu.email@empresa.com"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="reporter_phone">Telefone</Label>
+                        <Input
+                          id="reporter_phone"
+                          value={formData.reporter_phone}
+                          onChange={(e) => setFormData({...formData, reporter_phone: e.target.value})}
+                          placeholder="(11) 99999-9999"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
-                {!formData.is_anonymous && (
-                  <div className="space-y-4 border rounded-lg p-4">
-                    <h4 className="font-medium">Informações do Denunciante</h4>
-                    
-                    <div>
-                      <Label htmlFor="reporter_name">Nome Completo</Label>
-                      <Input
-                        id="reporter_name"
-                        value={formData.reporter_name}
-                        onChange={(e) => setFormData({...formData, reporter_name: e.target.value})}
-                        placeholder="Seu nome completo"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="reporter_email">Email</Label>
-                      <Input
-                        id="reporter_email"
-                        type="email"
-                        value={formData.reporter_email}
-                        onChange={(e) => setFormData({...formData, reporter_email: e.target.value})}
-                        placeholder="seu.email@empresa.com"
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="reporter_phone">Telefone</Label>
-                      <Input
-                        id="reporter_phone"
-                        value={formData.reporter_phone}
-                        onChange={(e) => setFormData({...formData, reporter_phone: e.target.value})}
-                        placeholder="(11) 99999-9999"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingReport ? 'Atualizar' : 'Enviar Denúncia'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {editingReport ? 'Atualizar' : 'Enviar Denúncia'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="reports">Relatórios</TabsTrigger>
-          <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
-          <TabsTrigger value="guidelines">Diretrizes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="reports" className="space-y-6">
-          {/* Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex gap-4 items-center">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Pesquisar relatórios..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="discrimination">Discriminação</SelectItem>
-                    <SelectItem value="harassment">Assédio</SelectItem>
-                    <SelectItem value="corruption">Corrupção</SelectItem>
-                    <SelectItem value="fraud">Fraude</SelectItem>
-                    <SelectItem value="safety">Segurança</SelectItem>
-                    <SelectItem value="environment">Meio Ambiente</SelectItem>
-                    <SelectItem value="other">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={severityFilter} onValueChange={setSeverityFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Gravidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="critical">Crítica</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="low">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="open">Aberto</SelectItem>
-                    <SelectItem value="investigating">Investigando</SelectItem>
-                    <SelectItem value="in_review">Em Análise</SelectItem>
-                    <SelectItem value="resolved">Resolvido</SelectItem>
-                    <SelectItem value="closed">Fechado</SelectItem>
-                  </SelectContent>
-                </Select>
+      {/* Métricas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <Shield className="h-6 w-6 text-blue-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Total</p>
+                <p className="text-lg font-bold">{metrics.total_reports}</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Ethics Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <Shield className="h-8 w-8 text-blue-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{reports.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <UserX className="h-8 w-8 text-purple-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Anônimas</p>
-                    <p className="text-2xl font-bold">
-                      {reports.filter(r => r.is_anonymous).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <Clock className="h-8 w-8 text-yellow-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Em Andamento</p>
-                    <p className="text-2xl font-bold">
-                      {reports.filter(r => r.status === 'open' || r.status === 'investigating' || r.status === 'in_review').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Resolvidas</p>
-                    <p className="text-2xl font-bold">
-                      {reports.filter(r => r.status === 'resolved').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <AlertTriangle className="h-8 w-8 text-red-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Críticas</p>
-                    <p className="text-2xl font-bold">
-                      {reports.filter(r => r.severity === 'critical').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Reports Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Relatórios de Ética</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Título</TableHead>
-                      <TableHead className="text-xs">Categoria</TableHead>
-                      <TableHead className="text-xs">Gravidade</TableHead>
-                      <TableHead className="text-xs">Tipo</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                      <TableHead className="text-xs">Data</TableHead>
-                      <TableHead className="text-xs">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredReports.map((report) => (
-                      <TableRow key={report.id}>
-                        <TableCell className="text-xs font-medium">
-                          <div>
-                            <p className="font-semibold">{report.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {report.description.substring(0, 60)}...
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge variant="outline">{getCategoryText(report.category)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className={getSeverityColor(report.severity)}>
-                            {getSeverityText(report.severity)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex items-center">
-                            {report.is_anonymous ? (
-                              <>
-                                <UserX className="h-4 w-4 mr-1" />
-                                <span className="text-xs">Anônima</span>
-                              </>
-                            ) : (
-                              <>
-                                <User className="h-4 w-4 mr-1" />
-                                <span className="text-xs">Identificada</span>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className={getStatusColor(report.status)}>
-                            {getStatusText(report.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {format(new Date(report.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(report)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResolve(report)}
-                              title="Gerenciar Resolução"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(report.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {filteredReports.length === 0 && (
-                  <div className="text-center py-8">
-                    <Shield className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' || severityFilter !== 'all'
-                        ? 'Nenhum relatório encontrado com os filtros aplicados.'
-                        : 'Nenhum relatório de ética encontrado.'}
-                    </p>
-                  </div>
-                )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <UserX className="h-6 w-6 text-purple-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Anônimas</p>
+                <p className="text-lg font-bold">{metrics.anonymous_reports}</p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <Clock className="h-6 w-6 text-yellow-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Em Andamento</p>
+                <p className="text-lg font-bold">{metrics.pending_reports}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Resolvidas</p>
+                <p className="text-lg font-bold">{metrics.resolved_reports}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Críticas</p>
+                <p className="text-lg font-bold">{metrics.critical_reports}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="statistics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatórios por Categoria</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Array.from(new Set(reports.map(r => r.category))).map(category => (
-                    <div key={category} className="flex justify-between items-center">
-                      <span>{getCategoryText(category)}</span>
-                      <Badge variant="outline">
-                        {reports.filter(r => r.category === category).length}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+      {/* Filtros */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Filtros</h3>
+              {hasActiveFilters() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                >
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Status dos Relatórios</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {['open', 'investigating', 'in_review', 'resolved', 'closed'].map(status => (
-                    <div key={status} className="flex justify-between items-center">
-                      <span>{getStatusText(status)}</span>
-                      <Badge variant="outline">
-                        {reports.filter(r => r.status === status).length}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Pesquisar relatórios..."
+                  value={filters.search_term}
+                  onChange={(e) => updateFilter('search_term', e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select 
+                value={filters.categories[0] || undefined} 
+                onValueChange={(value) => updateFilter('categories', value ? [value] : [])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as Categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="discrimination">Discriminação</SelectItem>
+                  <SelectItem value="harassment">Assédio</SelectItem>
+                  <SelectItem value="corruption">Corrupção</SelectItem>
+                  <SelectItem value="fraud">Fraude</SelectItem>
+                  <SelectItem value="safety">Segurança</SelectItem>
+                  <SelectItem value="environment">Meio Ambiente</SelectItem>
+                  <SelectItem value="other">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={filters.statuses[0] || undefined} 
+                onValueChange={(value) => updateFilter('statuses', value ? [value] : [])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Aberto</SelectItem>
+                  <SelectItem value="investigating">Investigando</SelectItem>
+                  <SelectItem value="in_review">Em Análise</SelectItem>
+                  <SelectItem value="resolved">Resolvido</SelectItem>
+                  <SelectItem value="closed">Fechado</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={filters.severities[0] || undefined} 
+                onValueChange={(value) => updateFilter('severities', value ? [value] : [])}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as Severidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="critical">Crítica</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <TabsContent value="guidelines" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Diretrizes do Canal de Ética</CardTitle>
-            </CardHeader>
-            <CardContent className="prose max-w-none">
-              <h3>Como fazer uma denúncia</h3>
-              <p>
-                O Canal de Ética é um espaço seguro para relatar violações ao código de conduta, 
-                práticas antiéticas ou ilegais. Você pode fazer denúncias de forma anônima ou identificada.
+            <div className="flex items-center gap-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={filters.show_anonymous_only}
+                  onChange={(e) => updateFilter('show_anonymous_only', e.target.checked)}
+                />
+                <span className="text-sm">Apenas anônimas</span>
+              </label>
+              
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={!filters.show_resolved}
+                  onChange={(e) => updateFilter('show_resolved', !e.target.checked)}
+                />
+                <span className="text-sm">Ocultar resolvidas</span>
+              </label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de Relatórios */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Relatórios de Ética ({sortedReports.length})</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {sortedReports.length === 0 ? (
+            <div className="text-center py-8">
+              <Shield className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-500">
+                {hasActiveFilters()
+                  ? 'Nenhum relatório encontrado com os filtros aplicados.'
+                  : 'Nenhum relatório de ética encontrado.'}
               </p>
-              
-              <h3>Tipos de situações que devem ser reportadas</h3>
-              <ul>
-                <li><strong>Discriminação:</strong> Tratamento diferenciado baseado em características pessoais</li>
-                <li><strong>Assédio:</strong> Comportamento inadequado, intimidação ou coerção</li>
-                <li><strong>Corrupção:</strong> Uso inadequado de cargo ou posição para benefício pessoal</li>
-                <li><strong>Fraude:</strong> Atos desonestos com intenção de obter vantagem indevida</li>
-                <li><strong>Segurança:</strong> Práticas que colocam em risco a segurança no trabalho</li>
-                <li><strong>Meio Ambiente:</strong> Violações às normas ambientais</li>
-              </ul>
-              
-              <h3>Garantias e Proteções</h3>
-              <ul>
-                <li>Confidencialidade total para denúncias anônimas</li>
-                <li>Proteção contra retaliação para denunciantes identificados</li>
-                <li>Investigação imparcial e profissional</li>
-                <li>Acompanhamento do caso até a resolução</li>
-              </ul>
-              
-              <h3>Processo de Investigação</h3>
-              <ol>
-                <li><strong>Recebimento:</strong> Denúncia é registrada no sistema</li>
-                <li><strong>Análise Preliminar:</strong> Avaliação inicial da denúncia</li>
-                <li><strong>Investigação:</strong> Coleta de evidências e depoimentos</li>
-                <li><strong>Resolução:</strong> Conclusão e aplicação de medidas corretivas</li>
-                <li><strong>Acompanhamento:</strong> Monitoramento das ações implementadas</li>
-              </ol>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={sortedReports.map(r => r.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {sortedReports.map((report) => (
+                    <EthicsReportCard
+                      key={report.id}
+                      report={report}
+                      onEdit={handleEdit}
+                      onResolve={handleResolve}
+                      onDelete={handleDelete}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Resolution Dialog */}
       <Dialog open={isResolutionDialogOpen} onOpenChange={setIsResolutionDialogOpen}>
@@ -885,7 +827,7 @@ const EthicsChannelPage = () => {
                 value={resolutionData.resolution}
                 onChange={(e) => setResolutionData({...resolutionData, resolution: e.target.value})}
                 rows={4}
-                placeholder="Descreva as ações tomadas, investigações realizadas e conclusões..."
+                placeholder="Descreva as ações tomadas e a resolução do caso..."
               />
             </div>
             
@@ -894,32 +836,12 @@ const EthicsChannelPage = () => {
                 Cancelar
               </Button>
               <Button type="submit">
-                Atualizar
+                Atualizar Status
               </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* AI Components */}
-      <AIChatAssistant
-        type="general"
-        context={{
-          module: 'Canal de Ética',
-          totalReports: reports.length,
-          openReports: reports.filter(r => r.status === 'open' || r.status === 'investigating').length,
-          anonymousReports: reports.filter(r => r.is_anonymous).length,
-          categories: Array.from(new Set(reports.map(r => r.category))),
-          currentFilters: { categoryFilter, statusFilter, severityFilter, searchTerm }
-        }}
-      />
-      
-      <AIContentGenerator
-        type="policy"
-        onGenerated={(content) => {
-          console.log('Generated ethics policy:', content);
-        }}
-      />
     </div>
   );
 };
