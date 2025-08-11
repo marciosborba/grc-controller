@@ -11,7 +11,7 @@ import NewRiskManagementPage from "@/components/risks/NewRiskManagementPage";
 import SecurityIncidentsPage from "@/components/incidents/SecurityIncidentsPage";
 import CompliancePage from "@/components/compliance/CompliancePage";
 import AuditReportsPage from "@/components/audit/AuditReportsPage";
-import PoliciesPage from "@/components/policies/PoliciesPage";
+import PolicyManagementPage from "@/components/policies/PolicyManagementPage";
 import VendorsPage from "@/components/vendors/VendorsPage";
 import AssessmentsPage from "@/components/assessments/AssessmentsPage";
 import { FrameworkManagementPage } from "@/components/assessments/FrameworkManagementPage";
@@ -134,7 +134,7 @@ const App = () => (
                 <Route path="assessments/frameworks/:id/evaluate" element={<FrameworkEvaluationPage />} />
                 <Route path="assessments/:id" element={<AssessmentDetailPage />} />
                 <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
-                <Route path="policies" element={<PoliciesPage />} />
+                <Route path="policies" element={<PolicyManagementPage />} />
                 <Route path="vendors" element={<VendorsPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="ethics" element={<EthicsChannelPage />} />

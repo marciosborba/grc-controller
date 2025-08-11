@@ -217,11 +217,16 @@ const RiskCard: React.FC<RiskCardProps> = ({
   // Calcular nível de risco
   const calculateRiskLevel = () => {
     // Priorizar nível da análise estruturada se disponível
+    if (analysisData?.qualitativeRiskLevel) {
+      return analysisData.qualitativeRiskLevel;
+    }
+    
+    // Se não há análise estruturada mas há riskLevel no generalData, usar ele
     if (generalData.riskLevel) {
       return generalData.riskLevel;
     }
     
-    // Fallback para cálculo tradicional
+    // Fallback para cálculo tradicional baseado nos valores atuais
     const score = generalData.probability * generalData.impact;
     if (score >= 20) return 'Muito Alto';
     if (score >= 15) return 'Alto';
@@ -455,7 +460,6 @@ const RiskCard: React.FC<RiskCardProps> = ({
       ...prev,
       probability: Math.round(analysis.probabilityScore),
       impact: Math.round(analysis.impactScore),
-      // Adicionar o nível de risco calculado
       riskLevel: analysis.qualitativeRiskLevel
     }));
   };
@@ -488,7 +492,9 @@ const RiskCard: React.FC<RiskCardProps> = ({
         await onUpdate(risk.id, { 
           analysisData,
           probability: Math.round(analysisData.probabilityScore),
-          impact: Math.round(analysisData.impactScore)
+          impact: Math.round(analysisData.impactScore),
+          riskLevel: analysisData.qualitativeRiskLevel,
+          riskScore: Math.round(analysisData.probabilityScore) * Math.round(analysisData.impactScore)
         });
         toast.success('Análise de risco salva com sucesso');
         setIsAnalysisMode(false);
@@ -554,7 +560,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="truncate">{risk.category}</span>
                     <span>•</span>
-                    <span className="truncate">Score: {risk.riskScore}</span>
+                    <span className="truncate">Score: {generalData.probability * generalData.impact}</span>
                     {risk.owner && (
                       <>
                         <span>•</span>
@@ -799,9 +805,14 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </div>
                       <div>
                         <span className="font-medium">Nível:</span> 
-                        <Badge className={getRiskLevelColor(risk.riskLevel)}>
-                          {risk.riskLevel} (Score: {risk.riskScore})
+                        <Badge className={getRiskLevelColor(currentRiskLevel)}>
+                          {currentRiskLevel} (Score: {generalData.probability * generalData.impact})
                         </Badge>
+                        {analysisData?.qualitativeRiskLevel && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (Via Análise Estruturada)
+                          </span>
+                        )}
                       </div>
                       <div className="col-span-2">
                         <span className="font-medium">Descrição:</span> {risk.description || 'Não informado'}
