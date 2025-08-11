@@ -225,7 +225,7 @@ export const RiskManagerDashboard = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-danger/20 transition-colors">
               <AlertTriangle className="h-8 w-8 text-danger" />
@@ -240,7 +240,7 @@ export const RiskManagerDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
               <Target className="h-8 w-8 text-primary" />
@@ -255,7 +255,7 @@ export const RiskManagerDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-accent/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-accent/20 transition-colors">
               <BarChart3 className="h-8 w-8 text-accent" />

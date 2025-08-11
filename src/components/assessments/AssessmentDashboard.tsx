@@ -117,7 +117,7 @@ export const AssessmentDashboard: React.FC = () => {
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map(i => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse overflow-hidden">
               <CardContent className="p-6">
                 <div className="h-20 bg-muted rounded"></div>
               </CardContent>
@@ -153,7 +153,7 @@ export const AssessmentDashboard: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Assessments</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -166,7 +166,7 @@ export const AssessmentDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progresso Médio</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -177,7 +177,7 @@ export const AssessmentDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -190,7 +190,7 @@ export const AssessmentDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Vencidos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -207,7 +207,7 @@ export const AssessmentDashboard: React.FC = () => {
       {/* Charts and Analytics */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Maturity Distribution */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
@@ -236,7 +236,7 @@ export const AssessmentDashboard: React.FC = () => {
         </Card>
 
         {/* Framework Statistics */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
@@ -269,7 +269,7 @@ export const AssessmentDashboard: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />

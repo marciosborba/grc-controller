@@ -142,7 +142,7 @@ export const ExecutiveDashboard = () => {
       </div>
 
       {/* AI Assistant Banner */}
-      <Card className="grc-card bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20">
+      <Card className="grc-card bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20 overflow-hidden">
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4">
             <div className="p-3 bg-primary/10 rounded-lg">
@@ -173,7 +173,7 @@ export const ExecutiveDashboard = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="grc-card">
+        <Card className="grc-card overflow-hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -191,7 +191,7 @@ export const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card">
+        <Card className="grc-card overflow-hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -209,7 +209,7 @@ export const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card">
+        <Card className="grc-card overflow-hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -227,7 +227,7 @@ export const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card">
+        <Card className="grc-card overflow-hidden">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -255,7 +255,7 @@ export const ExecutiveDashboard = () => {
         <RiskMatrix />
 
         {/* Performance Trends */}
-        <Card className="grc-card">
+        <Card className="grc-card overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
@@ -298,7 +298,7 @@ export const ExecutiveDashboard = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="p-3 sm:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-danger/20 transition-colors">
               <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-danger" />
@@ -313,7 +313,7 @@ export const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="p-3 sm:p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-warning/20 transition-colors">
               <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />
@@ -328,7 +328,7 @@ export const ExecutiveDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group sm:col-span-2 lg:col-span-1">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group sm:col-span-2 lg:col-span-1 overflow-hidden">
           <CardContent className="p-4 sm:p-6 text-center">
             <div className="p-3 sm:p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
               <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />

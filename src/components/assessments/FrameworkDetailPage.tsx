@@ -287,7 +287,7 @@ const FrameworkDetailPage: React.FC = () => {
       </div>
 
       {/* Framework Information */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Informações do Framework</CardTitle>
         </CardHeader>
@@ -339,7 +339,7 @@ const FrameworkDetailPage: React.FC = () => {
       </Card>
 
       {/* Controls Section */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className={`flex ${isMobile ? 'flex-col space-y-2' : 'flex-row'} items-center justify-between`}>
           <CardTitle>Controles ({controls.length})</CardTitle>
           <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'gap-2'}`}>

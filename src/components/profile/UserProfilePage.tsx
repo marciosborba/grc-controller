@@ -78,7 +78,7 @@ interface UserActivity {
 export const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { preferences, setPreferences } = useThemeContext();
+  const { preferences, setPreferences, savePreferences, saving: themeSaving, theme, setTheme } = useThemeContext();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<UserActivity[]>([]);
@@ -621,10 +621,11 @@ export const UserProfilePage: React.FC = () => {
                 <div className="space-y-2">
                   <Label>Tema</Label>
                   <Select
-                    value={preferences.theme}
-                    onValueChange={(value: 'light' | 'dark' | 'system') =>
-                      setPreferences(prev => ({ ...prev, theme: value }))
-                    }
+                    value={theme || 'system'}
+                    onValueChange={(value: 'light' | 'dark' | 'system') => {
+                      setTheme(value);
+                      setPreferences(prev => ({ ...prev, theme: value }));
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -698,6 +699,8 @@ export const UserProfilePage: React.FC = () => {
                   },
                 }));
               }}
+              onSave={savePreferences}
+              saving={themeSaving}
             />
 
             {/* Notification Settings */}

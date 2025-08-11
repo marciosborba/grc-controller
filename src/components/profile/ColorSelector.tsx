@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Palette, RefreshCw } from 'lucide-react';
+import { Palette, RefreshCw, Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ColorPalette {
   primary: string;
@@ -16,11 +17,39 @@ interface ColorSelectorProps {
   palette: ColorPalette;
   onPaletteChange: (palette: ColorPalette) => void;
   onGeneratePalette: () => void;
+  onSave?: () => Promise<void>;
+  saving?: boolean;
 }
 
-export const ColorSelector: React.FC<ColorSelectorProps> = ({ palette, onPaletteChange, onGeneratePalette }) => {
+export const ColorSelector: React.FC<ColorSelectorProps> = ({ 
+  palette, 
+  onPaletteChange, 
+  onGeneratePalette, 
+  onSave, 
+  saving = false 
+}) => {
+  const { toast } = useToast();
+
   const handleColorChange = (colorName: keyof ColorPalette, value: string) => {
     onPaletteChange({ ...palette, [colorName]: value });
+  };
+
+  const handleSave = async () => {
+    if (onSave) {
+      try {
+        await onSave();
+        toast({
+          title: 'Sucesso',
+          description: 'Paleta de cores salva com sucesso',
+        });
+      } catch (error) {
+        toast({
+          title: 'Erro',
+          description: 'Erro ao salvar a paleta de cores',
+          variant: 'destructive'
+        });
+      }
+    }
   };
 
   return (
@@ -87,14 +116,31 @@ export const ColorSelector: React.FC<ColorSelectorProps> = ({ palette, onPalette
         </div>
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: palette.primary }}></div>
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: palette.secondary }}></div>
-            <div className="w-8 h-8 rounded-full" style={{ backgroundColor: palette.tertiary }}></div>
+            <div className="w-8 h-8 rounded-full border-2 border-border" style={{ backgroundColor: palette.primary }}></div>
+            <div className="w-8 h-8 rounded-full border-2 border-border" style={{ backgroundColor: palette.secondary }}></div>
+            <div className="w-8 h-8 rounded-full border-2 border-border" style={{ backgroundColor: palette.tertiary }}></div>
           </div>
-          <Button variant="outline" onClick={onGeneratePalette}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Gerar Nova Paleta
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onGeneratePalette}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Gerar Nova Paleta
+            </Button>
+            {onSave && (
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Cores
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

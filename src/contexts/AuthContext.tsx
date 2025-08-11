@@ -40,7 +40,6 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isPlatformAdmin: boolean;
-  theme: 'light' | 'dark';
 }
 
 interface AuthContextType {
@@ -49,7 +48,6 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  toggleTheme: () => void;
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
 }
 
@@ -159,8 +157,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tenant,
         roles,
         permissions,
-        isPlatformAdmin,
-        theme: 'light' as const
+        isPlatformAdmin
       };
 
       console.log(`[AuthContext] User object created:`, {
@@ -183,8 +180,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tenantId: '46b1c048-85a1-423b-96fc-776007c8de1f',
         roles: ['user'],
         permissions: ['read'],
-        isPlatformAdmin: false,
-        theme: 'light' as const
+        isPlatformAdmin: false
       };
     }
   };
@@ -314,19 +310,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const toggleTheme = () => {
-    if (user) {
-      const newTheme: 'light' | 'dark' = user.theme === 'light' ? 'dark' : 'light';
-      const updatedUser: AuthUser = { ...user, theme: newTheme };
-      setUser(updatedUser);
-      
-      if (newTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  };
 
   useEffect(() => {
     console.log('AuthContext: Starting initialization');
@@ -385,7 +368,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading,
     login,
     logout,
-    toggleTheme,
     signup,
   };
 

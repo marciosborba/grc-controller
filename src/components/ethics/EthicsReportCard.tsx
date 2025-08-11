@@ -88,14 +88,14 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
   const [activeSection, setActiveSection] = useState<'general' | 'investigation' | 'history'>('general');
 
   return (
-    <Card className={`w-full transition-all duration-300 ${
+    <Card className={`w-full transition-all duration-300 overflow-hidden ${
       isExpanded
         ? 'bg-gray-200 dark:bg-gray-700 shadow-xl ring-2 ring-gray-400 dark:ring-gray-500 border-gray-400 dark:border-gray-500'
         : 'bg-card hover:bg-muted/40 border-border'
     }`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${
+          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 rounded-t-lg ${
             isExpanded ? 'bg-gray-300 dark:bg-gray-600' : 'hover:bg-muted/60'
           }`} title={isExpanded ? 'Clique para recolher' : 'Clique para expandir'}>
             <div className="flex items-center justify-between gap-4">

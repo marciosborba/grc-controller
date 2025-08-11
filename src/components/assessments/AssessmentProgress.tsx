@@ -34,7 +34,7 @@ const AssessmentProgress: React.FC<AssessmentProgressProps> = ({
   return (
     <div className="space-y-4">
       {userRole && (
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
@@ -56,7 +56,7 @@ const AssessmentProgress: React.FC<AssessmentProgressProps> = ({
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progresso Geral</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -70,7 +70,7 @@ const AssessmentProgress: React.FC<AssessmentProgressProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Controles Avaliados</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -83,7 +83,7 @@ const AssessmentProgress: React.FC<AssessmentProgressProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Controles Pendentes</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -96,7 +96,7 @@ const AssessmentProgress: React.FC<AssessmentProgressProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Média CMMI</CardTitle>
             <Star className="h-4 w-4 text-muted-foreground" />

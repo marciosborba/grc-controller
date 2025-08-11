@@ -751,7 +751,7 @@ export const ReportsPage = () => {
 
       {/* Estatísticas Rápidas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -766,7 +766,7 @@ export const ReportsPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Riscos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -779,7 +779,7 @@ export const ReportsPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Políticas</CardTitle>
             <FileCheck className="h-4 w-4 text-muted-foreground" />
@@ -792,7 +792,7 @@ export const ReportsPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Incidentes</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
@@ -807,7 +807,7 @@ export const ReportsPage = () => {
       </div>
 
       {/* Gerador de Relatórios */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <TrendingUp className="h-5 w-5" />
@@ -876,7 +876,7 @@ export const ReportsPage = () => {
 
       {/* Gráfico do Relatório */}
       {chartData.length > 0 && (
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BarChartIcon className="h-5 w-5" />
@@ -912,7 +912,7 @@ export const ReportsPage = () => {
       )}
 
       {/* Lista de Módulos */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Módulos Disponíveis</CardTitle>
           <CardDescription>

@@ -286,7 +286,7 @@ export const ComplianceDashboard = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
               <FileCheck className="h-8 w-8 text-primary" />
@@ -301,7 +301,7 @@ export const ComplianceDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-warning/20 transition-colors">
               <Shield className="h-8 w-8 text-warning" />
@@ -316,7 +316,7 @@ export const ComplianceDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-success/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-success/20 transition-colors">
               <Users className="h-8 w-8 text-success" />

@@ -419,7 +419,7 @@ export const FrameworkControlsPage: React.FC = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
@@ -430,7 +430,7 @@ export const FrameworkControlsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Críticos</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
@@ -443,7 +443,7 @@ export const FrameworkControlsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Domínios</CardTitle>
             <Settings className="h-4 w-4 text-muted-foreground" />
@@ -454,7 +454,7 @@ export const FrameworkControlsPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Preventivos</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
@@ -469,7 +469,7 @@ export const FrameworkControlsPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="pt-6">
           <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-5'}`}>
             <div className="relative">
@@ -527,7 +527,7 @@ export const FrameworkControlsPage: React.FC = () => {
       </Card>
 
       {/* Controls Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

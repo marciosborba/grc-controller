@@ -109,7 +109,7 @@ const RiskMatrix = () => {
   const totalRisks = risks.length;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full overflow-hidden">
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg sm:text-xl">Matriz de Riscos</CardTitle>

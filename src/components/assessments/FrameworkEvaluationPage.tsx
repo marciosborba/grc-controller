@@ -229,7 +229,7 @@ const FrameworkEvaluationPage: React.FC = () => {
 
       {/* Progress Overview */}
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progresso da Avaliação</CardTitle>
           </CardHeader>
@@ -241,7 +241,7 @@ const FrameworkEvaluationPage: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Maturidade Média</CardTitle>
           </CardHeader>
@@ -252,7 +252,7 @@ const FrameworkEvaluationPage: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Controles</CardTitle>
           </CardHeader>
@@ -266,7 +266,7 @@ const FrameworkEvaluationPage: React.FC = () => {
       </div>
 
       {/* Evaluation Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Avaliação dos Controles</CardTitle>
         </CardHeader>

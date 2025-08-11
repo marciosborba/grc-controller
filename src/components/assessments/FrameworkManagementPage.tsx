@@ -106,7 +106,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
 
       {/* Stats Cards */}
       <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'md:grid-cols-3'}`}>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Frameworks</CardTitle>
           </CardHeader>
@@ -114,7 +114,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
             <div className="text-2xl font-bold">{frameworks.length}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Categorias</CardTitle>
           </CardHeader>
@@ -124,7 +124,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Controles Totais</CardTitle>
           </CardHeader>
@@ -146,7 +146,7 @@ A.8.1,"Inventário de Ativos","Gestão de Ativos",`;
       </div>
 
       {/* Frameworks Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className={isMobile ? "p-2" : "p-0"}>
           <div className={isMobile ? "overflow-x-auto" : ""}>
             <Table>

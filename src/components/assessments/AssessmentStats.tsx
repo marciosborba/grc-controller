@@ -37,7 +37,7 @@ export const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessments })
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Taxa de Conclusão</CardTitle>
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -51,7 +51,7 @@ export const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessments })
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Progresso Médio</CardTitle>
           <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -65,7 +65,7 @@ export const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessments })
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
           <Clock className="h-4 w-4 text-yellow-600" />
@@ -78,7 +78,7 @@ export const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessments })
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Atrasados</CardTitle>
           <TrendingDown className="h-4 w-4 text-red-600" />
@@ -92,7 +92,7 @@ export const AssessmentStats: React.FC<AssessmentStatsProps> = ({ assessments })
       </Card>
 
       {/* Framework Usage Stats */}
-      <Card className="md:col-span-2 lg:col-span-4">
+      <Card className="md:col-span-2 lg:col-span-4 overflow-hidden">
         <CardHeader>
           <CardTitle className="text-base">Frameworks Mais Utilizados</CardTitle>
         </CardHeader>

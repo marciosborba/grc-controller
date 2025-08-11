@@ -330,7 +330,7 @@ export const FrameworksPage: React.FC = () => {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
@@ -341,7 +341,7 @@ export const FrameworksPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ativos</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
@@ -352,7 +352,7 @@ export const FrameworksPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -363,7 +363,7 @@ export const FrameworksPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Controles</CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -374,7 +374,7 @@ export const FrameworksPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Em Uso</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -394,7 +394,7 @@ export const FrameworksPage: React.FC = () => {
         </TabsList>
 
         <TabsContent value="templates">
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle>Templates de Frameworks</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -404,8 +404,8 @@ export const FrameworksPage: React.FC = () => {
             <CardContent>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {PREDEFINED_FRAMEWORKS.map((template, index) => (
-                  <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
+                  <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden">
+                    <CardHeader className="pb-3 rounded-t-lg">
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="text-lg">{template.name}</CardTitle>
@@ -437,7 +437,7 @@ export const FrameworksPage: React.FC = () => {
 
         <TabsContent value="list" className="space-y-4">
           {/* Search and Filters */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="pt-6">
               <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-4'}`}>
                 <div className="relative">
@@ -485,7 +485,7 @@ export const FrameworksPage: React.FC = () => {
           </Card>
 
           {/* Frameworks Table */}
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>

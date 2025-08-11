@@ -95,7 +95,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
   }, [type]);
 
   const ChatContent = useCallback(() => (
-    <Card className={`grc-card border-primary/30 ${isMinimized ? 'h-16' : 'h-96'} transition-all duration-300`}>
+    <Card className={`grc-card border-primary/30 ${isMinimized ? 'h-16' : 'h-96'} transition-all duration-300 overflow-hidden`}>
       <CardHeader className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

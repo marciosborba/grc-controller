@@ -44,7 +44,7 @@ const GUTMatrixSection: React.FC<GUTMatrixSectionProps> = ({ onComplete, onSkip 
 
   return (
     <div className="space-y-4">
-      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
             <Zap className="h-5 w-5" />
@@ -189,7 +189,7 @@ const GUTMatrixSection: React.FC<GUTMatrixSectionProps> = ({ onComplete, onSkip 
       </Card>
 
       {/* Explicação da Matriz GUT */}
-      <Card className="border-muted">
+      <Card className="border-muted overflow-hidden">
         <CardContent className="pt-4">
           <h6 className="font-medium mb-3">Como funciona a Matriz GUT</h6>
           <div className="text-sm text-muted-foreground space-y-2">

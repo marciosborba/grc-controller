@@ -239,7 +239,7 @@ export const OverdueActivitiesPage: React.FC = () => {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Vencidas</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -250,7 +250,7 @@ export const OverdueActivitiesPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Críticas</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
@@ -263,7 +263,7 @@ export const OverdueActivitiesPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Mais Atrasada</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -276,7 +276,7 @@ export const OverdueActivitiesPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Responsáveis</CardTitle>
             <User className="h-4 w-4 text-muted-foreground" />
@@ -291,7 +291,7 @@ export const OverdueActivitiesPage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardContent className="pt-6">
           <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-5'}`}>
             <div className="relative">
@@ -350,7 +350,7 @@ export const OverdueActivitiesPage: React.FC = () => {
       </Card>
 
       {/* Activities Table */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Atividades Vencidas ({filteredActivities.length})</CardTitle>
         </CardHeader>

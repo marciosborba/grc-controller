@@ -57,7 +57,7 @@ const AssessmentResponsesTable: React.FC<AssessmentResponsesTableProps> = ({
   const isMobile = useIsMobile();
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle>Controles do Framework</CardTitle>
         {onAddControl && userRole && (
