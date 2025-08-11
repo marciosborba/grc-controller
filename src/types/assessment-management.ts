@@ -298,6 +298,7 @@ export interface UseAssessmentManagementReturn {
   assessments: Assessment[];
   frameworks: AssessmentFramework[];
   metrics: AssessmentMetrics;
+  profiles: any[];
   
   // Estados de loading
   isAssessmentsLoading: boolean;
