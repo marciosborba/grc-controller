@@ -344,8 +344,8 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
         <CollapsibleTrigger asChild>
           <CardHeader className={`cursor-pointer transition-colors py-3 px-4 ${
             isExpanded 
-              ? 'bg-stone-300 dark:bg-gray-600' 
-              : 'hover:bg-stone-50 dark:hover:bg-gray-800'
+              ? 'bg-gray-300 dark:bg-gray-600' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800'
           }`} title={isExpanded ? "Clique para recolher" : "Clique para expandir"}>
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
