@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
@@ -103,59 +104,61 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={
-                <PublicRoute>
-                  <LoginPage />
-                </PublicRoute>
-              } />
-              
-              {/* Protected Routes */}
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }>
-                <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<DashboardPage />} />
-                <Route path="risks" element={<NewRiskManagementPage />} />
-                <Route path="compliance" element={<CompliancePage />} />
-                <Route path="incidents" element={<IncidentManagementPage />} />
-                <Route path="audit" element={<AuditReportsPage />} />
-                <Route path="assessments" element={<AssessmentsPage />} />
-                <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
-                <Route path="assessments/frameworks/create" element={<CreateFrameworkPage />} />
-                <Route path="assessments/frameworks/:id" element={<FrameworkDetailPage />} />
-                <Route path="assessments/frameworks/:id/evaluate" element={<FrameworkEvaluationPage />} />
-                <Route path="assessments/:id" element={<AssessmentDetailPage />} />
-                <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
-                <Route path="policies" element={<PolicyManagementPage />} />
-                <Route path="vendors" element={<VendorsPage />} />
-                <Route path="reports" element={<ReportsPage />} />
-                <Route path="ethics" element={<EthicsChannelPage />} />
-                <Route path="admin/tenants" element={
-                  <PlatformAdminRoute>
-                    <TenantManagement />
-                  </PlatformAdminRoute>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={
+                  <PublicRoute>
+                    <LoginPage />
+                  </PublicRoute>
                 } />
-                <Route path="debug-user" element={<DebugUserInfo />} />
-                <Route path="user-debug" element={<UserDebugInfo />} />
-                <Route path="profile" element={<UserProfilePage />} />
-                <Route path="settings" element={<UserManagementPage />} />
-                <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
-                <Route path="help" element={<HelpPage />} />
-              </Route>
-              
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+                
+                {/* Protected Routes */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="risks" element={<NewRiskManagementPage />} />
+                  <Route path="compliance" element={<CompliancePage />} />
+                  <Route path="incidents" element={<IncidentManagementPage />} />
+                  <Route path="audit" element={<AuditReportsPage />} />
+                  <Route path="assessments" element={<AssessmentsPage />} />
+                  <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
+                  <Route path="assessments/frameworks/create" element={<CreateFrameworkPage />} />
+                  <Route path="assessments/frameworks/:id" element={<FrameworkDetailPage />} />
+                  <Route path="assessments/frameworks/:id/evaluate" element={<FrameworkEvaluationPage />} />
+                  <Route path="assessments/:id" element={<AssessmentDetailPage />} />
+                  <Route path="assessment-detail/:id" element={<AssessmentDetailPage />} />
+                  <Route path="policies" element={<PolicyManagementPage />} />
+                  <Route path="vendors" element={<VendorsPage />} />
+                  <Route path="reports" element={<ReportsPage />} />
+                  <Route path="ethics" element={<EthicsChannelPage />} />
+                  <Route path="admin/tenants" element={
+                    <PlatformAdminRoute>
+                      <TenantManagement />
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="debug-user" element={<DebugUserInfo />} />
+                  <Route path="user-debug" element={<UserDebugInfo />} />
+                  <Route path="profile" element={<UserProfilePage />} />
+                  <Route path="settings" element={<UserManagementPage />} />
+                  <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
+                  <Route path="help" element={<HelpPage />} />
+                </Route>
+                
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

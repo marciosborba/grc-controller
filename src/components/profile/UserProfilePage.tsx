@@ -48,6 +48,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/utils/securityLogger';
+import { ColorSelector } from './ColorSelector';
+import { useThemeContext } from '@/contexts/ThemeContext';
 
 interface UserProfile {
   user_id: string;
@@ -73,41 +75,13 @@ interface UserActivity {
   ip_address?: string;
 }
 
-interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  notifications: {
-    email: boolean;
-    push: boolean;
-    security: boolean;
-    updates: boolean;
-  };
-  privacy: {
-    showEmail: boolean;
-    showActivity: boolean;
-  };
-}
-
 export const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { preferences, setPreferences } = useThemeContext();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<UserActivity[]>([]);
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    theme: 'system',
-    language: 'pt-BR',
-    notifications: {
-      email: true,
-      push: true,
-      security: true,
-      updates: false,
-    },
-    privacy: {
-      showEmail: true,
-      showActivity: false,
-    }
-  });
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -149,10 +123,18 @@ export const UserProfilePage: React.FC = () => {
 
       // Load preferences from profile
       if (profileData.notification_preferences) {
-        const prefs = profileData.notification_preferences as Record<string, unknown>;
+        const prefs = profileData.notification_preferences as any;
         setPreferences(prev => ({
           ...prev,
-          ...prefs
+          ...prefs,
+          notifications: {
+            ...prev.notifications,
+            ...prefs.notifications,
+          },
+          privacy: {
+            ...prev.privacy,
+            ...prefs.privacy,
+          },
         }));
       }
 
@@ -166,7 +148,7 @@ export const UserProfilePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, setPreferences]);
 
   const fetchUserActivities = useCallback(async () => {
     if (!user?.id) return;
@@ -700,6 +682,24 @@ export const UserProfilePage: React.FC = () => {
               </CardContent>
             </Card>
 
+            <ColorSelector
+              palette={preferences.colorPalette}
+              onPaletteChange={(newPalette) =>
+                setPreferences((prev) => ({ ...prev, colorPalette: newPalette }))
+              }
+              onGeneratePalette={() => {
+                const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+                setPreferences((prev) => ({
+                  ...prev,
+                  colorPalette: {
+                    primary: randomColor(),
+                    secondary: randomColor(),
+                    tertiary: randomColor(),
+                  },
+                }));
+              }}
+            />
+
             {/* Notification Settings */}
             <Card>
               <CardHeader>
@@ -715,7 +715,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Receber notificações importantes por email</p>
                   </div>
                   <Switch
-                    checked={preferences.notifications.email}
+                    checked={preferences.notifications?.email}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
@@ -731,7 +731,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Receber notificações no navegador</p>
                   </div>
                   <Switch
-                    checked={preferences.notifications.push}
+                    checked={preferences.notifications?.push}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
@@ -747,7 +747,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Notificações sobre eventos de segurança</p>
                   </div>
                   <Switch
-                    checked={preferences.notifications.security}
+                    checked={preferences.notifications?.security}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
@@ -763,7 +763,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Novidades e atualizações da plataforma</p>
                   </div>
                   <Switch
-                    checked={preferences.notifications.updates}
+                    checked={preferences.notifications?.updates}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
@@ -790,7 +790,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Permitir que outros usuários vejam seu email</p>
                   </div>
                   <Switch
-                    checked={preferences.privacy.showEmail}
+                    checked={preferences.privacy?.showEmail}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
@@ -806,7 +806,7 @@ export const UserProfilePage: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Permitir que outros vejam suas atividades recentes</p>
                   </div>
                   <Switch
-                    checked={preferences.privacy.showActivity}
+                    checked={preferences.privacy?.showActivity}
                     onCheckedChange={(checked) =>
                       setPreferences(prev => ({
                         ...prev,
