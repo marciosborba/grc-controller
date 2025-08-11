@@ -8,7 +8,7 @@ import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 import NewRiskManagementPage from "@/components/risks/NewRiskManagementPage";
-import SecurityIncidentsPage from "@/components/incidents/SecurityIncidentsPage";
+import IncidentManagementPage from "@/components/incidents/IncidentManagementPage";
 import CompliancePage from "@/components/compliance/CompliancePage";
 import AuditReportsPage from "@/components/audit/AuditReportsPage";
 import PolicyManagementPage from "@/components/policies/PolicyManagementPage";
@@ -125,7 +125,7 @@ const App = () => (
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="risks" element={<NewRiskManagementPage />} />
                 <Route path="compliance" element={<CompliancePage />} />
-                <Route path="incidents" element={<SecurityIncidentsPage />} />
+                <Route path="incidents" element={<IncidentManagementPage />} />
                 <Route path="audit" element={<AuditReportsPage />} />
                 <Route path="assessments" element={<AssessmentsPage />} />
                 <Route path="assessments/frameworks" element={<FrameworkManagementPage />} />
