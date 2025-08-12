@@ -47,7 +47,7 @@ import {
   Clock,
   XCircle,
   Shield,
-  Warning,
+  AlertCircle,
   Info,
   Star,
   Monitor,
@@ -180,7 +180,7 @@ const VendorCard: React.FC<VendorCardProps> = ({
   const getRiskLevelIcon = (level: VendorRiskLevel) => {
     switch (level) {
       case 'Critical': return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case 'High': return <Warning className="h-4 w-4 text-orange-600" />;
+      case 'High': return <AlertCircle className="h-4 w-4 text-orange-600" />;
       case 'Medium': return <Info className="h-4 w-4 text-yellow-600" />;
       case 'Low': return <CheckCircle className="h-4 w-4 text-blue-600" />;
       case 'Minimal': return <Shield className="h-4 w-4 text-green-600" />;
