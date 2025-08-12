@@ -3,594 +3,505 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileText } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  FileText, 
+  Plus, 
+  Search, 
+  Filter,
+  Download,
+  Upload,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  FileCheck,
+  Users,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  BarChart3,
+  Activity,
+  Eye,
+  Archive,
+  Shield
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
-import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
-
-interface ComplianceRecord {
-  id: string;
-  framework: string;
-  control_id: string;
-  control_description: string;
-  compliance_status: string;
-  evidence_url: string | null;
-  last_assessment_date: string | null;
-  next_assessment_date: string | null;
-  responsible_person: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import ComplianceCard from './ComplianceCard';
+import type { ComplianceAssessment } from '@/types/compliance-management';
 
 const CompliancePage = () => {
-  const [records, setRecords] = useState<ComplianceRecord[]>([]);
-  const [filteredRecords, setFilteredRecords] = useState<ComplianceRecord[]>([]);
+  const { user } = useAuth();
+  
+  // Estados principais
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<ComplianceAssessment | null>(null);
+  const [assessments, setAssessments] = useState<ComplianceAssessment[]>([]);
+  const [filteredAssessments, setFilteredAssessments] = useState<ComplianceAssessment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Estados de filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [frameworkFilter, setFrameworkFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<ComplianceRecord | null>(null);
-  const [lastAssessmentDate, setLastAssessmentDate] = useState<Date>();
-  const [nextAssessmentDate, setNextAssessmentDate] = useState<Date>();
-  
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
 
-  const [formData, setFormData] = useState({
-    framework: '',
-    control_id: '',
-    control_description: '',
-    compliance_status: 'not_assessed',
-    evidence_url: '',
-    responsible_person: '',
-  });
+  // Estados de carregamento
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // Mock data - substitua por dados reais da API
   useEffect(() => {
-    fetchRecords();
-  }, []);
+    const fetchAssessments = async () => {
+      setIsLoading(true);
+      try {
+        // Por enquanto, vamos usar dados mock
+        const mockAssessments: ComplianceAssessment[] = [
+          {
+            id: '1',
+            title: 'Avaliação LGPD - Sistema de CRM',
+            description: 'Avaliação de conformidade com a Lei Geral de Proteção de Dados para o sistema de Customer Relationship Management',
+            compliance_framework: 'LGPD',
+            assessment_type: 'Privacy Impact Assessment',
+            status: 'In Progress',
+            priority: 'High',
+            current_phase: 'Data Collection',
+            overall_maturity_level: 3,
+            lead_assessor: 'Maria Silva',
+            business_owner: 'João Santos',
+            planned_start_date: new Date('2024-01-15'),
+            planned_completion_date: new Date('2024-03-30'),
+            actual_start_date: new Date('2024-01-18'),
+            scope_description: 'Avaliação completa dos processos de coleta, armazenamento e processamento de dados pessoais no sistema CRM',
+            assessment_methodology: 'Questionários estruturados, entrevistas com stakeholders, análise documental e testes técnicos',
+            created_by: user?.id || 'system',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: '2',
+            title: 'Assessment ISO 27001 - Segurança da Informação',
+            description: 'Avaliação de conformidade com os controles da ISO 27001:2022 para certificação',
+            compliance_framework: 'ISO 27001',
+            assessment_type: 'Certification Assessment',
+            status: 'Planning',
+            priority: 'Critical',
+            current_phase: 'Planning',
+            overall_maturity_level: 2,
+            lead_assessor: 'Carlos Pereira',
+            business_owner: 'Ana Costa',
+            planned_start_date: new Date('2024-02-01'),
+            planned_completion_date: new Date('2024-06-15'),
+            actual_start_date: null,
+            scope_description: 'Avaliação de todos os 93 controles da ISO 27001 aplicáveis à organização',
+            assessment_methodology: 'Gap analysis, documentação de evidências, testes de controles e preparação para auditoria externa',
+            created_by: user?.id || 'system',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: '3',
+            title: 'Compliance SOX - Controles Financeiros',
+            description: 'Avaliação de conformidade com os controles internos da Lei Sarbanes-Oxley',
+            compliance_framework: 'SOX',
+            assessment_type: 'Financial Controls Assessment',
+            status: 'Completed',
+            priority: 'Medium',
+            current_phase: 'Reporting',
+            overall_maturity_level: 4,
+            lead_assessor: 'Roberto Lima',
+            business_owner: 'Patricia Oliveira',
+            planned_start_date: new Date('2023-10-01'),
+            planned_completion_date: new Date('2024-01-31'),
+            actual_start_date: new Date('2023-10-05'),
+            scope_description: 'Avaliação dos controles internos sobre demonstrações financeiras conforme seção 404 da SOX',
+            assessment_methodology: 'Walkthrough de processos, testes de efetividade operacional e documentação de deficiências',
+            created_by: user?.id || 'system',
+            created_at: new Date('2023-10-01'),
+            updated_at: new Date()
+          }
+        ];
 
+        setAssessments(mockAssessments);
+        setFilteredAssessments(mockAssessments);
+      } catch (error) {
+        console.error('Error fetching assessments:', error);
+        toast.error('Erro ao carregar avaliações de compliance');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAssessments();
+  }, [user?.id]);
+
+  // Aplicar filtros
   useEffect(() => {
-    let filtered = records;
-    
+    let filtered = assessments;
+
     if (searchTerm) {
-      filtered = filtered.filter(record => 
-        record.control_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.control_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.framework.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(assessment => 
+        assessment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assessment.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assessment.compliance_framework.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (frameworkFilter !== 'all') {
-      filtered = filtered.filter(record => record.framework === frameworkFilter);
+      filtered = filtered.filter(assessment => assessment.compliance_framework === frameworkFilter);
     }
-    
+
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(record => record.compliance_status === statusFilter);
+      filtered = filtered.filter(assessment => assessment.status === statusFilter);
     }
-    
-    setFilteredRecords(filtered);
-  }, [records, searchTerm, frameworkFilter, statusFilter]);
 
-  const fetchRecords = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('compliance_records')
-        .select('*')
-        .order('framework', { ascending: true });
-      
-      if (error) throw error;
-      setRecords(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao carregar registros de conformidade',
-        variant: 'destructive',
-      });
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(assessment => assessment.priority === priorityFilter);
     }
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    setFilteredAssessments(filtered);
+  }, [assessments, searchTerm, frameworkFilter, statusFilter, priorityFilter]);
+
+  const handleCreateAssessment = async (data: any) => {
+    setIsCreating(true);
     try {
-      const recordData = {
-        ...formData,
-        last_assessment_date: lastAssessmentDate ? format(lastAssessmentDate, 'yyyy-MM-dd') : null,
-        next_assessment_date: nextAssessmentDate ? format(nextAssessmentDate, 'yyyy-MM-dd') : null,
-        created_by: user?.id,
+      // Mock create - substituir por chamada real à API
+      const newAssessment: ComplianceAssessment = {
+        id: Date.now().toString(),
+        ...data,
+        created_by: user?.id || 'system',
+        created_at: new Date(),
+        updated_at: new Date()
       };
-
-      if (editingRecord) {
-        const { error } = await supabase
-          .from('compliance_records')
-          .update(recordData)
-          .eq('id', editingRecord.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Registro atualizado com sucesso',
-        });
-      } else {
-        const { error } = await supabase
-          .from('compliance_records')
-          .insert([recordData]);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Registro criado com sucesso',
-        });
-      }
       
+      setAssessments(prev => [...prev, newAssessment]);
       setIsDialogOpen(false);
-      resetForm();
-      fetchRecords();
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Falha ao salvar registro',
-        variant: 'destructive',
-      });
+      toast.success('Avaliação de compliance criada com sucesso');
+    } catch (error) {
+      console.error('Error creating assessment:', error);
+      toast.error('Erro ao criar avaliação de compliance');
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleEdit = (record: ComplianceRecord) => {
-    setEditingRecord(record);
-    setFormData({
-      framework: record.framework,
-      control_id: record.control_id,
-      control_description: record.control_description,
-      compliance_status: record.compliance_status,
-      evidence_url: record.evidence_url || '',
-      responsible_person: record.responsible_person || '',
-    });
-    setLastAssessmentDate(record.last_assessment_date ? new Date(record.last_assessment_date) : undefined);
-    setNextAssessmentDate(record.next_assessment_date ? new Date(record.next_assessment_date) : undefined);
-    setIsDialogOpen(true);
+  const handleUpdateAssessment = async (id: string, updates: any) => {
+    setIsUpdating(true);
+    try {
+      // Mock update - substituir por chamada real à API
+      setAssessments(prev => prev.map(assessment => 
+        assessment.id === id 
+          ? { ...assessment, ...updates, updated_at: new Date() }
+          : assessment
+      ));
+      toast.success('Avaliação de compliance atualizada com sucesso');
+    } catch (error) {
+      console.error('Error updating assessment:', error);
+      toast.error('Erro ao atualizar avaliação de compliance');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+  const handleDeleteAssessment = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta avaliação?')) return;
     
+    setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('compliance_records')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Registro excluído com sucesso',
-      });
-      
-      fetchRecords();
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao excluir registro',
-        variant: 'destructive',
-      });
+      // Mock delete - substituir por chamada real à API
+      setAssessments(prev => prev.filter(assessment => assessment.id !== id));
+      toast.success('Avaliação de compliance excluída com sucesso');
+    } catch (error) {
+      console.error('Error deleting assessment:', error);
+      toast.error('Erro ao excluir avaliação de compliance');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      framework: '',
-      control_id: '',
-      control_description: '',
-      compliance_status: 'not_assessed',
-      evidence_url: '',
-      responsible_person: '',
-    });
-    setLastAssessmentDate(undefined);
-    setNextAssessmentDate(undefined);
-    setEditingRecord(null);
+    setEditingAssessment(null);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'compliant': return 'bg-green-100 text-green-800 border-green-200';
-      case 'non_compliant': return 'bg-red-100 text-red-800 border-red-200';
-      case 'partially_compliant': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'not_assessed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Planning': return 'border-blue-300 bg-blue-50 text-blue-800';
+      case 'In Progress': return 'border-orange-300 bg-orange-50 text-orange-800';
+      case 'Review': return 'border-purple-300 bg-purple-50 text-purple-800';
+      case 'Completed': return 'border-green-300 bg-green-50 text-green-800';
+      case 'On Hold': return 'border-yellow-300 bg-yellow-50 text-yellow-800';
+      default: return 'border-gray-300 bg-gray-50 text-gray-800';
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'compliant': return 'Conforme';
-      case 'non_compliant': return 'Não Conforme';
-      case 'partially_compliant': return 'Parcialmente Conforme';
-      case 'not_assessed': return 'Não Avaliado';
+      case 'Planning': return 'Planejamento';
+      case 'In Progress': return 'Em Andamento';
+      case 'Review': return 'Revisão';
+      case 'Completed': return 'Concluído';
+      case 'On Hold': return 'Suspenso';
       default: return status;
     }
   };
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Critical': return 'text-red-600';
+      case 'High': return 'text-orange-600';
+      case 'Medium': return 'text-yellow-600';
+      case 'Low': return 'text-green-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  // Estatísticas resumidas
+  const stats = {
+    total: assessments.length,
+    inProgress: assessments.filter(a => a.status === 'In Progress').length,
+    completed: assessments.filter(a => a.status === 'Completed').length,
+    overdue: assessments.filter(a => 
+      a.planned_completion_date && 
+      new Date(a.planned_completion_date) < new Date() && 
+      a.status !== 'Completed'
+    ).length,
+    avgMaturity: assessments.length > 0 
+      ? Math.round(assessments.reduce((sum, a) => sum + (a.overall_maturity_level || 0), 0) / assessments.length * 10) / 10
+      : 0
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando avaliações de compliance...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Conformidade</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Monitore a conformidade com frameworks regulatórios</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Monitore a conformidade com frameworks regulatórios
+          </p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <Plus className="mr-2 h-4 w-4" />
-              Novo Registro
+              Nova Avaliação
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingRecord ? 'Editar Registro' : 'Novo Registro'}
+                {editingAssessment ? 'Editar Avaliação' : 'Nova Avaliação'}
               </DialogTitle>
+              <DialogDescription>
+                Crie uma nova avaliação de compliance para acompanhar a conformidade com frameworks regulatórios.
+              </DialogDescription>
             </DialogHeader>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="framework">Framework *</Label>
-                  <Select
-                    value={formData.framework}
-                    onValueChange={(value) => setFormData({...formData, framework: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ISO 27001">ISO 27001</SelectItem>
-                      <SelectItem value="LGPD">LGPD</SelectItem>
-                      <SelectItem value="SOX">SOX</SelectItem>
-                      <SelectItem value="NIST">NIST</SelectItem>
-                      <SelectItem value="PCI DSS">PCI DSS</SelectItem>
-                      <SelectItem value="COBIT">COBIT</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="control_id">ID do Controle *</Label>
-                  <Input
-                    id="control_id"
-                    value={formData.control_id}
-                    onChange={(e) => setFormData({...formData, control_id: e.target.value})}
-                    required
-                    placeholder="Ex: A.5.1.1"
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="control_description">Descrição do Controle *</Label>
-                  <Textarea
-                    id="control_description"
-                    value={formData.control_description}
-                    onChange={(e) => setFormData({...formData, control_description: e.target.value})}
-                    required
-                    rows={3}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="compliance_status">Status de Conformidade *</Label>
-                  <Select
-                    value={formData.compliance_status}
-                    onValueChange={(value) => setFormData({...formData, compliance_status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compliant">Conforme</SelectItem>
-                      <SelectItem value="non_compliant">Não Conforme</SelectItem>
-                      <SelectItem value="partially_compliant">Parcialmente Conforme</SelectItem>
-                      <SelectItem value="not_assessed">Não Avaliado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="responsible_person">Responsável</Label>
-                  <Input
-                    id="responsible_person"
-                    value={formData.responsible_person}
-                    onChange={(e) => setFormData({...formData, responsible_person: e.target.value})}
-                    placeholder="Nome do responsável"
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="evidence_url">URL da Evidência</Label>
-                  <Input
-                    id="evidence_url"
-                    value={formData.evidence_url}
-                    onChange={(e) => setFormData({...formData, evidence_url: e.target.value})}
-                    placeholder="https://..."
-                  />
-                </div>
-                
-                <div>
-                  <Label>Última Avaliação</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !lastAssessmentDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {lastAssessmentDate ? format(lastAssessmentDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={lastAssessmentDate}
-                        onSelect={setLastAssessmentDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div>
-                  <Label>Próxima Avaliação</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !nextAssessmentDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {nextAssessmentDate ? format(nextAssessmentDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={nextAssessmentDate}
-                        onSelect={setNextAssessmentDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingRecord ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
+            {/* Form content would go here - simplified for now */}
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Formulário de criação/edição de avaliações será implementado aqui.
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <FileCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">avaliações</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+            <p className="text-xs text-muted-foreground">ativas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">finalizadas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Atrasadas</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+            <p className="text-xs text-muted-foreground">vencidas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Maturidade Média</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.avgMaturity}</div>
+            <p className="text-xs text-muted-foreground">de 5.0</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pesquisar</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Pesquisar controles..."
+                  placeholder="Buscar avaliações..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-            
-            <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Framework" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="ISO 27001">ISO 27001</SelectItem>
-                <SelectItem value="LGPD">LGPD</SelectItem>
-                <SelectItem value="SOX">SOX</SelectItem>
-                <SelectItem value="NIST">NIST</SelectItem>
-                <SelectItem value="PCI DSS">PCI DSS</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="compliant">Conforme</SelectItem>
-                <SelectItem value="non_compliant">Não Conforme</SelectItem>
-                <SelectItem value="partially_compliant">Parcialmente</SelectItem>
-                <SelectItem value="not_assessed">Não Avaliado</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Framework</label>
+              <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os frameworks" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os frameworks</SelectItem>
+                  <SelectItem value="LGPD">LGPD</SelectItem>
+                  <SelectItem value="ISO 27001">ISO 27001</SelectItem>
+                  <SelectItem value="SOX">SOX</SelectItem>
+                  <SelectItem value="NIST">NIST</SelectItem>
+                  <SelectItem value="PCI DSS">PCI DSS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="Planning">Planejamento</SelectItem>
+                  <SelectItem value="In Progress">Em Andamento</SelectItem>
+                  <SelectItem value="Review">Revisão</SelectItem>
+                  <SelectItem value="Completed">Concluído</SelectItem>
+                  <SelectItem value="On Hold">Suspenso</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Prioridade</label>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as prioridades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as prioridades</SelectItem>
+                  <SelectItem value="Critical">Crítica</SelectItem>
+                  <SelectItem value="High">Alta</SelectItem>
+                  <SelectItem value="Medium">Média</SelectItem>
+                  <SelectItem value="Low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Compliance Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Conformes</p>
-                <p className="text-2xl font-bold">
-                  {records.filter(r => r.compliance_status === 'compliant').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-red-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Não Conformes</p>
-                <p className="text-2xl font-bold">
-                  {records.filter(r => r.compliance_status === 'non_compliant').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-yellow-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Parciais</p>
-                <p className="text-2xl font-bold">
-                  {records.filter(r => r.compliance_status === 'partially_compliant').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-gray-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{records.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Content */}
+      <div className="space-y-4">
+        {filteredAssessments.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Shield className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação encontrada</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {searchTerm || frameworkFilter !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all'
+                  ? "Não há avaliações que correspondam aos filtros selecionados."
+                  : "Comece criando sua primeira avaliação de compliance."}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeira Avaliação
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredAssessments.map((assessment) => (
+              <ComplianceCard
+                key={assessment.id}
+                compliance={assessment}
+                onUpdate={handleUpdateAssessment}
+                onDelete={handleDeleteAssessment}
+                canEdit={true}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Compliance Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Registros de Conformidade</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Framework</TableHead>
-                <TableHead>Controle</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Próxima Avaliação</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRecords.map((record) => (
-                <TableRow key={record.id}>
-                  <TableCell>
-                    <Badge variant="outline">{record.framework}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono">{record.control_id}</TableCell>
-                  <TableCell>
-                    <div className="max-w-xs">
-                      <p className="truncate">{record.control_description}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(record.compliance_status)}>
-                      {getStatusText(record.compliance_status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {record.next_assessment_date ? format(new Date(record.next_assessment_date), "dd/MM/yyyy", { locale: ptBR }) : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(record)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(record.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {filteredRecords.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhum registro encontrado</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* AI Components */}
-      <AIChatAssistant
-        type="compliance"
-        context={{
-          module: 'Conformidade',
-          totalRecords: records.length,
-          complianceByStatus: {
-            compliant: records.filter(r => r.compliance_status === 'compliant').length,
-            non_compliant: records.filter(r => r.compliance_status === 'non_compliant').length,
-            partially_compliant: records.filter(r => r.compliance_status === 'partially_compliant').length,
-            not_assessed: records.filter(r => r.compliance_status === 'not_assessed').length
-          },
-          frameworks: Array.from(new Set(records.map(r => r.framework))),
-          currentFilters: { frameworkFilter, statusFilter, searchTerm }
-        }}
-      />
-      
-      <AIContentGenerator
-        type="questionnaire"
-        onGenerated={(content) => {
-          console.log('Generated compliance questionnaire:', content);
-        }}
-      />
     </div>
   );
 };

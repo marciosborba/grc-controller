@@ -3,617 +3,555 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, ClipboardList, AlertCircle, Brain } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  ClipboardList, 
+  Plus, 
+  Search, 
+  Filter,
+  Download,
+  Upload,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  FileCheck,
+  Users,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  BarChart3,
+  Activity,
+  Eye,
+  Archive,
+  PlayCircle,
+  FileText,
+  Building,
+  Database
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
-import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
-import { cn } from '@/lib/utils';
-
-interface AuditReport {
-  id: string;
-  title: string;
-  audit_type: string;
-  status: string;
-  scope: string | null;
-  auditor_id: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  findings: string | null;
-  recommendations: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import AuditCard from './AuditCard';
+import type { Audit } from '@/types/audit-management';
 
 const AuditReportsPage = () => {
-  const [reports, setReports] = useState<AuditReport[]>([]);
-  const [filteredReports, setFilteredReports] = useState<AuditReport[]>([]);
+  const { user } = useAuth();
+  
+  // Estados principais
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAudit, setEditingAudit] = useState<Audit | null>(null);
+  const [audits, setAudits] = useState<Audit[]>([]);
+  const [filteredAudits, setFilteredAudits] = useState<Audit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Estados de filtro
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingReport, setEditingReport] = useState<AuditReport | null>(null);
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
-  
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [phaseFilter, setPhaseFilter] = useState<string>('all');
 
-  const [formData, setFormData] = useState({
-    title: '',
-    audit_type: '',
-    status: 'draft',
-    scope: '',
-    auditor_id: '',
-    findings: '',
-    recommendations: '',
-  });
+  // Estados de carregamento
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // Mock data - substitua por dados reais da API
   useEffect(() => {
-    fetchReports();
-  }, []);
+    const fetchAudits = async () => {
+      setIsLoading(true);
+      try {
+        // Por enquanto, vamos usar dados mock
+        const mockAudits: Audit[] = [
+          {
+            id: '1',
+            title: 'Auditoria Interna - Processo de Compras',
+            description: 'Auditoria do processo de compras e contratações para verificar aderência aos controles internos',
+            audit_type: 'Internal Audit',
+            audit_scope: 'Process Specific',
+            scope_description: 'Processos de solicitação, aprovação, compra e recebimento de bens e serviços',
+            status: 'Fieldwork',
+            priority: 'High',
+            current_phase: 'Control Testing',
+            lead_auditor: 'Sandra Martins',
+            auditor_id: user?.id || 'system',
+            planned_start_date: new Date('2024-01-10'),
+            planned_end_date: new Date('2024-02-28'),
+            fieldwork_start_date: new Date('2024-01-15'),
+            fieldwork_end_date: new Date('2024-02-20'),
+            report_due_date: new Date('2024-03-05'),
+            budgeted_hours: 160,
+            actual_hours: 120,
+            estimated_cost: 25000.00,
+            actual_cost: 18500.00,
+            overall_opinion: null,
+            overall_rating: 3,
+            executive_summary: null,
+            key_findings_summary: 'Identificadas oportunidades de melhoria nos controles de aprovação e segregação de funções',
+            objectives: ['Avaliar a efetividade dos controles no processo de compras', 'Verificar conformidade com políticas internas', 'Identificar oportunidades de melhoria'],
+            audit_criteria: ['Política de Compras v2.1', 'Norma de Alçadas Financeiras', 'Código de Ética'],
+            auditee_contacts: ['Fernando Costa - Gerente de Compras', 'Lucia Santos - Coordenadora Financeira'],
+            auditors: ['Sandra Martins - Auditora Líder', 'Paulo Ribeiro - Auditor Sênior'],
+            confidentiality_level: 'Internal',
+            follow_up_required: true,
+            follow_up_date: new Date('2024-06-01'),
+            findings: [],
+            created_by: user?.id || 'system',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: '2',
+            title: 'Auditoria Externa - Demonstrações Financeiras 2023',
+            description: 'Auditoria independente das demonstrações financeiras do exercício de 2023',
+            audit_type: 'External Audit',
+            audit_scope: 'Organization-wide',
+            scope_description: 'Demonstrações financeiras consolidadas da empresa e subsidiárias',
+            status: 'Review',
+            priority: 'Critical',
+            current_phase: 'Reporting',
+            lead_auditor: 'KPMG Auditores',
+            auditor_id: null,
+            planned_start_date: new Date('2024-01-02'),
+            planned_end_date: new Date('2024-03-31'),
+            fieldwork_start_date: new Date('2024-02-01'),
+            fieldwork_end_date: new Date('2024-03-15'),
+            report_due_date: new Date('2024-04-15'),
+            budgeted_hours: 480,
+            actual_hours: 465,
+            estimated_cost: 150000.00,
+            actual_cost: 148200.00,
+            overall_opinion: 'Unqualified Opinion',
+            overall_rating: 5,
+            executive_summary: 'As demonstrações financeiras apresentam adequadamente a posição patrimonial e financeira da Companhia',
+            key_findings_summary: 'Não foram identificadas deficiências significativas nos controles internos sobre demonstrações financeiras',
+            objectives: ['Emitir opinião sobre as demonstrações financeiras', 'Avaliar controles internos relevantes', 'Verificar conformidade com normas contábeis'],
+            audit_criteria: ['CPC - Comitê de Pronunciamentos Contábeis', 'Lei 6.404/76', 'Instruções CVM'],
+            auditee_contacts: ['Ana Rodrigues - CFO', 'Marcos Alves - Controller', 'Beatriz Silva - Gerente Contábil'],
+            auditors: ['João Mendes - Sócio KPMG', 'Patricia Lemos - Gerente KPMG', 'Rafael Costa - Supervisor KPMG'],
+            confidentiality_level: 'Confidential',
+            follow_up_required: false,
+            follow_up_date: null,
+            findings: [],
+            created_by: user?.id || 'system',
+            created_at: new Date(),
+            updated_at: new Date()
+          },
+          {
+            id: '3',
+            title: 'Auditoria de TI - Segurança da Informação',
+            description: 'Avaliação dos controles de segurança da informação nos sistemas críticos',
+            audit_type: 'IT Audit',
+            audit_scope: 'IT Systems',
+            scope_description: 'Controles de acesso, backup, monitoramento e segurança dos sistemas ERP, CRM e financeiro',
+            status: 'Planning',
+            priority: 'High',
+            current_phase: 'Planning',
+            lead_auditor: 'Carlos Mendes',
+            auditor_id: user?.id || 'system',
+            planned_start_date: new Date('2024-03-01'),
+            planned_end_date: new Date('2024-04-30'),
+            fieldwork_start_date: null,
+            fieldwork_end_date: null,
+            report_due_date: new Date('2024-05-15'),
+            budgeted_hours: 200,
+            actual_hours: 0,
+            estimated_cost: 30000.00,
+            actual_cost: 0,
+            overall_opinion: null,
+            overall_rating: null,
+            executive_summary: null,
+            key_findings_summary: null,
+            objectives: ['Avaliar controles de segurança da informação', 'Verificar compliance com políticas de segurança', 'Identificar vulnerabilidades'],
+            audit_criteria: ['Política de Segurança da Informação', 'ISO 27001', 'LGPD'],
+            auditee_contacts: ['Roberto Silva - CISO', 'Marina Costa - Gerente de TI'],
+            auditors: ['Carlos Mendes - Auditor de TI', 'Ana Paula - Especialista em Segurança'],
+            confidentiality_level: 'Restricted',
+            follow_up_required: true,
+            follow_up_date: null,
+            findings: [],
+            created_by: user?.id || 'system',
+            created_at: new Date(),
+            updated_at: new Date()
+          }
+        ];
 
+        setAudits(mockAudits);
+        setFilteredAudits(mockAudits);
+      } catch (error) {
+        console.error('Error fetching audits:', error);
+        toast.error('Erro ao carregar auditorias');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAudits();
+  }, [user?.id]);
+
+  // Aplicar filtros
   useEffect(() => {
-    let filtered = reports;
-    
+    let filtered = audits;
+
     if (searchTerm) {
-      filtered = filtered.filter(report => 
-        report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.audit_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.scope?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(audit => 
+        audit.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        audit.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        audit.lead_auditor?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (typeFilter !== 'all') {
-      filtered = filtered.filter(report => report.audit_type === typeFilter);
+      filtered = filtered.filter(audit => audit.audit_type === typeFilter);
     }
-    
+
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(report => report.status === statusFilter);
+      filtered = filtered.filter(audit => audit.status === statusFilter);
     }
-    
-    setFilteredReports(filtered);
-  }, [reports, searchTerm, typeFilter, statusFilter]);
 
-  const fetchReports = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('audit_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setReports(data || []);
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao carregar relatórios de auditoria',
-        variant: 'destructive',
-      });
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(audit => audit.priority === priorityFilter);
     }
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+    if (phaseFilter !== 'all') {
+      filtered = filtered.filter(audit => audit.current_phase === phaseFilter);
+    }
+
+    setFilteredAudits(filtered);
+  }, [audits, searchTerm, typeFilter, statusFilter, priorityFilter, phaseFilter]);
+
+  const handleCreateAudit = async (data: any) => {
+    setIsCreating(true);
     try {
-      const reportData = {
-        ...formData,
-        start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
-        end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,
-        auditor_id: user?.id,
+      // Mock create - substituir por chamada real à API
+      const newAudit: Audit = {
+        id: Date.now().toString(),
+        ...data,
+        created_by: user?.id || 'system',
+        created_at: new Date(),
+        updated_at: new Date(),
+        findings: []
       };
-
-      if (editingReport) {
-        const { error } = await supabase
-          .from('audit_reports')
-          .update(reportData)
-          .eq('id', editingReport.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Relatório atualizado com sucesso',
-        });
-      } else {
-        const { error } = await supabase
-          .from('audit_reports')
-          .insert([reportData]);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Relatório criado com sucesso',
-        });
-      }
       
+      setAudits(prev => [...prev, newAudit]);
       setIsDialogOpen(false);
-      resetForm();
-      fetchReports();
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: error.message || 'Falha ao salvar relatório',
-        variant: 'destructive',
-      });
+      toast.success('Auditoria criada com sucesso');
+    } catch (error) {
+      console.error('Error creating audit:', error);
+      toast.error('Erro ao criar auditoria');
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  const handleEdit = (report: AuditReport) => {
-    setEditingReport(report);
-    setFormData({
-      title: report.title,
-      audit_type: report.audit_type,
-      status: report.status,
-      scope: report.scope || '',
-      auditor_id: report.auditor_id || '',
-      findings: report.findings || '',
-      recommendations: report.recommendations || '',
-    });
-    setStartDate(report.start_date ? new Date(report.start_date) : undefined);
-    setEndDate(report.end_date ? new Date(report.end_date) : undefined);
-    setIsDialogOpen(true);
+  const handleUpdateAudit = async (id: string, updates: any) => {
+    setIsUpdating(true);
+    try {
+      // Mock update - substituir por chamada real à API
+      setAudits(prev => prev.map(audit => 
+        audit.id === id 
+          ? { ...audit, ...updates, updated_at: new Date() }
+          : audit
+      ));
+      toast.success('Auditoria atualizada com sucesso');
+    } catch (error) {
+      console.error('Error updating audit:', error);
+      toast.error('Erro ao atualizar auditoria');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este relatório?')) return;
+  const handleDeleteAudit = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta auditoria?')) return;
     
+    setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('audit_reports')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Relatório excluído com sucesso',
-      });
-      
-      fetchReports();
-    } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao excluir relatório',
-        variant: 'destructive',
-      });
+      // Mock delete - substituir por chamada real à API
+      setAudits(prev => prev.filter(audit => audit.id !== id));
+      toast.success('Auditoria excluída com sucesso');
+    } catch (error) {
+      console.error('Error deleting audit:', error);
+      toast.error('Erro ao excluir auditoria');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      audit_type: '',
-      status: 'draft',
-      scope: '',
-      auditor_id: '',
-      findings: '',
-      recommendations: '',
-    });
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setEditingReport(null);
+    setEditingAudit(null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'reviewed': return 'bg-purple-100 text-purple-800 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  // Estatísticas resumidas
+  const stats = {
+    total: audits.length,
+    active: audits.filter(a => ['Planning', 'Fieldwork', 'Review'].includes(a.status)).length,
+    completed: audits.filter(a => a.status === 'Closed').length,
+    overdue: audits.filter(a => 
+      a.planned_end_date && 
+      new Date(a.planned_end_date) < new Date() && 
+      a.status !== 'Closed'
+    ).length,
+    totalCost: audits.reduce((sum, a) => sum + (a.actual_cost || a.estimated_cost || 0), 0),
+    avgProgress: audits.length > 0 
+      ? Math.round(audits.reduce((sum, a) => {
+          const phases = ['Planning', 'Risk Assessment', 'Control Testing', 'Substantive Testing', 'Reporting', 'Follow-up', 'Closure'];
+          const currentIndex = phases.indexOf(a.current_phase);
+          return sum + (currentIndex >= 0 ? ((currentIndex + 1) / phases.length) * 100 : 0);
+        }, 0) / audits.length)
+      : 0
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return 'Rascunho';
-      case 'in_progress': return 'Em Progresso';
-      case 'completed': return 'Concluído';
-      case 'reviewed': return 'Revisado';
-      default: return status;
-    }
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case 'internal': return 'Interna';
-      case 'external': return 'Externa';
-      case 'compliance': return 'Conformidade';
-      case 'security': return 'Segurança';
-      case 'financial': return 'Financeira';
-      case 'operational': return 'Operacional';
-      default: return type;
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando auditorias...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Relatórios de Auditoria</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Gerencie e monitore auditorias organizacionais</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Gerencie e monitore todas as auditorias internas e externas
+          </p>
         </div>
-        <div className="flex items-center space-x-2 shrink-0">
-          <AIContentGenerator 
-            type="audit_plan"
-            trigger={
-              <Button variant="outline" size="sm">
-                <Brain className="h-4 w-4 mr-2" />
-                Planejar com IA
-              </Button>
-            }
-          />
-          
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={resetForm} className="grc-button-primary">
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Relatório
+        
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={resetForm}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Auditoria
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingReport ? 'Editar Relatório' : 'Novo Relatório'}
+                {editingAudit ? 'Editar Auditoria' : 'Nova Auditoria'}
               </DialogTitle>
+              <DialogDescription>
+                Crie uma nova auditoria para acompanhar o processo de avaliação e controle.
+              </DialogDescription>
             </DialogHeader>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="title">Título *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                    placeholder="Ex: Auditoria de Segurança da Informação Q1 2024"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="audit_type">Tipo de Auditoria *</Label>
-                  <Select
-                    value={formData.audit_type}
-                    onValueChange={(value) => setFormData({...formData, audit_type: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="internal">Auditoria Interna</SelectItem>
-                      <SelectItem value="external">Auditoria Externa</SelectItem>
-                      <SelectItem value="compliance">Auditoria de Conformidade</SelectItem>
-                      <SelectItem value="security">Auditoria de Segurança</SelectItem>
-                      <SelectItem value="financial">Auditoria Financeira</SelectItem>
-                      <SelectItem value="operational">Auditoria Operacional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({...formData, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Rascunho</SelectItem>
-                      <SelectItem value="in_progress">Em Progresso</SelectItem>
-                      <SelectItem value="completed">Concluído</SelectItem>
-                      <SelectItem value="reviewed">Revisado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label>Data de Início</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div>
-                  <Label>Data de Término</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="scope">Escopo da Auditoria</Label>
-                  <Textarea
-                    id="scope"
-                    value={formData.scope}
-                    onChange={(e) => setFormData({...formData, scope: e.target.value})}
-                    rows={3}
-                    placeholder="Descreva o escopo, áreas e processos que serão auditados..."
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="findings">Achados da Auditoria</Label>
-                  <Textarea
-                    id="findings"
-                    value={formData.findings}
-                    onChange={(e) => setFormData({...formData, findings: e.target.value})}
-                    rows={4}
-                    placeholder="Descreva os principais achados, não conformidades e observações..."
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="recommendations">Recomendações</Label>
-                  <Textarea
-                    id="recommendations"
-                    value={formData.recommendations}
-                    onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
-                    rows={4}
-                    placeholder="Liste as recomendações e ações corretivas propostas..."
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingReport ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
+            {/* Form content would go here - simplified for now */}
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Formulário de criação/edição de auditorias será implementado aqui.
+              </p>
+            </div>
           </DialogContent>
         </Dialog>
-        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">auditorias</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ativas</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.active}</div>
+            <p className="text-xs text-muted-foreground">em andamento</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <p className="text-xs text-muted-foreground">finalizadas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Atrasadas</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
+            <p className="text-xs text-muted-foreground">vencidas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Progresso Médio</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.avgProgress}%</div>
+            <p className="text-xs text-muted-foreground">conclusão</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pesquisar</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Pesquisar relatórios..."
+                  placeholder="Buscar auditorias..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
             </div>
-            
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="internal">Interna</SelectItem>
-                <SelectItem value="external">Externa</SelectItem>
-                <SelectItem value="compliance">Conformidade</SelectItem>
-                <SelectItem value="security">Segurança</SelectItem>
-                <SelectItem value="financial">Financeira</SelectItem>
-                <SelectItem value="operational">Operacional</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="draft">Rascunho</SelectItem>
-                <SelectItem value="in_progress">Em Progresso</SelectItem>
-                <SelectItem value="completed">Concluído</SelectItem>
-                <SelectItem value="reviewed">Revisado</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo</label>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="Internal Audit">Auditoria Interna</SelectItem>
+                  <SelectItem value="External Audit">Auditoria Externa</SelectItem>
+                  <SelectItem value="Regulatory Audit">Auditoria Regulatória</SelectItem>
+                  <SelectItem value="IT Audit">Auditoria de TI</SelectItem>
+                  <SelectItem value="Financial Audit">Auditoria Financeira</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="Planning">Planejamento</SelectItem>
+                  <SelectItem value="Fieldwork">Trabalho de Campo</SelectItem>
+                  <SelectItem value="Review">Revisão</SelectItem>
+                  <SelectItem value="Reporting">Relatório</SelectItem>
+                  <SelectItem value="Closed">Concluída</SelectItem>
+                  <SelectItem value="Cancelled">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Prioridade</label>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as prioridades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as prioridades</SelectItem>
+                  <SelectItem value="Critical">Crítica</SelectItem>
+                  <SelectItem value="High">Alta</SelectItem>
+                  <SelectItem value="Medium">Média</SelectItem>
+                  <SelectItem value="Low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fase</label>
+              <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as fases" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as fases</SelectItem>
+                  <SelectItem value="Planning">Planejamento</SelectItem>
+                  <SelectItem value="Risk Assessment">Avaliação de Risco</SelectItem>
+                  <SelectItem value="Control Testing">Teste de Controles</SelectItem>
+                  <SelectItem value="Substantive Testing">Testes Substantivos</SelectItem>
+                  <SelectItem value="Reporting">Relatório</SelectItem>
+                  <SelectItem value="Follow-up">Acompanhamento</SelectItem>
+                  <SelectItem value="Closure">Encerramento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Audit Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-blue-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{reports.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <ClipboardList className="h-8 w-8 text-yellow-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Em Progresso</p>
-                <p className="text-2xl font-bold">
-                  {reports.filter(r => r.status === 'in_progress').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-green-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold">
-                  {reports.filter(r => r.status === 'completed').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertCircle className="h-8 w-8 text-purple-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Revisados</p>
-                <p className="text-2xl font-bold">
-                  {reports.filter(r => r.status === 'reviewed').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Content */}
+      <div className="space-y-4">
+        {filteredAudits.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <ClipboardList className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhuma auditoria encontrada</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {searchTerm || typeFilter !== 'all' || statusFilter !== 'all' || priorityFilter !== 'all' || phaseFilter !== 'all'
+                  ? "Não há auditorias que correspondam aos filtros selecionados."
+                  : "Comece criando sua primeira auditoria."}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeira Auditoria
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredAudits.map((audit) => (
+              <AuditCard
+                key={audit.id}
+                audit={audit}
+                onUpdate={handleUpdateAudit}
+                onDelete={handleDeleteAudit}
+                canEdit={true}
+              />
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Reports Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Relatórios de Auditoria</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Título</TableHead>
-                  <TableHead className="text-xs">Tipo</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs">Período</TableHead>
-                  <TableHead className="text-xs">Criado em</TableHead>
-                  <TableHead className="text-xs">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell className="text-xs font-medium">{report.title}</TableCell>
-                    <TableCell className="text-xs">
-                      <Badge variant="outline">
-                        {getTypeText(report.audit_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <Badge className={getStatusColor(report.status)}>
-                        {getStatusText(report.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {report.start_date && report.end_date ? (
-                        <span className="text-xs">
-                          {format(new Date(report.start_date), 'dd/MM/yy', { locale: ptBR })} - {format(new Date(report.end_date), 'dd/MM/yy', { locale: ptBR })}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(report.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(report)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(report.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            {filteredReports.length === 0 && (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-500">
-                  {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
-                    ? 'Nenhum relatório encontrado com os filtros aplicados.'
-                    : 'Nenhum relatório de auditoria encontrado.'}
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Assistant */}
-      <AIChatAssistant type="audit" context={{ reports: filteredReports }} />
     </div>
   );
 };
