@@ -222,11 +222,30 @@ export const useUserManagement = () => {
         const now = new Date();
         const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+        // Carregar dados reais de autenticação do Supabase Auth
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const authUsersList = authUsers?.users || [];
+
+        // Calcular usuários realmente logados (últimas 24 horas)
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const recentlyLoggedIn = authUsersList.filter(authUser => 
+          authUser.last_sign_in_at && new Date(authUser.last_sign_in_at) > last24Hours
+        ).length;
+
+        // Calcular usuários ativos baseado na combinação de profiles ativos E auth users
+        const totalUsers = profiles?.length || 0;
+        const activeProfileUsers = profiles?.filter(p => p.is_active && (!p.locked_until || new Date(p.locked_until) <= now)).length || 0;
+        const lockedUsers = profiles?.filter(p => p.locked_until && new Date(p.locked_until) > now).length || 0;
+        
+        // Verificar usuários bloqueados no auth
+        const bannedAuthUsers = authUsersList.filter(authUser => authUser.banned_until).length;
+        const totalLockedUsers = lockedUsers + bannedAuthUsers;
+
         const stats: UserManagementStats = {
-          total_users: profiles?.length || 0,
-          active_users: profiles?.filter(p => p.is_active && (!p.locked_until || new Date(p.locked_until) <= now)).length || 0,
-          inactive_users: profiles?.filter(p => !p.is_active).length || 0,
-          locked_users: profiles?.filter(p => p.locked_until && new Date(p.locked_until) > now).length || 0,
+          total_users: totalUsers,
+          active_users: activeProfileUsers,
+          inactive_users: (profiles?.filter(p => !p.is_active).length || 0),
+          locked_users: totalLockedUsers,
           mfa_enabled_users: profiles?.filter(p => p.two_factor_enabled).length || 0,
           users_by_role: {
             admin: 0,
@@ -236,25 +255,52 @@ export const useUserManagement = () => {
             auditor: 0,
             user: 0
           },
-          recent_logins: profiles?.filter(p => 
-            p.last_login_at && new Date(p.last_login_at) > sevenDaysAgo
-          ).length || 0,
+          recent_logins: recentlyLoggedIn, // Agora usa dados reais do auth
           failed_login_attempts: profiles?.reduce((sum, p) => sum + (p.failed_login_attempts || 0), 0) || 0
         };
 
-        // Buscar roles separadamente
+        // Buscar roles separadamente e filtrar por tenant se necessário
         try {
-          const { data: userRoles } = await supabase
+          let roleQuery = supabase
             .from('user_roles')
-            .select('role');
+            .select('role, user_id');
 
+          // Se não for platform admin, filtrar pelos usuários do tenant
+          if (!user?.isPlatformAdmin && profiles) {
+            const userIdsInTenant = profiles.map(p => p.user_id);
+            roleQuery = roleQuery.in('user_id', userIdsInTenant);
+          }
+
+          const { data: userRoles } = await roleQuery;
+
+          // Contar roles únicos por usuário
+          const roleCountMap = new Map<string, Set<string>>();
+          
           userRoles?.forEach((ur: any) => {
-            if (ur.role in stats.users_by_role) {
-              stats.users_by_role[ur.role as AppRole]++;
+            if (!roleCountMap.has(ur.user_id)) {
+              roleCountMap.set(ur.user_id, new Set());
             }
+            roleCountMap.get(ur.user_id)!.add(ur.role);
           });
+
+          // Contar usuários por role (um usuário pode ter múltiplos roles)
+          roleCountMap.forEach((roles) => {
+            roles.forEach((role) => {
+              if (role in stats.users_by_role) {
+                stats.users_by_role[role as AppRole]++;
+              }
+            });
+          });
+          
+          // Contar usuários sem role definida como 'user'
+          const usersWithRoles = roleCountMap.size;
+          const usersWithoutRoles = Math.max(0, totalUsers - usersWithRoles);
+          stats.users_by_role.user += usersWithoutRoles;
+          
         } catch (roleError) {
           console.warn('Erro ao buscar roles para estatísticas:', roleError);
+          // Se falhar, assumir que todos são usuários básicos
+          stats.users_by_role.user = totalUsers;
         }
 
         return stats;

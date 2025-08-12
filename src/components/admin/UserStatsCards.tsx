@@ -122,22 +122,22 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats, isLoading
         </CardContent>
       </Card>
 
-      {/* Atividade Recente */}
+      {/* Usuários Logados */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Logins Recentes</CardTitle>
+          <CardTitle className="text-sm font-medium">Usuários Logados</CardTitle>
           <Activity className="h-4 w-4 text-purple-600" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-purple-600">{stats.recent_logins}</div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              Últimos 7 dias
+              Últimas 24 horas
             </Badge>
             {stats.failed_login_attempts > 0 && (
               <div className="flex items-center gap-1 text-xs text-red-600">
                 <AlertTriangle className="w-3 h-3" />
-                {stats.failed_login_attempts} falhas
+                {stats.failed_login_attempts} tentativas falhadas
               </div>
             )}
           </div>

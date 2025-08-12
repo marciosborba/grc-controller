@@ -23,6 +23,7 @@ import { ActivityLogsPage } from "@/components/settings/ActivityLogsPage";
 import TenantManagement from "@/components/admin/TenantManagement";
 import DebugUserInfo from "@/components/admin/DebugUserInfo";
 import UserDebugInfo from "@/components/admin/UserDebugInfo";
+import SystemDiagnosticPage from "@/components/admin/SystemDiagnosticPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import AssessmentDetailPage from "@/components/assessments/AssessmentDetailPage";
@@ -143,6 +144,11 @@ const App = () => (
                   <Route path="admin/tenants" element={
                     <PlatformAdminRoute>
                       <TenantManagement />
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="admin/system-diagnostic" element={
+                    <PlatformAdminRoute>
+                      <SystemDiagnosticPage />
                     </PlatformAdminRoute>
                   } />
                   <Route path="debug-user" element={<DebugUserInfo />} />
