@@ -1,49 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { 
-  Users, 
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { 
+  Building2, 
   Plus, 
   Search, 
-  Calendar as CalendarIcon, 
-  Edit, 
-  Trash2, 
-  Send,
-  FileText,
-  AlertTriangle,
+  Filter,
+  Download,
+  Upload,
   CheckCircle,
-  Building,
-  Mail,
-  Phone,
-  MapPin,
   Clock,
-  Target,
-  TrendingUp,
+  AlertTriangle,
   Shield,
-  Eye
+  Users,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  BarChart3,
+  Activity,
+  Eye,
+  Archive,
+  Target,
+  FileCheck,
+  Gauge,
+  Star,
+  AlertCircle
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
-import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
+import { supabase } from '@/integrations/supabase/client';
+import VendorCard from './VendorCard';
+import SortableVendorCard from './SortableVendorCard';
+import VendorForm from './VendorForm';
 
-interface Vendor {
+// Tipos simplificados para compatibilidade
+interface SimpleVendor {
   id: string;
   name: string;
   contact_person: string | null;
@@ -62,215 +72,78 @@ interface Vendor {
   updated_at: string;
 }
 
-interface VendorAssessment {
-  id: string;
-  vendor_id: string;
-  title: string;
+interface VendorFilters {
+  search: string;
+  category: string;
+  risk_level: string;
   status: string;
-  questionnaire_data: any;
-  responses: any;
-  score: number | null;
-  risk_rating: string | null;
-  completed_at: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 const VendorsPage = () => {
-  const navigate = useNavigate();
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [assessments, setAssessments] = useState<VendorAssessment[]>([]);
-  const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [riskFilter, setRiskFilter] = useState<string>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAssessmentDialogOpen, setIsAssessmentDialogOpen] = useState(false);
-  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-  const [contractStartDate, setContractStartDate] = useState<Date>();
-  const [contractEndDate, setContractEndDate] = useState<Date>();
-  const [nextAssessmentDate, setNextAssessmentDate] = useState<Date>();
-  const [activeTab, setActiveTab] = useState('vendors');
-  
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    address: '',
-    category: '',
-    risk_level: 'medium',
-    status: 'active',
+  // Estados principais
+  const [vendors, setVendors] = useState<SimpleVendor[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [filteredVendors, setFilteredVendors] = useState<SimpleVendor[]>([]);
+  const [sortedVendors, setSortedVendors] = useState<SimpleVendor[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<SimpleVendor | null>(null);
+  const [isCardView, setIsCardView] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Estados de filtro
+  const [filters, setFilters] = useState<VendorFilters>({
+    search: '',
+    category: 'all',
+    risk_level: 'all',
+    status: 'all'
   });
 
-  const [assessmentData, setAssessmentData] = useState({
-    title: '',
-    questionnaire_data: {} as any,
-  });
-
-  // Predefined questionnaire templates
-  const questionnaireTemplates = {
-    security: {
-      title: 'Questionário de Segurança da Informação',
-      questions: [
-        {
-          id: 'q1',
-          question: 'A empresa possui certificação ISO 27001?',
-          type: 'boolean',
-          weight: 10,
-          required: true
-        },
-        {
-          id: 'q2',
-          question: 'Qual é a frequência de backup dos dados?',
-          type: 'select',
-          options: ['Diário', 'Semanal', 'Mensal', 'Não realiza backup'],
-          weight: 8,
-          required: true
-        },
-        {
-          id: 'q3',
-          question: 'A empresa possui um plano de continuidade de negócios?',
-          type: 'boolean',
-          weight: 9,
-          required: true
-        },
-        {
-          id: 'q4',
-          question: 'Quais medidas de controle de acesso são implementadas?',
-          type: 'multiple',
-          options: ['Autenticação de dois fatores', 'Controle por biometria', 'Senhas complexas', 'Revisão periódica de acessos'],
-          weight: 7,
-          required: true
-        },
-        {
-          id: 'q5',
-          question: 'A empresa realiza treinamentos de conscientização em segurança?',
-          type: 'select',
-          options: ['Trimestralmente', 'Semestralmente', 'Anualmente', 'Não realiza'],
-          weight: 6,
-          required: true
-        }
-      ]
-    },
-    compliance: {
-      title: 'Questionário de Compliance e Regulamentações',
-      questions: [
-        {
-          id: 'q1',
-          question: 'A empresa está em conformidade com a LGPD?',
-          type: 'boolean',
-          weight: 10,
-          required: true
-        },
-        {
-          id: 'q2',
-          question: 'Possui DPO (Data Protection Officer) designado?',
-          type: 'boolean',
-          weight: 8,
-          required: true
-        },
-        {
-          id: 'q3',
-          question: 'Realiza DPIA (Avaliação de Impacto à Proteção de Dados)?',
-          type: 'boolean',
-          weight: 7,
-          required: true
-        },
-        {
-          id: 'q4',
-          question: 'Qual o tempo máximo para notificação de incidentes?',
-          type: 'select',
-          options: ['24 horas', '48 horas', '72 horas', 'Mais de 72 horas'],
-          weight: 9,
-          required: true
-        },
-        {
-          id: 'q5',
-          question: 'A empresa possui política de retenção de dados?',
-          type: 'boolean',
-          weight: 6,
-          required: true
-        }
-      ]
-    },
-    financial: {
-      title: 'Questionário de Avaliação Financeira',
-      questions: [
-        {
-          id: 'q1',
-          question: 'A empresa possui auditoria externa anual?',
-          type: 'boolean',
-          weight: 10,
-          required: true
-        },
-        {
-          id: 'q2',
-          question: 'Qual a classificação de rating de crédito?',
-          type: 'select',
-          options: ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'Não possui'],
-          weight: 9,
-          required: true
-        },
-        {
-          id: 'q3',
-          question: 'A empresa possui seguro de responsabilidade civil?',
-          type: 'boolean',
-          weight: 8,
-          required: true
-        },
-        {
-          id: 'q4',
-          question: 'Tempo de mercado da empresa (em anos)?',
-          type: 'number',
-          weight: 7,
-          required: true
-        },
-        {
-          id: 'q5',
-          question: 'A empresa já passou por processos de recuperação judicial?',
-          type: 'boolean',
-          weight: 10,
-          required: true
-        }
-      ]
-    }
-  };
+  // Configuração do drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     fetchVendors();
-    fetchAssessments();
+    fetchProfiles();
   }, []);
 
   useEffect(() => {
     let filtered = vendors;
     
-    if (searchTerm) {
+    if (filters.search) {
       filtered = filtered.filter(vendor => 
-        vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        vendor.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        vendor.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        vendor.contact_person?.toLowerCase().includes(filters.search.toLowerCase()) ||
+        vendor.email?.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
     
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(vendor => vendor.category === categoryFilter);
+    if (filters.category !== 'all') {
+      filtered = filtered.filter(vendor => vendor.category === filters.category);
     }
     
-    if (riskFilter !== 'all') {
-      filtered = filtered.filter(vendor => vendor.risk_level === riskFilter);
+    if (filters.risk_level !== 'all') {
+      filtered = filtered.filter(vendor => vendor.risk_level === filters.risk_level);
+    }
+
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(vendor => vendor.status === filters.status);
     }
     
     setFilteredVendors(filtered);
-  }, [vendors, searchTerm, categoryFilter, riskFilter]);
+    setSortedVendors(filtered);
+  }, [vendors, filters]);
 
   const fetchVendors = async () => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('vendors')
         .select('*')
@@ -284,63 +157,42 @@ const VendorsPage = () => {
         description: 'Falha ao carregar fornecedores',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchAssessments = async () => {
+  const fetchProfiles = async () => {
     try {
       const { data, error } = await supabase
-        .from('vendor_assessments')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('profiles')
+        .select('user_id, full_name, job_title')
+        .eq('is_active', true);
       
       if (error) throw error;
-      setAssessments(data || []);
+      setProfiles(data || []);
     } catch (error: any) {
-      toast({
-        title: 'Erro',
-        description: 'Falha ao carregar assessments',
-        variant: 'destructive',
-      });
+      console.error('Erro ao carregar perfis:', error);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleCreateVendor = async (vendorData: any) => {
     try {
-      const vendorData = {
-        ...formData,
-        contract_start_date: contractStartDate ? format(contractStartDate, 'yyyy-MM-dd') : null,
-        contract_end_date: contractEndDate ? format(contractEndDate, 'yyyy-MM-dd') : null,
-        next_assessment_date: nextAssessmentDate ? format(nextAssessmentDate, 'yyyy-MM-dd') : null,
-        created_by: user?.id,
-      };
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([{
+          ...vendorData,
+          created_by: user?.id,
+        }])
+        .select()
+        .single();
 
-      if (editingVendor) {
-        const { error } = await supabase
-          .from('vendors')
-          .update(vendorData)
-          .eq('id', editingVendor.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Fornecedor atualizado com sucesso',
-        });
-      } else {
-        const { error } = await supabase
-          .from('vendors')
-          .insert([vendorData]);
-        
-        if (error) throw error;
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Fornecedor criado com sucesso',
-        });
-      }
+      if (error) throw error;
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Fornecedor criado com sucesso',
+      });
       
       setIsDialogOpen(false);
       resetForm();
@@ -348,79 +200,52 @@ const VendorsPage = () => {
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message || 'Falha ao salvar fornecedor',
+        description: error.message || 'Falha ao criar fornecedor',
         variant: 'destructive',
       });
     }
   };
 
-  const handleCreateAssessment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedVendor) return;
-
+  const handleUpdateVendor = async (vendorId: string, updates: any) => {
     try {
       const { error } = await supabase
-        .from('vendor_assessments')
-        .insert([{
-          vendor_id: selectedVendor.id,
-          title: assessmentData.title,
-          questionnaire_data: assessmentData.questionnaire_data,
-          status: 'sent',
-          created_by: user?.id,
-        }]);
-
+        .from('vendors')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', vendorId);
+      
       if (error) throw error;
-
+      
       toast({
         title: 'Sucesso',
-        description: 'Questionário de assessment enviado com sucesso',
+        description: 'Fornecedor atualizado com sucesso',
       });
-
-      setIsAssessmentDialogOpen(false);
-      setSelectedVendor(null);
-      resetAssessmentForm();
-      fetchAssessments();
+      
+      if (editingVendor?.id === vendorId) {
+        setIsDialogOpen(false);
+        resetForm();
+      }
+      
+      fetchVendors();
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message || 'Falha ao enviar assessment',
+        description: error.message || 'Falha ao atualizar fornecedor',
         variant: 'destructive',
       });
     }
   };
 
-  const handleEdit = (vendor: Vendor) => {
-    setEditingVendor(vendor);
-    setFormData({
-      name: vendor.name,
-      contact_person: vendor.contact_person || '',
-      email: vendor.email || '',
-      phone: vendor.phone || '',
-      address: vendor.address || '',
-      category: vendor.category,
-      risk_level: vendor.risk_level,
-      status: vendor.status,
-    });
-    setContractStartDate(vendor.contract_start_date ? new Date(vendor.contract_start_date) : undefined);
-    setContractEndDate(vendor.contract_end_date ? new Date(vendor.contract_end_date) : undefined);
-    setNextAssessmentDate(vendor.next_assessment_date ? new Date(vendor.next_assessment_date) : undefined);
-    setIsDialogOpen(true);
-  };
-
-  const handleSendAssessment = (vendor: Vendor) => {
-    setSelectedVendor(vendor);
-    setIsAssessmentDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
+  const handleDeleteVendor = async (vendorId: string) => {
     if (!confirm('Tem certeza que deseja excluir este fornecedor?')) return;
     
     try {
       const { error } = await supabase
         .from('vendors')
         .delete()
-        .eq('id', id);
+        .eq('id', vendorId);
       
       if (error) throw error;
       
@@ -439,836 +264,313 @@ const VendorsPage = () => {
     }
   };
 
+  const handleEdit = (vendor: SimpleVendor) => {
+    setEditingVendor(vendor);
+    setIsDialogOpen(true);
+  };
+
   const resetForm = () => {
-    setFormData({
-      name: '',
-      contact_person: '',
-      email: '',
-      phone: '',
-      address: '',
-      category: '',
-      risk_level: 'medium',
-      status: 'active',
-    });
-    setContractStartDate(undefined);
-    setContractEndDate(undefined);
-    setNextAssessmentDate(undefined);
     setEditingVendor(null);
   };
 
-  const resetAssessmentForm = () => {
-    setAssessmentData({
-      title: '',
-      questionnaire_data: {},
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setSortedVendors((vendors) => {
+        const oldIndex = vendors.findIndex((vendor) => vendor.id === active.id);
+        const newIndex = vendors.findIndex((vendor) => vendor.id === over.id);
+
+        return arrayMove(vendors, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const updateFilter = (key: keyof VendorFilters, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      category: 'all',
+      risk_level: 'all',
+      status: 'all'
     });
   };
 
-  const selectQuestionnaireTemplate = (templateKey: string) => {
-    const template = questionnaireTemplates[templateKey as keyof typeof questionnaireTemplates];
-    setAssessmentData({
-      title: template.title,
-      questionnaire_data: template,
-    });
+  const hasActiveFilters = () => {
+    return !!(
+      filters.search ||
+      filters.category !== 'all' ||
+      filters.risk_level !== 'all' ||
+      filters.status !== 'all'
+    );
   };
 
-  const calculateRiskScore = (assessment: VendorAssessment) => {
-    if (!assessment.responses || !assessment.questionnaire_data?.questions) return 0;
+  // Métricas dos fornecedores
+  const getMetrics = () => {
+    const total = vendors.length;
+    const active = vendors.filter(v => v.status === 'active').length;
+    const high_risk = vendors.filter(v => v.risk_level === 'high' || v.risk_level === 'critical').length;
+    const expiring_contracts = vendors.filter(v => {
+      if (!v.contract_end_date) return false;
+      const endDate = new Date(v.contract_end_date);
+      const now = new Date();
+      const monthsUntilExpiry = (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30);
+      return monthsUntilExpiry <= 3 && monthsUntilExpiry > 0;
+    }).length;
 
-    const questions = assessment.questionnaire_data.questions;
-    let totalScore = 0;
-    let maxScore = 0;
-
-    questions.forEach((question: any) => {
-      const response = assessment.responses[question.id];
-      const weight = question.weight || 1;
-      maxScore += weight * 10; // Assumindo pontuação máxima de 10 por pergunta
-
-      if (response !== undefined) {
-        let score = 0;
-        
-        switch (question.type) {
-          case 'boolean':
-            score = response ? 10 : 0;
-            break;
-          case 'select':
-            // Pontuação baseada na posição da opção (primeira opção = pontuação máxima)
-            const optionIndex = question.options?.indexOf(response) || 0;
-            score = Math.max(0, 10 - (optionIndex * 2));
-            break;
-          case 'multiple':
-            // Pontuação baseada no número de opções selecionadas
-            score = Math.min(10, (response.length / question.options?.length || 1) * 10);
-            break;
-          case 'number':
-            // Pontuação baseada no valor numérico (adaptável conforme a pergunta)
-            score = Math.min(10, Math.max(0, response / 10));
-            break;
-          default:
-            score = 5; // Pontuação neutra para tipos desconhecidos
-        }
-        
-        totalScore += score * weight;
-      }
-    });
-
-    return maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    return {
+      total,
+      active,
+      high_risk,
+      expiring_contracts
+    };
   };
 
-  const getRiskColor = (riskLevel: string) => {
-    switch (riskLevel) {
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'critical': return 'bg-red-200 text-red-900 border-red-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const metrics = getMetrics();
 
-  const getRiskText = (riskLevel: string) => {
-    switch (riskLevel) {
-      case 'low': return 'Baixo';
-      case 'medium': return 'Médio';
-      case 'high': return 'Alto';
-      case 'critical': return 'Crítico';
-      default: return riskLevel;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'suspended': return 'bg-red-100 text-red-800 border-red-200';
-      case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active': return 'Ativo';
-      case 'inactive': return 'Inativo';
-      case 'suspended': return 'Suspenso';
-      case 'under_review': return 'Em Análise';
-      default: return status;
-    }
-  };
-
-  const getAssessmentStatusColor = (status: string) => {
-    switch (status) {
-      case 'sent': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'overdue': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getAssessmentStatusText = (status: string) => {
-    switch (status) {
-      case 'sent': return 'Enviado';
-      case 'in_progress': return 'Em Progresso';
-      case 'completed': return 'Concluído';
-      case 'overdue': return 'Atrasado';
-      default: return status;
-    }
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Carregando fornecedores...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Fornecedores</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Gerencie riscos de terceiros e questionários de assessment</p>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Gerencie riscos de fornecedores, due diligence e avaliações de vendor risk
+          </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm} className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Fornecedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingVendor ? 'Editar Fornecedor' : 'Novo Fornecedor'}
-              </DialogTitle>
-            </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="name">Nome da Empresa *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                    placeholder="Ex: TechCorp Solutions"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="contact_person">Pessoa de Contato</Label>
-                  <Input
-                    id="contact_person"
-                    value={formData.contact_person}
-                    onChange={(e) => setFormData({...formData, contact_person: e.target.value})}
-                    placeholder="Nome do responsável"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="contato@empresa.com"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="category">Categoria *</Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value) => setFormData({...formData, category: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Tecnologia">Tecnologia</SelectItem>
-                      <SelectItem value="Consultoria">Consultoria</SelectItem>
-                      <SelectItem value="Serviços">Serviços</SelectItem>
-                      <SelectItem value="Logística">Logística</SelectItem>
-                      <SelectItem value="Financeiro">Financeiro</SelectItem>
-                      <SelectItem value="Manufatura">Manufatura</SelectItem>
-                      <SelectItem value="Telecomunicações">Telecomunicações</SelectItem>
-                      <SelectItem value="Outros">Outros</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="col-span-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Textarea
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    rows={2}
-                    placeholder="Endereço completo da empresa"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="risk_level">Nível de Risco</Label>
-                  <Select
-                    value={formData.risk_level}
-                    onValueChange={(value) => setFormData({...formData, risk_level: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baixo</SelectItem>
-                      <SelectItem value="medium">Médio</SelectItem>
-                      <SelectItem value="high">Alto</SelectItem>
-                      <SelectItem value="critical">Crítico</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({...formData, status: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="inactive">Inativo</SelectItem>
-                      <SelectItem value="suspended">Suspenso</SelectItem>
-                      <SelectItem value="under_review">Em Análise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label>Início do Contrato</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !contractStartDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {contractStartDate ? format(contractStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={contractStartDate}
-                        onSelect={setContractStartDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div>
-                  <Label>Fim do Contrato</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !contractEndDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {contractEndDate ? format(contractEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={contractEndDate}
-                        onSelect={setContractEndDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                
-                <div>
-                  <Label>Próximo Assessment</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !nextAssessmentDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {nextAssessmentDate ? format(nextAssessmentDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={nextAssessmentDate}
-                        onSelect={setNextAssessmentDate}
-                        initialFocus
-                        className="p-3 pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCardView(!isCardView)}
+          >
+            {isCardView ? <BarChart3 className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+            {isCardView ? 'Visão Lista' : 'Visão Cards'}
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Fornecedor
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingVendor ? 'Editar Fornecedor' : 'Novo Fornecedor'}
+                </DialogTitle>
+              </DialogHeader>
               
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingVendor ? 'Atualizar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+              <VendorForm
+                vendor={editingVendor || undefined}
+                profiles={profiles}
+                onSubmit={editingVendor ? 
+                  (data) => handleUpdateVendor(editingVendor.id, data) : 
+                  handleCreateVendor
+                }
+                onCancel={() => setIsDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
-          <TabsTrigger value="assessments">Assessments</TabsTrigger>
-          <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="vendors" className="space-y-6">
-          {/* Filters */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex gap-4 items-center">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      placeholder="Pesquisar fornecedores..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    <SelectItem value="Tecnologia">Tecnologia</SelectItem>
-                    <SelectItem value="Consultoria">Consultoria</SelectItem>
-                    <SelectItem value="Serviços">Serviços</SelectItem>
-                    <SelectItem value="Logística">Logística</SelectItem>
-                    <SelectItem value="Financeiro">Financeiro</SelectItem>
-                    <SelectItem value="Outros">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={riskFilter} onValueChange={setRiskFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Risco" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="low">Baixo</SelectItem>
-                    <SelectItem value="medium">Médio</SelectItem>
-                    <SelectItem value="high">Alto</SelectItem>
-                    <SelectItem value="critical">Crítico</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Vendor Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <Building className="h-8 w-8 text-blue-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">{vendors.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <CheckCircle className="h-8 w-8 text-green-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold">
-                      {vendors.filter(v => v.status === 'active').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <AlertTriangle className="h-8 w-8 text-red-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Alto Risco</p>
-                    <p className="text-2xl font-bold">
-                      {vendors.filter(v => v.risk_level === 'high' || v.risk_level === 'critical').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center">
-                  <Clock className="h-8 w-8 text-yellow-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Assessments Pendentes</p>
-                    <p className="text-2xl font-bold">
-                      {assessments.filter(a => a.status === 'sent' || a.status === 'in_progress').length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Vendors Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Fornecedores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Empresa</TableHead>
-                      <TableHead className="text-xs">Categoria</TableHead>
-                      <TableHead className="text-xs">Contato</TableHead>
-                      <TableHead className="text-xs">Risco</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                      <TableHead className="text-xs">Próximo Assessment</TableHead>
-                      <TableHead className="text-xs">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredVendors.map((vendor) => (
-                      <TableRow key={vendor.id}>
-                        <TableCell className="text-xs font-medium">
-                          <div>
-                            <p className="font-semibold">{vendor.name}</p>
-                            <p className="text-xs text-muted-foreground">{vendor.contact_person}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge variant="outline">{vendor.category}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex flex-col space-y-1">
-                            {vendor.email && (
-                              <div className="flex items-center text-xs">
-                                <Mail className="h-3 w-3 mr-1" />
-                                {vendor.email}
-                              </div>
-                            )}
-                            {vendor.phone && (
-                              <div className="flex items-center text-xs">
-                                <Phone className="h-3 w-3 mr-1" />
-                                {vendor.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className={getRiskColor(vendor.risk_level)}>
-                            {getRiskText(vendor.risk_level)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className={getStatusColor(vendor.status)}>
-                            {getStatusText(vendor.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {vendor.next_assessment_date ? (
-                            format(new Date(vendor.next_assessment_date), 'dd/MM/yyyy', { locale: ptBR })
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(vendor)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleSendAssessment(vendor)}
-                              title="Enviar Assessment"
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(vendor.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                
-                {filteredVendors.length === 0 && (
-                  <div className="text-center py-8">
-                    <Building className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      {searchTerm || categoryFilter !== 'all' || riskFilter !== 'all'
-                        ? 'Nenhum fornecedor encontrado com os filtros aplicados.'
-                        : 'Nenhum fornecedor encontrado.'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="assessments" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Assessments de Fornecedores</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Fornecedor</TableHead>
-                      <TableHead className="text-xs">Título</TableHead>
-                      <TableHead className="text-xs">Status</TableHead>
-                      <TableHead className="text-xs">Score</TableHead>
-                      <TableHead className="text-xs">Classificação</TableHead>
-                      <TableHead className="text-xs">Enviado em</TableHead>
-                      <TableHead className="text-xs">Concluído em</TableHead>
-                      <TableHead className="text-xs">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {assessments.map((assessment) => {
-                      const vendor = vendors.find(v => v.id === assessment.vendor_id);
-                      const score = assessment.score || calculateRiskScore(assessment);
-                      return (
-                        <TableRow key={assessment.id}>
-                          <TableCell className="text-xs font-medium">
-                            {vendor?.name || 'Fornecedor não encontrado'}
-                          </TableCell>
-                          <TableCell className="text-xs">{assessment.title}</TableCell>
-                          <TableCell className="text-xs">
-                            <Badge className={getAssessmentStatusColor(assessment.status)}>
-                              {getAssessmentStatusText(assessment.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {score ? (
-                              <div className="flex items-center space-x-2">
-                                <Progress value={score} className="w-16" />
-                                <span className="text-xs font-medium">{score}%</span>
-                              </div>
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {assessment.risk_rating && (
-                              <Badge className={getRiskColor(assessment.risk_rating)}>
-                                {getRiskText(assessment.risk_rating)}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {format(new Date(assessment.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {assessment.completed_at ? (
-                              format(new Date(assessment.completed_at), 'dd/MM/yyyy', { locale: ptBR })
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/assessment-detail/${assessment.id}`)}
-                              title="Visualizar Questionário"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                
-                {assessments.length === 0 && (
-                  <div className="text-center py-8">
-                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      Nenhum assessment encontrado.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="statistics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fornecedores por Categoria</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Array.from(new Set(vendors.map(v => v.category))).map(category => (
-                    <div key={category} className="flex justify-between items-center">
-                      <span>{category}</span>
-                      <Badge variant="outline">
-                        {vendors.filter(v => v.category === category).length}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribuição de Risco</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {['low', 'medium', 'high', 'critical'].map(risk => (
-                    <div key={risk} className="flex justify-between items-center">
-                      <span>{getRiskText(risk)}</span>
-                      <Badge variant="outline">
-                        {vendors.filter(v => v.risk_level === risk).length}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {/* Assessment Dialog */}
-      <Dialog open={isAssessmentDialogOpen} onOpenChange={setIsAssessmentDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Enviar Assessment para {selectedVendor?.name}</DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleCreateAssessment} className="space-y-4">
-            <div>
-              <Label>Selecione um Template de Questionário</Label>
-              <div className="grid grid-cols-1 gap-3 mt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-start h-auto p-4"
-                  onClick={() => selectQuestionnaireTemplate('security')}
-                >
-                  <Shield className="mr-3 h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-medium">Segurança da Informação</div>
-                    <div className="text-sm text-muted-foreground">
-                      Avaliação de controles de segurança cibernética
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-start h-auto p-4"
-                  onClick={() => selectQuestionnaireTemplate('compliance')}
-                >
-                  <CheckCircle className="mr-3 h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-medium">Compliance e Regulamentações</div>
-                    <div className="text-sm text-muted-foreground">
-                      Conformidade com LGPD e outras regulamentações
-                    </div>
-                  </div>
-                </Button>
-                
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-start h-auto p-4"
-                  onClick={() => selectQuestionnaireTemplate('financial')}
-                >
-                  <TrendingUp className="mr-3 h-5 w-5" />
-                  <div className="text-left">
-                    <div className="font-medium">Avaliação Financeira</div>
-                    <div className="text-sm text-muted-foreground">
-                      Saúde financeira e estabilidade empresarial
-                    </div>
-                  </div>
-                </Button>
+      {/* Métricas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <Building2 className="h-6 w-6 text-blue-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Total</p>
+                <p className="text-lg font-bold">{metrics.total}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Ativos</p>
+                <p className="text-lg font-bold">{metrics.active}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <AlertTriangle className="h-6 w-6 text-red-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Alto Risco</p>
+                <p className="text-lg font-bold">{metrics.high_risk}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center">
+              <Clock className="h-6 w-6 text-orange-500" />
+              <div className="ml-3">
+                <p className="text-xs font-medium text-muted-foreground">Vencendo</p>
+                <p className="text-lg font-bold">{metrics.expiring_contracts}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Filtros</h3>
+              {hasActiveFilters() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                >
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
             
-            {assessmentData.title && (
-              <div>
-                <Label>Título do Assessment</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  value={assessmentData.title}
-                  onChange={(e) => setAssessmentData({...assessmentData, title: e.target.value})}
-                  placeholder="Título personalizado do assessment"
+                  placeholder="Pesquisar fornecedores..."
+                  value={filters.search}
+                  onChange={(e) => updateFilter('search', e.target.value)}
+                  className="pl-10"
                 />
               </div>
-            )}
-            
-            {assessmentData.questionnaire_data?.questions && (
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <h4 className="font-medium mb-2">Preview do Questionário:</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {assessmentData.questionnaire_data.questions.map((q: any, index: number) => (
-                    <div key={q.id} className="text-sm">
-                      <span className="font-medium">{index + 1}.</span> {q.question}
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Total de {assessmentData.questionnaire_data.questions.length} perguntas
+              
+              <Select 
+                value={filters.category} 
+                onValueChange={(value) => updateFilter('category', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as Categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Categorias</SelectItem>
+                  <SelectItem value="Technology Provider">Tecnologia</SelectItem>
+                  <SelectItem value="Professional Services">Serviços</SelectItem>
+                  <SelectItem value="Manufacturing">Manufatura</SelectItem>
+                  <SelectItem value="Logistics">Logística</SelectItem>
+                  <SelectItem value="Cloud Service Provider">Cloud</SelectItem>
+                  <SelectItem value="Data Processor">Dados</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={filters.risk_level} 
+                onValueChange={(value) => updateFilter('risk_level', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Riscos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Riscos</SelectItem>
+                  <SelectItem value="low">Baixo</SelectItem>
+                  <SelectItem value="medium">Médio</SelectItem>
+                  <SelectItem value="high">Alto</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={filters.status} 
+                onValueChange={(value) => updateFilter('status', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="suspended">Suspenso</SelectItem>
+                  <SelectItem value="under_review">Em Análise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lista de Fornecedores */}
+      <div className="space-y-4">
+        {sortedVendors.length === 0 ? (
+          <Card>
+            <CardContent className="py-8">
+              <div className="text-center">
+                <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Nenhum fornecedor encontrado
+                </p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  {hasActiveFilters() 
+                    ? 'Tente ajustar os filtros para encontrar mais resultados.' 
+                    : 'Comece criando seu primeiro fornecedor.'
+                  }
                 </p>
               </div>
-            )}
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsAssessmentDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={!assessmentData.title}>
-                Enviar Assessment
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* AI Components */}
-      <AIChatAssistant
-        type="general"
-        context={{
-          module: 'Gestão de Fornecedores',
-          totalVendors: vendors.length,
-          highRiskVendors: vendors.filter(v => v.risk_level === 'high' || v.risk_level === 'critical').length,
-          activeVendors: vendors.filter(v => v.status === 'active').length,
-          categories: Array.from(new Set(vendors.map(v => v.category))),
-          totalAssessments: assessments.length,
-          currentFilters: { categoryFilter, riskFilter, searchTerm }
-        }}
-      />
-      
-      <AIContentGenerator
-        type="questionnaire"
-        onGenerated={(content) => {
-          console.log('Generated vendor assessment questionnaire:', content);
-        }}
-      />
+            </CardContent>
+          </Card>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={sortedVendors.map(v => v.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {sortedVendors.map((vendor) => (
+                  <SortableVendorCard
+                    key={vendor.id}
+                    vendor={vendor as any}
+                    onUpdate={handleUpdateVendor}
+                    onDelete={handleDeleteVendor}
+                    canEdit={true}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
     </div>
   );
 };

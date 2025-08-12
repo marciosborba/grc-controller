@@ -38,7 +38,6 @@ import {
   Building,
   FileCheck,
   AlertTriangle,
-  AlertCircle,
   FileText,
   BarChart3,
   History,

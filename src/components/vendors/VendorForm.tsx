@@ -15,7 +15,7 @@ import { CalendarIcon, Plus, X, Building2, Users, Shield, DollarSign, FileText }
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Vendor, VendorStatus, VendorRiskLevel, VendorCategory, VendorType } from '@/types/vendor-management';
+import type { Vendor, VendorStatus, VendorRiskLevel, VendorCategory, VendorType, MonitoringFrequency } from '@/types/vendor-management';
 
 interface VendorFormProps {
   vendor?: Vendor;
@@ -119,7 +119,7 @@ const VendorForm: React.FC<VendorFormProps> = ({
 
   // Array states
   const [certifications, setCertifications] = useState<string[]>(
-    vendor?.certifications?.map(c => typeof c === 'string' ? c : c.name) || []
+    vendor?.certifications?.map(c => typeof c === 'string' ? c : c.certification_name || c.name || '') || []
   );
   const [serviceRequirements, setServiceRequirements] = useState<string[]>(
     vendor?.service_level_requirements || []
@@ -143,10 +143,10 @@ const VendorForm: React.FC<VendorFormProps> = ({
         postal_code: formData.address_postal_code,
         country: formData.address_country
       },
-      contract_start_date: contractStartDate ? format(contractStartDate, 'yyyy-MM-dd') : null,
-      contract_end_date: contractEndDate ? format(contractEndDate, 'yyyy-MM-dd') : null,
-      next_risk_assessment_due: nextAssessmentDate ? format(nextAssessmentDate, 'yyyy-MM-dd') : null,
-      certifications: certifications.map(name => ({ name, status: 'Valid' as const })),
+      contract_start_date: contractStartDate ? contractStartDate.toISOString() : null,
+      contract_end_date: contractEndDate ? contractEndDate.toISOString() : null,
+      next_risk_assessment_due: nextAssessmentDate ? nextAssessmentDate.toISOString() : null,
+      certifications: certifications.map(name => ({ certification_name: name, status: 'Valid' as const })),
       service_level_requirements: serviceRequirements,
       tags,
       annual_spend: formData.annual_spend ? parseFloat(formData.annual_spend) : null,
