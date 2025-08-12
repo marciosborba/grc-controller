@@ -350,7 +350,7 @@ const VendorsPage = () => {
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Fornecedores</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão Risco de Fornecedores</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Gerencie riscos de fornecedores, due diligence e avaliações de vendor risk
           </p>

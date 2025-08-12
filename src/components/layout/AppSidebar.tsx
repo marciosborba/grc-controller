@@ -61,7 +61,7 @@ const navigationItems = [{
     permissions: ['audit.read', 'all'],
     description: 'Planejamento e execução de auditorias'
   }, {
-    title: 'Fornecedores',
+    title: 'Vendor Risk',
     url: '/vendors',
     icon: Users,
     permissions: ['vendor.read', 'all'],
