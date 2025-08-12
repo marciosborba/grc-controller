@@ -51,6 +51,7 @@ import { supabase } from '@/integrations/supabase/client';
 import VendorCard from './VendorCard';
 import SortableVendorCard from './SortableVendorCard';
 import VendorForm from './VendorForm';
+import NewVendorRiskManagement from './NewVendorRiskManagement';
 
 // Tipos simplificados para compatibilidade
 interface SimpleVendor {
@@ -80,6 +81,7 @@ interface VendorFilters {
 }
 
 const VendorsPage = () => {
+  const [activeView, setActiveView] = useState<'vendors' | 'risk_management'>('risk_management');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -345,18 +347,44 @@ const VendorsPage = () => {
     );
   }
 
+  // Se o modo de visualização for risk_management, usar o novo componente
+  if (activeView === 'risk_management') {
+    return <NewVendorRiskManagement />;
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header com seletor de visualização */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão Risco de Fornecedores</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Vendor Risk</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Gerencie riscos de fornecedores, due diligence e avaliações de vendor risk
+            Gerencie fornecedores e riscos de terceiros
           </p>
         </div>
         
         <div className="flex gap-2">
+          <div className="flex rounded-lg border border-input bg-background p-1">
+            <Button
+              variant={activeView === 'risk_management' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('risk_management')}
+              className="flex items-center gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              Risk Management
+            </Button>
+            <Button
+              variant={activeView === 'vendors' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveView('vendors')}
+              className="flex items-center gap-2"
+            >
+              <Building2 className="h-4 w-4" />
+              Fornecedores
+            </Button>
+          </div>
+          
           <Button
             variant="outline"
             size="sm"
