@@ -256,7 +256,7 @@ export function DPIAPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="draft">Rascunho</SelectItem>
                   <SelectItem value="in_progress">Em Andamento</SelectItem>
                   <SelectItem value="pending_approval">Pendente</SelectItem>
@@ -273,7 +273,7 @@ export function DPIAPage() {
                   <SelectValue placeholder="Nível de Risco" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="low">Baixo</SelectItem>
                   <SelectItem value="medium">Médio</SelectItem>
                   <SelectItem value="high">Alto</SelectItem>

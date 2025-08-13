@@ -323,7 +323,7 @@ export function LegalBasesPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Ativas</SelectItem>
                   <SelectItem value="suspended">Suspensas</SelectItem>
                   <SelectItem value="expired">Expiradas</SelectItem>
@@ -336,7 +336,7 @@ export function LegalBasesPage() {
                   <SelectValue placeholder="Tipo de Base" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os Tipos</SelectItem>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
                   {Object.entries(LEGAL_BASIS_TYPES).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}

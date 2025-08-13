@@ -342,7 +342,7 @@ export function DataSubjectRequestsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="received">Recebida</SelectItem>
                   <SelectItem value="under_verification">Em Verificação</SelectItem>
                   <SelectItem value="verified">Verificada</SelectItem>
@@ -357,7 +357,7 @@ export function DataSubjectRequestsPage() {
                   <SelectValue placeholder="Tipo de Solicitação" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os Tipos</SelectItem>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
                   {Object.entries(REQUEST_TYPES).map(([key, label]) => (
                     <SelectItem key={key} value={key}>{label}</SelectItem>
                   ))}
@@ -369,7 +369,7 @@ export function DataSubjectRequestsPage() {
                   <SelectValue placeholder="Verificação" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="verified">Verificadas</SelectItem>
                   <SelectItem value="unverified">Não Verificadas</SelectItem>
                 </SelectContent>

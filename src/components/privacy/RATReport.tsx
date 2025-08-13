@@ -202,7 +202,7 @@ export function RATReport() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="active">Ativas</SelectItem>
                   <SelectItem value="suspended">Suspensas</SelectItem>
                   <SelectItem value="under_review">Em Revisão</SelectItem>
@@ -214,7 +214,7 @@ export function RATReport() {
                   <SelectValue placeholder="Departamento" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="TI">Tecnologia da Informação</SelectItem>
                   <SelectItem value="RH">Recursos Humanos</SelectItem>
                   <SelectItem value="Marketing">Marketing</SelectItem>

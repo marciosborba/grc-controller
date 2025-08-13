@@ -541,7 +541,7 @@ export function CreateConsentDialog({ onCreateConsent }: CreateConsentDialogProp
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhuma</SelectItem>
+                          <SelectItem value="none">Nenhuma</SelectItem>
                           <SelectItem value="marketing">Base Legal - Marketing</SelectItem>
                           <SelectItem value="comunicacao">Base Legal - Comunicação</SelectItem>
                           <SelectItem value="analise">Base Legal - Análise de Dados</SelectItem>

@@ -289,7 +289,7 @@ export function PrivacyIncidentsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="open">Aberto</SelectItem>
                   <SelectItem value="investigating">Investigando</SelectItem>
                   <SelectItem value="escalated">Escalado</SelectItem>
@@ -306,7 +306,7 @@ export function PrivacyIncidentsPage() {
                   <SelectValue placeholder="Severidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="low">Baixa</SelectItem>
                   <SelectItem value="medium">Média</SelectItem>
                   <SelectItem value="high">Alta</SelectItem>

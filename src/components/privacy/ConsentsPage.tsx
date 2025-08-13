@@ -349,7 +349,7 @@ export function ConsentsPage() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="granted">Concedidos</SelectItem>
                   <SelectItem value="revoked">Revogados</SelectItem>
                   <SelectItem value="expired">Expirados</SelectItem>
@@ -362,7 +362,7 @@ export function ConsentsPage() {
                   <SelectValue placeholder="Método de Coleta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os Métodos</SelectItem>
+                  <SelectItem value="all">Todos os Métodos</SelectItem>
                   <SelectItem value="website_form">Formulário Web</SelectItem>
                   <SelectItem value="mobile_app">App Mobile</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
