@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
@@ -51,6 +51,12 @@ const navigationItems = [{
     icon: FileCheck,
     permissions: ['compliance.read', 'all'],
     description: 'Controles de conformidade'
+  }, {
+    title: 'Privacidade e LGPD',
+    url: '/privacy',
+    icon: KeyRound,
+    permissions: ['privacy.read', 'all'],
+    description: 'Gestão de privacidade e proteção de dados'
   }]
 }, {
   label: 'Gestão',

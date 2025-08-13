@@ -32,6 +32,11 @@ import FrameworkEvaluationPage from "@/components/assessments/FrameworkEvaluatio
 import CreateFrameworkPage from "@/components/assessments/CreateFrameworkPage";
 import HelpPage from "./pages/HelpPage";
 import { UserProfilePage } from "@/components/profile/UserProfilePage";
+import { PrivacyDashboard } from "@/components/privacy/PrivacyDashboard";
+import { DataDiscoveryPage } from "@/components/privacy/DataDiscoveryPage";
+import { DataInventoryPage } from "@/components/privacy/DataInventoryPage";
+import { DPIAPage } from "@/components/privacy/DPIAPage";
+import { PrivacyIncidentsPage } from "@/components/privacy/PrivacyIncidentsPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -141,6 +146,11 @@ const App = () => (
                   <Route path="vendors" element={<VendorsPage />} />
                   <Route path="reports" element={<ReportsPage />} />
                   <Route path="ethics" element={<EthicsChannelPage />} />
+                  <Route path="privacy" element={<PrivacyDashboard />} />
+                  <Route path="privacy/discovery" element={<DataDiscoveryPage />} />
+                  <Route path="privacy/inventory" element={<DataInventoryPage />} />
+                  <Route path="privacy/dpia" element={<DPIAPage />} />
+                  <Route path="privacy/incidents" element={<PrivacyIncidentsPage />} />
                   <Route path="admin/tenants" element={
                     <PlatformAdminRoute>
                       <TenantManagement />
