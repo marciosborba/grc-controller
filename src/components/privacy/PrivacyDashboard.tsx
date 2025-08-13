@@ -13,7 +13,10 @@ import {
   TrendingUp,
   CheckCircle,
   Clock,
-  Zap
+  Zap,
+  Activity,
+  Scale,
+  Globe
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,6 +80,18 @@ export function PrivacyDashboard() {
           processing_activities: 0,
           legal_bases: 0,
           training_completion_rate: 0
+        },
+        legal_bases: {
+          total_bases: 0,
+          active_bases: 0,
+          expiring_soon: 0,
+          needs_validation: 0
+        },
+        processing_activities: {
+          total_activities: 0,
+          active_activities: 0,
+          high_risk_activities: 0,
+          requires_dpia: 0
         }
       });
     } finally {
@@ -128,10 +143,34 @@ export function PrivacyDashboard() {
     {
       title: 'Bases Legais',
       description: 'Fundamentos para tratamento',
-      icon: FileText,
+      icon: Scale,
       color: 'teal',
       action: () => navigate('/privacy/legal-bases'),
-      count: metrics?.compliance_overview?.legal_bases || 0
+      count: metrics?.legal_bases?.total_bases || 0
+    },
+    {
+      title: 'Consentimentos',
+      description: 'Gestão de consentimentos LGPD',
+      icon: CheckCircle,
+      color: 'indigo',
+      action: () => navigate('/privacy/consents'),
+      count: metrics?.consents?.total_active || 0
+    },
+    {
+      title: 'Atividades de Tratamento (RAT)',
+      description: 'Registro oficial Art. 37 LGPD',
+      icon: Activity,
+      color: 'cyan',
+      action: () => navigate('/privacy/processing-activities'),
+      count: metrics?.processing_activities?.total_activities || 0
+    },
+    {
+      title: 'Relatório RAT',
+      description: 'Relatório oficial do registro',
+      icon: FileText,
+      color: 'slate',
+      action: () => navigate('/privacy/rat-report'),
+      count: 0
     }
   ];
 
@@ -167,7 +206,7 @@ export function PrivacyDashboard() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Itens no Inventário</CardTitle>

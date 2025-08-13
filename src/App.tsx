@@ -37,6 +37,12 @@ import { DataDiscoveryPage } from "@/components/privacy/DataDiscoveryPage";
 import { DataInventoryPage } from "@/components/privacy/DataInventoryPage";
 import { DPIAPage } from "@/components/privacy/DPIAPage";
 import { PrivacyIncidentsPage } from "@/components/privacy/PrivacyIncidentsPage";
+import { DataSubjectRequestsPage } from "@/components/privacy/DataSubjectRequestsPage";
+import { DataSubjectPortal } from "@/components/privacy/DataSubjectPortal";
+import { LegalBasesPage } from "@/components/privacy/LegalBasesPage";
+import { ConsentsPage } from "@/components/privacy/ConsentsPage";
+import { ProcessingActivitiesPage } from "@/components/privacy/ProcessingActivitiesPage";
+import { RATReport } from "@/components/privacy/RATReport";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -122,6 +128,7 @@ const App = () => (
                     <LoginPage />
                   </PublicRoute>
                 } />
+                <Route path="/privacy-portal" element={<DataSubjectPortal />} />
                 
                 {/* Protected Routes */}
                 <Route path="/" element={
@@ -151,6 +158,11 @@ const App = () => (
                   <Route path="privacy/inventory" element={<DataInventoryPage />} />
                   <Route path="privacy/dpia" element={<DPIAPage />} />
                   <Route path="privacy/incidents" element={<PrivacyIncidentsPage />} />
+                  <Route path="privacy/requests" element={<DataSubjectRequestsPage />} />
+                  <Route path="privacy/legal-bases" element={<LegalBasesPage />} />
+                  <Route path="privacy/consents" element={<ConsentsPage />} />
+                  <Route path="privacy/processing-activities" element={<ProcessingActivitiesPage />} />
+                  <Route path="privacy/rat-report" element={<RATReport />} />
                   <Route path="admin/tenants" element={
                     <PlatformAdminRoute>
                       <TenantManagement />

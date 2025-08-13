@@ -108,6 +108,33 @@ export const logActivity = async (
   }
 };
 
+export const logSecurityEvent = async (eventData: {
+  event: string;
+  description: string;
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  metadata?: Record<string, any>;
+}): Promise<void> => {
+  try {
+    const { error: dbError } = await supabase
+      .from('activity_logs')
+      .insert({
+        action: eventData.event,
+        resource_type: 'security',
+        details: { 
+          description: eventData.description,
+          severity: eventData.severity || 'low',
+          ...eventData.metadata 
+        }
+      });
+    
+    if (dbError) {
+      console.error('Erro ao registrar evento de segurança:', dbError);
+    }
+  } catch (dbError) {
+    console.error('Erro ao registrar evento de segurança:', dbError);
+  }
+};
+
 export const logSecurityFailure = async (
   event: string,
   error: string,
