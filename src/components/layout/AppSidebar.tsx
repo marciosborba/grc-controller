@@ -4,6 +4,7 @@ import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
+import { getTenantDisplayName } from '@/utils/tenantHelpers';
 const navigationItems = [{
   label: 'Principal',
   items: [{
@@ -147,7 +148,7 @@ export function AppSidebar() {
             <div>
               <h1 className="text-lg font-bold text-foreground">GRC Controller
           </h1>
-              <p className="text-xs text-muted-foreground">{user?.tenant?.name || 'Governança • Riscos • Compliance'}</p>
+              <p className="text-xs text-muted-foreground">{getTenantDisplayName(user?.tenant)}</p>
             </div>
           </div>}
         <SidebarTrigger className="hover:bg-muted/50 p-2 rounded-md" />

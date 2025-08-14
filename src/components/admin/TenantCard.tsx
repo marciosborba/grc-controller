@@ -251,7 +251,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     return 'text-green-600';
   };
 
-  const saveCompanyData = async () => {
+  const saveCompanyData = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsSaving(true);
     try {
       const updatedSettings = {
@@ -281,15 +285,10 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       toast.success('Dados da empresa atualizados com sucesso');
       setIsEditingCompany(false);
       
-      // Se for a tenant do usuário atual, recarrega apenas se necessário
+      // Não recarregar a página automaticamente - deixar o usuário decidir
       if (user?.tenantId === tenant.id && 
           (companyData.trading_name?.trim() || companyData.corporate_name?.trim())) {
-        toast.info('Nome da organização atualizado. Recarregando...');
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
-            window.location.reload();
-          }
-        }, 1500);
+        toast.info('Nome da organização atualizado. Recarregue a página para ver as mudanças na interface.');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -299,7 +298,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
-  const saveRiskMatrix = async () => {
+  const saveRiskMatrix = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsSaving(true);
     try {
       const updatedSettings = {
@@ -340,7 +343,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     });
   };
 
-  const saveUserConfig = async () => {
+  const saveUserConfig = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsSaving(true);
     try {
       const { error } = await supabase.rpc('rpc_manage_tenant', {
@@ -396,7 +403,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   };
 
   // Adicionar usuário à tenant
-  const addUserToTenant = async () => {
+  const addUserToTenant = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!newUserEmail.trim()) {
       toast.error('Email é obrigatório');
       return;
@@ -1034,6 +1045,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               Cancelar
             </Button>
             <Button 
+              type="button"
               onClick={addUserToTenant} 
               disabled={
                 isSaving || 
@@ -1197,7 +1209,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button onClick={saveCompanyData} disabled={isSaving}>
+            <Button type="button" onClick={saveCompanyData} disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Salvando...' : 'Salvar'}
             </Button>
@@ -1331,7 +1343,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button onClick={saveRiskMatrix} disabled={isSaving}>
+            <Button type="button" onClick={saveRiskMatrix} disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Salvando...' : 'Salvar Configuração'}
             </Button>
@@ -1465,6 +1477,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               Cancelar
             </Button>
             <Button 
+              type="button"
               onClick={saveUserConfig} 
               disabled={
                 isSaving || 
