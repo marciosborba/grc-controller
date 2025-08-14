@@ -287,57 +287,116 @@ export function useDataInventory() {
   }, []);
 
   // Estatísticas do inventário
-  const getInventoryStats = useCallback(() => {
-    const totalItems = inventoryItems.length;
-    const activeItems = inventoryItems.filter(item => item.status === 'active').length;
-    const criticalItems = inventoryItems.filter(item => item.sensitivity_level === 'critica').length;
-    const highSensitivityItems = inventoryItems.filter(item => 
-      item.sensitivity_level === 'alta' || item.sensitivity_level === 'critica'
-    ).length;
+  const getInventoryStats = useCallback(async () => {
+    try {
+      // Get real count from database
+      const { count: totalItems, error: countError } = await supabase
+        .from('data_inventory')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError || !totalItems) {
+        // Return zero stats if table not accessible or empty
+        return {
+          totalItems: 0,
+          activeItems: 0,
+          criticalItems: 0,
+          highSensitivityItems: 0,
+          needsReview: 0,
+          overdueReview: 0,
+          totalVolume: 0,
+          byCategory: {},
+          bySensitivity: {}
+        };
+      }
+
+      // If we have data, try to get detailed stats
+      const { data, error } = await supabase
+        .from('data_inventory')
+        .select('status, sensitivity_level, next_review_date, estimated_volume, data_category');
+
+      if (error || !data) {
+        // Return basic stats with just the count
+        return {
+          totalItems,
+          activeItems: 0,
+          criticalItems: 0,
+          highSensitivityItems: 0,
+          needsReview: 0,
+          overdueReview: 0,
+          totalVolume: 0,
+          byCategory: {},
+          bySensitivity: {}
+        };
+      }
+
+      const activeItems = data.filter(item => item.status === 'active').length;
+      const criticalItems = data.filter(item => item.sensitivity_level === 'critica').length;
+      const highSensitivityItems = data.filter(item => 
+        item.sensitivity_level === 'alta' || item.sensitivity_level === 'critica'
+      ).length;
     
-    // Itens que precisam de revisão (próximos 30 dias)
-    const needsReview = inventoryItems.filter(item => {
-      if (!item.next_review_date) return false;
-      const reviewDate = new Date(item.next_review_date);
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      return reviewDate <= thirtyDaysFromNow;
-    }).length;
+      // Itens que precisam de revisão (próximos 30 dias)
+      const needsReview = data.filter(item => {
+        if (!item.next_review_date) return false;
+        const reviewDate = new Date(item.next_review_date);
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        return reviewDate <= thirtyDaysFromNow;
+      }).length;
 
-    // Itens vencidos (revisão em atraso)
-    const overdueReview = inventoryItems.filter(item => {
-      if (!item.next_review_date) return false;
-      const reviewDate = new Date(item.next_review_date);
-      return reviewDate < new Date();
-    }).length;
+      // Itens vencidos (revisão em atraso)
+      const overdueReview = data.filter(item => {
+        if (!item.next_review_date) return false;
+        const reviewDate = new Date(item.next_review_date);
+        return reviewDate < new Date();
+      }).length;
 
-    // Volume total estimado
-    const totalVolume = inventoryItems.reduce((sum, item) => sum + (item.estimated_volume || 0), 0);
+      // Volume total estimado
+      const totalVolume = data.reduce((sum, item) => sum + (item.estimated_volume || 0), 0);
 
-    // Distribuição por categoria
-    const byCategory: Record<string, number> = {};
-    inventoryItems.forEach(item => {
-      byCategory[item.data_category] = (byCategory[item.data_category] || 0) + 1;
-    });
+      // Distribuição por categoria
+      const byCategory: Record<string, number> = {};
+      data.forEach(item => {
+        if (item.data_category) {
+          byCategory[item.data_category] = (byCategory[item.data_category] || 0) + 1;
+        }
+      });
 
-    // Distribuição por sensibilidade
-    const bySensitivity: Record<string, number> = {};
-    inventoryItems.forEach(item => {
-      bySensitivity[item.sensitivity_level] = (bySensitivity[item.sensitivity_level] || 0) + 1;
-    });
-    
-    return {
-      totalItems,
-      activeItems,
-      criticalItems,
-      highSensitivityItems,
-      needsReview,
-      overdueReview,
-      totalVolume,
-      byCategory,
-      bySensitivity
-    };
-  }, [inventoryItems]);
+      // Distribuição por sensibilidade
+      const bySensitivity: Record<string, number> = {};
+      data.forEach(item => {
+        if (item.sensitivity_level) {
+          bySensitivity[item.sensitivity_level] = (bySensitivity[item.sensitivity_level] || 0) + 1;
+        }
+      });
+      
+      return {
+        totalItems,
+        activeItems,
+        criticalItems,
+        highSensitivityItems,
+        needsReview,
+        overdueReview,
+        totalVolume,
+        byCategory,
+        bySensitivity
+      };
+
+    } catch (error) {
+      console.error('Error calculating inventory stats:', error);
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        criticalItems: 0,
+        highSensitivityItems: 0,
+        needsReview: 0,
+        overdueReview: 0,
+        totalVolume: 0,
+        byCategory: {},
+        bySensitivity: {}
+      };
+    }
+  }, []);
 
   // Buscar itens que precisam de revisão
   const getItemsNeedingReview = useCallback(() => {

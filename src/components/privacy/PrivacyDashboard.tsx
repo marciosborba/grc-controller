@@ -16,7 +16,8 @@ import {
   Zap,
   Activity,
   Scale,
-  Globe
+  Globe,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,81 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { supabase } from '@/integrations/supabase/client';
 import { DevAuthHelper } from './DevAuthHelper';
+
+// Calculate LGPD compliance score based on real system metrics
+function calculateComplianceScore(metrics: any): number {
+  if (!metrics) return 0;
+  
+  let score = 0;
+  let totalChecks = 0;
+  
+  // Data Inventory Completeness (25% weight)
+  totalChecks += 25;
+  const inventoryItems = metrics.data_inventory?.total_inventories || 0;
+  const needsReview = metrics.data_inventory?.needs_review || 0;
+  if (inventoryItems > 0) {
+    const inventoryCompleteness = Math.max(0, 100 - ((needsReview / inventoryItems) * 100));
+    score += (inventoryCompleteness * 0.25);
+  }
+  
+  // Data Subject Requests Handling (20% weight) 
+  totalChecks += 20;
+  const totalRequests = metrics.data_subject_requests?.total_requests || 0;
+  const overdueRequests = metrics.data_subject_requests?.overdue_requests || 0;
+  if (totalRequests > 0) {
+    const requestsCompliance = Math.max(0, 100 - ((overdueRequests / totalRequests) * 100));
+    score += (requestsCompliance * 0.20);
+  } else {
+    score += 20; // No requests is compliant
+  }
+  
+  // Privacy Incidents Management (20% weight)
+  totalChecks += 20;
+  const totalIncidents = metrics.privacy_incidents?.total_incidents || 0;
+  const openIncidents = metrics.privacy_incidents?.open_incidents || 0;
+  const anpdRequired = metrics.privacy_incidents?.anpd_notifications_required || 0;
+  if (totalIncidents === 0) {
+    score += 20; // No incidents is good
+  } else {
+    const incidentsCompliance = Math.max(0, 100 - ((openIncidents + anpdRequired) / totalIncidents) * 50);
+    score += (incidentsCompliance * 0.20);
+  }
+  
+  // Legal Framework Implementation (15% weight)
+  totalChecks += 15;
+  const totalBases = metrics.legal_bases?.total_bases || 0;
+  const activeBases = metrics.legal_bases?.active_bases || 0;
+  const expiringBases = metrics.legal_bases?.expiring_soon || 0;
+  if (totalBases > 0) {
+    const basesCompliance = Math.max(0, ((activeBases - expiringBases) / totalBases) * 100);
+    score += (basesCompliance * 0.15);
+  }
+  
+  // Consents Management (10% weight)
+  totalChecks += 10;
+  const activeConsents = metrics.consents?.total_active || 0;
+  const expiringConsents = metrics.consents?.expiring_soon || 0;
+  if (activeConsents > 0) {
+    const consentsCompliance = Math.max(0, 100 - ((expiringConsents / activeConsents) * 100));
+    score += (consentsCompliance * 0.10);
+  } else {
+    score += 10; // No consents needed is compliant
+  }
+  
+  // DPIA/Processing Activities (10% weight)
+  totalChecks += 10;
+  const totalActivities = metrics.processing_activities?.total_activities || 0;
+  const highRiskActivities = metrics.processing_activities?.high_risk_activities || 0;
+  const pendingDpias = metrics.dpia_assessments?.pending_dpias || 0;
+  if (totalActivities > 0) {
+    const dpiaCompliance = Math.max(0, 100 - ((pendingDpias / Math.max(1, highRiskActivities)) * 100));
+    score += (dpiaCompliance * 0.10);
+  } else {
+    score += 10;
+  }
+  
+  return Math.round(score);
+}
 
 export function PrivacyDashboard() {
   const navigate = useNavigate();
@@ -175,7 +251,7 @@ export function PrivacyDashboard() {
     }
   ];
 
-  const complianceScore = 85; // Mock score - would be calculated from actual data
+  const complianceScore = calculateComplianceScore(metrics);
 
   // Check if we have no data (user likely not authenticated)
   const hasNoData = metrics && (
@@ -365,6 +441,7 @@ export function PrivacyDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
+              {/* High Priority: Overdue Data Subject Requests */}
               {metrics?.data_subject_requests?.overdue_requests > 0 && (
                 <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
                   <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -380,28 +457,14 @@ export function PrivacyDashboard() {
                 </div>
               )}
 
-              {metrics?.data_inventory?.needs_review > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <Calendar className="w-5 h-5 text-yellow-600 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-yellow-800">Revisão de Inventário</p>
-                    <p className="text-sm text-yellow-600">
-                      {metrics.data_inventory.needs_review} itens precisam de revisão
-                    </p>
-                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/inventory')}>
-                      Revisar Itens
-                    </Button>
-                  </div>
-                </div>
-              )}
-
+              {/* High Priority: ANPD Notifications Required */}
               {metrics?.privacy_incidents?.anpd_notifications_required > 0 && (
                 <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
                   <Zap className="w-5 h-5 text-red-600 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-medium text-red-800">Notificação ANPD Pendente</p>
                     <p className="text-sm text-red-600">
-                      {metrics.privacy_incidents.anpd_notifications_required} incidentes requerem notificação
+                      {metrics.privacy_incidents.anpd_notifications_required} incidentes requerem notificação à ANPD
                     </p>
                     <Button size="sm" className="mt-2" onClick={() => navigate('/privacy/incidents')}>
                       Ver Incidentes
@@ -410,14 +473,99 @@ export function PrivacyDashboard() {
                 </div>
               )}
 
+              {/* High Priority: Expiring Legal Bases */}
+              {metrics?.legal_bases?.expiring_soon > 0 && (
+                <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-orange-800">Bases Legais Expirando</p>
+                    <p className="text-sm text-orange-600">
+                      {metrics.legal_bases.expiring_soon} bases legais expiram em breve
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/legal-bases')}>
+                      Revisar Bases
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* High Priority: Pending DPIAs */}
+              {metrics?.dpia_assessments?.pending_dpias > 0 && (
+                <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <Shield className="w-5 h-5 text-orange-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-orange-800">DPIA/RIPD Pendentes</p>
+                    <p className="text-sm text-orange-600">
+                      {metrics.dpia_assessments.pending_dpias} avaliações de impacto aguardam conclusão
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/dpia')}>
+                      Ver DPIAs
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Priority: Data Inventory Review */}
+              {metrics?.data_inventory?.needs_review > 0 && (
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <Database className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-800">Revisão de Inventário</p>
+                    <p className="text-sm text-yellow-600">
+                      {metrics.data_inventory.needs_review} itens do inventário precisam de revisão
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/inventory')}>
+                      Revisar Itens
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Priority: Expiring Consents */}
+              {metrics?.consents?.expiring_soon > 0 && (
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <Users className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-800">Consentimentos Expirando</p>
+                    <p className="text-sm text-yellow-600">
+                      {metrics.consents.expiring_soon} consentimentos expiram em breve
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/consents')}>
+                      Gerenciar Consentimentos
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Priority: Open Privacy Incidents */}
+              {metrics?.privacy_incidents?.open_incidents > 0 && !metrics?.privacy_incidents?.anpd_notifications_required && (
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-800">Incidentes em Investigação</p>
+                    <p className="text-sm text-yellow-600">
+                      {metrics.privacy_incidents.open_incidents} incidentes aguardam resolução
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/incidents')}>
+                      Ver Incidentes
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Success State - All Clear */}
               {(!metrics?.data_subject_requests?.overdue_requests && 
                 !metrics?.data_inventory?.needs_review && 
-                !metrics?.privacy_incidents?.anpd_notifications_required) && (
+                !metrics?.privacy_incidents?.anpd_notifications_required &&
+                !metrics?.privacy_incidents?.open_incidents &&
+                !metrics?.legal_bases?.expiring_soon &&
+                !metrics?.dpia_assessments?.pending_dpias &&
+                !metrics?.consents?.expiring_soon) && (
                 <div className="text-center py-8">
                   <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                  <h3 className="font-medium text-green-800 mb-2">Tudo em Ordem!</h3>
+                  <h3 className="font-medium text-green-800 mb-2">Excelente Conformidade!</h3>
                   <p className="text-sm text-green-600">
-                    Não há ações prioritárias pendentes no momento.
+                    Todas as ações prioritárias estão em dia. Continue monitorando regularmente.
                   </p>
                 </div>
               )}

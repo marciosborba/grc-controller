@@ -147,7 +147,7 @@ export function AppSidebar() {
             <div>
               <h1 className="text-lg font-bold text-foreground">GRC Controller
           </h1>
-              <p className="text-xs text-muted-foreground">Governança • Riscos • Compliance</p>
+              <p className="text-xs text-muted-foreground">{user?.tenant?.name || 'Governança • Riscos • Compliance'}</p>
             </div>
           </div>}
         <SidebarTrigger className="hover:bg-muted/50 p-2 rounded-md" />

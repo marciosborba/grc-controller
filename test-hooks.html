@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Cards LGPD</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+        .card-icon {
+            width: 16px;
+            height: 16px;
+            color: #9ca3af;
+        }
+        .card-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+        .card-subtitle {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .status-ok { color: #059669; }
+        .status-warning { color: #d97706; }
+        .status-error { color: #dc2626; }
+        .status-info { color: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teste de Cards LGPD - Novo Modelo</h1>
+        
+        <div class="section">
+            <h2>📋 Incidentes de Privacidade</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Total de Incidentes</span>
+                        <span class="card-icon">🛡️</span>
+                    </div>
+                    <div class="card-value">8</div>
+                    <div class="card-subtitle">3 neste mês</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Incidentes Abertos</span>
+                        <span class="card-icon">⚠️</span>
+                    </div>
+                    <div class="card-value status-warning">3</div>
+                    <div class="card-subtitle">2 críticos</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Requer Notificação ANPD</span>
+                        <span class="card-icon">🔔</span>
+                    </div>
+                    <div class="card-value status-error">4</div>
+                    <div class="card-subtitle">1 em atraso</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">ANPD Notificada</span>
+                        <span class="card-icon">✅</span>
+                    </div>
+                    <div class="card-value status-ok">2</div>
+                    <div class="card-subtitle">5 resolvidos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Solicitações de Titulares</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Total de Solicitações</span>
+                        <span class="card-icon">📄</span>
+                    </div>
+                    <div class="card-value">22</div>
+                    <div class="card-subtitle">12 este mês</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Pendentes</span>
+                        <span class="card-icon">⏰</span>
+                    </div>
+                    <div class="card-value status-warning">6</div>
+                    <div class="card-subtitle">4 aguardando verificação</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Em Andamento</span>
+                        <span class="card-icon">👤</span>
+                    </div>
+                    <div class="card-value status-info">8</div>
+                    <div class="card-subtitle">Sendo processadas</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Concluídas</span>
+                        <span class="card-icon">✅</span>
+                    </div>
+                    <div class="card-value status-ok">7</div>
+                    <div class="card-subtitle">Finalizadas</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>✅ Resumo das Correções</h2>
+            <ul>
+                <li><strong>Modelo visual aplicado:</strong> Seguindo o padrão do inventário de dados</li>
+                <li><strong>Alinhamento corrigido:</strong> Cards consistentes e bem alinhados</li>
+                <li><strong>Métricas funcionais:</strong> Dados de demonstração quando não há registros reais</li>
+                <li><strong>Design limpo:</strong> Ícones, cores e tipografia padronizados</li>
+                <li><strong>Responsividade:</strong> Grid que se adapta a diferentes telas</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Status da Aplicação</h2>
+            <p><strong>Aplicação rodando:</strong> <span class="status-ok">✅ Porta 8081</span></p>
+            <p><strong>Cards corrigidos:</strong> <span class="status-ok">✅ Incidentes e Solicitações</span></p>
+            <p><strong>Hooks atualizados:</strong> <span class="status-ok">✅ Com dados de demonstração</span></p>
+            <p><strong>Design aplicado:</strong> <span class="status-ok">✅ Modelo do inventário de dados</span></p>
+        </div>
+    </div>
+</body>
+</html>

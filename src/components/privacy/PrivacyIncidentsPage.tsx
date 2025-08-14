@@ -230,9 +230,9 @@ export function PrivacyIncidentsPage() {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold">{stats.total || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.thisMonth} neste mês
+              {stats.thisMonth || 0} neste mês
             </p>
           </CardContent>
         </Card>
@@ -243,9 +243,9 @@ export function PrivacyIncidentsPage() {
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.open}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.open || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.critical} críticos
+              {stats.critical || 0} críticos
             </p>
           </CardContent>
         </Card>
@@ -256,9 +256,9 @@ export function PrivacyIncidentsPage() {
             <Bell className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.requiresANPDNotification}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.requiresANPDNotification || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.overdue} em atraso
+              {stats.overdue || 0} em atraso
             </p>
           </CardContent>
         </Card>
@@ -269,9 +269,9 @@ export function PrivacyIncidentsPage() {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.anpdNotified}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.anpdNotified || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.resolved} resolvidos
+              {stats.resolved || 0} resolvidos
             </p>
           </CardContent>
         </Card>

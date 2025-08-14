@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Card,
   CardContent,
@@ -45,6 +46,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   ChevronDown,
   ChevronRight,
@@ -59,7 +62,13 @@ import {
   Grid3x3,
   Activity,
   Save,
-  X
+  X,
+  Plus,
+  UserPlus,
+  UserX,
+  Shield,
+  Search,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -92,6 +101,17 @@ interface TenantCompanyData {
   industry?: string;
   size?: string;
   description?: string;
+}
+
+interface TenantUser {
+  user_id: string;
+  full_name: string;
+  email: string;
+  job_title?: string;
+  department?: string;
+  is_active: boolean;
+  created_at: string;
+  last_login_at?: string;
 }
 
 interface RiskMatrixConfig {
@@ -138,6 +158,7 @@ interface TenantCardProps {
 
 const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting }) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [isEditingRiskMatrix, setIsEditingRiskMatrix] = useState(false);
@@ -161,6 +182,14 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     max_users: tenant.max_users,
     current_users_count: tenant.current_users_count
   });
+
+  // Estados para gerenciamento de usuários da tenant
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [selectedTab, setSelectedTab] = useState("info");
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState("");
 
   const getStatusBadge = () => {
     if (!tenant.is_active) {
@@ -196,8 +225,27 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     );
   };
 
+  // Helper para obter a contagem real de usuários
+  const getCurrentUserCount = () => {
+    return tenantUsers.length > 0 ? tenantUsers.length : tenant.current_users_count;
+  };
+
+  // Helper para obter o nome de exibição da tenant (prioriza nome fantasia)
+  const getDisplayName = () => {
+    // Buscar primeiro nos dados salvos da tenant
+    const savedCompanyData = tenant.settings?.company_data as TenantCompanyData || {};
+    
+    // Prioridade: Nome fantasia > Razão social > Nome da tenant
+    return savedCompanyData.trading_name || 
+           savedCompanyData.corporate_name || 
+           companyData.trading_name || 
+           companyData.corporate_name || 
+           tenant.name;
+  };
+
   const getUsersUsageColor = () => {
-    const percentage = (tenant.current_users_count / tenant.max_users) * 100;
+    const currentCount = getCurrentUserCount();
+    const percentage = (currentCount / tenant.max_users) * 100;
     if (percentage >= 90) return 'text-red-600';
     if (percentage >= 75) return 'text-yellow-600';
     return 'text-green-600';
@@ -211,9 +259,19 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
         company_data: companyData
       };
 
+      // Também atualiza o nome da tenant se houver nome fantasia
+      const tenantUpdateData: any = { settings: updatedSettings };
+      
+      // Se há nome fantasia, atualiza o nome da tenant para facilitar identificação
+      if (companyData.trading_name && companyData.trading_name.trim()) {
+        tenantUpdateData.name = companyData.trading_name.trim();
+      } else if (companyData.corporate_name && companyData.corporate_name.trim()) {
+        tenantUpdateData.name = companyData.corporate_name.trim();
+      }
+
       const { error } = await supabase.rpc('rpc_manage_tenant', {
         action: 'update',
-        tenant_data: { settings: updatedSettings },
+        tenant_data: tenantUpdateData,
         tenant_id_param: tenant.id
       });
 
@@ -222,6 +280,17 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast.success('Dados da empresa atualizados com sucesso');
       setIsEditingCompany(false);
+      
+      // Se for a tenant do usuário atual, recarrega apenas se necessário
+      if (user?.tenantId === tenant.id && 
+          (companyData.trading_name?.trim() || companyData.corporate_name?.trim())) {
+        toast.info('Nome da organização atualizado. Recarregando...');
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        }, 1500);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro ao salvar: ${errorMessage}`);
@@ -297,6 +366,169 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
+  // Carregar usuários da tenant
+  const loadTenantUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          user_id,
+          full_name,
+          email,
+          job_title,
+          department,
+          is_active,
+          created_at,
+          last_login_at
+        `)
+        .eq('tenant_id', tenant.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTenantUsers(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+      toast.error('Erro ao carregar usuários da tenant');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Adicionar usuário à tenant
+  const addUserToTenant = async () => {
+    if (!newUserEmail.trim()) {
+      toast.error('Email é obrigatório');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Verificar se o usuário existe
+      const { data: existingUser, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (userError) throw userError;
+
+      const user = existingUser.users?.find(u => u.email === newUserEmail.trim());
+      
+      if (!user) {
+        toast.error('Usuário não encontrado no sistema');
+        return;
+      }
+
+      // Verificar se já está na tenant
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingProfile?.tenant_id === tenant.id) {
+        toast.error('Usuário já está vinculado a esta tenant');
+        return;
+      }
+
+      if (existingProfile?.tenant_id && existingProfile.tenant_id !== tenant.id) {
+        toast.error('Usuário já está vinculado a outra tenant');
+        return;
+      }
+
+      // Verificar limite de usuários
+      if (tenantUsers.length >= tenant.max_users) {
+        toast.error('Limite máximo de usuários atingido para esta tenant');
+        return;
+      }
+
+      // Atualizar o perfil para vincular à tenant
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          tenant_id: tenant.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          updated_at: new Date().toISOString()
+        });
+
+      if (updateError) throw updateError;
+
+      // Atualizar contador de usuários na tenant
+      const { error: tenantUpdateError } = await supabase
+        .from('tenants')
+        .update({ current_users_count: tenantUsers.length + 1 })
+        .eq('id', tenant.id);
+
+      if (tenantUpdateError) throw tenantUpdateError;
+
+      toast.success('Usuário adicionado à tenant com sucesso');
+      setNewUserEmail('');
+      setIsAddingUser(false);
+      await loadTenantUsers();
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao adicionar usuário: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Remover usuário da tenant
+  const removeUserFromTenant = async (userId: string, userName: string) => {
+    if (!confirm(`Confirma a remoção do usuário "${userName}" desta tenant?`)) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Remover perfil (descincular da tenant)
+      const { error: deleteError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('tenant_id', tenant.id);
+
+      if (deleteError) throw deleteError;
+
+      // Atualizar contador de usuários na tenant
+      const { error: tenantUpdateError } = await supabase
+        .from('tenants')
+        .update({ current_users_count: Math.max(0, tenantUsers.length - 1) })
+        .eq('id', tenant.id);
+
+      if (tenantUpdateError) throw tenantUpdateError;
+
+      toast.success(`Usuário "${userName}" removido da tenant`);
+      await loadTenantUsers();
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao remover usuário: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Filtrar usuários baseado na pesquisa
+  const filteredUsers = tenantUsers.filter(user =>
+    user.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+    (user.job_title && user.job_title.toLowerCase().includes(userSearchTerm.toLowerCase()))
+  );
+
+  // Carregar usuários quando a guia for selecionada ou quando o card for expandido
+  useEffect(() => {
+    if (isExpanded && tenantUsers.length === 0) {
+      loadTenantUsers();
+    }
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (selectedTab === 'users' && isExpanded && tenantUsers.length === 0) {
+      loadTenantUsers();
+    }
+  }, [selectedTab, isExpanded]);
+
   return (
     <Card className={`w-full transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-muted/70 dark:bg-muted/60 shadow-lg ring-1 ring-border border-border' : 'bg-card hover:bg-muted/30 border-border'}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -306,7 +538,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <div className="flex items-center gap-3">
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 <div>
-                  <CardTitle className="text-lg font-semibold">{tenant.name}</CardTitle>
+                  <CardTitle className="text-lg font-semibold">{getDisplayName()}</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">{tenant.slug}</p>
                 </div>
               </div>
@@ -314,7 +546,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 <div className="text-right">
                   <div className={`flex items-center gap-1 ${getUsersUsageColor()}`}>
                     <Users className="h-4 w-4" />
-                    <span className="font-medium">{tenant.current_users_count}</span>
+                    <span className="font-medium">{getCurrentUserCount()}</span>
                     <span className="text-muted-foreground">/ {tenant.max_users}</span>
                   </div>
                   <div className="flex gap-2 mt-1">
@@ -329,39 +561,112 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <div className="space-y-6">
-              {/* Informações Básicas */}
-              <div>
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">INFORMAÇÕES BÁSICAS</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>Contato: {tenant.contact_email}</span>
-                  </div>
-                  {tenant.contact_phone && (
+            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+              <TabsList className="grid grid-cols-4 w-full mb-6">
+                <TabsTrigger value="info">
+                  <Activity className="h-4 w-4 mr-2" />
+                  Informações
+                </TabsTrigger>
+                <TabsTrigger value="company">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Empresa
+                </TabsTrigger>
+                <TabsTrigger value="users">
+                  <Users className="h-4 w-4 mr-2" />
+                  Usuários ({tenantUsers.length})
+                </TabsTrigger>
+                <TabsTrigger value="config">
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configurações
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Guia Informações Básicas */}
+              <TabsContent value="info" className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">INFORMAÇÕES BÁSICAS</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>Telefone: {tenant.contact_phone}</span>
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>Contato: {tenant.contact_email}</span>
                     </div>
-                  )}
-                  {tenant.billing_email && (
+                    {tenant.contact_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>Telefone: {tenant.contact_phone}</span>
+                      </div>
+                    )}
+                    {tenant.billing_email && (
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        <span>Faturamento: {tenant.billing_email}</span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      <span>Faturamento: {tenant.billing_email}</span>
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                      <span>Criado em: {new Date(tenant.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <span>Criado em: {new Date(tenant.created_at).toLocaleDateString('pt-BR')}</span>
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                <Separator />
 
-              {/* Dados Cadastrais da Empresa */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
+                {/* Estatísticas de Usuários */}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">ESTATÍSTICAS DE USUÁRIOS</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Usuários Ativos:</span>
+                      <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
+                        {getCurrentUserCount()}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Limite Máximo:</span>
+                      <div className="text-lg font-bold text-gray-600">
+                        {tenant.max_users}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <span className="font-medium">Taxa de Utilização:</span>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              (getCurrentUserCount() / tenant.max_users) * 100 >= 90
+                                ? 'bg-red-500'
+                                : (getCurrentUserCount() / tenant.max_users) * 100 >= 75
+                                ? 'bg-yellow-500'
+                                : 'bg-green-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, (getCurrentUserCount() / tenant.max_users) * 100)}%`
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium min-w-12">
+                          {Math.round((getCurrentUserCount() / tenant.max_users) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    {getCurrentUserCount() >= tenant.max_users * 0.9 && (
+                      <div className="md:col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-yellow-800">
+                          <Activity className="h-4 w-4" />
+                          <span className="font-medium">Atenção:</span>
+                        </div>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          Este tenant está próximo do limite de usuários. Consider aumentar o limite para evitar bloqueios.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Guia Dados da Empresa */}
+              <TabsContent value="company" className="space-y-6">
+                <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     DADOS CADASTRAIS DA EMPRESA
@@ -422,157 +727,326 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                     Nenhum dado cadastral adicionado. Clique em "Editar" para configurar.
                   </p>
                 )}
-              </div>
+              </TabsContent>
 
-              <Separator />
-
-              {/* Configuração de Usuários */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
+              {/* Guia Usuários */}
+              <TabsContent value="users" className="space-y-6">
+                <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    CONFIGURAÇÃO DE USUÁRIOS
+                    USUÁRIOS DA TENANT ({tenantUsers.length}/{tenant.max_users})
                   </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditingUsers(true)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Usuários Ativos:</span>
-                    <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
-                      {tenant.current_users_count}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Limite Máximo:</span>
-                    <div className="text-lg font-bold text-gray-600">
-                      {tenant.max_users}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <span className="font-medium">Taxa de Utilização:</span>
-                    <div className="flex items-center gap-3 mt-1">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            (tenant.current_users_count / tenant.max_users) * 100 >= 90
-                              ? 'bg-red-500'
-                              : (tenant.current_users_count / tenant.max_users) * 100 >= 75
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                          }`}
-                          style={{
-                            width: `${Math.min(100, (tenant.current_users_count / tenant.max_users) * 100)}%`
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs font-medium min-w-12">
-                        {Math.round((tenant.current_users_count / tenant.max_users) * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                  {tenant.current_users_count >= tenant.max_users * 0.9 && (
-                    <div className="md:col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-800">
-                        <Activity className="h-4 w-4" />
-                        <span className="font-medium">Atenção:</span>
-                      </div>
-                      <p className="text-sm text-yellow-700 mt-1">
-                        Este tenant está próximo do limite de usuários. Consider aumentar o limite para evitar bloqueios.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Configuração da Matriz de Riscos */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Grid3x3 className="h-4 w-4" />
-                    MATRIZ DE RISCOS
-                  </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditingRiskMatrix(true)}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Configurar
-                  </Button>
-                </div>
-
-                <div className="text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium">Tipo:</span>
-                    <Badge variant="outline">{riskMatrix.type}</Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <span className="font-medium">Níveis de Impacto:</span>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {riskMatrix.impact_labels.join(' • ')}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium">Níveis de Probabilidade:</span>
-                      <div className="mt-1 text-xs text-muted-foreground">
-                        {riskMatrix.probability_labels.join(' • ')}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Ações */}
-              <div className="flex items-center justify-end gap-3">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={tenant.current_users_count > 0 || isDeleting}
-                      className="text-destructive hover:text-destructive border-destructive/20"
+                      onClick={loadTenantUsers}
+                      disabled={loadingUsers}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Tenant
+                      <RefreshCw className={`h-4 w-4 mr-2 ${loadingUsers ? 'animate-spin' : ''}`} />
+                      Atualizar
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Tem certeza que deseja excluir o tenant "{tenant.name}"? 
-                        Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => onDelete(tenant.id)}
-                        className="bg-destructive hover:bg-destructive/90"
-                      >
-                        Excluir
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsAddingUser(true)}
+                      disabled={tenantUsers.length >= tenant.max_users}
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Adicionar Usuário
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Barra de Pesquisa */}
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Pesquisar por nome, email ou cargo..."
+                      value={userSearchTerm}
+                      onChange={(e) => setUserSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Lista de Usuários */}
+                {loadingUsers ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Carregando usuários...</p>
+                  </div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="font-medium text-muted-foreground mb-2">
+                      {userSearchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário vinculado'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {userSearchTerm 
+                        ? 'Tente ajustar os termos da pesquisa'
+                        : 'Clique em "Adicionar Usuário" para vincular usuários a esta tenant'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Cargo</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Adicionado</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map((user) => (
+                          <TableRow key={user.user_id}>
+                            <TableCell className="font-medium">
+                              {user.full_name || 'Nome não informado'}
+                            </TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {user.job_title || '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                                {user.is_active ? 'Ativo' : 'Inativo'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUserFromTenant(user.user_id, user.full_name)}
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={isSaving}
+                              >
+                                <UserX className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Guia Configurações */}
+              <TabsContent value="config" className="space-y-6">
+                {/* Configuração de Usuários */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      LIMITES DE USUÁRIOS
+                    </h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingUsers(true)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Limite Máximo:</span>
+                      <div className="text-lg font-bold text-gray-600">
+                        {tenant.max_users}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Usuários Ativos:</span>
+                      <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
+                        {getCurrentUserCount()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Configuração da Matriz de Riscos */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                      <Grid3x3 className="h-4 w-4" />
+                      MATRIZ DE RISCOS
+                    </h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingRiskMatrix(true)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configurar
+                    </Button>
+                  </div>
+
+                  <div className="text-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium">Tipo:</span>
+                      <Badge variant="outline">{riskMatrix.type}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <span className="font-medium">Níveis de Impacto:</span>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {riskMatrix.impact_labels.join(' • ')}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Níveis de Probabilidade:</span>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {riskMatrix.probability_labels.join(' • ')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Ações Perigosas */}
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">AÇÕES PERIGOSAS</h4>
+                  <div className="flex items-center justify-start">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={getCurrentUserCount() > 0 || isDeleting}
+                          className="text-destructive hover:text-destructive border-destructive/20"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Tenant
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir o tenant "{tenant.name}"? 
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDelete(tenant.id)}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Dialog para Adicionar Usuário */}
+      <Dialog open={isAddingUser} onOpenChange={setIsAddingUser}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Adicionar Usuário à Tenant
+            </DialogTitle>
+            <DialogDescription>
+              Digite o email de um usuário existente no sistema para vinculá-lo a esta tenant.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="user_email">Email do Usuário</Label>
+              <Input
+                id="user_email"
+                type="email"
+                placeholder="usuario@exemplo.com"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addUserToTenant();
+                  }
+                }}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                O usuário deve já estar registrado no sistema.
+              </p>
+            </div>
+
+            {/* Informações sobre limites */}
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Shield className="h-4 w-4" />
+                <span className="font-medium">Limites Atuais:</span>
+              </div>
+              <ul className="text-sm text-blue-700 mt-2 space-y-1">
+                <li>• Usuários atuais: <strong>{tenantUsers.length}</strong></li>
+                <li>• Limite máximo: <strong>{tenant.max_users}</strong></li>
+                <li>• Vagas disponíveis: <strong>{Math.max(0, tenant.max_users - tenantUsers.length)}</strong></li>
+              </ul>
+            </div>
+
+            {tenantUsers.length >= tenant.max_users && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 text-red-800">
+                  <X className="h-4 w-4" />
+                  <span className="font-medium">Limite Atingido:</span>
+                </div>
+                <p className="text-sm text-red-700 mt-1">
+                  Esta tenant atingiu o limite máximo de usuários. Aumente o limite nas configurações primeiro.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setIsAddingUser(false);
+                setNewUserEmail('');
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={addUserToTenant} 
+              disabled={
+                isSaving || 
+                !newUserEmail.trim() ||
+                tenantUsers.length >= tenant.max_users
+              }
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              {isSaving ? 'Adicionando...' : 'Adicionar Usuário'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog para Editar Dados da Empresa */}
       <Dialog open={isEditingCompany} onOpenChange={setIsEditingCompany}>

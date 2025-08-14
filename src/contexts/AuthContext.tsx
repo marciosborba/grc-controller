@@ -28,6 +28,7 @@ export interface Tenant {
   current_users_count: number;
   subscription_plan: string;
   is_active: boolean;
+  settings?: Record<string, any>;
 }
 
 export interface AuthUser {
@@ -136,7 +137,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
           const { data: tenantData } = await supabase
             .from('tenants')
-            .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active')
+            .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active, settings')
             .eq('id', profile.tenant_id)
             .maybeSingle();
           
