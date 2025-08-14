@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Database, Scan, Eye, CheckCircle, XCircle, AlertTriangle, Filter, MoreHorizontal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Database, Scan, Eye, CheckCircle, XCircle, AlertTriangle, Filter, MoreHorizontal, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +20,7 @@ import { CreateDataSourceDialog } from './CreateDataSourceDialog';
 import { DataDiscoveryResultCard } from './DataDiscoveryResultCard';
 
 export function DataDiscoveryPage() {
+  const navigate = useNavigate();
   const {
     sources,
     results,
@@ -147,11 +149,21 @@ export function DataDiscoveryPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Discovery de Dados</h1>
-          <p className="text-muted-foreground">
-            Mapeamento automático de dados pessoais em sistemas e aplicações
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">Discovery de Dados</h1>
+            <p className="text-muted-foreground">
+              Mapeamento automático de dados pessoais em sistemas e aplicações
+            </p>
+          </div>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />

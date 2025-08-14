@@ -34,11 +34,7 @@ export function useDataDiscovery() {
     try {
       let query = supabase
         .from('data_discovery_sources')
-        .select(`
-          *,
-          data_steward:profiles!data_steward_id(full_name),
-          created_by_profile:profiles!created_by(full_name)
-        `);
+        .select('*');
 
       // Apply filters
       if (state.filters.status && state.filters.status.length > 0) {
@@ -325,8 +321,7 @@ export function useDataDiscovery() {
         .from('data_discovery_results')
         .select(`
           *,
-          source:data_discovery_sources(name, type),
-          reviewed_by_profile:profiles!reviewed_by(full_name)
+          source:data_discovery_sources(name, type)
         `);
 
       if (sourceId) {

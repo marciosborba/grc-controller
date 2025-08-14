@@ -32,13 +32,7 @@ export function useDataInventory() {
     try {
       let query = supabase
         .from('data_inventory')
-        .select(`
-          *,
-          data_controller:profiles!data_controller_id(full_name),
-          data_processor:profiles!data_processor_id(full_name),
-          data_steward:profiles!data_steward_id(full_name),
-          created_by_profile:profiles!created_by(full_name)
-        `);
+        .select('*');
 
       // Apply filters
       if (state.filters.status && state.filters.status.length > 0) {
@@ -99,12 +93,7 @@ export function useDataInventory() {
           created_by: user.id,
           updated_by: user.id
         })
-        .select(`
-          *,
-          data_controller:profiles!data_controller_id(full_name),
-          data_processor:profiles!data_processor_id(full_name),
-          data_steward:profiles!data_steward_id(full_name)
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
@@ -142,12 +131,7 @@ export function useDataInventory() {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .select(`
-          *,
-          data_controller:profiles!data_controller_id(full_name),
-          data_processor:profiles!data_processor_id(full_name),
-          data_steward:profiles!data_steward_id(full_name)
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
@@ -245,12 +229,7 @@ export function useDataInventory() {
           updated_at: new Date().toISOString()
         })
         .in('id', itemIds)
-        .select(`
-          *,
-          data_controller:profiles!data_controller_id(full_name),
-          data_processor:profiles!data_processor_id(full_name),
-          data_steward:profiles!data_steward_id(full_name)
-        `);
+        .select('*');
 
       if (error) throw error;
 

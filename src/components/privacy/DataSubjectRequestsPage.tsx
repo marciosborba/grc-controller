@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -13,7 +14,8 @@ import {
   Calendar,
   User,
   FileText,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,7 @@ import { CreateRequestDialog } from './CreateRequestDialog';
 import { RequestProcessingDialog } from './RequestProcessingDialog';
 
 export function DataSubjectRequestsPage() {
+  const navigate = useNavigate();
   const {
     requests,
     loading,
@@ -67,9 +70,9 @@ export function DataSubjectRequestsPage() {
   // Filter requests based on search and filters
   const filteredRequests = requests.filter(request => {
     const matchesSearch = 
-      request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.requester_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.request_description?.toLowerCase().includes(searchTerm.toLowerCase());
+      (request.data_subject_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (request.data_subject_email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (request.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     
     return matchesSearch;
   });
@@ -220,13 +223,23 @@ export function DataSubjectRequestsPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Solicitações de Titulares
-          </h1>
-          <p className="text-muted-foreground">
-            Gestão de direitos dos titulares de dados pessoais
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">
+              Solicitações de Titulares
+            </h1>
+            <p className="text-muted-foreground">
+              Gestão de direitos dos titulares de dados pessoais
+            </p>
+          </div>
         </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

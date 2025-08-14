@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PrivacyIncident } from '@/types/privacy-management';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface IncidentFilters {
   status?: string;
@@ -34,6 +35,7 @@ export interface ANPDNotificationData {
 }
 
 export function usePrivacyIncidents() {
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<PrivacyIncident[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<IncidentStats>({
@@ -54,14 +56,8 @@ export function usePrivacyIncidents() {
 
       let query = supabase
         .from('privacy_incidents')
-        .select(`
-          *,
-          discovered_by_user:discovered_by(email, raw_user_meta_data),
-          incident_manager_user:incident_manager_id(email, raw_user_meta_data),
-          dpo_user:dpo_id(email, raw_user_meta_data),
-          anpd_communications(*)
-        `)
-        .order('discovered_at', { ascending: false });
+        .select('*')
+        .order('created_at', { ascending: false });
 
       // Apply filters
       if (filters.status) {
@@ -188,9 +184,11 @@ export function usePrivacyIncidents() {
       const { error } = await supabase
         .from('privacy_incidents')
         .update({
+
           ...updates,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', id);
 
       if (error) throw error;
@@ -254,10 +252,12 @@ export function usePrivacyIncidents() {
       const { error: updateError } = await supabase
         .from('privacy_incidents')
         .update({
+
           anpd_notified: true,
           anpd_notification_date: notificationData.notification_date,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', incidentId);
 
       if (updateError) throw updateError;

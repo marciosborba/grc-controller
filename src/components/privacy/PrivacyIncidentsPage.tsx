@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -10,7 +11,8 @@ import {
   Filter,
   Download,
   Send,
-  Eye
+  Eye,
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,7 @@ import { CreateIncidentDialog } from './CreateIncidentDialog';
 import { ANPDNotificationDialog } from './ANPDNotificationDialog';
 
 export function PrivacyIncidentsPage() {
+  const navigate = useNavigate();
   const {
     incidents,
     loading,
@@ -169,13 +172,23 @@ export function PrivacyIncidentsPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Incidentes de Privacidade
-          </h1>
-          <p className="text-muted-foreground">
-            Gestão de incidentes e comunicação com a ANPD
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">
+              Incidentes de Privacidade
+            </h1>
+            <p className="text-muted-foreground">
+              Gestão de incidentes e comunicação com a ANPD
+            </p>
+          </div>
         </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

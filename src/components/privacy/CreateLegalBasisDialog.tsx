@@ -53,7 +53,7 @@ const createLegalBasisSchema = z.object({
   applies_to_processing: z.array(z.string()).min(1, 'Selecione pelo menos um tipo de processamento'),
   valid_from: z.string().min(1, 'Data de início é obrigatória'),
   valid_until: z.string().optional(),
-  legal_responsible_id: z.string().min(1, 'Responsável legal é obrigatório')
+  legal_responsible_id: z.string().optional()
 });
 
 type CreateLegalBasisFormData = z.infer<typeof createLegalBasisSchema>;
@@ -348,7 +348,7 @@ export function CreateLegalBasisDialog({ onCreateBasis }: CreateLegalBasisDialog
                   name="legal_responsible_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Responsável Legal *</FormLabel>
+                      <FormLabel>Responsável Legal</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -356,11 +356,12 @@ export function CreateLegalBasisDialog({ onCreateBasis }: CreateLegalBasisDialog
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="dpo">DPO - Data Protection Officer</SelectItem>
-                          <SelectItem value="juridico">Departamento Jurídico</SelectItem>
-                          <SelectItem value="compliance">Compliance Officer</SelectItem>
-                          <SelectItem value="ti">Diretor de TI</SelectItem>
-                          <SelectItem value="rh">Diretor de RH</SelectItem>
+                          <SelectItem value="">Nenhum responsável específico</SelectItem>
+                          <SelectItem value="00000000-0000-0000-0000-000000000001">DPO - Data Protection Officer</SelectItem>
+                          <SelectItem value="00000000-0000-0000-0000-000000000002">Departamento Jurídico</SelectItem>
+                          <SelectItem value="00000000-0000-0000-0000-000000000003">Compliance Officer</SelectItem>
+                          <SelectItem value="00000000-0000-0000-0000-000000000004">Diretor de TI</SelectItem>
+                          <SelectItem value="00000000-0000-0000-0000-000000000005">Diretor de RH</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

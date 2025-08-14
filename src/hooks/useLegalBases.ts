@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LegalBasis, LegalBasisType, LegalBasisStatus } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface LegalBasisFilters {
   status?: LegalBasisStatus;
@@ -44,6 +45,7 @@ export interface LegalBasisUsage {
 }
 
 export function useLegalBases() {
+  const { user } = useAuth();
   const [legalBases, setLegalBases] = useState<LegalBasis[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<LegalBasisStats>({
@@ -71,12 +73,7 @@ export function useLegalBases() {
 
       let query = supabase
         .from('legal_bases')
-        .select(`
-          *,
-          legal_responsible_user:legal_responsible_id(email, raw_user_meta_data),
-          created_by_user:created_by(email, raw_user_meta_data),
-          updated_by_user:updated_by(email, raw_user_meta_data)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -121,11 +118,19 @@ export function useLegalBases() {
 
     } catch (error) {
       console.error('Error fetching legal bases:', error);
-      await logSecurityEvent({
+      try {
+
+        await logSecurityEvent({
         event: 'legal_bases_fetch_error',
         description: `Error fetching legal bases: ${error instanceof Error ? error.message : 'Unknown error'}`,
         severity: 'medium'
       });
+
+      } catch (logError) {
+
+        console.warn('Warning: Could not log security event:', logError);
+
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -197,7 +202,10 @@ export function useLegalBases() {
 
       const finalData = {
         ...sanitizedData,
-        status: 'active' as LegalBasisStatus
+        status: 'active' as LegalBasisStatus,
+        legal_responsible_id: sanitizedData.legal_responsible_id || null,
+        created_by: user?.id,
+        updated_by: user?.id
       };
 
       const { data, error } = await supabase
@@ -208,16 +216,29 @@ export function useLegalBases() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
-        event: 'legal_basis_created',
-        description: `New legal basis created: ${basisData.name} (${basisData.legal_basis_type})`,
-        severity: 'low',
-        metadata: {
-          legal_basis_id: data.id,
-          legal_basis_type: basisData.legal_basis_type,
-          legal_responsible_id: basisData.legal_responsible_id
+      // Log success without throwing error if logging fails
+      try {
+        try {
+
+          await logSecurityEvent({
+          event: 'legal_basis_created',
+          description: `New legal basis created: ${basisData.name} (${basisData.legal_basis_type})`,
+          severity: 'low',
+          metadata: {
+            legal_basis_id: data.id,
+            legal_basis_type: basisData.legal_basis_type,
+            legal_responsible_id: basisData.legal_responsible_id
+          }
+        });
+
+        } catch (logError) {
+
+          console.warn('Warning: Could not log security event:', logError);
+
         }
-      });
+      } catch (logError) {
+        console.warn('Warning: Could not log security event:', logError);
+      }
 
       await fetchLegalBases(); // Refresh data
 
@@ -242,6 +263,7 @@ export function useLegalBases() {
         description: updates.description ? sanitizeString(updates.description) : undefined,
         justification: updates.justification ? sanitizeString(updates.justification) : undefined,
         legal_article: updates.legal_article ? sanitizeString(updates.legal_article) : undefined,
+        updated_by: user?.id,
         updated_at: new Date().toISOString()
       };
 
@@ -257,7 +279,10 @@ export function useLegalBases() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'legal_basis_updated',
         description: `Legal basis updated: ${id}`,
         severity: 'low',
@@ -266,6 +291,15 @@ export function useLegalBases() {
           updates: Object.keys(cleanUpdates)
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchLegalBases(); // Refresh data
 
@@ -297,7 +331,10 @@ export function useLegalBases() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'legal_basis_suspended',
         description: `Legal basis suspended: ${id}`,
         severity: 'medium',
@@ -306,6 +343,15 @@ export function useLegalBases() {
           suspension_reason: sanitizedReason
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchLegalBases(); // Refresh data
 
@@ -335,7 +381,10 @@ export function useLegalBases() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'legal_basis_reactivated',
         description: `Legal basis reactivated: ${id}`,
         severity: 'low',
@@ -343,6 +392,15 @@ export function useLegalBases() {
           legal_basis_id: id
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchLegalBases(); // Refresh data
 
@@ -377,7 +435,10 @@ export function useLegalBases() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'legal_basis_validated',
         description: `Legal basis validation: ${validationData.basis_id} - ${validationData.is_valid ? 'Valid' : 'Invalid'}`,
         severity: validationData.is_valid ? 'low' : 'medium',
@@ -387,6 +448,15 @@ export function useLegalBases() {
           validated_by: validationData.validated_by
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchLegalBases(); // Refresh data
 
@@ -440,7 +510,10 @@ export function useLegalBases() {
           })
           .in('id', expiredIds);
 
-        await logSecurityEvent({
+        try {
+
+
+          await logSecurityEvent({
           event: 'legal_bases_auto_expired',
           description: `${expiredData.length} legal bases automatically expired`,
           severity: 'medium',
@@ -448,6 +521,15 @@ export function useLegalBases() {
             expired_basis_ids: expiredIds
           }
         });
+
+
+        } catch (logError) {
+
+
+          console.warn('Warning: Could not log security event:', logError);
+
+
+        }
       }
 
       return {

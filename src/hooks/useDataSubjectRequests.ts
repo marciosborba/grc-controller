@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DataSubjectRequest, DataSubjectRequestType, DataSubjectRequestStatus, VerificationMethod, ResponseMethod } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface RequestFilters {
   status?: string;
@@ -54,6 +55,7 @@ export interface RequestAssignmentData {
 }
 
 export function useDataSubjectRequests() {
+  const { user } = useAuth();
   const [requests, setRequests] = useState<DataSubjectRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<RequestStats>({
@@ -87,14 +89,8 @@ export function useDataSubjectRequests() {
 
       let query = supabase
         .from('data_subject_requests')
-        .select(`
-          *,
-          assigned_user:assigned_to(email, raw_user_meta_data),
-          verified_by_user:verified_by(email, raw_user_meta_data),
-          responded_by_user:responded_by(email, raw_user_meta_data),
-          escalated_to_user:escalated_to(email, raw_user_meta_data)
-        `)
-        .order('received_at', { ascending: false });
+        .select('*')
+        .order('created_at', { ascending: false });
 
       // Apply filters
       if (filters.status) {
@@ -145,11 +141,19 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error fetching data subject requests:', error);
-      await logSecurityEvent({
+      try {
+
+        await logSecurityEvent({
         event: 'data_subject_requests_fetch_error',
         description: `Error fetching requests: ${error instanceof Error ? error.message : 'Unknown error'}`,
         severity: 'medium'
       });
+
+      } catch (logError) {
+
+        console.warn('Warning: Could not log security event:', logError);
+
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -250,7 +254,10 @@ export function useDataSubjectRequests() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'data_subject_request_created',
         description: `New data subject request created: ${requestData.request_type} for ${requestData.requester_email}`,
         severity: 'low',
@@ -260,6 +267,15 @@ export function useDataSubjectRequests() {
           requester_email: requestData.requester_email
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchRequests(); // Refresh data
 
@@ -283,6 +299,7 @@ export function useDataSubjectRequests() {
       const { error } = await supabase
         .from('data_subject_requests')
         .update({
+
           identity_verified: true,
           verification_method: verificationData.verification_method,
           verification_documents: verificationData.verification_documents,
@@ -290,13 +307,17 @@ export function useDataSubjectRequests() {
           verified_at: new Date().toISOString(),
           status: 'verified' as DataSubjectRequestStatus,
           internal_notes: sanitizedNotes,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', verificationData.request_id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'data_subject_request_verified',
         description: `Identity verified for request ${verificationData.request_id}`,
         severity: 'low',
@@ -306,6 +327,15 @@ export function useDataSubjectRequests() {
           verified_by: verificationData.verified_by
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchRequests(); // Refresh data
 
@@ -345,7 +375,10 @@ export function useDataSubjectRequests() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'data_subject_request_processed',
         description: `Request ${processingData.request_id} processed with status: ${processingData.status}`,
         severity: 'low',
@@ -355,6 +388,15 @@ export function useDataSubjectRequests() {
           response_method: processingData.response_method
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchRequests(); // Refresh data
 
@@ -378,16 +420,21 @@ export function useDataSubjectRequests() {
       const { error } = await supabase
         .from('data_subject_requests')
         .update({
+
           assigned_to: assignmentData.assigned_to,
           status: 'in_progress' as DataSubjectRequestStatus,
           internal_notes: sanitizedNotes,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', assignmentData.request_id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'data_subject_request_assigned',
         description: `Request ${assignmentData.request_id} assigned to ${assignmentData.assigned_to}`,
         severity: 'low',
@@ -396,6 +443,15 @@ export function useDataSubjectRequests() {
           assigned_to: assignmentData.assigned_to
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchRequests(); // Refresh data
 
@@ -418,18 +474,23 @@ export function useDataSubjectRequests() {
       const { error } = await supabase
         .from('data_subject_requests')
         .update({
+
           escalated: true,
           escalated_to: escalatedTo,
           escalated_at: new Date().toISOString(),
           escalation_reason: sanitizedReason,
           status: 'escalated' as DataSubjectRequestStatus,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', requestId);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'data_subject_request_escalated',
         description: `Request ${requestId} escalated to ${escalatedTo}`,
         severity: 'medium',
@@ -439,6 +500,15 @@ export function useDataSubjectRequests() {
           escalation_reason: sanitizedReason
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchRequests(); // Refresh data
 

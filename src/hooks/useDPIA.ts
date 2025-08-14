@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DPIAAssessment } from '@/types/privacy-management';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface DPIAFilters {
   status?: string;
@@ -21,6 +22,7 @@ export interface DPIAStats {
 }
 
 export function useDPIA() {
+  const { user } = useAuth();
   const [dpias, setDpias] = useState<DPIAAssessment[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<DPIAStats>({
@@ -40,12 +42,7 @@ export function useDPIA() {
 
       let query = supabase
         .from('dpia_assessments')
-        .select(`
-          *,
-          processing_activity:processing_activities(name, description),
-          conducted_by_user:conducted_by(email, raw_user_meta_data),
-          reviewed_by_user:reviewed_by(email, raw_user_meta_data)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -130,7 +127,9 @@ export function useDPIA() {
         .from('dpia_assessments')
         .insert([{
           ...dpiaData,
-          started_at: new Date().toISOString()
+          started_at: new Date().toISOString(),
+          created_by: user?.id,
+          updated_by: user?.id
         }])
         .select()
         .single();
@@ -156,9 +155,11 @@ export function useDPIA() {
       const { error } = await supabase
         .from('dpia_assessments')
         .update({
+
           ...updates,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', id);
 
       if (error) throw error;

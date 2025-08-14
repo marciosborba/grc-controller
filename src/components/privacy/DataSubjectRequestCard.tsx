@@ -201,7 +201,7 @@ export function DataSubjectRequestCard({
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-lg font-semibold text-foreground">
-                    {request.requester_name}
+                    {request.data_subject_name}
                   </h3>
                   {request.identity_verified && (
                     <Shield className="w-4 h-4 text-green-600" title="Identidade Verificada" />
@@ -238,7 +238,7 @@ export function DataSubjectRequestCard({
                 <div className="flex items-center space-x-2">
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Email:</span>
-                  <span className="font-medium">{request.requester_email}</span>
+                  <span className="font-medium">{request.data_subject_email}</span>
                 </div>
                 
                 <div className="flex items-center space-x-2">
@@ -269,10 +269,10 @@ export function DataSubjectRequestCard({
               </div>
 
               {/* Description */}
-              {request.request_description && (
+              {request.description && (
                 <div className="bg-muted p-3 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    <strong>Descrição:</strong> {request.request_description}
+                    <strong>Descrição:</strong> {request.description}
                   </p>
                 </div>
               )}

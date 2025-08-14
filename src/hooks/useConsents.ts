@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Consent, ConsentStatus, CollectionMethod } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ConsentFilters {
   status?: ConsentStatus;
@@ -45,6 +46,7 @@ export interface ConsentRenewal {
 }
 
 export function useConsents() {
+  const { user } = useAuth();
   const [consents, setConsents] = useState<Consent[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ConsentStats>({
@@ -75,12 +77,7 @@ export function useConsents() {
 
       let query = supabase
         .from('consents')
-        .select(`
-          *,
-          legal_basis:legal_basis_id(name, legal_basis_type),
-          created_by_user:created_by(email, raw_user_meta_data),
-          updated_by_user:updated_by(email, raw_user_meta_data)
-        `)
+        .select('*')
         .order('granted_at', { ascending: false });
 
       // Apply filters
@@ -133,11 +130,19 @@ export function useConsents() {
 
     } catch (error) {
       console.error('Error fetching consents:', error);
-      await logSecurityEvent({
+      try {
+
+        await logSecurityEvent({
         event: 'consents_fetch_error',
         description: `Error fetching consents: ${error instanceof Error ? error.message : 'Unknown error'}`,
         severity: 'medium'
       });
+
+      } catch (logError) {
+
+        console.warn('Warning: Could not log security event:', logError);
+
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -226,7 +231,9 @@ export function useConsents() {
         is_specific: true,
         is_free: true,
         is_unambiguous: true,
-        language: 'pt-BR'
+        language: 'pt-BR',
+        created_by: user?.id,
+        updated_by: user?.id
       };
 
       const { data, error } = await supabase
@@ -237,7 +244,10 @@ export function useConsents() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'consent_created',
         description: `New consent created for ${consentData.data_subject_email}`,
         severity: 'low',
@@ -248,6 +258,15 @@ export function useConsents() {
           collection_method: consentData.collection_method
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchConsents(); // Refresh data
 
@@ -273,14 +292,17 @@ export function useConsents() {
         .update({
           status: 'revoked' as ConsentStatus,
           revoked_at: new Date().toISOString(),
-          revocation_reason: sanitizedReason,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', revocationData.consent_id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'consent_revoked',
         description: `Consent revoked: ${revocationData.consent_id}`,
         severity: 'medium',
@@ -291,6 +313,15 @@ export function useConsents() {
           notification_method: revocationData.notification_method
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchConsents(); // Refresh data
 
@@ -312,17 +343,20 @@ export function useConsents() {
         .from('consents')
         .update({
           status: 'granted' as ConsentStatus,
-          expired_at: renewalData.new_expiry_date,
+          expires_at: renewalData.new_expiry_date,
           collection_method: renewalData.renewal_method,
-          evidence_url: renewalData.renewal_evidence_url,
           granted_at: new Date().toISOString(), // New grant date for renewal
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
         })
         .eq('id', renewalData.consent_id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'consent_renewed',
         description: `Consent renewed: ${renewalData.consent_id}`,
         severity: 'low',
@@ -333,6 +367,15 @@ export function useConsents() {
           renewed_by: renewalData.renewed_by
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchConsents(); // Refresh data
 
@@ -386,7 +429,10 @@ export function useConsents() {
           })
           .in('id', expiredIds);
 
-        await logSecurityEvent({
+        try {
+
+
+          await logSecurityEvent({
           event: 'consents_auto_expired',
           description: `${expiredData.length} consents automatically expired`,
           severity: 'medium',
@@ -394,6 +440,15 @@ export function useConsents() {
             expired_consent_ids: expiredIds
           }
         });
+
+
+        } catch (logError) {
+
+
+          console.warn('Warning: Could not log security event:', logError);
+
+
+        }
       }
 
       return {
@@ -412,10 +467,7 @@ export function useConsents() {
     try {
       const { data, error } = await supabase
         .from('consents')
-        .select(`
-          *,
-          legal_basis:legal_basis_id(name, legal_basis_type)
-        `)
+        .select('*')
         .eq('data_subject_email', email.toLowerCase())
         .order('granted_at', { ascending: false });
 
@@ -470,14 +522,17 @@ export function useConsents() {
         .update({
           status: 'revoked' as ConsentStatus,
           revoked_at: new Date().toISOString(),
-          revocation_reason: sanitizedReason,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
         })
         .in('id', ids);
 
       if (updateError) throw updateError;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'consents_bulk_revoked',
         description: `${ids.length} consents bulk revoked`,
         severity: 'high',
@@ -487,6 +542,15 @@ export function useConsents() {
           revocation_reason: sanitizedReason
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchConsents(); // Refresh data
 
@@ -507,10 +571,7 @@ export function useConsents() {
     try {
       const { data, error } = await supabase
         .from('consents')
-        .select(`
-          *,
-          legal_basis:legal_basis_id(name, legal_basis_type)
-        `)
+        .select('*')
         .order('granted_at', { ascending: false });
 
       if (error) throw error;

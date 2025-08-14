@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Search, Database, CheckCircle, AlertTriangle, Calendar, Users, FileText, Filter, MoreHorizontal, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Database, CheckCircle, AlertTriangle, Calendar, Users, FileText, Filter, MoreHorizontal, Eye, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { CreateDataInventoryDialog } from './CreateDataInventoryDialog';
 import { DataInventoryCard } from './DataInventoryCard';
 
 export function DataInventoryPage() {
+  const navigate = useNavigate();
   const {
     inventoryItems,
     state,
@@ -135,11 +137,21 @@ export function DataInventoryPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Inventário de Dados Pessoais</h1>
-          <p className="text-muted-foreground">
-            Catálogo completo de dados pessoais tratados pela organização
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">Inventário de Dados Pessoais</h1>
+            <p className="text-muted-foreground">
+              Catálogo completo de dados pessoais tratados pela organização
+            </p>
+          </div>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
           <Plus className="w-4 h-4" />

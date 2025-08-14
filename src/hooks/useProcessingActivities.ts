@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ProcessingActivity, ProcessingActivityStatus, DataCategory, ProcessingPurpose } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ProcessingActivityFilters {
   status?: ProcessingActivityStatus;
@@ -51,6 +52,7 @@ export interface ProcessingActivityReview {
 }
 
 export function useProcessingActivities() {
+  const { user } = useAuth();
   const [activities, setActivities] = useState<ProcessingActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ProcessingActivityStats>({
@@ -89,12 +91,7 @@ export function useProcessingActivities() {
 
       let query = supabase
         .from('processing_activities')
-        .select(`
-          *,
-          legal_basis:legal_basis_id(name, legal_basis_type),
-          created_by_user:created_by(email, raw_user_meta_data),
-          updated_by_user:updated_by(email, raw_user_meta_data)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -141,11 +138,19 @@ export function useProcessingActivities() {
 
     } catch (error) {
       console.error('Error fetching processing activities:', error);
-      await logSecurityEvent({
+      try {
+
+        await logSecurityEvent({
         event: 'processing_activities_fetch_error',
         description: `Error fetching processing activities: ${error instanceof Error ? error.message : 'Unknown error'}`,
         severity: 'medium'
       });
+
+      } catch (logError) {
+
+        console.warn('Warning: Could not log security event:', logError);
+
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -255,7 +260,10 @@ export function useProcessingActivities() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_created',
         description: `New processing activity created: ${activityData.name}`,
         severity: 'low',
@@ -267,6 +275,15 @@ export function useProcessingActivities() {
           is_high_risk: activityData.is_high_risk
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -304,7 +321,10 @@ export function useProcessingActivities() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_updated',
         description: `Processing activity updated: ${id}`,
         severity: 'low',
@@ -313,6 +333,15 @@ export function useProcessingActivities() {
           updated_fields: Object.keys(sanitizedData)
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -335,16 +364,21 @@ export function useProcessingActivities() {
       const { error } = await supabase
         .from('processing_activities')
         .update({
+
           status: 'suspended' as ProcessingActivityStatus,
           suspension_reason: sanitizedReason,
           suspended_at: new Date().toISOString(),
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_suspended',
         description: `Processing activity suspended: ${id}`,
         severity: 'medium',
@@ -353,6 +387,15 @@ export function useProcessingActivities() {
           suspension_reason: sanitizedReason
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -373,16 +416,21 @@ export function useProcessingActivities() {
       const { error } = await supabase
         .from('processing_activities')
         .update({
+
           status: 'active' as ProcessingActivityStatus,
           suspension_reason: null,
           suspended_at: null,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_reactivated',
         description: `Processing activity reactivated: ${id}`,
         severity: 'low',
@@ -390,6 +438,15 @@ export function useProcessingActivities() {
           activity_id: id
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -410,17 +467,22 @@ export function useProcessingActivities() {
       const { error } = await supabase
         .from('processing_activities')
         .update({
+
           is_compliant: validationData.is_compliant,
           validation_notes: validationData.validation_notes,
           validated_by: validationData.validated_by,
           validated_at: validationData.validation_date,
+          updated_by: user?.id,
           updated_at: new Date().toISOString()
-        })
+      })
         .eq('id', validationData.activity_id);
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_validated',
         description: `Processing activity validation: ${validationData.activity_id}`,
         severity: 'medium',
@@ -432,6 +494,15 @@ export function useProcessingActivities() {
           recommendations: validationData.recommendations
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -469,7 +540,10 @@ export function useProcessingActivities() {
 
       if (error) throw error;
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'processing_activity_reviewed',
         description: `Processing activity reviewed: ${reviewData.activity_id}`,
         severity: 'medium',
@@ -480,6 +554,15 @@ export function useProcessingActivities() {
           review_notes: sanitizedNotes
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       await fetchActivities(); // Refresh data
 
@@ -558,7 +641,10 @@ export function useProcessingActivities() {
         recommendation = 'A atividade apresenta baixo risco, mas deve continuar seguindo as melhores práticas de proteção de dados.';
       }
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'dpia_recommendation_generated',
         description: `DPIA recommendation generated for activity: ${id}`,
         severity: 'low',
@@ -569,6 +655,15 @@ export function useProcessingActivities() {
           risk_factors: riskFactors
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       return {
         requires_dpia: requiresDPIA,
@@ -594,10 +689,7 @@ export function useProcessingActivities() {
       // Fetch all activities with related data
       const { data, error } = await supabase
         .from('processing_activities')
-        .select(`
-          *,
-          legal_basis:legal_basis_id(name, legal_basis_type)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -617,7 +709,10 @@ export function useProcessingActivities() {
         filteredData = filteredData.filter(a => a.is_high_risk);
       }
 
-      await logSecurityEvent({
+      try {
+
+
+        await logSecurityEvent({
         event: 'rat_report_generated',
         description: `RAT report generated with ${filteredData.length} activities`,
         severity: 'low',
@@ -626,6 +721,15 @@ export function useProcessingActivities() {
           filters: filters
         }
       });
+
+
+      } catch (logError) {
+
+
+        console.warn('Warning: Could not log security event:', logError);
+
+
+      }
 
       return {
         activities: filteredData,

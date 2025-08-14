@@ -25,6 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { supabase } from '@/integrations/supabase/client';
+import { DevAuthHelper } from './DevAuthHelper';
 
 export function PrivacyDashboard() {
   const navigate = useNavigate();
@@ -122,7 +123,7 @@ export function PrivacyDashboard() {
       icon: Users,
       color: 'purple',
       action: () => navigate('/privacy/requests'),
-      count: metrics?.data_subject_requests?.pending_requests || 0
+      count: metrics?.data_subject_requests?.total_requests || 0
     },
     {
       title: 'Incidentes de Privacidade',
@@ -130,7 +131,7 @@ export function PrivacyDashboard() {
       icon: AlertTriangle,
       color: 'red',
       action: () => navigate('/privacy/incidents'),
-      count: metrics?.privacy_incidents?.open_incidents || 0
+      count: metrics?.privacy_incidents?.total_incidents || 0
     },
     {
       title: 'DPIA/AIPD',
@@ -138,7 +139,7 @@ export function PrivacyDashboard() {
       icon: Shield,
       color: 'orange',
       action: () => navigate('/privacy/dpia'),
-      count: metrics?.dpia_assessments?.pending_dpias || 0
+      count: metrics?.dpia_assessments?.total_dpias || 0
     },
     {
       title: 'Bases Legais',
@@ -176,6 +177,16 @@ export function PrivacyDashboard() {
 
   const complianceScore = 85; // Mock score - would be calculated from actual data
 
+  // Check if we have no data (user likely not authenticated)
+  const hasNoData = metrics && (
+    !metrics.legal_bases?.total_bases &&
+    !metrics.consents?.total_active &&
+    !metrics.data_inventory?.total_inventories &&
+    !metrics.data_subject_requests?.total_requests &&
+    !metrics.privacy_incidents?.total_incidents &&
+    !metrics.processing_activities?.total_activities
+  );
+
   if (loading) {
     return (
       <div className="container mx-auto py-6">
@@ -205,6 +216,11 @@ export function PrivacyDashboard() {
         </div>
       </div>
 
+      {/* Development Auth Helper - Show when no data available */}
+      {hasNoData && (
+        <DevAuthHelper />
+      )}
+
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
@@ -222,28 +238,28 @@ export function PrivacyDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Solicitações Ativas</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.data_subject_requests?.pending_requests || 0}</div>
+            <div className="text-2xl font-bold">{metrics?.data_subject_requests?.total_requests || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {metrics?.data_subject_requests?.overdue_requests || 0} em atraso
+              {metrics?.data_subject_requests?.pending_requests || 0} pendentes | {metrics?.data_subject_requests?.overdue_requests || 0} em atraso
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Incidentes Abertos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Incidentes</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {metrics?.privacy_incidents?.open_incidents || 0}
+              {metrics?.privacy_incidents?.total_incidents || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {metrics?.privacy_incidents?.anpd_notifications_required || 0} requer notificação ANPD
+              {metrics?.privacy_incidents?.open_incidents || 0} abertos | {metrics?.privacy_incidents?.anpd_notifications_required || 0} requer ANPD
             </p>
           </CardContent>
         </Card>

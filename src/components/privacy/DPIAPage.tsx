@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Filter, Search, AlertTriangle, CheckCircle, Clock, Shield, Download, Copy } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Filter, Search, AlertTriangle, CheckCircle, Clock, Shield, Download, Copy, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { DPIACard } from './DPIACard';
 import { CreateDPIADialog } from './CreateDPIADialog';
 
 export function DPIAPage() {
+  const navigate = useNavigate();
   const { 
     dpias, 
     loading, 
@@ -154,13 +156,23 @@ export function DPIAPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            DPIA - Data Protection Impact Assessment
-          </h1>
-          <p className="text-muted-foreground">
-            Avaliação de impacto à proteção de dados pessoais
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">
+              DPIA - Data Protection Impact Assessment
+            </h1>
+            <p className="text-muted-foreground">
+              Avaliação de impacto à proteção de dados pessoais
+            </p>
+          </div>
         </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

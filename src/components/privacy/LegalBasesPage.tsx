@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -15,7 +16,8 @@ import {
   Calendar,
   Users,
   FileText,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,7 @@ import { LegalBasisCard } from './LegalBasisCard';
 import { CreateLegalBasisDialog } from './CreateLegalBasisDialog';
 
 export function LegalBasesPage() {
+  const navigate = useNavigate();
   const {
     legalBases,
     loading,
@@ -201,13 +204,23 @@ export function LegalBasesPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Bases Legais LGPD
-          </h1>
-          <p className="text-muted-foreground">
-            Gestão de bases legais para tratamento de dados pessoais
-          </p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/privacy')}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-3xl font-bold text-foreground">
+              Bases Legais LGPD
+            </h1>
+            <p className="text-muted-foreground">
+              Gestão de bases legais para tratamento de dados pessoais
+            </p>
+          </div>
         </div>
         
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
