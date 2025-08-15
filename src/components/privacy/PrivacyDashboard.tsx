@@ -300,56 +300,72 @@ export function PrivacyDashboard() {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Itens no Inventário</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics?.data_inventory?.total_inventories || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics?.data_inventory?.needs_review || 0} precisam revisão
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics?.data_subject_requests?.total_requests || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics?.data_subject_requests?.pending_requests || 0} pendentes | {metrics?.data_subject_requests?.overdue_requests || 0} em atraso
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Incidentes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {metrics?.privacy_incidents?.total_incidents || 0}
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[120px] text-center">
+              <div className="flex justify-center mb-2">
+                <Database className="h-5 w-5 text-blue-500" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Itens no Inventário</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.data_inventory?.total_inventories || 0}</p>
+                <p className="text-xs text-muted-foreground leading-tight">
+                  {metrics?.data_inventory?.needs_review || 0} precisam revisão
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {metrics?.privacy_incidents?.open_incidents || 0} abertos | {metrics?.privacy_incidents?.anpd_notifications_required || 0} requer ANPD
-            </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Consentimentos</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{metrics?.consents?.total_active || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {metrics?.consents?.expiring_soon || 0} vencem em breve
-            </p>
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[120px] text-center">
+              <div className="flex justify-center mb-2">
+                <Users className="h-5 w-5 text-purple-500" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Total de Solicitações</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.data_subject_requests?.total_requests || 0}</p>
+                <p className="text-xs text-muted-foreground leading-tight">
+                  {metrics?.data_subject_requests?.pending_requests || 0} pendentes | {metrics?.data_subject_requests?.overdue_requests || 0} em atraso
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[120px] text-center">
+              <div className="flex justify-center mb-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Total de Incidentes</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-red-600 mb-2 leading-none">
+                  {metrics?.privacy_incidents?.total_incidents || 0}
+                </p>
+                <p className="text-xs text-muted-foreground leading-tight">
+                  {metrics?.privacy_incidents?.open_incidents || 0} abertos | {metrics?.privacy_incidents?.anpd_notifications_required || 0} requer ANPD
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[120px] text-center">
+              <div className="flex justify-center mb-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Consentimentos</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.consents?.total_active || 0}</p>
+                <p className="text-xs text-muted-foreground leading-tight">
+                  {metrics?.consents?.expiring_soon || 0} vencem em breve
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

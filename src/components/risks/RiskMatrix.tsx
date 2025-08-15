@@ -1,25 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Target } from 'lucide-react';
 import type { MatrixSize, RiskLevel } from '@/types/risk-management';
-import { generateMatrixData, findRiskPositionInMatrix } from '@/utils/risk-analysis';
+import { generateMatrixData, findRiskPositionInMatrix, getTenantMatrixConfig } from '@/utils/risk-analysis';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RiskMatrixProps {
   probabilityScore: number;
   impactScore: number;
-  matrixSize: MatrixSize;
+  matrixSize?: MatrixSize;
   qualitativeLevel?: RiskLevel;
 }
 
 const RiskMatrix: React.FC<RiskMatrixProps> = ({ 
   probabilityScore, 
   impactScore, 
-  matrixSize,
+  matrixSize: propMatrixSize,
   qualitativeLevel
 }) => {
-  const matrixData = generateMatrixData(matrixSize);
-  const riskPosition = findRiskPositionInMatrix(probabilityScore, impactScore);
+  const { user } = useAuth();
+  const [matrixSize, setMatrixSize] = useState<MatrixSize>(propMatrixSize || '4x4');
+  const [matrixData, setMatrixData] = useState(generateMatrixData(matrixSize));
+  
+  useEffect(() => {
+    const loadTenantConfig = async () => {
+      if (user?.tenant?.id) {
+        const config = await getTenantMatrixConfig(user.tenant.id);
+        setMatrixSize(config.type);
+        setMatrixData(generateMatrixData(config.type));
+      } else if (propMatrixSize) {
+        setMatrixSize(propMatrixSize);
+        setMatrixData(generateMatrixData(propMatrixSize));
+      }
+    };
+    
+    loadTenantConfig();
+  }, [user?.tenant?.id, propMatrixSize]);
+  
+  const riskPosition = findRiskPositionInMatrix(probabilityScore, impactScore, matrixSize);
   
   const size = matrixSize === '4x4' ? 4 : 5;
   const cellSize = size === 4 ? 'h-16 w-16' : 'h-12 w-12';
@@ -153,7 +172,7 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
 
           {/* Legenda */}
           <div className="mt-6">
-            <h6 className="font-medium mb-3 text-center">Legenda dos Níveis de Risco</h6>
+            <h6 className="font-medium mb-3 text-center">Legenda dos Níveis de Risco (Matriz {matrixSize})</h6>
             <div className="flex flex-wrap justify-center gap-2">
               {[
                 { level: 'Muito Baixo', color: '#22c55e' },

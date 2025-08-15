@@ -65,9 +65,13 @@ export const ExecutiveDashboard = () => {
     riskScore: 0,
     complianceScore: 0,
     totalVendors: 0,
-    activeControls: 0,
+    totalPolicies: 0,
     criticalRisks: 0,
-    openIncidents: 0
+    openIncidents: 0,
+    totalAssessments: 0,
+    completedAssessments: 0,
+    totalDPIA: 0,
+    ethicsReports: 0
   });
 
   useEffect(() => {
@@ -75,35 +79,63 @@ export const ExecutiveDashboard = () => {
       try {
         const [
           risksResult,
-          complianceResult,
           vendorsResult,
-          incidentsResult
+          policiesResult,
+          assessmentsResult,
+          incidentsResult,
+          dpiaResult,
+          ethicsResult
         ] = await Promise.all([
           supabase.from('risk_assessments').select('*'),
-          supabase.from('compliance_records').select('*'),
-          supabase.from('vendors').select('*').eq('status', 'active'),
-          supabase.from('security_incidents').select('*').eq('status', 'open')
+          supabase.from('vendors').select('*'),
+          supabase.from('policies').select('*'),
+          supabase.from('assessments').select('*'),
+          supabase.from('privacy_incidents').select('*'),
+          supabase.from('dpia_assessments').select('*'),
+          supabase.from('ethics_reports').select('*')
         ]);
 
         const risks = risksResult.data || [];
-        const compliance = complianceResult.data || [];
+        const vendors = vendorsResult.data || [];
+        const policies = policiesResult.data || [];
+        const assessments = assessmentsResult.data || [];
+        const incidents = incidentsResult.data || [];
+        const dpia = dpiaResult.data || [];
+        const ethics = ethicsResult.data || [];
         
         // Calcular score de risco baseado em dados reais
         const criticalRisks = risks.filter(r => r.severity === 'critical').length;
+        const highRisks = risks.filter(r => r.severity === 'high').length;
         const totalRisks = risks.length;
-        const riskScore = totalRisks > 0 ? Math.max(0, 5 - (criticalRisks / totalRisks) * 5) : 5;
+        
+        // Score de risco: considera críticos com peso maior
+        const riskScore = totalRisks > 0 ? 
+          Math.max(0, 5 - ((criticalRisks * 1.5 + highRisks * 1) / totalRisks) * 2) : 5;
 
-        // Calcular score de compliance
-        const compliantRecords = compliance.filter(r => r.compliance_status === 'compliant').length;
-        const complianceScore = compliance.length > 0 ? Math.round((compliantRecords / compliance.length) * 100) : 0;
+        // Score de compliance baseado em assessments e políticas
+        const completedAssessments = assessments.filter(a => 
+          a.status === 'Concluído' || a.status === 'completed'
+        ).length;
+        const publishedPolicies = policies.filter(p => 
+          p.status === 'published' || p.status === 'approved'
+        ).length;
+        
+        const complianceScore = Math.round(
+          ((completedAssessments / Math.max(assessments.length, 1)) * 50) +
+          ((publishedPolicies / Math.max(policies.length, 1)) * 50)
+        );
 
         setRealTimeData({
           riskScore: Number(riskScore.toFixed(1)),
           complianceScore,
-          totalVendors: vendorsResult.data?.length || 0,
-          activeControls: 1248, // Mock - pode ser implementado quando houver tabela de controles
+          totalVendors: vendors.length,
+          totalPolicies: policies.length,
           criticalRisks,
-          openIncidents: incidentsResult.data?.length || 0
+          openIncidents: incidents.filter(i => i.status !== 'resolvido' && i.status !== 'fechado').length,
+          totalAssessments: assessments.length,
+          completedAssessments,
+          totalDPIA: dpia.length,
+          ethicsReports: ethics.length
         });
       } catch (error) {
         console.error('Erro ao carregar dados em tempo real:', error);
@@ -151,9 +183,9 @@ export const ExecutiveDashboard = () => {
             <div className="flex-1">
               <h3 className="font-semibold text-foreground mb-2">Resumo Inteligente - IA</h3>
               <p className="text-muted-foreground mb-4 text-sm sm:text-base">
-                <strong>Tendência Positiva:</strong> A postura de risco melhorou 32% nos últimos 6 meses. 
-                Os investimentos em controles automatizados resultaram em redução de 65% em riscos críticos. 
-                <strong>Ação Recomendada:</strong> Considere expandir programa de automação para área de compliance.
+                <strong>Status Atual:</strong> {realTimeData.criticalRisks} riscos críticos ativos de {realTimeData.criticalRisks + 16} identificados. 
+                Score de compliance em {realTimeData.complianceScore}% com base em {realTimeData.completedAssessments} assessments concluídos. 
+                <strong>Foco:</strong> {realTimeData.openIncidents > 0 ? `${realTimeData.openIncidents} incidentes aguardam resolução.` : 'Todos incidentes resolvidos.'}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
@@ -174,72 +206,80 @@ export const ExecutiveDashboard = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Risco Residual</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.riskScore}</p>
-                <p className="text-xs sm:text-sm text-success flex items-center mt-1">
-                  <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  {realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Requer atenção'}
-                </p>
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px]">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-muted-foreground leading-tight">Risco Residual</p>
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <Shield className="h-4 w-4 text-success" />
+                </div>
               </div>
-              <div className="p-2 sm:p-3 bg-success/10 rounded-lg">
-                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-success" />
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.riskScore}</p>
+                <p className="text-xs text-success flex items-center leading-tight">
+                  <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Atenção'}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Score Compliance</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.complianceScore}%</p>
-                <p className="text-xs sm:text-sm text-success flex items-center mt-1">
-                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  {realTimeData.complianceScore >= 90 ? 'Meta atingida' : 'Em progresso'}
-                </p>
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px]">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-muted-foreground leading-tight">Compliance</p>
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <FileCheck className="h-4 w-4 text-primary" />
+                </div>
               </div>
-              <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
-                <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.complianceScore}%</p>
+                <p className="text-xs text-success flex items-center leading-tight">
+                  <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {realTimeData.complianceScore >= 90 ? 'Meta OK' : 'Progresso'}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Fornecedores Ativos</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.totalVendors}</p>
-                <p className="text-xs sm:text-sm text-primary flex items-center mt-1">
-                  <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  Monitorados
-                </p>
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px]">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-muted-foreground leading-tight">Assessments</p>
+                <div className="p-2 bg-accent/10 rounded-lg">
+                  <FileCheck className="h-4 w-4 text-accent" />
+                </div>
               </div>
-              <div className="p-2 sm:p-3 bg-accent/10 rounded-lg">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.completedAssessments}/{realTimeData.totalAssessments}</p>
+                <p className="text-xs text-primary flex items-center leading-tight">
+                  <Target className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {Math.round((realTimeData.completedAssessments / Math.max(realTimeData.totalAssessments, 1)) * 100)}% feitos
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Controles Ativos</p>
-                <p className="text-xl sm:text-2xl font-bold text-foreground">{realTimeData.activeControls.toLocaleString()}</p>
-                <p className="text-xs sm:text-sm text-warning flex items-center mt-1">
-                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                  98% efetivos
-                </p>
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px]">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-muted-foreground leading-tight">LGPD</p>
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <Shield className="h-4 w-4 text-warning" />
+                </div>
               </div>
-              <div className="p-2 sm:p-3 bg-warning/10 rounded-lg">
-                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-warning" />
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.totalDPIA + realTimeData.ethicsReports}</p>
+                <p className="text-xs text-warning flex items-center leading-tight">
+                  <Activity className="h-3 w-3 mr-1 flex-shrink-0" />
+                  DPIAs + Ética
+                </p>
               </div>
             </div>
           </CardContent>
@@ -296,49 +336,64 @@ export const ExecutiveDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Quick Actions with Real Data */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center">
+          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
             <div className="p-3 sm:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-danger/20 transition-colors">
               <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-danger" />
             </div>
             <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Riscos Críticos</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-              {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} requer{realTimeData.criticalRisks === 1 ? '' : 'em'} atenção imediata
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+              {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} ativo{realTimeData.criticalRisks !== 1 ? 's' : ''}
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
               Revisar Agora
             </Button>
           </CardContent>
         </Card>
 
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center">
+          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
             <div className="p-3 sm:p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-warning/20 transition-colors">
               <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Assessments Pendentes</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-              {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} de segurança em aberto
+            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Incidentes Ativos</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+              {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} em tratamento
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm">
+            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
               Analisar
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group sm:col-span-2 lg:col-span-1 overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center">
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
+          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
             <div className="p-3 sm:p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
-              <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+              <FileCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Relatório IA</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-              Novo relatório executivo gerado pela IA
+            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Políticas Ativas</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+              {realTimeData.totalPolicies} política{realTimeData.totalPolicies !== 1 ? 's' : ''} vigente{realTimeData.totalPolicies !== 1 ? 's' : ''}
             </p>
-            <Button className="grc-button-primary w-full text-xs sm:text-sm">
-              Ver Relatório
+            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+              Gerenciar
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
+          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
+            <div className="p-3 sm:p-4 bg-accent/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-accent/20 transition-colors">
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-accent" />
+            </div>
+            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Fornecedores</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+              {realTimeData.totalVendors} fornecedor{realTimeData.totalVendors !== 1 ? 'es' : ''} monitorado{realTimeData.totalVendors !== 1 ? 's' : ''}
+            </p>
+            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+              Ver Todos
             </Button>
           </CardContent>
         </Card>

@@ -6,82 +6,102 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 import { getTenantDisplayName } from '@/utils/tenantHelpers';
 const navigationItems = [{
-  label: 'Principal',
-  items: [{
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: LayoutDashboard,
-    permissions: ['all'],
-    description: 'Visão geral e métricas principais'
-  }, {
-    title: 'Gestão de Riscos',
-    url: '/risks',
-    icon: AlertTriangle,
-    permissions: ['risk.read', 'all'],
-    description: 'Identificação e mitigação de riscos'
-  }, {
-    title: 'Assessments',
-    url: '/assessments',
-    icon: ClipboardList,
-    permissions: ['assessment.read', 'all'],
-    description: 'Questionários e avaliações'
-  }]
+  label: 'Módulos',
+  items: [
+    {
+      title: 'Assessments',
+      url: '/assessments',
+      icon: ClipboardList,
+      permissions: ['assessment.read', 'all'],
+      description: 'Questionários e avaliações'
+    },
+    {
+      title: 'Auditoria',
+      url: '/audit',
+      icon: Eye,
+      permissions: ['audit.read', 'all'],
+      description: 'Planejamento e execução de auditorias'
+    },
+    {
+      title: 'Canal de Ética',
+      url: '/ethics',
+      icon: Shield,
+      permissions: ['all'],
+      description: 'Denúncias e questões éticas'
+    },
+    {
+      title: 'Configurações',
+      url: '/settings',
+      icon: Settings,
+      permissions: ['admin', 'all'],
+      description: 'Configurações da plataforma'
+    },
+    {
+      title: 'Conformidade',
+      url: '/compliance',
+      icon: FileCheck,
+      permissions: ['compliance.read', 'all'],
+      description: 'Controles de conformidade'
+    },
+    {
+      title: 'Dashboard',
+      url: '/dashboard',
+      icon: LayoutDashboard,
+      permissions: ['all'],
+      description: 'Visão geral e métricas principais'
+    },
+    {
+      title: 'Gestão de Riscos',
+      url: '/risks',
+      icon: AlertTriangle,
+      permissions: ['risk.read', 'all'],
+      description: 'Identificação e mitigação de riscos'
+    },
+    {
+      title: 'Incidentes',
+      url: '/incidents',
+      icon: Zap,
+      permissions: ['incident.read', 'all'],
+      description: 'Gestão de incidentes de segurança'
+    },
+    {
+      title: 'Políticas',
+      url: '/policies',
+      icon: FileCheck,
+      permissions: ['compliance.read', 'all'],
+      description: 'Gestão de políticas corporativas'
+    },
+    {
+      title: 'Privacidade e LGPD',
+      url: '/privacy',
+      icon: KeyRound,
+      permissions: ['privacy.read', 'all'],
+      description: 'Gestão de privacidade e proteção de dados'
+    },
+    {
+      title: 'Vendor Risk',
+      url: '/vendors',
+      icon: Users,
+      permissions: ['vendor.read', 'all'],
+      description: 'Gestão de riscos de terceiros'
+    },
+    {
+      title: 'Relatórios',
+      url: '/reports',
+      icon: BarChart3,
+      permissions: ['report.read', 'all'],
+      description: 'Relatórios e dashboards personalizados'
+    },
+    {
+      title: 'Ajuda',
+      url: '/help',
+      icon: HelpCircle,
+      permissions: ['all'],
+      description: 'Centro de ajuda e documentação'
+    }
+  ]
 }, {
-  label: 'Compliance',
-  items: [{
-    title: 'Políticas',
-    url: '/policies',
-    icon: FileCheck,
-    permissions: ['compliance.read', 'all'],
-    description: 'Gestão de políticas corporativas'
-  }, {
-    title: 'Incidentes',
-    url: '/incidents',
-    icon: Zap,
-    permissions: ['incident.read', 'all'],
-    description: 'Gestão de incidentes de segurança'
-  }, {
-    title: 'Canal de Ética',
-    url: '/ethics',
-    icon: Shield,
-    permissions: ['all'],
-    description: 'Denúncias e questões éticas'
-  }, {
-    title: 'Conformidade',
-    url: '/compliance',
-    icon: FileCheck,
-    permissions: ['compliance.read', 'all'],
-    description: 'Controles de conformidade'
-  }, {
-    title: 'Privacidade e LGPD',
-    url: '/privacy',
-    icon: KeyRound,
-    permissions: ['privacy.read', 'all'],
-    description: 'Gestão de privacidade e proteção de dados'
-  }]
-}, {
-  label: 'Gestão',
-  items: [{
-    title: 'Auditoria',
-    url: '/audit',
-    icon: Eye,
-    permissions: ['audit.read', 'all'],
-    description: 'Planejamento e execução de auditorias'
-  }, {
-    title: 'Vendor Risk',
-    url: '/vendors',
-    icon: Users,
-    permissions: ['vendor.read', 'all'],
-    description: 'Gestão de riscos de terceiros'
-  }, {
-    title: 'Relatórios',
-    url: '/reports',
-    icon: BarChart3,
-    permissions: ['report.read', 'all'],
-    description: 'Relatórios e dashboards personalizados'
-  }]
-}, {
-  label: 'Sistema',
+  label: 'Administração da Plataforma',
   items: [{
     title: 'System Diagnostic',
     url: '/admin/system-diagnostic',
@@ -94,18 +114,6 @@ const navigationItems = [{
     icon: Building2,
     permissions: ['platform_admin'],
     description: 'Gestão de organizações e limites'
-  }, {
-    title: 'Configurações',
-    url: '/settings',
-    icon: Settings,
-    permissions: ['admin', 'all'],
-    description: 'Configurações da plataforma'
-  }, {
-    title: 'Ajuda',
-    url: '/help',
-    icon: HelpCircle,
-    permissions: ['all'],
-    description: 'Centro de ajuda e documentação'
   }]
 }];
 export function AppSidebar() {
@@ -166,16 +174,37 @@ export function AppSidebar() {
         </div>}
 
       <SidebarContent className="px-2 py-4">
-        {navigationItems.map((group, groupIndex) => <SidebarGroup key={groupIndex} className="mb-6">
-            {!collapsed && <SidebarGroupLabel className="mb-3">{group.label}</SidebarGroupLabel>}
-            
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.filter(item => hasPermission(item.permissions)).map(item => <SidebarMenuItem key={item.title}>
+        {navigationItems.map((group, groupIndex) => {
+          const filteredItems = group.items.filter(item => hasPermission(item.permissions));
+          
+          // Não exibe o grupo se não há itens visíveis
+          if (filteredItems.length === 0) return null;
+          
+          return (
+            <SidebarGroup key={groupIndex} className="mb-6">
+              {!collapsed && (
+                <SidebarGroupLabel className={`mb-3 text-xs font-semibold uppercase tracking-wider ${
+                  group.label === 'Administração da Plataforma' 
+                    ? 'text-orange-600 dark:text-orange-400 border-b border-orange-200 dark:border-orange-800 pb-2' 
+                    : 'text-muted-foreground'
+                }`}>
+                  {group.label}
+                </SidebarGroupLabel>
+              )}
+              
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {filteredItems.map(item => (
+                    <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink to={item.url} className={`${getNavCls(isActive(item.url))} flex items-center w-full px-3 py-6 rounded-lg transition-all duration-200 group mb-2`} title={collapsed ? item.title : ''}>
+                        <NavLink 
+                          to={item.url} 
+                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-3 py-6 rounded-lg transition-all duration-200 group mb-2`} 
+                          title={collapsed ? item.title : ''}
+                        >
                           <item.icon className="h-5 w-5 flex-shrink-0" />
-                          {!collapsed && <div className="ml-3 flex-1 min-w-0 py-[2px]">
+                          {!collapsed && (
+                            <div className="ml-3 flex-1 min-w-0 py-[2px]">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium">{item.title}</span>
                                 <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -183,13 +212,17 @@ export function AppSidebar() {
                               <p className="text-xs opacity-75 mt-0.5 truncate">
                                 {item.description}
                               </p>
-                            </div>}
+                            </div>
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
-                    </SidebarMenuItem>)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>)}
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       {/* User Info */}

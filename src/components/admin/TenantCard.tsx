@@ -117,7 +117,7 @@ interface TenantUser {
 interface RiskMatrixConfig {
   type: '4x4' | '5x5';
   impact_labels: string[];
-  probability_labels: string[];
+  likelihood_labels: string[];
   risk_levels: {
     low: number[];
     medium: number[];
@@ -129,7 +129,7 @@ interface RiskMatrixConfig {
 const DEFAULT_RISK_MATRIX_4X4: RiskMatrixConfig = {
   type: '4x4',
   impact_labels: ['Insignificante', 'Menor', 'Moderado', 'Maior'],
-  probability_labels: ['Raro', 'Improvável', 'Possível', 'Provável'],
+  likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável'],
   risk_levels: {
     low: [1, 2, 4],
     medium: [3, 5, 6, 8],
@@ -141,7 +141,7 @@ const DEFAULT_RISK_MATRIX_4X4: RiskMatrixConfig = {
 const DEFAULT_RISK_MATRIX_5X5: RiskMatrixConfig = {
   type: '5x5',
   impact_labels: ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'],
-  probability_labels: ['Raro', 'Improvável', 'Possível', 'Provável', 'Quase Certo'],
+  likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável', 'Quase Certo'],
   risk_levels: {
     low: [1, 2, 3, 5, 6],
     medium: [4, 7, 8, 9, 10, 11],
@@ -173,9 +173,28 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   });
 
   // Estados para matriz de riscos
-  const [riskMatrix, setRiskMatrix] = useState<RiskMatrixConfig>(
-    (tenant.settings?.risk_matrix as RiskMatrixConfig) || DEFAULT_RISK_MATRIX_4X4
-  );
+  const [riskMatrix, setRiskMatrix] = useState<RiskMatrixConfig>(() => {
+    const savedMatrix = tenant.settings?.risk_matrix;
+    
+    // Se não há configuração salva, usar padrão 4x4
+    if (!savedMatrix) {
+      return DEFAULT_RISK_MATRIX_4X4;
+    }
+    
+    // Converter configuração salva para estrutura esperada
+    if (savedMatrix.likelihood_labels && !savedMatrix.probability_labels) {
+      // Estrutura nova do banco de dados
+      return {
+        type: savedMatrix.type || '4x4',
+        impact_labels: savedMatrix.impact_labels || DEFAULT_RISK_MATRIX_4X4.impact_labels,
+        likelihood_labels: savedMatrix.likelihood_labels || DEFAULT_RISK_MATRIX_4X4.likelihood_labels,
+        risk_levels: savedMatrix.risk_levels || (savedMatrix.type === '5x5' ? DEFAULT_RISK_MATRIX_5X5.risk_levels : DEFAULT_RISK_MATRIX_4X4.risk_levels)
+      };
+    }
+    
+    // Estrutura antiga ou já compatível
+    return (savedMatrix as RiskMatrixConfig) || DEFAULT_RISK_MATRIX_4X4;
+  });
 
   // Estados para configuração de usuários
   const [userConfig, setUserConfig] = useState({
@@ -337,9 +356,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       impact_labels: riskMatrix.impact_labels.length === defaultMatrix.impact_labels.length 
         ? riskMatrix.impact_labels 
         : defaultMatrix.impact_labels,
-      probability_labels: riskMatrix.probability_labels.length === defaultMatrix.probability_labels.length
-        ? riskMatrix.probability_labels
-        : defaultMatrix.probability_labels
+      likelihood_labels: riskMatrix.likelihood_labels?.length === defaultMatrix.likelihood_labels.length
+        ? riskMatrix.likelihood_labels
+        : defaultMatrix.likelihood_labels
     });
   };
 
@@ -920,7 +939,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                       <div>
                         <span className="font-medium">Níveis de Probabilidade:</span>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          {riskMatrix.probability_labels.join(' • ')}
+                          {riskMatrix.likelihood_labels?.join(' • ') || 'Não configurado'}
                         </div>
                       </div>
                     </div>
@@ -1279,15 +1298,15 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
             <div>
               <Label>Níveis de Probabilidade</Label>
               <div className="grid gap-2 mt-2">
-                {riskMatrix.probability_labels.map((label, index) => (
+                {riskMatrix.likelihood_labels?.map((label, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <span className="text-sm font-mono w-6">{index + 1}:</span>
                     <Input
                       value={label}
                       onChange={(e) => {
-                        const newLabels = [...riskMatrix.probability_labels];
+                        const newLabels = [...(riskMatrix.likelihood_labels || [])];
                         newLabels[index] = e.target.value;
-                        setRiskMatrix({ ...riskMatrix, probability_labels: newLabels });
+                        setRiskMatrix({ ...riskMatrix, likelihood_labels: newLabels });
                       }}
                       placeholder={`Nível de probabilidade ${index + 1}`}
                     />
@@ -1300,39 +1319,103 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
             <div>
               <Label>Preview da Matriz</Label>
               <div className="mt-2 p-4 border rounded-lg bg-gray-50">
-                <div className="grid gap-1" style={{ 
-                  gridTemplateColumns: `auto repeat(${riskMatrix.type === '4x4' ? 4 : 5}, 1fr)` 
-                }}>
-                  {/* Header */}
-                  <div></div>
-                  {riskMatrix.impact_labels.map((label, index) => (
-                    <div key={index} className="text-xs font-medium text-center p-2 bg-white rounded">
-                      {label}
-                    </div>
-                  ))}
-                  
-                  {/* Rows */}
-                  {riskMatrix.probability_labels.map((probLabel, probIndex) => (
-                    <React.Fragment key={probIndex}>
-                      <div className="text-xs font-medium p-2 bg-white rounded">
-                        {probLabel}
+                <div className="max-w-md mx-auto">
+                  {/* Matrix Container */}
+                  <div className="inline-block">
+                    <div className="flex">
+                      <div className="flex flex-col justify-center items-center mr-2">
+                        <div className="text-xs font-medium text-muted-foreground transform -rotate-90 whitespace-nowrap">
+                          IMPACTO
+                        </div>
                       </div>
-                      {riskMatrix.impact_labels.map((impactLabel, impactIndex) => {
-                        const riskValue = (probIndex + 1) * (impactIndex + 1);
-                        let bgColor = 'bg-green-100';
-                        
-                        if (riskMatrix.risk_levels.critical.includes(riskValue)) bgColor = 'bg-red-200';
-                        else if (riskMatrix.risk_levels.high.includes(riskValue)) bgColor = 'bg-orange-200';
-                        else if (riskMatrix.risk_levels.medium.includes(riskValue)) bgColor = 'bg-yellow-200';
-                        
-                        return (
-                          <div key={impactIndex} className={`text-xs text-center p-2 rounded ${bgColor}`}>
-                            {riskValue}
+                      
+                      <div className="space-y-0">
+                        {/* Y-axis numbers */}
+                        <div className="flex">
+                          <div className="flex flex-col space-y-0 mr-1">
+                            {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, i) => (
+                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground`}>
+                                {(riskMatrix.type === '4x4' ? 4 : 5) - i}
+                              </div>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
+                          
+                          {/* Grid Matrix */}
+                          <div className={`grid ${riskMatrix.type === '4x4' ? 'grid-rows-4' : 'grid-rows-5'} gap-0`}>
+                            {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, rowIndex) => (
+                              <div key={rowIndex} className={`grid ${riskMatrix.type === '4x4' ? 'grid-cols-4' : 'grid-cols-5'} gap-0`}>
+                                {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, colIndex) => {
+                                  const riskValue = ((riskMatrix.type === '4x4' ? 4 : 5) - rowIndex) * (colIndex + 1);
+                                  let backgroundColor = '#22c55e'; // Verde (Muito Baixo)
+                                  
+                                  if (riskMatrix.risk_levels.critical.includes(riskValue)) {
+                                    backgroundColor = '#ef4444'; // Vermelho (Muito Alto)
+                                  } else if (riskMatrix.risk_levels.high.includes(riskValue)) {
+                                    backgroundColor = '#f97316'; // Laranja (Alto)
+                                  } else if (riskMatrix.risk_levels.medium.includes(riskValue)) {
+                                    backgroundColor = '#eab308'; // Amarelo (Médio)
+                                  } else if (riskMatrix.risk_levels.low && riskMatrix.risk_levels.low.includes(riskValue)) {
+                                    backgroundColor = '#84cc16'; // Verde claro (Baixo)
+                                  }
+                                  
+                                  return (
+                                    <div
+                                      key={colIndex}
+                                      className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} border border-white/30 flex items-center justify-center`}
+                                      style={{ backgroundColor }}
+                                    >
+                                      <span className={`${riskMatrix.type === '4x4' ? 'text-xs' : 'text-[10px]'} font-medium text-white drop-shadow-sm`}>
+                                        {riskValue}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* X-axis numbers */}
+                        <div className="flex justify-center mt-1">
+                          <div className={`flex space-x-0 ${riskMatrix.type === '4x4' ? 'ml-9' : 'ml-7'}`}>
+                            {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, i) => (
+                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground`}>
+                                {i + 1}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="text-center mt-1">
+                          <div className="text-xs font-medium text-muted-foreground">PROBABILIDADE</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compact Legend */}
+                  <div className="mt-4">
+                    <div className="flex flex-wrap justify-center gap-2 text-xs">
+                      {[
+                        { level: 'Muito Alto', color: '#ef4444' },
+                        { level: 'Alto', color: '#f97316' },
+                        { level: 'Médio', color: '#eab308' },
+                        { level: 'Baixo', color: '#84cc16' },
+                        { level: 'Muito Baixo', color: '#22c55e' }
+                      ].map(({ level, color }) => (
+                        <div key={level} className="flex items-center space-x-1">
+                          <div className="w-3 h-3 rounded border" style={{ backgroundColor: color }}></div>
+                          <span className="text-xs">{level}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      Matriz {riskMatrix.type} • {(riskMatrix.type === '4x4' ? 4 : 5) * (riskMatrix.type === '4x4' ? 4 : 5)} combinações possíveis
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

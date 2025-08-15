@@ -84,6 +84,7 @@ import {
 } from '@/data/risk-assessment-questions';
 import { 
   processRiskAnalysis, 
+  processRiskAnalysisWithTenantConfig,
   generateMatrixData, 
   findRiskPositionInMatrix 
 } from '@/utils/risk-analysis';
@@ -108,7 +109,7 @@ import { RISK_CATEGORIES, TREATMENT_TYPES, ACTIVITY_STATUSES } from '@/types/ris
 
 interface RiskCardProps {
   risk: Risk;
-  onUpdate?: (riskId: string, updates: any) => void;
+  onUpdate?: (riskId: string, updates: Partial<Risk>) => void;
   onDelete?: (riskId: string) => void;
   isUpdating?: boolean;
   isDeleting?: boolean;
@@ -444,12 +445,12 @@ const RiskCard: React.FC<RiskCardProps> = ({
     }
   };
 
-  const processAnalysis = (probAnswers: RiskAssessmentAnswer[], impAnswers: RiskAssessmentAnswer[]) => {
-    const analysis = processRiskAnalysis(
+  const processAnalysis = async (probAnswers: RiskAssessmentAnswer[], impAnswers: RiskAssessmentAnswer[]) => {
+    const analysis = await processRiskAnalysisWithTenantConfig(
       selectedRiskType,
-      matrixSize,
       probAnswers,
-      impAnswers
+      impAnswers,
+      user?.tenant?.id
     );
     
     setAnalysisData(analysis);

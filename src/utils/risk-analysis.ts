@@ -5,6 +5,41 @@ import type {
   MatrixSize,
   GUTAnalysis 
 } from '@/types/risk-management';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TenantRiskMatrixConfig {
+  type: '4x4' | '5x5';
+  impact_labels: string[];
+  likelihood_labels: string[];
+}
+
+// Função para obter configuração da matriz da tenant
+export const getTenantMatrixConfig = async (tenantId?: string): Promise<TenantRiskMatrixConfig> => {
+  const defaultConfig: TenantRiskMatrixConfig = {
+    type: '4x4',
+    impact_labels: ['Baixo', 'Médio', 'Alto', 'Crítico'],
+    likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável']
+  };
+
+  if (!tenantId) return defaultConfig;
+
+  try {
+    const { data, error } = await supabase
+      .from('tenants')
+      .select('settings')
+      .eq('id', tenantId)
+      .single();
+
+    if (error || !data?.settings?.risk_matrix) {
+      return defaultConfig;
+    }
+
+    return data.settings.risk_matrix;
+  } catch (error) {
+    console.error('Erro ao buscar configuração da matriz:', error);
+    return defaultConfig;
+  }
+};
 
 // Calcula a média das respostas
 export const calculateAverageScore = (answers: RiskAssessmentAnswer[]): number => {
@@ -26,10 +61,10 @@ export const calculateQualitativeRiskLevel = (
   if (matrixSize === '4x4') {
     // Matriz 4x4 (valores de 1 a 4)
     const score = prob * impact;
-    if (score >= 16) return 'Muito Alto';
-    if (score >= 12) return 'Alto';
-    if (score >= 8) return 'Médio';
-    if (score >= 4) return 'Baixo';
+    if (score >= 12) return 'Muito Alto';
+    if (score >= 9) return 'Alto';
+    if (score >= 5) return 'Médio';
+    if (score >= 3) return 'Baixo';
     return 'Muito Baixo';
   } else {
     // Matriz 5x5 (valores de 1 a 5)
@@ -40,6 +75,16 @@ export const calculateQualitativeRiskLevel = (
     if (score >= 4) return 'Baixo';
     return 'Muito Baixo';
   }
+};
+
+// Versão que usa configuração da tenant
+export const calculateQualitativeRiskLevelWithTenantConfig = async (
+  probabilityScore: number,
+  impactScore: number,
+  tenantId?: string
+): Promise<RiskLevel> => {
+  const config = await getTenantMatrixConfig(tenantId);
+  return calculateQualitativeRiskLevel(probabilityScore, impactScore, config.type);
 };
 
 // Calcula a prioridade GUT
@@ -93,6 +138,28 @@ export const processRiskAnalysis = (
   };
 };
 
+// Versão que usa configuração da tenant
+export const processRiskAnalysisWithTenantConfig = async (
+  riskType: RiskAnalysisData['riskType'],
+  probabilityAnswers: RiskAssessmentAnswer[],
+  impactAnswers: RiskAssessmentAnswer[],
+  tenantId?: string,
+  gutGravity?: number,
+  gutUrgency?: number,
+  gutTendency?: number
+): Promise<RiskAnalysisData> => {
+  const config = await getTenantMatrixConfig(tenantId);
+  return processRiskAnalysis(
+    riskType,
+    config.type,
+    probabilityAnswers,
+    impactAnswers,
+    gutGravity,
+    gutUrgency,
+    gutTendency
+  );
+};
+
 // Gera dados para visualização da matriz de risco
 export interface MatrixCell {
   probability: number;
@@ -131,16 +198,34 @@ export const generateMatrixData = (matrixSize: MatrixSize): MatrixCell[][] => {
   return matrix;
 };
 
+// Versão que usa configuração da tenant
+export const generateMatrixDataWithTenantConfig = async (tenantId?: string): Promise<MatrixCell[][]> => {
+  const config = await getTenantMatrixConfig(tenantId);
+  return generateMatrixData(config.type);
+};
+
 // Encontra a posição do risco na matriz
 export const findRiskPositionInMatrix = (
   probabilityScore: number,
-  impactScore: number
+  impactScore: number,
+  matrixSize: MatrixSize = '5x5'
 ): { x: number; y: number } => {
-  const prob = Math.max(1, Math.min(5, Math.round(probabilityScore)));
-  const impact = Math.max(1, Math.min(5, Math.round(impactScore)));
+  const maxValue = matrixSize === '4x4' ? 4 : 5;
+  const prob = Math.max(1, Math.min(maxValue, Math.round(probabilityScore)));
+  const impact = Math.max(1, Math.min(maxValue, Math.round(impactScore)));
   
   return {
     x: prob - 1, // Converter para índice baseado em 0
-    y: 5 - impact // Inverter porque a matriz é exibida de cima para baixo
+    y: maxValue - impact // Inverter porque a matriz é exibida de cima para baixo
   };
+};
+
+// Versão que usa configuração da tenant
+export const findRiskPositionInMatrixWithTenantConfig = async (
+  probabilityScore: number,
+  impactScore: number,
+  tenantId?: string
+): Promise<{ x: number; y: number }> => {
+  const config = await getTenantMatrixConfig(tenantId);
+  return findRiskPositionInMatrix(probabilityScore, impactScore, config.type);
 };
