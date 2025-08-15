@@ -41,8 +41,13 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
   const riskPosition = findRiskPositionInMatrix(probabilityScore, impactScore, matrixSize);
   
   const size = matrixSize === '4x4' ? 4 : 5;
-  const cellSize = size === 4 ? 'h-16 w-16' : 'h-12 w-12';
-  const textSize = size === 4 ? 'text-sm' : 'text-xs';
+  // Responsivo: células menores em mobile, maiores em desktop
+  const cellSize = size === 4 
+    ? 'h-12 w-12 sm:h-16 sm:w-16' 
+    : 'h-10 w-10 sm:h-12 sm:w-12';
+  const textSize = size === 4 
+    ? 'text-xs sm:text-sm' 
+    : 'text-[10px] sm:text-xs';
 
   const getQualitativeLevelColor = (level?: RiskLevel) => {
     if (!level) return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -66,30 +71,30 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Scores */}
-          <div className="flex justify-center space-x-8 mb-4">
+          {/* Scores - Responsivo */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-8 mb-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {probabilityScore.toFixed(1)}
               </div>
-              <div className="text-sm text-muted-foreground">Probabilidade</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Probabilidade</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {impactScore.toFixed(1)}
               </div>
-              <div className="text-sm text-muted-foreground">Impacto</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Impacto</div>
             </div>
           </div>
 
-          {/* Matriz */}
-          <div className="flex justify-center">
-            <div className="inline-block">
-              {/* Label do eixo Y (Impacto) */}
+          {/* Matriz - Responsiva */}
+          <div className="flex justify-center overflow-x-auto">
+            <div className="inline-block min-w-fit">
+              {/* Label do eixo Y (Impacto) - Escondido em mobile muito pequeno */}
               <div className="flex">
-                <div className="flex flex-col justify-center items-center mr-3">
+                <div className="hidden xs:flex flex-col justify-center items-center mr-2 sm:mr-3">
                   <div 
-                    className="text-sm font-medium text-muted-foreground transform -rotate-90 whitespace-nowrap"
+                    className="text-xs sm:text-sm font-medium text-muted-foreground transform -rotate-90 whitespace-nowrap"
                     style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                   >
                     IMPACTO
@@ -99,11 +104,11 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                 <div className="space-y-0">
                   {/* Números do eixo Y */}
                   <div className="flex">
-                    <div className="flex flex-col space-y-0 mr-2">
+                    <div className="flex flex-col space-y-0 mr-1 sm:mr-2">
                       {Array.from({ length: size }, (_, i) => (
                         <div 
                           key={i} 
-                          className={`${cellSize} flex items-center justify-center text-sm font-medium text-muted-foreground`}
+                          className={`${cellSize} flex items-center justify-center text-xs sm:text-sm font-medium text-muted-foreground`}
                         >
                           {size - i}
                         </div>
@@ -135,7 +140,11 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                                     <div className="w-2 h-2 bg-blue-600 border border-white rounded-full shadow-lg" />
                                   </div>
                                 )}
-                                <span className={`${textSize} font-medium text-white drop-shadow-sm`}>
+                                <span className={`${textSize} font-medium text-white drop-shadow-sm hidden sm:inline`}>
+                                  {cell.probability}×{cell.impact}
+                                </span>
+                                {/* Versão simplificada para mobile */}
+                                <span className="text-[8px] font-medium text-white drop-shadow-sm sm:hidden">
                                   {cell.probability}×{cell.impact}
                                 </span>
                               </div>
@@ -148,11 +157,11 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                   
                   {/* Label do eixo X (Probabilidade) */}
                   <div className="flex justify-center mt-2">
-                    <div className="flex space-x-0 ml-10">
+                    <div className="flex space-x-0 ml-6 sm:ml-10">
                       {Array.from({ length: size }, (_, i) => (
                         <div 
                           key={i} 
-                          className={`${cellSize} flex items-center justify-center text-sm font-medium text-muted-foreground`}
+                          className={`${cellSize} flex items-center justify-center text-xs sm:text-sm font-medium text-muted-foreground`}
                         >
                           {i + 1}
                         </div>
@@ -161,7 +170,7 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                   </div>
                   
                   <div className="text-center mt-1">
-                    <div className="text-sm font-medium text-muted-foreground">
+                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">
                       PROBABILIDADE
                     </div>
                   </div>
@@ -170,10 +179,10 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
             </div>
           </div>
 
-          {/* Legenda */}
+          {/* Legenda - Responsiva */}
           <div className="mt-6">
-            <h6 className="font-medium mb-3 text-center">Legenda dos Níveis de Risco (Matriz {matrixSize})</h6>
-            <div className="flex flex-wrap justify-center gap-2">
+            <h6 className="font-medium mb-3 text-center text-sm sm:text-base">Legenda dos Níveis de Risco (Matriz {matrixSize})</h6>
+            <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
               {[
                 { level: 'Muito Baixo', color: '#22c55e' },
                 { level: 'Baixo', color: '#84cc16' },
@@ -181,34 +190,34 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                 { level: 'Alto', color: '#f97316' },
                 { level: 'Muito Alto', color: '#ef4444' }
               ].map(({ level, color }) => (
-                <div key={level} className="flex items-center space-x-2">
+                <div key={level} className="flex items-center space-x-1 sm:space-x-2">
                   <div 
-                    className="w-4 h-4 rounded border"
+                    className="w-3 h-3 sm:w-4 sm:h-4 rounded border"
                     style={{ backgroundColor: color }}
                   />
-                  <span className="text-sm">{level}</span>
+                  <span className="text-xs sm:text-sm">{level}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Posição do risco */}
+          {/* Posição do risco - Responsiva */}
           <div className="text-center p-3 bg-muted/50 rounded-lg">
-            <p className="text-sm">
+            <p className="text-xs sm:text-sm">
               Posição do risco: <strong>({Math.round(probabilityScore)}, {Math.round(impactScore)})</strong>
-              <br />
-              <span className="text-muted-foreground">
+              <br className="hidden sm:block" />
+              <span className="text-muted-foreground block sm:inline mt-1 sm:mt-0">
                 O ponto azul na matriz mostra a posição calculada do seu risco
               </span>
             </p>
           </div>
 
-          {/* Nível Qualitativo */}
+          {/* Nível Qualitativo - Responsivo */}
           {qualitativeLevel && (
-            <div className="text-center p-4 border-t">
-              <h6 className="text-sm font-medium text-muted-foreground mb-2">Nível de Risco Qualitativo</h6>
+            <div className="text-center p-3 sm:p-4 border-t">
+              <h6 className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Nível de Risco Qualitativo</h6>
               <Badge 
-                className={`text-lg px-4 py-2 font-semibold ${getQualitativeLevelColor(qualitativeLevel)}`}
+                className={`text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 font-semibold ${getQualitativeLevelColor(qualitativeLevel)}`}
                 variant="outline"
               >
                 {qualitativeLevel}

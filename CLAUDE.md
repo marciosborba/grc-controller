@@ -42,8 +42,9 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 **Component Structure:**
 - Feature-based organization under `src/components/`
 - Modular UI components in `src/components/ui/` (shadcn/ui)
-- Domain-specific components: assessments, admin, risks, compliance, etc.
+- Domain-specific components: assessments, admin, risks, compliance, privacy, general-settings, etc.
 - Layout components: AppLayout, AppSidebar, AppHeader
+- Mobile-first responsive design implemented across all modules
 
 ### Core Features
 
@@ -68,6 +69,27 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 - Policy management with approval workflows
 - Compliance tracking and reporting
 - Audit report generation
+
+**Privacy & LGPD Module:**
+- Comprehensive LGPD compliance management
+- Data inventory and mapping (Article 30)
+- DPIA (Data Protection Impact Assessment) workflows
+- Data subject rights management
+- Privacy incident tracking and reporting
+- Legal bases management
+- Consent management system
+- Processing activities documentation
+- RAT (Registro de Atividades de Tratamento) reports
+
+**General Settings Module:**
+- External service integrations (APIs, MCP, Email, SSO, Webhooks, Backup)
+- REST/GraphQL/SOAP API configurations with multiple authentication methods
+- Model Context Protocol (MCP) for AI providers (Claude, OpenAI, custom)
+- Email service providers (SMTP, SendGrid, AWS SES, Mailgun) with template management
+- Single Sign-On integrations (Azure AD, Google, Okta, Auth0, SAML, OIDC)
+- Webhook system for real-time notifications and external system integration
+- Backup and synchronization configurations (local, cloud providers)
+- Integration status dashboard with real-time monitoring
 
 ## Important Implementation Notes
 
@@ -94,13 +116,17 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 - Custom hooks for feature-specific logic (useAssessments, useUserManagement, etc.)
 - Drag-and-drop functionality using @dnd-kit for sortable interfaces
 - Form handling with react-hook-form + Zod validation
+- Mobile-first responsive design with Tailwind CSS breakpoints
+- Consistent state management patterns across modules
+- Toast notifications for user feedback (Sonner)
+- Real-time simulation for testing integrations
 
 ## Key File Locations
 
 **Configuration:**
 - `vite.config.ts` - Build configuration (port 8080, path aliases)
 - `eslint.config.js` - Linting rules
-- `tailwind.config.ts` - Styling configuration
+- `tailwind.config.ts` - Styling configuration with custom breakpoints (xs: 475px)
 - `components.json` - shadcn/ui configuration
 
 **Database:**
@@ -118,9 +144,63 @@ This is a **GRC (Governance, Risk, and Compliance)** management system built wit
 - `docs/USER_MANAGEMENT_SYSTEM.md` - User management system details
 - `docs/RISK_MANAGEMENT_SYSTEM.md` - Risk management implementation guide
 - `README.md` - Project setup and deployment info
+- `conf.md` - General Settings Module complete technical documentation
 
 **Scripts & Utilities:**
 - `scripts/check-user-management.js` - User management system validation
 - `scripts/auto-fix.js` - Automated error fixing script
 - `scripts/create-platform-admin.js` - Platform admin user creation
 - Various SQL migration files in `supabase/migrations/`
+
+## Module-Specific File Locations
+
+**Privacy & LGPD Module:**
+- `src/components/privacy/` - All privacy-related components
+- `src/components/privacy/PrivacyDashboard.tsx` - Main privacy dashboard
+- `src/components/privacy/DataInventoryPage.tsx` - LGPD Article 30 compliance
+- `src/components/privacy/DPIAPage.tsx` - Data Protection Impact Assessments
+- `src/components/privacy/DataSubjectRequestsPage.tsx` - Rights management
+- `src/components/privacy/RATReport.tsx` - Processing activities report
+
+**General Settings Module:**
+- `src/components/general-settings/GeneralSettingsPage.tsx` - Main settings page with tabs
+- `src/components/general-settings/sections/IntegrationsStatusDashboard.tsx` - Status monitoring
+- `src/components/general-settings/sections/APIIntegrationsSection.tsx` - REST/GraphQL/SOAP APIs
+- `src/components/general-settings/sections/MCPConfigurationSection.tsx` - AI providers (MCP)
+- `src/components/general-settings/sections/EmailServiceSection.tsx` - Email integrations
+- `src/components/general-settings/sections/SSOConfigurationSection.tsx` - Single Sign-On
+- `src/components/general-settings/sections/WebhooksSection.tsx` - Webhook management
+- `src/components/general-settings/sections/BackupSyncSection.tsx` - Backup & sync
+
+**Responsive Design Updates:**
+- `src/components/risks/RiskMatrix.tsx` - Updated for mobile responsiveness
+- `src/components/dashboard/ExecutiveDashboard.tsx` - Mobile-optimized KPI cards
+- `src/components/admin/SystemUsersSection.tsx` - Responsive table layouts
+- `src/components/layout/AppSidebar.tsx` - Mobile navigation improvements
+- `src/components/layout/AppHeader.tsx` - Responsive header design
+
+## Current System State
+
+**Recent Major Updates:**
+1. **Complete responsive design implementation** across all modules (August 2025)
+2. **General Settings Module** - Full external integrations system (August 2025)
+3. **Privacy & LGPD Module** - Comprehensive data protection compliance tools
+4. **Enhanced navigation** - Improved sidebar with better organization
+
+**Active Routes:**
+- `/privacy` - Privacy dashboard and LGPD tools
+- `/privacy/*` - Privacy sub-modules (inventory, dpia, requests, etc.)
+- `/settings/general` - External integrations and advanced settings
+- All existing GRC routes (assessments, risks, compliance, etc.)
+
+**Development Status:**
+- ✅ All modules responsive and mobile-ready
+- ✅ General Settings fully implemented and integrated
+- ✅ Privacy module comprehensive and functional
+- ✅ Build system working correctly (port 8083 currently)
+- ⚠️ ESLint shows 445 issues (mostly TypeScript `any` types - pre-existing)
+
+**Performance Considerations:**
+- Bundle size: ~5.6MB (main chunk) - Consider code splitting for optimization
+- Responsive breakpoints: xs(475px), sm(640px), md(768px), lg(1024px), xl(1280px)
+- Real-time simulations implemented for integration testing

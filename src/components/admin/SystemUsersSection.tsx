@@ -224,71 +224,71 @@ export const SystemUsersSection = () => {
 
   return (
     <div className="space-y-6">
-      {/* User Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      {/* User Statistics - Mobile-first responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{userStats.total}</div>
-            <p className="text-xs text-muted-foreground">usuários cadastrados</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold">{userStats.total}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">usuários cadastrados</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Ativos</CardTitle>
+            <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{userStats.active}</div>
-            <p className="text-xs text-muted-foreground">contas ativas</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">{userStats.active}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">contas ativas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inativos</CardTitle>
-            <UserX className="h-4 w-4 text-red-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Inativos</CardTitle>
+            <UserX className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{userStats.inactive}</div>
-            <p className="text-xs text-muted-foreground">contas bloqueadas</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold text-red-600">{userStats.inactive}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">contas bloqueadas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Login Hoje</CardTitle>
-            <Clock className="h-4 w-4 text-blue-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Login Hoje</CardTitle>
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{userStats.loggedInToday}</div>
-            <p className="text-xs text-muted-foreground">acessos hoje</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">{userStats.loggedInToday}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">acessos hoje</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Novos</CardTitle>
-            <Calendar className="h-4 w-4 text-purple-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Novos</CardTitle>
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{userStats.newThisWeek}</div>
-            <p className="text-xs text-muted-foreground">esta semana</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold text-purple-600">{userStats.newThisWeek}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">esta semana</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Admins</CardTitle>
-            <Shield className="h-4 w-4 text-orange-600" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium">Admins</CardTitle>
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{userStats.platformAdmins}</div>
-            <p className="text-xs text-muted-foreground">administradores</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="text-lg sm:text-2xl font-bold text-orange-600">{userStats.platformAdmins}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">administradores</p>
           </CardContent>
         </Card>
       </div>
@@ -313,58 +313,61 @@ export const SystemUsersSection = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          {/* Search and Filters - Mobile-first responsive */}
+          <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-col lg:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, email ou organização..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 text-sm"
               />
             </div>
             
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filtrar por papel" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os papéis</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="ciso">CISO</SelectItem>
-                <SelectItem value="risk_manager">Gestor de Riscos</SelectItem>
-                <SelectItem value="compliance_officer">Compliance</SelectItem>
-                <SelectItem value="auditor">Auditor</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:flex lg:gap-4">
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full lg:w-48">
+                  <SelectValue placeholder="Filtrar por papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os papéis</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="ciso">CISO</SelectItem>
+                  <SelectItem value="risk_manager">Gestor de Riscos</SelectItem>
+                  <SelectItem value="compliance_officer">Compliance</SelectItem>
+                  <SelectItem value="auditor">Auditor</SelectItem>
+                  <SelectItem value="user">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filtrar por status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="inactive">Inativos</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full lg:w-48">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="inactive">Inativos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Users Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Organização</TableHead>
-                  <TableHead>Papéis</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Último Acesso</TableHead>
-                  <TableHead>Criado em</TableHead>
-                </TableRow>
-              </TableHeader>
+          {/* Users Table - Mobile responsive */}
+          <div className="rounded-md border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[200px]">Usuário</TableHead>
+                    <TableHead className="hidden sm:table-cell min-w-[120px]">Organização</TableHead>
+                    <TableHead className="min-w-[120px]">Papéis</TableHead>
+                    <TableHead className="min-w-[80px]">Status</TableHead>
+                    <TableHead className="hidden md:table-cell min-w-[120px]">Último Acesso</TableHead>
+                    <TableHead className="hidden lg:table-cell min-w-[100px]">Criado em</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
@@ -384,51 +387,60 @@ export const SystemUsersSection = () => {
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{user.full_name}</span>
-                          <span className="text-sm text-muted-foreground flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {user.email}
+                      <TableCell className="p-2 sm:p-4">
+                        <div className="flex flex-col space-y-1">
+                          <span className="font-medium text-sm">{user.full_name}</span>
+                          <span className="text-xs text-muted-foreground flex items-center">
+                            <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
+                            <span className="truncate">{user.email}</span>
                           </span>
                           {user.job_title && (
-                            <span className="text-xs text-muted-foreground">{user.job_title}</span>
+                            <span className="text-xs text-muted-foreground truncate">{user.job_title}</span>
                           )}
+                          {/* Mostrar organização em mobile quando coluna está oculta */}
+                          <span className="sm:hidden text-xs text-muted-foreground">
+                            Org: {user.tenant_name || 'N/A'}
+                          </span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell p-2 sm:p-4">
                         <span className="text-sm">{user.tenant_name || 'N/A'}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2 sm:p-4">
                         <div className="flex flex-wrap gap-1">
-                          {user.roles.map((role) => (
+                          {user.roles.slice(0, 2).map((role) => (
                             <Badge
                               key={role}
                               variant="outline"
-                              className={`text-xs ${getRoleBadgeColor(role)}`}
+                              className={`text-[10px] sm:text-xs ${getRoleBadgeColor(role)}`}
                             >
                               {role}
                             </Badge>
                           ))}
+                          {user.roles.length > 2 && (
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">
+                              +{user.roles.length - 2}
+                            </Badge>
+                          )}
                           {user.roles.length === 0 && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs">
                               user
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="p-2 sm:p-4">
                         <Badge 
                           variant={user.is_active ? "default" : "destructive"}
-                          className="text-xs"
+                          className="text-[10px] sm:text-xs"
                         >
                           {user.is_active ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell p-2 sm:p-4">
                         <span className="text-sm">{formatLastSignIn(user.last_sign_in_at)}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell p-2 sm:p-4">
                         <span className="text-sm">
                           {new Date(user.created_at).toLocaleDateString('pt-BR')}
                         </span>
@@ -437,7 +449,8 @@ export const SystemUsersSection = () => {
                   ))
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           </div>
 
           {filteredUsers.length > 0 && (

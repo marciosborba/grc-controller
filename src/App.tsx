@@ -43,6 +43,7 @@ import { LegalBasesPage } from "@/components/privacy/LegalBasesPage";
 import { ConsentsPage } from "@/components/privacy/ConsentsPage";
 import { ProcessingActivitiesPage } from "@/components/privacy/ProcessingActivitiesPage";
 import { RATReport } from "@/components/privacy/RATReport";
+import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -178,6 +179,7 @@ const App = () => (
                   <Route path="profile" element={<UserProfilePage />} />
                   <Route path="settings" element={<UserManagementPage />} />
                   <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
+                  <Route path="settings/general" element={<GeneralSettingsPage />} />
                   <Route path="help" element={<HelpPage />} />
                 </Route>
                 

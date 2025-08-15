@@ -276,18 +276,18 @@ export function PrivacyDashboard() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Privacidade e LGPD</h1>
-          <p className="text-muted-foreground">
+      {/* Header - Responsivo */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Privacidade e LGPD</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Gestão completa de privacidade e proteção de dados pessoais
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="flex items-center gap-1">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
+          <Badge variant="secondary" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1">
             <Shield className="w-3 h-3" />
-            Score de Compliance: {complianceScore}%
+            Score: {complianceScore}%
           </Badge>
         </div>
       </div>
@@ -297,18 +297,18 @@ export function PrivacyDashboard() {
         <DevAuthHelper />
       )}
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Key Metrics - Mobile-first responsive */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4 h-full">
-            <div className="flex flex-col h-full min-h-[120px] text-center">
-              <div className="flex justify-center mb-2">
-                <Database className="h-5 w-5 text-blue-500" />
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <Database className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Itens no Inventário</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">Itens no Inventário</p>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.data_inventory?.total_inventories || 0}</p>
-                <p className="text-xs text-muted-foreground leading-tight">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{metrics?.data_inventory?.total_inventories || 0}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                   {metrics?.data_inventory?.needs_review || 0} precisam revisão
                 </p>
               </div>
@@ -317,15 +317,15 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-4 h-full">
-            <div className="flex flex-col h-full min-h-[120px] text-center">
-              <div className="flex justify-center mb-2">
-                <Users className="h-5 w-5 text-purple-500" />
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Total de Solicitações</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">Total de Solicitações</p>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.data_subject_requests?.total_requests || 0}</p>
-                <p className="text-xs text-muted-foreground leading-tight">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{metrics?.data_subject_requests?.total_requests || 0}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                   {metrics?.data_subject_requests?.pending_requests || 0} pendentes | {metrics?.data_subject_requests?.overdue_requests || 0} em atraso
                 </p>
               </div>
@@ -334,17 +334,17 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-4 h-full">
-            <div className="flex flex-col h-full min-h-[120px] text-center">
-              <div className="flex justify-center mb-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Total de Incidentes</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">Total de Incidentes</p>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-red-600 mb-2 leading-none">
+                <p className="text-lg sm:text-2xl font-bold text-red-600 mb-1 sm:mb-2 leading-none">
                   {metrics?.privacy_incidents?.total_incidents || 0}
                 </p>
-                <p className="text-xs text-muted-foreground leading-tight">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                   {metrics?.privacy_incidents?.open_incidents || 0} abertos | {metrics?.privacy_incidents?.anpd_notifications_required || 0} requer ANPD
                 </p>
               </div>
@@ -353,15 +353,15 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-4 h-full">
-            <div className="flex flex-col h-full min-h-[120px] text-center">
-              <div className="flex justify-center mb-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+          <CardContent className="p-3 sm:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
               </div>
-              <p className="text-sm font-medium text-muted-foreground mb-3 leading-tight">Consentimentos</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">Consentimentos</p>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{metrics?.consents?.total_active || 0}</p>
-                <p className="text-xs text-muted-foreground leading-tight">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{metrics?.consents?.total_active || 0}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                   {metrics?.consents?.expiring_soon || 0} vencem em breve
                 </p>
               </div>
@@ -370,76 +370,76 @@ export function PrivacyDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions Grid */}
+      {/* Quick Actions Grid - Responsivo */}
       <div>
-        <h2 className="text-xl font-semibold mb-4">Funcionalidades</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Funcionalidades</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {quickActions.map((action, index) => (
             <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={action.action}>
-              <CardHeader>
+              <CardHeader className="p-3 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
-                  <div className={`p-2 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
-                    <action.icon className={`w-5 h-5 text-${action.color}-600 dark:text-${action.color}-400`} />
+                  <div className={`p-1.5 sm:p-2 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
+                    <action.icon className={`w-4 h-4 sm:w-5 sm:h-5 text-${action.color}-600 dark:text-${action.color}-400`} />
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
                     {action.count > 0 && (
-                      <Badge variant="secondary">{action.count}</Badge>
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{action.count}</Badge>
                     )}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                 </div>
-                <CardTitle className="text-base">{action.title}</CardTitle>
-                <CardDescription>{action.description}</CardDescription>
+                <CardTitle className="text-sm sm:text-base leading-tight">{action.title}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm leading-tight">{action.description}</CardDescription>
               </CardHeader>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Compliance Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Compliance Overview - Responsivo */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
               Score de Compliance LGPD
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Avaliação automática do nível de conformidade
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span>Compliance Geral</span>
                 <span>{complianceScore}%</span>
               </div>
               <Progress value={complianceScore} className="h-2" />
             </div>
             
-            <div className="space-y-3 text-sm">
+            <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                   <span>Inventário Atualizado</span>
                 </div>
-                <Badge variant="outline">OK</Badge>
+                <Badge variant="outline" className="text-xs px-1.5 py-0.5">OK</Badge>
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-yellow-500" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
                   <span>DPIAs Pendentes</span>
                 </div>
-                <Badge variant="secondary">{metrics?.dpia_assessments?.pending_dpias || 0}</Badge>
+                <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{metrics?.dpia_assessments?.pending_dpias || 0}</Badge>
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-blue-500" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                   <span>Bases Legais Definidas</span>
                 </div>
-                <Badge variant="outline">{metrics?.compliance_overview?.legal_bases || 0}</Badge>
+                <Badge variant="outline" className="text-xs px-1.5 py-0.5">{metrics?.compliance_overview?.legal_bases || 0}</Badge>
               </div>
             </div>
           </CardContent>

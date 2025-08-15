@@ -173,28 +173,28 @@ export const ExecutiveDashboard = () => {
         </div>
       </div>
 
-      {/* AI Assistant Banner */}
+      {/* AI Assistant Banner - Responsivo */}
       <Card className="grc-card bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20 overflow-hidden">
-        <CardContent className="p-4 sm:p-6">
+        <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Brain className="h-6 w-6 text-primary" />
+            <div className="p-2 sm:p-3 bg-primary/10 rounded-lg self-center sm:self-start">
+              <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground mb-2">Resumo Inteligente - IA</h3>
-              <p className="text-muted-foreground mb-4 text-sm sm:text-base">
-                <strong>Status Atual:</strong> {realTimeData.criticalRisks} riscos críticos ativos de {realTimeData.criticalRisks + 16} identificados. 
-                Score de compliance em {realTimeData.complianceScore}% com base em {realTimeData.completedAssessments} assessments concluídos. 
-                <strong>Foco:</strong> {realTimeData.openIncidents > 0 ? `${realTimeData.openIncidents} incidentes aguardam resolução.` : 'Todos incidentes resolvidos.'}
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Resumo Inteligente - IA</h3>
+              <p className="text-muted-foreground mb-3 sm:mb-4 text-xs sm:text-sm">
+                <span className="block sm:inline"><strong>Status Atual:</strong> {realTimeData.criticalRisks} riscos críticos ativos de {realTimeData.criticalRisks + 16} identificados.</span>{' '}
+                <span className="block sm:inline mt-1 sm:mt-0">Score de compliance em {realTimeData.complianceScore}% com base em {realTimeData.completedAssessments} assessments concluídos.</span>{' '}
+                <span className="block sm:inline mt-1 sm:mt-0"><strong>Foco:</strong> {realTimeData.openIncidents > 0 ? `${realTimeData.openIncidents} incidentes aguardam resolução.` : 'Todos incidentes resolvidos.'}</span>
               </p>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
+              <div className="flex flex-wrap justify-center sm:justify-start gap-1 sm:gap-2">
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-[10px] sm:text-xs px-2 py-1">
                   ↗ Risco em declínio
                 </Badge>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-xs">
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] sm:text-xs px-2 py-1">
                   🎯 Meta Q2 atingida
                 </Badge>
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px] sm:text-xs px-2 py-1">
                   ⚠ LGPD requer atenção
                 </Badge>
               </div>
@@ -203,22 +203,22 @@ export const ExecutiveDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* KPI Cards - Melhor espaçamento em mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-3 sm:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[100px]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-muted-foreground leading-tight">Risco Residual</p>
-                <div className="p-2 bg-success/10 rounded-lg">
-                  <Shield className="h-4 w-4 text-success" />
+          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Risco Residual</p>
+                <div className="p-1 sm:p-2 bg-success/10 rounded-lg">
+                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.riskScore}</p>
-                <p className="text-xs text-success flex items-center leading-tight">
-                  <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
-                  {realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Atenção'}
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.riskScore}</p>
+                <p className="text-[10px] sm:text-xs text-success flex items-center leading-tight">
+                  <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">{realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Atenção'}</span>
                 </p>
               </div>
             </div>
@@ -226,19 +226,19 @@ export const ExecutiveDashboard = () => {
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-3 sm:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[100px]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-muted-foreground leading-tight">Compliance</p>
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileCheck className="h-4 w-4 text-primary" />
+          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Compliance</p>
+                <div className="p-1 sm:p-2 bg-primary/10 rounded-lg">
+                  <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.complianceScore}%</p>
-                <p className="text-xs text-success flex items-center leading-tight">
-                  <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
-                  {realTimeData.complianceScore >= 90 ? 'Meta OK' : 'Progresso'}
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.complianceScore}%</p>
+                <p className="text-[10px] sm:text-xs text-success flex items-center leading-tight">
+                  <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">{realTimeData.complianceScore >= 90 ? 'Meta OK' : 'Progresso'}</span>
                 </p>
               </div>
             </div>
@@ -246,19 +246,19 @@ export const ExecutiveDashboard = () => {
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-3 sm:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[100px]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-muted-foreground leading-tight">Assessments</p>
-                <div className="p-2 bg-accent/10 rounded-lg">
-                  <FileCheck className="h-4 w-4 text-accent" />
+          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Assessments</p>
+                <div className="p-1 sm:p-2 bg-accent/10 rounded-lg">
+                  <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.completedAssessments}/{realTimeData.totalAssessments}</p>
-                <p className="text-xs text-primary flex items-center leading-tight">
-                  <Target className="h-3 w-3 mr-1 flex-shrink-0" />
-                  {Math.round((realTimeData.completedAssessments / Math.max(realTimeData.totalAssessments, 1)) * 100)}% feitos
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.completedAssessments}/{realTimeData.totalAssessments}</p>
+                <p className="text-[10px] sm:text-xs text-primary flex items-center leading-tight">
+                  <Target className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">{Math.round((realTimeData.completedAssessments / Math.max(realTimeData.totalAssessments, 1)) * 100)}% feitos</span>
                 </p>
               </div>
             </div>
@@ -266,19 +266,19 @@ export const ExecutiveDashboard = () => {
         </Card>
 
         <Card className="grc-card overflow-hidden">
-          <CardContent className="p-3 sm:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[100px]">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-muted-foreground leading-tight">LGPD</p>
-                <div className="p-2 bg-warning/10 rounded-lg">
-                  <Shield className="h-4 w-4 text-warning" />
+          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
+            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">LGPD</p>
+                <div className="p-1 sm:p-2 bg-warning/10 rounded-lg">
+                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-center">
-                <p className="text-2xl font-bold text-foreground mb-2 leading-none">{realTimeData.totalDPIA + realTimeData.ethicsReports}</p>
-                <p className="text-xs text-warning flex items-center leading-tight">
-                  <Activity className="h-3 w-3 mr-1 flex-shrink-0" />
-                  DPIAs + Ética
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.totalDPIA + realTimeData.ethicsReports}</p>
+                <p className="text-[10px] sm:text-xs text-warning flex items-center leading-tight">
+                  <Activity className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
+                  <span className="truncate">DPIAs + Ética</span>
                 </p>
               </div>
             </div>
@@ -336,63 +336,63 @@ export const ExecutiveDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions with Real Data */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Quick Actions with Real Data - Responsivo */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
-            <div className="p-3 sm:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-danger/20 transition-colors">
-              <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-danger" />
+          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
+            <div className="p-2 sm:p-3 md:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-danger/20 transition-colors">
+              <XCircle className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-danger" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Riscos Críticos</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Riscos Críticos</h3>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
               {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} ativo{realTimeData.criticalRisks !== 1 ? 's' : ''}
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
               Revisar Agora
             </Button>
           </CardContent>
         </Card>
 
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
-            <div className="p-3 sm:p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-warning/20 transition-colors">
-              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-warning" />
+          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
+            <div className="p-2 sm:p-3 md:p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-warning/20 transition-colors">
+              <Clock className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-warning" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Incidentes Ativos</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Incidentes Ativos</h3>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
               {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} em tratamento
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
               Analisar
             </Button>
           </CardContent>
         </Card>
 
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
-            <div className="p-3 sm:p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-primary/20 transition-colors">
-              <FileCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
+            <div className="p-2 sm:p-3 md:p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-primary/20 transition-colors">
+              <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Políticas Ativas</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Políticas Ativas</h3>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
               {realTimeData.totalPolicies} política{realTimeData.totalPolicies !== 1 ? 's' : ''} vigente{realTimeData.totalPolicies !== 1 ? 's' : ''}
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
               Gerenciar
             </Button>
           </CardContent>
         </Card>
 
         <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-4 sm:p-6 text-center flex flex-col h-full">
-            <div className="p-3 sm:p-4 bg-accent/10 rounded-lg w-fit mx-auto mb-3 sm:mb-4 group-hover:bg-accent/20 transition-colors">
-              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-accent" />
+          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
+            <div className="p-2 sm:p-3 md:p-4 bg-accent/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-accent/20 transition-colors">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-accent" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Fornecedores</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 flex-grow">
+            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Fornecedores</h3>
+            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
               {realTimeData.totalVendors} fornecedor{realTimeData.totalVendors !== 1 ? 'es' : ''} monitorado{realTimeData.totalVendors !== 1 ? 's' : ''}
             </p>
-            <Button variant="outline" size="sm" className="w-full text-xs sm:text-sm mt-auto">
+            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
               Ver Todos
             </Button>
           </CardContent>
