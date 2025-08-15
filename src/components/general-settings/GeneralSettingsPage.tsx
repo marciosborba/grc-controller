@@ -182,7 +182,7 @@ export const GeneralSettingsPage = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
           <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
           <TabsTrigger value="mcp" className="text-xs sm:text-sm">MCP</TabsTrigger>
@@ -190,6 +190,7 @@ export const GeneralSettingsPage = () => {
           <TabsTrigger value="sso" className="text-xs sm:text-sm">SSO</TabsTrigger>
           <TabsTrigger value="webhooks" className="text-xs sm:text-sm">Webhooks</TabsTrigger>
           <TabsTrigger value="backup" className="text-xs sm:text-sm">Backup</TabsTrigger>
+          <TabsTrigger value="global-config" className="text-xs sm:text-sm">Conf. Globais</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -298,6 +299,207 @@ export const GeneralSettingsPage = () => {
         {/* Backup & Sync Tab */}
         <TabsContent value="backup">
           <BackupSyncSection />
+        </TabsContent>
+
+        {/* Global Configuration Tab */}
+        <TabsContent value="global-config">
+          <div className="space-y-6">
+            {/* Platform Appearance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Configurações Globais da Plataforma
+                </CardTitle>
+                <CardDescription>
+                  Configure a aparência, cores, fontes e opções globais da plataforma
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Color Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Paleta de Cores</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor Primária</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#3b82f6" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#3b82f6" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor Secundária</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#6b7280" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#6b7280" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor de Sucesso</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#10b981" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#10b981" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor de Aviso</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#f59e0b" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#f59e0b" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor de Erro</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#ef4444" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#ef4444" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Cor de Fundo</label>
+                      <div className="flex items-center gap-2">
+                        <input type="color" defaultValue="#ffffff" className="w-12 h-10 rounded border" />
+                        <input type="text" defaultValue="#ffffff" className="flex-1 px-3 py-2 border rounded-md" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Typography Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Tipografia</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Fonte Principal</label>
+                      <select className="w-full px-3 py-2 border rounded-md">
+                        <option value="inter">Inter</option>
+                        <option value="roboto">Roboto</option>
+                        <option value="open-sans">Open Sans</option>
+                        <option value="lato">Lato</option>
+                        <option value="poppins">Poppins</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Fonte de Títulos</label>
+                      <select className="w-full px-3 py-2 border rounded-md">
+                        <option value="inter">Inter</option>
+                        <option value="roboto">Roboto</option>
+                        <option value="playfair">Playfair Display</option>
+                        <option value="montserrat">Montserrat</option>
+                        <option value="source-serif">Source Serif Pro</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Tamanho Base (px)</label>
+                      <input type="number" defaultValue="16" min="12" max="24" className="w-full px-3 py-2 border rounded-md" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Altura da Linha</label>
+                      <input type="number" step="0.1" defaultValue="1.5" min="1.0" max="2.0" className="w-full px-3 py-2 border rounded-md" />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Button Styles */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Estilos de Botões</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Bordas dos Botões</label>
+                      <select className="w-full px-3 py-2 border rounded-md">
+                        <option value="rounded-none">Quadrado</option>
+                        <option value="rounded-sm">Pequeno</option>
+                        <option value="rounded-md">Médio</option>
+                        <option value="rounded-lg">Grande</option>
+                        <option value="rounded-full">Circular</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Tamanho Padrão</label>
+                      <select className="w-full px-3 py-2 border rounded-md">
+                        <option value="sm">Pequeno</option>
+                        <option value="md">Médio</option>
+                        <option value="lg">Grande</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Dropdown Options */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Opções de Dropdowns</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Níveis de Risco</label>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input type="text" defaultValue="Baixo" className="flex-1 px-3 py-2 border rounded-md" />
+                          <input type="color" defaultValue="#10b981" className="w-12 h-10 rounded border" />
+                          <Button variant="outline" size="sm">Remover</Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="text" defaultValue="Médio" className="flex-1 px-3 py-2 border rounded-md" />
+                          <input type="color" defaultValue="#f59e0b" className="w-12 h-10 rounded border" />
+                          <Button variant="outline" size="sm">Remover</Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="text" defaultValue="Alto" className="flex-1 px-3 py-2 border rounded-md" />
+                          <input type="color" defaultValue="#ef4444" className="w-12 h-10 rounded border" />
+                          <Button variant="outline" size="sm">Remover</Button>
+                        </div>
+                        <Button variant="outline" size="sm">Adicionar Nível</Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Status de Compliance</label>
+                      <div className="mt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <input type="text" defaultValue="Conforme" className="flex-1 px-3 py-2 border rounded-md" />
+                          <input type="color" defaultValue="#10b981" className="w-12 h-10 rounded border" />
+                          <Button variant="outline" size="sm">Remover</Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input type="text" defaultValue="Não Conforme" className="flex-1 px-3 py-2 border rounded-md" />
+                          <input type="color" defaultValue="#ef4444" className="w-12 h-10 rounded border" />
+                          <Button variant="outline" size="sm">Remover</Button>
+                        </div>
+                        <Button variant="outline" size="sm">Adicionar Status</Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium">Departamentos</label>
+                      <div className="mt-2 space-y-2">
+                        {['TI', 'Jurídico', 'RH', 'Financeiro', 'Operações'].map((dept, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <input type="text" defaultValue={dept} className="flex-1 px-3 py-2 border rounded-md" />
+                            <Button variant="outline" size="sm">Remover</Button>
+                          </div>
+                        ))}
+                        <Button variant="outline" size="sm">Adicionar Departamento</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline">Resetar Padrões</Button>
+                  <Button variant="outline">Pré-visualizar</Button>
+                  <Button>Salvar Configurações</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 
