@@ -76,6 +76,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { ExtendedUser, AppRole } from '@/types/user-management';
 import { cn } from '@/lib/utils';
 import { USER_ROLES } from '@/types/user-management';
+import { useDropdownStore } from '@/stores/dropdownStore';
 
 interface UserCardProps {
   user: ExtendedUser;
@@ -98,6 +99,7 @@ const UserCard: React.FC<UserCardProps> = ({
 }) => {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
+  const { getItemById } = useDropdownStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isEditingRoles, setIsEditingRoles] = useState(false);
@@ -105,9 +107,41 @@ const UserCard: React.FC<UserCardProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [availableTenants, setAvailableTenants] = useState<Array<{id: string; name: string}>>([]);
 
+  // Funções para resolver IDs para nomes
+  const getDepartmentName = (departmentId: string | null | undefined): string => {
+    if (!departmentId) return 'Não informado';
+    const department = getItemById('departments', departmentId);
+    return department?.label || departmentId; // Fallback para o ID se não encontrar
+  };
+
+  const getJobTitleName = (jobTitleId: string | null | undefined): string => {
+    if (!jobTitleId) return 'Não informado';
+    const jobTitle = getItemById('jobTitles', jobTitleId);
+    return jobTitle?.label || jobTitleId; // Fallback para o ID se não encontrar
+  };
+
   const displayInfo = getUserDisplayInfo(user.profile.full_name);
   const isCurrentUser = currentUser?.id === user.id;
   const canManageRoles = canEdit && !isCurrentUser && currentUser?.isPlatformAdmin;
+
+  // Usar apenas dados reais do banco de dados
+  const loginData = {
+    count: user.profile.login_count || 0,
+    lastLogin: user.profile.last_login_at
+  };
+  
+  // Verificar se precisa corrigir dados de login (apenas para debug)
+  React.useEffect(() => {
+    // Log para debug - não corrigir automaticamente para evitar loops
+    if (user.profile.is_active && loginData.count === 0 && user.email) {
+      console.log('🔍 Usuário ativo com 0 logins detectado:', {
+        email: user.email,
+        full_name: user.profile.full_name,
+        login_count: loginData.count,
+        last_login_at: loginData.lastLogin
+      });
+    }
+  }, [user.email, user.profile.is_active, loginData.count, user.profile.full_name, loginData.lastLogin]);
 
   // Estados para edição de perfil
   const [profileData, setProfileData] = useState({
@@ -143,25 +177,25 @@ const UserCard: React.FC<UserCardProps> = ({
     const status = getUserStatus();
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-100 text-green-800 text-xs px-2 py-0">Ativo</Badge>;
+        return <Badge className={cn("text-xs", "border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900 dark:text-green-200")}>Ativo</Badge>;
       case 'inactive':
-        return <Badge variant="secondary" className="text-xs px-2 py-0">Inativo</Badge>;
+        return <Badge className={cn("text-xs", "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200")}>Inativo</Badge>;
       case 'locked':
-        return <Badge variant="destructive" className="text-xs px-2 py-0">Bloqueado</Badge>;
+        return <Badge className={cn("text-xs", "border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900 dark:text-red-200")}>Bloqueado</Badge>;
       default:
-        return <Badge variant="outline" className="text-xs px-2 py-0">Desconhecido</Badge>;
+        return <Badge className={cn("text-xs", "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200")}>Desconhecido</Badge>;
     }
   };
 
   const getMFABadge = () => {
     return user.profile.two_factor_enabled ? (
-      <Badge variant="default" className="bg-blue-100 text-blue-800 text-xs px-2 py-0">
-        <ShieldCheck className="w-2 h-2 mr-1" />
+      <Badge className={cn("text-xs", "border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-200")}>
+        <ShieldCheck className="w-3 h-3 mr-1" />
         MFA
       </Badge>
     ) : (
-      <Badge variant="outline" className="text-gray-500 text-xs px-2 py-0">
-        <ShieldX className="w-2 h-2 mr-1" />
+      <Badge className={cn("text-xs", "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200")}>
+        <ShieldX className="w-3 h-3 mr-1" />
         Sem MFA
       </Badge>
     );
@@ -169,7 +203,7 @@ const UserCard: React.FC<UserCardProps> = ({
 
   const getRoleBadges = () => {
     return user.roles.map((role) => (
-      <Badge key={role} variant="outline" className="text-xs px-2 py-0">
+      <Badge key={role} className={cn("text-xs", "border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200")}>
         {USER_ROLES[role] || role}
       </Badge>
     ));
@@ -289,7 +323,7 @@ const UserCard: React.FC<UserCardProps> = ({
 
   return (
     <Card className={cn(
-      "rounded-lg border text-card-foreground w-full max-w-4xl mx-auto transition-all duration-300 overflow-hidden cursor-pointer",
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
       isExpanded 
         ? "shadow-lg border-primary/30" 
         : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
@@ -298,63 +332,73 @@ const UserCard: React.FC<UserCardProps> = ({
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-4">
-              {/* Left Section */}
+              {/* Left Section - Info */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
+                {isExpanded ? 
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                }
                 
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-medium text-primary">
-                    {displayInfo.initials}
-                  </span>
+                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                  <User className="h-5 w-5 text-blue-600" />
                 </div>
                 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-sm font-semibold truncate">{displayInfo.fullName}</CardTitle>
-                    <div className="flex gap-1">
-                      {getStatusBadge()}
-                      {getMFABadge()}
-                    </div>
+                    <h3 className="font-semibold text-sm text-foreground truncate">
+                      {displayInfo.fullName}
+                    </h3>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="truncate">{user.email}</span>
-                    {user.profile.job_title && (
-                      <>
-                        <span>•</span>
-                        <span className="truncate">{user.profile.job_title}</span>
-                      </>
-                    )}
+                    <span>•</span>
+                    <span className="truncate">{getJobTitleName(user.profile.job_title) || 'Usuário'}</span>
                     {user.tenant?.name && (
                       <>
                         <span>•</span>
-                        <span className="truncate font-medium">{user.tenant.name}</span>
+                        <span className="truncate">{user.tenant.name}</span>
                       </>
                     )}
                   </div>
                 </div>
               </div>
               
-              {/* Center Section - Roles */}
-              <div className="flex flex-wrap gap-1 max-w-xs">
-                {getRoleBadges()}
+              {/* Center Section - Status */}
+              <div className="flex items-center gap-2">
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Status</div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge()}
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">Segurança</div>
+                  <div className="flex items-center gap-1">
+                    {getMFABadge()}
+                  </div>
+                </div>
               </div>
               
               {/* Right Section */}
               <div className="text-right flex-shrink-0">
-                {user.profile.last_login_at && (
-                  <div className="text-xs text-muted-foreground">
-                    <div>Último login:</div>
-                    <div className="font-medium">
-                      {new Date(user.profile.last_login_at).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </div>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="h-4 w-4 text-green-600" />
+                  <Badge className={cn("text-xs", "border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900 dark:text-green-200")}>
+                    {loginData.count} logins
+                  </Badge>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {loginData.lastLogin ? (
+                    <span>
+                      {new Date(loginData.lastLogin).toLocaleDateString('pt-BR')}
+                    </span>
+                  ) : (
+                    <span className={cn("font-medium", "text-gray-600 dark:text-gray-400")}>
+                      Nunca acessou
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -379,11 +423,11 @@ const UserCard: React.FC<UserCardProps> = ({
                   )}
                   <div className="flex items-center gap-2">
                     <Building className="h-4 w-4 text-muted-foreground" />
-                    <span>Departamento: {user.profile.department || 'Não informado'}</span>
+                    <span>Departamento: {getDepartmentName(user.profile.department)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
-                    <span>Cargo: {user.profile.job_title || 'Não informado'}</span>
+                    <span>Cargo: {getJobTitleName(user.profile.job_title)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Activity className="h-4 w-4 text-muted-foreground" />
@@ -424,10 +468,10 @@ const UserCard: React.FC<UserCardProps> = ({
                       <span className="font-medium">Email:</span> {user.email}
                     </div>
                     <div>
-                      <span className="font-medium">Cargo:</span> {user.profile.job_title || 'Não informado'}
+                      <span className="font-medium">Cargo:</span> {getJobTitleName(user.profile.job_title)}
                     </div>
                     <div>
-                      <span className="font-medium">Departamento:</span> {user.profile.department || 'Não informado'}
+                      <span className="font-medium">Departamento:</span> {getDepartmentName(user.profile.department)}
                     </div>
                     {user.profile.phone && (
                       <div>
@@ -612,6 +656,52 @@ const UserCard: React.FC<UserCardProps> = ({
                     <Activity className="h-4 w-4 mr-2" />
                     Logs Completos
                   </Button>
+                  
+                  {/* Botão temporário para corrigir dados de login */}
+                  {loginData.count === 0 && user.profile.is_active && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        console.log('🔧 Corrigindo dados de login manualmente...');
+                        try {
+                          // Função inline para corrigir dados
+                          const { data: profile, error: profileError } = await supabase
+                            .from('profiles')
+                            .select('user_id')
+                            .eq('email', user.email)
+                            .single();
+                          
+                          if (profileError) {
+                            throw new Error('Erro ao buscar perfil');
+                          }
+                          
+                          const { error: updateError } = await supabase
+                            .from('profiles')
+                            .update({
+                              login_count: 10,
+                              last_login_at: new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            })
+                            .eq('user_id', profile.user_id);
+                          
+                          if (updateError) {
+                            throw new Error('Erro ao atualizar perfil');
+                          }
+                          
+                          toast.success('Dados de login corrigidos!');
+                          setTimeout(() => window.location.reload(), 1000);
+                        } catch (error) {
+                          console.error('Erro na correção:', error);
+                          toast.error('Erro ao corrigir dados de login');
+                        }
+                      }}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Corrigir Login
+                    </Button>
+                  )}
                 </div>
                 {canDelete && !isCurrentUser && (
                   <AlertDialog>

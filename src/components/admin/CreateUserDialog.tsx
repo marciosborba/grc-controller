@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -23,16 +23,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { UserPlus, Mail, Shield, Users } from 'lucide-react';
+import { UserPlus, Mail, Shield } from 'lucide-react';
+import { SimpleExtensibleSelect } from '@/components/ui/simple-extensible-select';
+import { useDepartmentOptions, useJobTitleOptions } from '@/hooks/useExtensibleDropdowns';
 import type { CreateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,18 +55,6 @@ interface CreateUserDialogProps {
 
 const AVAILABLE_ROLES: AppRole[] = ['user', 'auditor', 'compliance_officer', 'risk_manager', 'ciso', 'admin'];
 
-const DEPARTMENTS = [
-  'Tecnologia da Informação',
-  'Segurança da Informação',
-  'Compliance',
-  'Auditoria',
-  'Riscos',
-  'Jurídico',
-  'Recursos Humanos',
-  'Financeiro',
-  'Operações'
-];
-
 const ADDITIONAL_PERMISSIONS = [
   { id: 'reports.export', label: 'Exportar Relatórios' },
   { id: 'logs.export', label: 'Exportar Logs' },
@@ -90,6 +72,23 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   const { user } = useAuth();
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const wasLoadingRef = useRef(false);
+  
+  // Hooks para opções dos dropdowns
+  const departmentOptions = useDepartmentOptions();
+  const jobTitleOptions = useJobTitleOptions();
+
+  // Fechar dialog automaticamente após sucesso
+  useEffect(() => {
+    if (wasLoadingRef.current && !isLoading) {
+      // Se estava carregando e agora não está mais, significa que terminou
+      // Aguardar um pouco para garantir que o toast de sucesso seja exibido
+      setTimeout(() => {
+        handleClose();
+      }, 1000);
+    }
+    wasLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -213,8 +212,19 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                     <FormItem>
                       <FormLabel>Cargo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Analista de Segurança" {...field} />
+                        <SimpleExtensibleSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          type="jobTitles"
+                          placeholder="Selecione ou adicione um cargo"
+                          canAddNew={true}
+                          hasAddPermission={jobTitleOptions.canAdd}
+                          validateNewItem={jobTitleOptions.validateNewItem}
+                          showDescription={true}
+                          allowClear={true}
+                        />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -225,20 +235,20 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Departamento</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o departamento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {DEPARTMENTS.map((dept) => (
-                            <SelectItem key={dept} value={dept}>
-                              {dept}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <SimpleExtensibleSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          type="departments"
+                          placeholder="Selecione ou adicione um departamento"
+                          canAddNew={true}
+                          hasAddPermission={departmentOptions.canAdd}
+                          validateNewItem={departmentOptions.validateNewItem}
+                          showDescription={true}
+                          allowClear={true}
+                        />
+                      </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

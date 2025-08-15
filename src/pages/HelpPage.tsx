@@ -81,7 +81,7 @@ const FAQContent = () => {
       question: 'Como gerencio os usuários do sistema?',
       answer: (
         <>
-          A gestão de usuários e permissões é feita em <Link to="/settings" className="text-primary hover:underline">Configurações</Link> na subseção de Gerenciamento de Usuários.
+          A gestão de usuários e permissões é feita em <Link to="/settings" className="text-primary hover:underline">Gestão de Usuários</Link>.
         </>
       )
     },
@@ -89,7 +89,7 @@ const FAQContent = () => {
       question: 'Onde vejo os logs de atividade do sistema?',
       answer: (
         <>
-          Os logs de atividade estão disponíveis em <Link to="/settings/activity-logs" className="text-primary hover:underline">Configurações</Link> na subseção de Logs de Atividade.
+          Os logs de atividade estão disponíveis em <Link to="/settings/activity-logs" className="text-primary hover:underline">Gestão de Usuários</Link> na subseção de Logs de Atividade.
         </>
       )
     },

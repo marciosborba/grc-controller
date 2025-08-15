@@ -215,6 +215,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: authUser.email,
         isPlatformAdmin: authUser.isPlatformAdmin
       });
+      
+      // Debug: Verificar dados de login
+      if (profile && (profile.login_count === null || profile.login_count === 0)) {
+        console.log('🔍 Usuário com login_count zerado detectado:', {
+          user_id: supabaseUser.id,
+          email: supabaseUser.email,
+          login_count: profile.login_count
+        });
+      }
 
       await logAuthEvent('login_success', { user_id: supabaseUser.id });
       return authUser;
@@ -291,6 +300,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(data.session);
         const authUser = await buildUserObject(data.user);
         setUser(authUser);
+        
+        // Atualizar dados de login no perfil do usuário
+        try {
+          // Primeiro, buscar o login_count atual
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('login_count')
+            .eq('user_id', data.user.id)
+            .single();
+          
+          const currentCount = currentProfile?.login_count || 0;
+          
+          // Atualizar com o novo count e data
+          await supabase
+            .from('profiles')
+            .update({
+              last_login_at: new Date().toISOString(),
+              login_count: currentCount + 1
+            })
+            .eq('user_id', data.user.id);
+            
+          console.log('✅ Dados de login atualizados:', {
+            user_id: data.user.id,
+            email: data.user.email,
+            old_login_count: currentCount,
+            new_login_count: currentCount + 1,
+            last_login_at: new Date().toISOString()
+          });
+        } catch (updateError) {
+          console.warn('Erro ao atualizar dados de login:', updateError);
+        }
         
         // Registrar login bem-sucedido com informações completas
         await logAuthEvent('login_success', {

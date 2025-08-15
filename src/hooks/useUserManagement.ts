@@ -123,6 +123,19 @@ export const useUserManagement = () => {
             ? tenants?.find(t => t.id === profile.tenant_id) || null
             : null;
 
+          // Debug específico para Marcio Borba
+          if (profile.email === 'adm@grc-controller.com' || profile.full_name === 'Marcio Borba') {
+            console.log('🔍 DEBUG Marcio Borba - Dados do banco:', {
+              user_id: profile.user_id,
+              full_name: profile.full_name,
+              email: profile.email,
+              login_count: profile.login_count,
+              last_login_at: profile.last_login_at,
+              created_at: profile.created_at,
+              updated_at: profile.updated_at
+            });
+          }
+
           return {
             id: profile.user_id,
             email: profile.email || `user-${profile.user_id}@example.com`,
@@ -454,6 +467,23 @@ export const useUserManagement = () => {
         throw new Error('Sem permissão para editar usuários');
       }
 
+      // Verificar se o usuário pertence ao mesmo tenant (exceto platform admins)
+      if (!user?.isPlatformAdmin) {
+        const { data: targetUser, error: checkError } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('user_id', userId)
+          .single();
+        
+        if (checkError) {
+          throw new Error('Usuário não encontrado');
+        }
+        
+        if (targetUser.tenant_id !== user?.tenantId) {
+          throw new Error('Sem permissão para editar usuários de outro tenant');
+        }
+      }
+
       // Atualizar perfil
       const { error: profileError } = await supabase
         .from('profiles')
@@ -516,6 +546,23 @@ export const useUserManagement = () => {
         throw new Error('Sem permissão para excluir usuários');
       }
 
+      // Verificar se o usuário pertence ao mesmo tenant (exceto platform admins)
+      if (!user?.isPlatformAdmin) {
+        const { data: targetUser, error: checkError } = await supabase
+          .from('profiles')
+          .select('tenant_id')
+          .eq('user_id', userId)
+          .single();
+        
+        if (checkError) {
+          throw new Error('Usuário não encontrado');
+        }
+        
+        if (targetUser.tenant_id !== user?.tenantId) {
+          throw new Error('Sem permissão para excluir usuários de outro tenant');
+        }
+      }
+
       // Excluir do Supabase Auth (cascata para outras tabelas)
       const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) throw error;
@@ -549,6 +596,23 @@ export const useUserManagement = () => {
     mutationFn: async (action: BulkUserAction) => {
       if (!hasPermission('users.update')) {
         throw new Error('Sem permissão para executar ações em lote');
+      }
+
+      // Verificar se todos os usuários pertencem ao mesmo tenant (exceto platform admins)
+      if (!user?.isPlatformAdmin) {
+        const { data: targetUsers, error: checkError } = await supabase
+          .from('profiles')
+          .select('user_id, tenant_id')
+          .in('user_id', action.user_ids);
+        
+        if (checkError) {
+          throw new Error('Erro ao verificar usuários');
+        }
+        
+        const invalidUsers = targetUsers?.filter(u => u.tenant_id !== user?.tenantId) || [];
+        if (invalidUsers.length > 0) {
+          throw new Error(`Sem permissão para editar ${invalidUsers.length} usuário(s) de outro tenant`);
+        }
       }
 
       const results = [];

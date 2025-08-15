@@ -30,10 +30,10 @@ const navigationItems = [{
       description: 'Denúncias e questões éticas'
     },
     {
-      title: 'Configurações',
+      title: 'Gestão de Usuários',
       url: '/settings',
       icon: Settings,
-      permissions: ['admin', 'all'],
+      permissions: ['admin', 'users.read'],
       description: 'Gerenciamento de usuários e sistema'
     },
     {
@@ -149,7 +149,17 @@ export function AppSidebar() {
     
     return hasDirectPermission;
   };
-  const isActive = (path: string) => currentPath === path || currentPath.startsWith(path + '/');
+  const isActive = (path: string) => {
+    // Verificação exata para evitar conflitos entre /settings e /settings/general
+    if (path === '/settings') {
+      return currentPath === '/settings';
+    }
+    if (path === '/settings/general') {
+      return currentPath === '/settings/general' || currentPath.startsWith('/settings/general/');
+    }
+    // Para outras rotas, mantém a lógica original
+    return currentPath === path || currentPath.startsWith(path + '/');
+  };
   const getNavCls = (isActiveItem: boolean) => isActiveItem ? "bg-primary/10 text-primary font-medium border border-primary/20" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
   const handleProfileClick = () => {

@@ -103,11 +103,11 @@ export const AppHeader = () => {
                 <span className="text-sm">Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={handleProfileClick}
+                onClick={() => navigate('/settings')}
                 className="flex items-center space-x-2 cursor-pointer px-3 py-2"
               >
                 <Settings className="h-4 w-4" />
-                <span className="text-sm">Configurações</span>
+                <span className="text-sm">Gestão de Usuários</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 

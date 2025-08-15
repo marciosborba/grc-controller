@@ -3,24 +3,10 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import ComplianceCard from './ComplianceCard';
-
-interface ComplianceItem {
-  id: string;
-  title: string;
-  description?: string;
-  framework: string;
-  category: string;
-  status: string;
-  priority: string;
-  responsible: string;
-  due_date?: Date;
-  created_at: Date;
-  updated_at: Date;
-  [key: string]: any;
-}
+import type { ComplianceAssessment } from '@/types/compliance-management';
 
 interface SortableComplianceCardProps {
-  item: ComplianceItem;
+  item: ComplianceAssessment;
   onUpdate?: (itemId: string, updates: any) => void;
   onDelete?: (itemId: string) => void;
   canEdit?: boolean;
@@ -69,7 +55,12 @@ const SortableComplianceCard: React.FC<SortableComplianceCardProps> = (props) =>
       </div>
 
       {/* Compliance Card */}
-      <ComplianceCard {...props} />
+      <ComplianceCard 
+        compliance={props.item}
+        onUpdate={props.onUpdate}
+        onDelete={props.onDelete}
+        canEdit={props.canEdit}
+      />
     </div>
   );
 };

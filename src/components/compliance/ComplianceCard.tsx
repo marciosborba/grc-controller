@@ -53,12 +53,19 @@ import type {
   ComplianceAssessment, 
   ComplianceStatus, 
   ComplianceFramework,
-  CompliancePriority,
-  MaturityLevel
+  CompliancePriority
 } from '@/types/compliance-management';
 
+// Tipo estendido para compatibilidade
+type ExtendedComplianceAssessment = ComplianceAssessment & {
+  compliance_framework?: ComplianceFramework;
+  overall_maturity_level?: number;
+  business_owner?: string;
+  planned_completion_date?: Date;
+};
+
 interface ComplianceCardProps {
-  compliance: ComplianceAssessment;
+  compliance: ExtendedComplianceAssessment;
   onUpdate?: (complianceId: string, updates: any) => void;
   onDelete?: (complianceId: string) => void;
   canEdit?: boolean;
@@ -76,17 +83,31 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  // Verificação de segurança para evitar erros quando compliance é undefined
+  if (!compliance) {
+    return (
+      <Card className="rounded-lg border text-card-foreground w-full">
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p>Erro: Dados de compliance não encontrados</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Form states
   const [generalData, setGeneralData] = useState({
-    title: compliance.title,
+    title: compliance.title || '',
     description: compliance.description || '',
-    framework: compliance.compliance_framework,
-    status: compliance.status,
-    priority: compliance.priority,
+    framework: compliance.framework || compliance.compliance_framework || 'ISO 27001',
+    status: compliance.status || 'Planning',
+    priority: 'Medium' as CompliancePriority, // ComplianceAssessment não tem priority
     maturityLevel: compliance.overall_maturity_level || 1,
     assessor: compliance.lead_assessor || '',
     owner: compliance.business_owner || '',
-    dueDate: compliance.planned_completion_date ? format(compliance.planned_completion_date, 'yyyy-MM-dd') : '',
+    dueDate: compliance.planned_end_date ? format(compliance.planned_end_date, 'yyyy-MM-dd') : '',
     scope: compliance.scope_description || ''
   });
 
@@ -140,22 +161,24 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
     setShowDeleteDialog(false);
   }, [compliance.id, onDelete]);
 
-  const getStatusIcon = (status: ComplianceStatus) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Compliant': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'Partially Compliant': return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'Non-Compliant': return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'Not Assessed': return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+      case 'Completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'In Progress': return <Clock className="h-4 w-4 text-blue-600" />;
+      case 'Review': return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'Cancelled': return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'Planning': return <AlertTriangle className="h-4 w-4 text-gray-600" />;
       default: return <Shield className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const getStatusColor = (status: ComplianceStatus) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Compliant': return 'border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900 dark:text-green-200';
-      case 'Partially Compliant': return 'border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-200';
-      case 'Non-Compliant': return 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900 dark:text-red-200';
-      case 'Not Assessed': return 'border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200';
+      case 'Completed': return 'border-green-300 bg-green-50 text-green-800 dark:border-green-600 dark:bg-green-900 dark:text-green-200';
+      case 'In Progress': return 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-600 dark:bg-blue-900 dark:text-blue-200';
+      case 'Review': return 'border-yellow-300 bg-yellow-50 text-yellow-800 dark:border-yellow-600 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'Cancelled': return 'border-red-300 bg-red-50 text-red-800 dark:border-red-600 dark:bg-red-900 dark:text-red-200';
+      case 'Planning': return 'border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200';
       default: return 'border-gray-300 bg-gray-50 text-gray-800 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200';
     }
   };
@@ -195,16 +218,16 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-semibold text-sm text-foreground truncate">
-                      {compliance.title}
+                      {compliance.title || 'Título não definido'}
                     </h3>
-                    {compliance.priority === 'Critical' && (
+                    {compliance.status === 'Cancelled' && (
                       <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{compliance.compliance_framework}</span>
+                    <span className="truncate">{compliance.framework || compliance.compliance_framework || 'Framework não definido'}</span>
                     <span>•</span>
-                    <span className="truncate">Maturidade: {compliance.overall_maturity_level || 1}</span>
+                    <span className="truncate">Progresso: {compliance.progress_percentage || 0}%</span>
                     {compliance.lead_assessor && (
                       <>
                         <span>•</span>
@@ -217,27 +240,27 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
               
               {/* Center Section - Progress */}
               <div className="flex items-center gap-2">
-                <Progress value={(compliance.overall_maturity_level || 1) * 20} className="w-16" />
-                <span className="text-xs font-medium">{(compliance.overall_maturity_level || 1) * 20}%</span>
+                <Progress value={compliance.progress_percentage || 0} className="w-16" />
+                <span className="text-xs font-medium">{compliance.progress_percentage || 0}%</span>
               </div>
               
               {/* Right Section */}
               <div className="text-right flex-shrink-0">
                 <div className="flex items-center gap-2 mb-1">
-                  {getStatusIcon(compliance.status)}
-                  <Badge className={cn("text-xs", getStatusColor(compliance.status))}>
-                    {compliance.status}
+                  {getStatusIcon(compliance.status || 'Planning')}
+                  <Badge className={cn("text-xs", getStatusColor(compliance.status || 'Planning'))}>
+                    {compliance.status || 'Planning'}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  <span className={cn("font-medium", getPriorityColor(compliance.priority))}>
-                    {compliance.priority}
+                  <span className={cn("font-medium", getPriorityColor('Medium'))}>
+                    {compliance.status || 'Planning'}
                   </span>
-                  {compliance.planned_completion_date && (
+                  {compliance.planned_end_date && (
                     <>
                       <span className="mx-1">•</span>
                       <span>
-                        {format(compliance.planned_completion_date, "dd/MM/yyyy", { locale: ptBR })}
+                        {format(compliance.planned_end_date, "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </>
                   )}
@@ -474,20 +497,20 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
                       <div className="space-y-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Título</Label>
-                          <p className="text-sm font-medium">{compliance.title}</p>
+                          <p className="text-sm font-medium">{compliance.title || 'Título não definido'}</p>
                         </div>
                         
                         <div>
                           <Label className="text-xs text-muted-foreground">Framework</Label>
-                          <p className="text-sm">{compliance.compliance_framework}</p>
+                          <p className="text-sm">{compliance.compliance_framework || 'Framework não definido'}</p>
                         </div>
                         
                         <div>
                           <Label className="text-xs text-muted-foreground">Status</Label>
                           <div className="flex items-center gap-2">
-                            {getStatusIcon(compliance.status)}
-                            <Badge className={cn("text-xs", getStatusColor(compliance.status))}>
-                              {compliance.status}
+                            {getStatusIcon(compliance.status || 'Not Assessed')}
+                            <Badge className={cn("text-xs", getStatusColor(compliance.status || 'Not Assessed'))}>
+                              {compliance.status || 'Not Assessed'}
                             </Badge>
                           </div>
                         </div>
@@ -504,8 +527,8 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
                       <div className="space-y-4">
                         <div>
                           <Label className="text-xs text-muted-foreground">Prioridade</Label>
-                          <p className={cn("text-sm font-medium", getPriorityColor(compliance.priority))}>
-                            {compliance.priority}
+                          <p className={cn("text-sm font-medium", getPriorityColor(compliance.priority || 'Medium'))}>
+                            {compliance.priority || 'Medium'}
                           </p>
                         </div>
                         
