@@ -294,7 +294,7 @@ const UserCard: React.FC<UserCardProps> = ({
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? <ChevronDown className="h-4 w-4 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 flex-shrink-0" />}
+                {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                 
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <span className="text-xs font-medium text-primary">

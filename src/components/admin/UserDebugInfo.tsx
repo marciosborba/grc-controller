@@ -140,7 +140,7 @@ const UserDebugInfo: React.FC = () => {
                 </div>
                 <div>
                   <strong>Data:</strong>
-                  <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+                  <pre className="bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto text-gray-900 dark:text-gray-100">
                     {JSON.stringify(platformAdminData.data, null, 2)}
                   </pre>
                 </div>

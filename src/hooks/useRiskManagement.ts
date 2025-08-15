@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { 
+  useTenantSecurity,
+  tenantAccessMiddleware,
+  TENANT_SECURITY_CONFIG 
+} from '@/utils/tenantSecurity';
 import type { 
   Risk, 
   ActionPlan, 
@@ -26,49 +31,96 @@ import type {
 export const useRiskManagement = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { 
+    userTenantId, 
+    validateAccess, 
+    enforceFilter, 
+    logActivity,
+    isValidTenant 
+  } = useTenantSecurity();
+
+  // Verificar se usuário tem tenant válido
+  if (!isValidTenant) {
+    console.warn('[RISK-SECURITY] User without valid tenant accessing risk management');
+  }
 
   // ============================================================================
   // QUERIES - BUSCA DE DADOS
   // ============================================================================
 
-  // Buscar todos os riscos com filtros
+  // Buscar todos os riscos com filtros (ISOLAMENTO POR TENANT)
   const {
     data: risks = [],
     isLoading: isLoadingRisks,
     error: risksError
   } = useQuery({
-    queryKey: ['risks'],
+    queryKey: ['risks', userTenantId],
     queryFn: async (): Promise<Risk[]> => {
+      if (!userTenantId) {
+        await logActivity('invalid_access', {
+          action: 'query_risks_without_tenant',
+          reason: 'No tenant ID found'
+        });
+        throw new Error('Acesso negado: tenant não identificado');
+      }
+
       const { data, error } = await supabase
         .from('risk_assessments')
         .select(`
           *,
-          risk_action_plans (
+          risk_action_plans!inner (
             *,
             risk_action_activities (*)
           ),
           risk_communications (*)
         `)
+        .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        await logActivity('security_violation', {
+          action: 'query_risks_error',
+          error: error.message
+        });
+        throw error;
+      }
+
+      // Validar que todos os dados pertencem ao tenant correto
+      const validatedData = (data || []).filter(risk => {
+        const isValid = validateAccess(risk.tenant_id, { strictMode: true });
+        if (!isValid.isValid) {
+          logActivity('cross_tenant_attempt', {
+            action: 'risk_data_validation_failed',
+            riskId: risk.id,
+            riskTenant: risk.tenant_id,
+            error: isValid.error
+          });
+          return false;
+        }
+        return true;
+      });
 
       // Transformar dados do Supabase para o formato da aplicação
-      return (data || []).map(transformSupabaseRiskToRisk);
+      return validatedData.map(transformSupabaseRiskToRisk);
     },
-    enabled: !!user
+    enabled: !!user && !!userTenantId
   });
 
-  // Buscar métricas de risco
+  // Buscar métricas de risco (ISOLAMENTO POR TENANT)
   const {
     data: metrics,
     isLoading: isLoadingMetrics
   } = useQuery({
-    queryKey: ['risk-metrics'],
+    queryKey: ['risk-metrics', userTenantId],
     queryFn: async (): Promise<RiskMetrics> => {
+      if (!userTenantId) {
+        throw new Error('Acesso negado: tenant não identificado');
+      }
+
       const { data: riskData, error } = await supabase
         .from('risk_assessments')
-        .select('risk_level, status, created_at, due_date');
+        .select('risk_level, status, created_at, due_date, tenant_id')
+        .eq('tenant_id', userTenantId); // FILTRO CRÍTICO POR TENANT
 
       if (error) throw error;
 
@@ -88,10 +140,11 @@ export const useRiskManagement = () => {
         return acc;
       }, {} as Record<RiskStatus, number>);
 
-      // Calcular atividades em atraso
+      // Calcular atividades em atraso (ISOLAMENTO POR TENANT)
       const { data: activities } = await supabase
         .from('risk_action_activities')
-        .select('deadline, status')
+        .select('deadline, status, tenant_id')
+        .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .lt('deadline', now.toISOString())
         .neq('status', 'Concluído')
         .neq('status', 'Cancelado');
@@ -108,7 +161,7 @@ export const useRiskManagement = () => {
         averageResolutionTime: 0 // TODO: calcular baseado em histórico
       };
     },
-    enabled: !!user
+    enabled: !!user && !!userTenantId
   });
 
   // ============================================================================

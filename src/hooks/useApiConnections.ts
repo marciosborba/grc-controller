@@ -7,6 +7,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  useTenantSecurity,
+  tenantAccessMiddleware,
+  TENANT_SECURITY_CONFIG 
+} from '@/utils/tenantSecurity';
 import type {
   ApiConnection,
   ApiConnectionFormData,
@@ -45,6 +50,14 @@ export const useApiConnections = (): UseApiConnectionsReturn => {
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { 
+    userTenantId, 
+    validateAccess, 
+    validateIntegration, 
+    enforceFilter, 
+    logActivity,
+    isValidTenant 
+  } = useTenantSecurity();
 
   // Verificar se usuário tem tenant_id
   if (!user?.tenantId) {
@@ -294,31 +307,77 @@ export const useApiConnections = (): UseApiConnectionsReturn => {
     }
   }, [toast, loadConnections, user.tenantId]);
 
-  // Deletar conexão
+  // Deletar conexão com validações de segurança multi-tenant
   const deleteConnection = useCallback(async (id: string): Promise<boolean> => {
     try {
       const connection = connections.find(c => c.id === id);
-      if (!connection) return false;
+      if (!connection) {
+        await logActivity('invalid_access', {
+          action: 'delete_connection_not_found',
+          connectionId: id,
+          reason: 'Connection not found in local state'
+        });
+        return false;
+      }
 
-      // Deletar a integração (cascade deletará a conexão)
-      const { error: deleteError } = await supabase
-        .from('integrations')
-        .delete()
-        .eq('id', connection.integration_id);
-
-      if (deleteError) throw deleteError;
-
-      // Remover do estado local
-      setConnections(prev => prev.filter(c => c.id !== id));
-
-      toast({
-        title: 'Sucesso',
-        description: 'Conexão de API removida com sucesso'
+      // Validar acesso ao tenant da conexão
+      const validation = validateAccess(connection.tenant_id, {
+        strictMode: TENANT_SECURITY_CONFIG.STRICT_MODE,
+        logAttempts: true
       });
 
-      return true;
+      if (!validation.isValid) {
+        await logActivity('cross_tenant_attempt', {
+          action: 'delete_connection',
+          connectionId: id,
+          connectionTenant: connection.tenant_id,
+          error: validation.error
+        });
+        
+        toast({
+          title: 'Acesso Negado',
+          description: validation.error || 'Você não tem permissão para deletar esta conexão',
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      // Executar operação dentro do middleware de segurança
+      return await tenantAccessMiddleware(
+        async () => {
+          // Deletar a integração (cascade deletará a conexão)
+          const { error: deleteError } = await supabase
+            .from('integrations')
+            .delete()
+            .eq('id', connection.integration_id)
+            .eq('tenant_id', userTenantId); // DUPLA VERIFICAÇÃO DE TENANT
+
+          if (deleteError) throw deleteError;
+
+          // Remover do estado local
+          setConnections(prev => prev.filter(c => c.id !== id));
+
+          toast({
+            title: 'Sucesso',
+            description: 'Conexão de API removida com sucesso'
+          });
+
+          return true;
+        },
+        connection.tenant_id,
+        userTenantId,
+        { strictMode: true, logAttempts: true }
+      );
+
     } catch (err: any) {
       const errorMessage = err.message || 'Erro ao remover conexão de API';
+      
+      await logActivity('security_violation', {
+        action: 'delete_connection_error',
+        connectionId: id,
+        error: errorMessage
+      });
+
       toast({
         title: 'Erro',
         description: errorMessage,
@@ -326,7 +385,7 @@ export const useApiConnections = (): UseApiConnectionsReturn => {
       });
       return false;
     }
-  }, [connections, toast]);
+  }, [connections, toast, validateAccess, logActivity, userTenantId]);
 
   // Obter conexão por ID
   const getConnection = useCallback((id: string): ApiConnection | null => {

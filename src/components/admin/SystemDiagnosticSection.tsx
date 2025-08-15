@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { OwaspVulnerabilityScanner } from './OwaspVulnerabilityScanner';
 import { 
   Settings, 
   AlertTriangle, 
@@ -862,7 +864,7 @@ export const SystemDiagnosticSection = () => {
       case 'warning': return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
       case 'failed': return <XCircle className="h-4 w-4 text-red-600" />;
       case 'running': return <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />;
-      default: return <Clock className="h-4 w-4 text-gray-600" />;
+      default: return <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -872,7 +874,7 @@ export const SystemDiagnosticSection = () => {
       case 'warning': return 'text-yellow-700 bg-yellow-50 border-yellow-200';
       case 'failed': return 'text-red-700 bg-red-50 border-red-200';
       case 'running': return 'text-blue-700 bg-blue-50 border-blue-200';
-      default: return 'text-gray-700 bg-gray-50 border-gray-200';
+      default: return 'text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600';
     }
   };
 
@@ -911,7 +913,19 @@ export const SystemDiagnosticSection = () => {
     : diagnosticChecks.filter(check => check.category === selectedCategory);
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="overview" className="space-y-6">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="overview" className="flex items-center gap-2">
+          <Activity className="h-4 w-4" />
+          Visão Geral
+        </TabsTrigger>
+        <TabsTrigger value="vulnerabilities" className="flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Vulnerabilidades
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="overview" className="space-y-6">
       {/* Diagnostic Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
@@ -1117,8 +1131,8 @@ export const SystemDiagnosticSection = () => {
                       
                       {check.realData && (
                         <div className="mb-2">
-                          <p className="text-sm font-medium text-gray-600">Dados Reais:</p>
-                          <pre className="text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1 overflow-x-auto">
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dados Reais:</p>
+                          <pre className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 overflow-x-auto">
                             {JSON.stringify(check.realData, null, 2)}
                           </pre>
                         </div>
@@ -1180,6 +1194,11 @@ export const SystemDiagnosticSection = () => {
           </AlertDescription>
         </Alert>
       )}
-    </div>
+      </TabsContent>
+
+      <TabsContent value="vulnerabilities">
+        <OwaspVulnerabilityScanner />
+      </TabsContent>
+    </Tabs>
   );
 };

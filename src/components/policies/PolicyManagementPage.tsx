@@ -318,117 +318,109 @@ const PolicyManagementPage = () => {
         </div>
       </div>
 
-      {/* Métricas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <FileText className="h-6 w-6 text-blue-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{metrics.total_policies}</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics.total_policies}</div>
+            <p className="text-xs text-muted-foreground">políticas</p>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <FileText className="h-6 w-6 text-gray-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Rascunhos</p>
-                <p className="text-lg font-bold">{metrics.policies_by_status.draft || 0}</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">{metrics.policies_by_status.draft || 0}</div>
+            <p className="text-xs text-muted-foreground">em elaboração</p>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <Clock className="h-6 w-6 text-yellow-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Aguardando</p>
-                <p className="text-lg font-bold">{metrics.pending_approvals}</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aguardando</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{metrics.pending_approvals}</div>
+            <p className="text-xs text-muted-foreground">aprovação</p>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Aprovadas</p>
-                <p className="text-lg font-bold">{metrics.policies_by_status.approved || 0}</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{metrics.policies_by_status.approved || 0}</div>
+            <p className="text-xs text-muted-foreground">ativas</p>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <CalendarIcon className="h-6 w-6 text-orange-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Revisões</p>
-                <p className="text-lg font-bold">{metrics.upcoming_reviews}</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revisões</CardTitle>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{metrics.upcoming_reviews}</div>
+            <p className="text-xs text-muted-foreground">próximas</p>
           </CardContent>
         </Card>
-        
+
         <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center">
-              <TrendingUp className="h-6 w-6 text-purple-500" />
-              <div className="ml-3">
-                <p className="text-xs font-medium text-muted-foreground">Compliance</p>
-                <p className="text-lg font-bold">{Math.round(metrics.compliance_rate)}%</p>
-              </div>
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Compliance</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{Math.round(metrics.compliance_rate)}%</div>
+            <p className="text-xs text-muted-foreground">conformidade</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">Filtros</h3>
-              {hasActiveFilters() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                >
-                  Limpar Filtros
-                </Button>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pesquisar</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Pesquisar políticas..."
+                  placeholder="Buscar políticas..."
                   value={filters.search_term || ''}
                   onChange={(e) => updateFilter('search_term', e.target.value)}
                   className="pl-10"
                 />
               </div>
-              
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Categoria</label>
               <Select 
-                value={filters.categories?.[0] || undefined} 
-                onValueChange={(value) => updateFilter('categories', value ? [value as PolicyCategory] : [])}
+                value={filters.categories?.[0] || 'all'} 
+                onValueChange={(value) => updateFilter('categories', value === 'all' ? [] : [value as PolicyCategory])}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as Categorias" />
+                  <SelectValue placeholder="Todas as categorias" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Todas as categorias</SelectItem>
                   {Object.keys(POLICY_CATEGORIES).map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
@@ -436,15 +428,19 @@ const PolicyManagementPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
               <Select 
-                value={filters.statuses?.[0] || undefined} 
-                onValueChange={(value) => updateFilter('statuses', value ? [value as PolicyStatus] : [])}
+                value={filters.statuses?.[0] || 'all'} 
+                onValueChange={(value) => updateFilter('statuses', value === 'all' ? [] : [value as PolicyStatus])}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os Status" />
+                  <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   {Object.entries(POLICY_STATUSES).map(([key, label]) => (
                     <SelectItem key={key} value={key}>
                       {label.split(' - ')[0]}
@@ -452,15 +448,19 @@ const PolicyManagementPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo</label>
               <Select 
-                value={filters.document_types?.[0] || undefined} 
-                onValueChange={(value) => updateFilter('document_types', value ? [value as DocumentType] : [])}
+                value={filters.document_types?.[0] || 'all'} 
+                onValueChange={(value) => updateFilter('document_types', value === 'all' ? [] : [value as DocumentType])}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os Tipos" />
+                  <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   {Object.keys(DOCUMENT_TYPES).map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
@@ -469,76 +469,72 @@ const PolicyManagementPage = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="flex items-center gap-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filters.show_upcoming_reviews}
-                  onChange={(e) => updateFilter('show_upcoming_reviews', e.target.checked)}
-                />
-                <span className="text-sm">Revisões próximas (30 dias)</span>
-              </label>
-              
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={!filters.show_expired}
-                  onChange={(e) => updateFilter('show_expired', !e.target.checked)}
-                />
-                <span className="text-sm">Ocultar expiradas</span>
-              </label>
-            </div>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={filters.show_upcoming_reviews}
+                onChange={(e) => updateFilter('show_upcoming_reviews', e.target.checked)}
+              />
+              <span className="text-sm">Revisões próximas (30 dias)</span>
+            </label>
+            
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={!filters.show_expired}
+                onChange={(e) => updateFilter('show_expired', !e.target.checked)}
+              />
+              <span className="text-sm">Ocultar expiradas</span>
+            </label>
+            
+            {hasActiveFilters() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+              >
+                Limpar Filtros
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Lista de Políticas */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              Políticas ({sortedPolicies.length})
-              {hasActiveFilters() && (
-                <Badge variant="secondary" className="ml-2">
-                  Filtrada
-                </Badge>
-              )}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {sortedPolicies.length > 0 ? (
-            <div className="space-y-4">
-              {isCardView ? (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
+      {/* Content */}
+      <div className="space-y-4">
+        {sortedPolicies.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhuma política encontrada</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                {hasActiveFilters()
+                  ? "Não há políticas que correspondam aos filtros selecionados."
+                  : "Comece criando sua primeira política."}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeira Política
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {isCardView ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext 
+                  items={sortedPolicies.map(policy => policy.id)} 
+                  strategy={verticalListSortingStrategy}
                 >
-                  <SortableContext 
-                    items={sortedPolicies.map(policy => policy.id)} 
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {sortedPolicies.map((policy) => (
-                      <SortablePolicyCard
-                        key={policy.id}
-                        policy={policy}
-                        onUpdate={handleUpdatePolicy}
-                        onDelete={handleDeletePolicy}
-                        isUpdating={isUpdatingPolicy}
-                        isDeleting={isDeletingPolicy}
-                        canEdit={true}
-                        canDelete={true}
-                        canApprove={true}
-                      />
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <div className="space-y-4">
                   {sortedPolicies.map((policy) => (
-                    <PolicyCard
+                    <SortablePolicyCard
                       key={policy.id}
                       policy={policy}
                       onUpdate={handleUpdatePolicy}
@@ -550,36 +546,28 @@ const PolicyManagementPage = () => {
                       canApprove={true}
                     />
                   ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                {hasActiveFilters() 
-                  ? 'Nenhuma política encontrada' 
-                  : 'Nenhuma política cadastrada'
-                }
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {hasActiveFilters() 
-                  ? 'Tente ajustar os filtros para encontrar políticas.' 
-                  : 'Comece criando sua primeira política corporativa.'
-                }
-              </p>
-              {!hasActiveFilters() && (
-                <div className="mt-6">
-                  <Button onClick={() => setIsDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nova Política
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="space-y-4">
+                {sortedPolicies.map((policy) => (
+                  <PolicyCard
+                    key={policy.id}
+                    policy={policy}
+                    onUpdate={handleUpdatePolicy}
+                    onDelete={handleDeletePolicy}
+                    isUpdating={isUpdatingPolicy}
+                    isDeleting={isDeletingPolicy}
+                    canEdit={true}
+                    canDelete={true}
+                    canApprove={true}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

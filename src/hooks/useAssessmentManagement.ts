@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  useTenantSecurity,
+  tenantAccessMiddleware,
+  TENANT_SECURITY_CONFIG 
+} from '@/utils/tenantSecurity';
 import type { 
   Assessment,
   AssessmentFramework,
@@ -18,6 +24,19 @@ import type {
 export const useAssessmentManagement = (): UseAssessmentManagementReturn => {
   const queryClient = useQueryClient();
   const [profiles, setProfiles] = useState<any[]>([]);
+  const { user } = useAuth();
+  const { 
+    userTenantId, 
+    validateAccess, 
+    enforceFilter, 
+    logActivity,
+    isValidTenant 
+  } = useTenantSecurity();
+
+  // Verificar se usuário tem tenant válido
+  if (!isValidTenant) {
+    console.warn('[ASSESSMENT-SECURITY] User without valid tenant accessing assessment management');
+  }
 
   // Queries
   const {
@@ -26,9 +45,10 @@ export const useAssessmentManagement = (): UseAssessmentManagementReturn => {
     error: assessmentsError,
     refetch: refetchAssessments
   } = useQuery({
-    queryKey: ['assessments'],
+    queryKey: ['assessments', userTenantId],
     queryFn: fetchAssessments,
     staleTime: 5 * 60 * 1000,
+    enabled: !!user && !!userTenantId,
   });
 
   const {

@@ -403,12 +403,10 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex-shrink-0 p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                  {isExpanded ? 
-                    <ChevronDown className="h-4 w-4 text-gray-700 dark:text-gray-300 font-bold" /> : 
-                    <ChevronRight className="h-4 w-4 text-gray-700 dark:text-gray-300 font-bold" />
-                  }
-                </div>
+                {isExpanded ? 
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                }
                 
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
                   <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />

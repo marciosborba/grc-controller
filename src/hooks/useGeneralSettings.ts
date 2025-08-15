@@ -165,7 +165,15 @@ export const useGeneralSettings = (): UseGeneralSettingsReturn => {
 
       if (status === 'error' && error) {
         updateData.last_error = error;
-        updateData.error_count = supabase.raw('error_count + 1');
+        // Incrementar contador de erro via SQL
+        const { data: currentIntegration } = await supabase
+          .from('integrations')
+          .select('error_count')
+          .eq('id', id)
+          .eq('tenant_id', user.tenantId)
+          .single();
+        
+        updateData.error_count = (currentIntegration?.error_count || 0) + 1;
       } else if (status === 'connected') {
         updateData.last_error = null;
         updateData.error_count = 0;
@@ -358,28 +366,47 @@ export const useGeneralSettings = (): UseGeneralSettingsReturn => {
     refreshAll();
   }, [refreshAll]);
 
-  // Configurar real-time subscriptions
+  // Configurar real-time subscriptions com filtro por tenant
   useEffect(() => {
+    if (!user.tenantId) return;
+
+    // Subscription para mudanças na tabela integrations do tenant específico
     const integrationSubscription = supabase
-      .channel('integrations_changes')
+      .channel(`integrations_changes_${user.tenantId}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'integrations'
-      }, () => {
-        loadIntegrations();
-        loadStats();
+        table: 'integrations',
+        filter: `tenant_id=eq.${user.tenantId}` // FILTRO CRÍTICO POR TENANT
+      }, (payload: any) => {
+        console.log('Integration change detected for tenant:', user.tenantId, payload);
+        // Recarregar apenas se a mudança é do tenant atual
+        const newTenantId = payload.new?.tenant_id;
+        const oldTenantId = payload.old?.tenant_id;
+        
+        if (newTenantId === user.tenantId || oldTenantId === user.tenantId) {
+          loadIntegrations();
+          loadStats();
+        }
       })
       .subscribe();
 
+    // Subscription para logs de integração do tenant específico
     const logsSubscription = supabase
-      .channel('integration_logs_changes')
+      .channel(`integration_logs_changes_${user.tenantId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'integration_logs'
-      }, () => {
-        loadRecentLogs();
+        table: 'integration_logs',
+        filter: `tenant_id=eq.${user.tenantId}` // FILTRO CRÍTICO POR TENANT
+      }, (payload: any) => {
+        console.log('Integration log change detected for tenant:', user.tenantId, payload);
+        // Recarregar apenas se o log é do tenant atual
+        const newTenantId = payload.new?.tenant_id;
+        
+        if (newTenantId === user.tenantId) {
+          loadRecentLogs();
+        }
       })
       .subscribe();
 
@@ -387,7 +414,7 @@ export const useGeneralSettings = (): UseGeneralSettingsReturn => {
       supabase.removeChannel(integrationSubscription);
       supabase.removeChannel(logsSubscription);
     };
-  }, [loadIntegrations, loadStats, loadRecentLogs]);
+  }, [loadIntegrations, loadStats, loadRecentLogs, user.tenantId]);
 
   return {
     // Estado

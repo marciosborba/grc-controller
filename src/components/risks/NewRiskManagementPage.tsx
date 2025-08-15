@@ -241,34 +241,30 @@ const NewRiskManagementPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Gestão de Riscos Corporativos
-              </CardTitle>
-              <CardDescription>
-                Gerencie e monitore riscos com cards interativos e drag & drop
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Brain className="h-4 w-4 mr-2" />
-                IA Assistente
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos Corporativos</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Gerencie e monitore riscos com cards interativos e drag & drop
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Brain className="h-4 w-4 mr-2" />
+            IA Assistente
+          </Button>
+          <Button variant="outline">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Relatórios
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Risco
               </Button>
-              <Button variant="outline">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Relatórios
-              </Button>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={resetForm}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Risco
-                  </Button>
-                </DialogTrigger>
+            </DialogTrigger>
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -438,13 +434,78 @@ const NewRiskManagementPage: React.FC = () => {
                   </form>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-        </CardHeader>
+        </div>
+      </div>
 
-        <CardContent>
-          {/* Filters */}
-          <div className="mb-4 space-y-3">
+      {/* Metrics Cards */}
+      {metrics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
+                  <p className="text-2xl font-bold">
+                    {metrics.risksByLevel['Muito Alto'] || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-orange-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Alto</p>
+                  <p className="text-2xl font-bold">
+                    {metrics.risksByLevel['Alto'] || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Activity className="h-8 w-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Em Tratamento</p>
+                  <p className="text-2xl font-bold">
+                    {metrics.risksByStatus['Em Tratamento'] || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Shield className="h-8 w-8 text-gray-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{metrics.totalRisks}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -491,67 +552,11 @@ const NewRiskManagementPage: React.FC = () => {
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Metrics Cards */}
-          {metrics && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-8 w-8 text-red-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
-                      <p className="text-2xl font-bold">
-                        {metrics.risksByLevel['Muito Alto'] || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-8 w-8 text-orange-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Alto</p>
-                      <p className="text-2xl font-bold">
-                        {metrics.risksByLevel['Alto'] || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Activity className="h-8 w-8 text-blue-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Em Tratamento</p>
-                      <p className="text-2xl font-bold">
-                        {metrics.risksByStatus['Em Tratamento'] || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Shield className="h-8 w-8 text-gray-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Total</p>
-                      <p className="text-2xl font-bold">{metrics.totalRisks}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Risk Cards with Drag & Drop */}
+      {/* Risk Cards with Drag & Drop */}
+      <div className="space-y-4">
           {orderedRisks.length === 0 ? (
             <Card>
               <CardContent className="py-8">
@@ -590,8 +595,7 @@ const NewRiskManagementPage: React.FC = () => {
               </SortableContext>
             </DndContext>
           )}
-        </CardContent>
-      </Card>
+      </div>
     </div>
   );
 };
