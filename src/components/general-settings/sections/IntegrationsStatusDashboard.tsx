@@ -7,35 +7,46 @@ import {
   Activity,
   Zap,
   Globe,
-  Server
+  Server,
+  Mail,
+  Shield,
+  Webhook,
+  Cloud
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
-interface IntegrationStatus {
-  id: string;
-  name: string;
-  type: 'api' | 'email' | 'sso' | 'webhook' | 'backup' | 'mcp';
-  status: 'connected' | 'disconnected' | 'error' | 'pending';
-  lastSync?: string;
-  errorMessage?: string;
-}
+import { Button } from '@/components/ui/button';
+import type { 
+  Integration, 
+  IntegrationStats, 
+  IntegrationLog,
+  ConnectionTestResult 
+} from '@/types/general-settings';
 
 interface IntegrationsStatusDashboardProps {
-  integrations: IntegrationStatus[];
+  integrations: Integration[];
+  stats: IntegrationStats | null;
+  recentLogs: IntegrationLog[];
   isLoading: boolean;
   onRefresh: () => void;
+  onTestConnection: (integrationId: string) => Promise<ConnectionTestResult>;
 }
 
 const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = ({
   integrations,
+  stats,
+  recentLogs,
   isLoading,
-  onRefresh
+  onRefresh,
+  onTestConnection
 }) => {
-  const connectedCount = integrations.filter(i => i.status === 'connected').length;
-  const totalCount = integrations.length;
-  const healthPercentage = totalCount > 0 ? (connectedCount / totalCount) * 100 : 0;
+  // Usar stats reais se disponíveis, senão calcular localmente
+  const connectedCount = stats?.connected || integrations.filter(i => i.status === 'connected').length;
+  const totalCount = stats?.total_integrations || integrations.length;
+  const errorCount = stats?.error || integrations.filter(i => i.status === 'error').length;
+  const pendingCount = stats?.pending || integrations.filter(i => i.status === 'pending').length;
+  const healthPercentage = stats?.avg_uptime || (totalCount > 0 ? (connectedCount / totalCount) * 100 : 0);
 
   const getHealthColor = (percentage: number) => {
     if (percentage >= 80) return 'text-green-600';
@@ -89,7 +100,7 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
           </CardHeader>
           <CardContent className="p-3 sm:p-4">
             <div className="text-lg sm:text-2xl font-bold text-red-600">
-              {integrations.filter(i => i.status === 'error').length}
+              {errorCount}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
               requerem atenção
@@ -104,7 +115,7 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
           </CardHeader>
           <CardContent className="p-3 sm:p-4">
             <div className="text-lg sm:text-2xl font-bold text-yellow-600">
-              {integrations.filter(i => i.status === 'pending').length}
+              {pendingCount}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
               em configuração
@@ -155,13 +166,13 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { type: 'api', label: 'APIs', icon: Globe, color: 'blue' },
-              { type: 'email', label: 'E-mail', icon: RefreshCw, color: 'green' },
-              { type: 'sso', label: 'SSO', icon: CheckCircle, color: 'orange' },
-              { type: 'webhook', label: 'Webhooks', icon: Zap, color: 'indigo' },
-              { type: 'backup', label: 'Backup', icon: Server, color: 'cyan' },
-              { type: 'mcp', label: 'MCP', icon: Activity, color: 'purple' }
+              { type: 'email', label: 'E-mail', icon: Mail, color: 'green' },
+              { type: 'sso', label: 'SSO', icon: Shield, color: 'orange' },
+              { type: 'webhook', label: 'Webhooks', icon: Webhook, color: 'indigo' },
+              { type: 'backup', label: 'Backup', icon: Cloud, color: 'cyan' },
+              { type: 'mcp', label: 'MCP', icon: Zap, color: 'purple' }
             ].map(({ type, label, icon: Icon, color }) => {
-              const count = integrations.filter(i => i.type === type).length;
+              const count = stats?.by_type?.[type as keyof typeof stats.by_type] || integrations.filter(i => i.type === type).length;
               const connected = integrations.filter(i => i.type === type && i.status === 'connected').length;
               
               return (
@@ -180,40 +191,60 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
         </CardContent>
       </Card>
 
-      {/* Recent Sync Activity */}
-      {integrations.filter(i => i.lastSync).length > 0 && (
+      {/* Recent Activity from Logs */}
+      {recentLogs.length > 0 && (
         <Card>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-              Atividade de Sincronização
+              Atividade Recente
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Últimas sincronizações realizadas com sucesso
+              Últimas operações registradas no sistema
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
-              {integrations
-                .filter(i => i.lastSync)
-                .sort((a, b) => new Date(b.lastSync!).getTime() - new Date(a.lastSync!).getTime())
-                .slice(0, 5)
-                .map((integration) => (
-                  <div key={integration.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                    <div className="flex items-center space-x-3">
+              {recentLogs.slice(0, 5).map((log) => (
+                <div key={log.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  <div className="flex items-center space-x-3">
+                    {log.level === 'error' ? (
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    ) : log.level === 'warn' ? (
+                      <RefreshCw className="h-4 w-4 text-yellow-600" />
+                    ) : (
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="font-medium text-sm">{integration.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(integration.lastSync!).toLocaleString('pt-BR')}
-                        </p>
-                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-sm">{log.message}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString('pt-BR')} • {log.log_type}
+                        {log.response_time_ms && ` • ${log.response_time_ms}ms`}
+                      </p>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      Sincronizado
-                    </Badge>
                   </div>
-                ))}
+                  <Badge 
+                    variant={log.level === 'error' ? 'destructive' : 'outline'} 
+                    className="text-xs"
+                  >
+                    {log.level}
+                  </Badge>
+                </div>
+              ))}
+              
+              {recentLogs.length > 5 && (
+                <div className="text-center pt-3">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={onRefresh}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                    Ver mais atividades
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

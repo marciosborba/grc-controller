@@ -32,69 +32,30 @@ import SSOConfigurationSection from './sections/SSOConfigurationSection';
 import WebhooksSection from './sections/WebhooksSection';
 import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
+import DocumentationModal from './DocumentationModal';
+import { useGeneralSettings } from '@/hooks/useGeneralSettings';
+import type { IntegrationStatus as IntegrationStatusType } from '@/types/general-settings';
 
-interface IntegrationStatus {
-  id: string;
-  name: string;
-  type: 'api' | 'email' | 'sso' | 'webhook' | 'backup' | 'mcp';
-  status: 'connected' | 'disconnected' | 'error' | 'pending';
-  lastSync?: string;
-  errorMessage?: string;
-}
 
 export const GeneralSettingsPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [integrations, setIntegrations] = useState<IntegrationStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDocumentationOpen, setIsDocumentationOpen] = useState(false);
+  
+  // Usar hook real para carregar dados
+  const {
+    integrations,
+    stats,
+    recentLogs,
+    isLoading,
+    error,
+    refreshAll,
+    updateIntegrationStatus,
+    testConnection
+  } = useGeneralSettings();
 
-  useEffect(() => {
-    loadIntegrationsStatus();
-  }, []);
 
-  const loadIntegrationsStatus = async () => {
-    setIsLoading(true);
-    try {
-      // Simular carregamento do status das integrações
-      // Em produção, isso viria de uma API
-      const mockIntegrations: IntegrationStatus[] = [
-        {
-          id: 'slack-api',
-          name: 'Slack API',
-          type: 'api',
-          status: 'connected',
-          lastSync: new Date().toISOString()
-        },
-        {
-          id: 'email-service',
-          name: 'Serviço de E-mail',
-          type: 'email',
-          status: 'disconnected'
-        },
-        {
-          id: 'sso-azure',
-          name: 'Azure AD SSO',
-          type: 'sso',
-          status: 'pending'
-        },
-        {
-          id: 'mcp-claude',
-          name: 'Claude MCP',
-          type: 'mcp',
-          status: 'connected',
-          lastSync: new Date().toISOString()
-        }
-      ];
-      
-      setIntegrations(mockIntegrations);
-    } catch (error) {
-      console.error('Erro ao carregar status das integrações:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: IntegrationStatusType) => {
     switch (status) {
       case 'connected':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -107,7 +68,7 @@ export const GeneralSettingsPage = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: IntegrationStatusType) => {
     switch (status) {
       case 'connected':
         return <Badge className="bg-green-100 text-green-800 border-green-200">Conectado</Badge>;
@@ -120,6 +81,7 @@ export const GeneralSettingsPage = () => {
     }
   };
 
+  // Calcular categorias baseadas nos dados reais
   const integrationCategories = [
     {
       id: 'apis',
@@ -188,28 +150,36 @@ export const GeneralSettingsPage = () => {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={loadIntegrationsStatus}
+            onClick={refreshAll}
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Atualizar Status
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setIsDocumentationOpen(true)}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Documentação
           </Button>
         </div>
       </div>
 
-      {/* Alert de Informação */}
-      <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
-        <Info className="h-4 w-4" />
-        <AlertTitle>Centro de Integrações</AlertTitle>
-        <AlertDescription>
-          Configure e gerencie todas as integrações externas da plataforma GRC. 
-          Cada integração pode ser testada individualmente e monitorada em tempo real.
-        </AlertDescription>
-      </Alert>
+      {/* Alert de Informação ou Erro */}
+      {error ? (
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-950">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erro ao carregar integrações</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : (
+        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+          <Info className="h-4 w-4" />
+          <AlertTitle>Centro de Integrações</AlertTitle>
+          <AlertDescription>
+            Configure e gerencie todas as integrações externas da plataforma GRC. 
+            Cada integração pode ser testada individualmente e monitorada em tempo real.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
@@ -226,8 +196,11 @@ export const GeneralSettingsPage = () => {
         <TabsContent value="overview" className="space-y-6">
           <IntegrationsStatusDashboard 
             integrations={integrations}
+            stats={stats}
+            recentLogs={recentLogs}
             isLoading={isLoading}
-            onRefresh={loadIntegrationsStatus}
+            onRefresh={refreshAll}
+            onTestConnection={testConnection}
           />
 
           {/* Categories Grid */}
@@ -264,23 +237,35 @@ export const GeneralSettingsPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {integrations.slice(0, 5).map((integration) => (
-                <div key={integration.id} className="flex items-center justify-between py-2">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(integration.status)}
-                    <div>
-                      <p className="font-medium text-sm">{integration.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {integration.lastSync 
-                          ? `Última sincronização: ${new Date(integration.lastSync).toLocaleString('pt-BR')}`
-                          : 'Nunca sincronizado'
-                        }
-                      </p>
+              {recentLogs.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma atividade recente registrada
+                </p>
+              ) : (
+                recentLogs.slice(0, 5).map((log) => (
+                  <div key={log.id} className="flex items-center justify-between py-2">
+                    <div className="flex items-center space-x-3">
+                      {log.level === 'error' ? (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      )}
+                      <div>
+                        <p className="font-medium text-sm">{log.message}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(log.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
                     </div>
+                    <Badge 
+                      variant={log.level === 'error' ? 'destructive' : 'default'}
+                      className="text-xs"
+                    >
+                      {log.log_type}
+                    </Badge>
                   </div>
-                  {getStatusBadge(integration.status)}
-                </div>
-              ))}
+                ))
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -315,6 +300,12 @@ export const GeneralSettingsPage = () => {
           <BackupSyncSection />
         </TabsContent>
       </Tabs>
+
+      {/* Documentation Modal */}
+      <DocumentationModal 
+        isOpen={isDocumentationOpen}
+        onClose={() => setIsDocumentationOpen(false)}
+      />
     </div>
   );
 };
