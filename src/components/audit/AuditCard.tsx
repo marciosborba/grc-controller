@@ -187,10 +187,10 @@ const AuditCard: React.FC<AuditCardProps> = ({
 
   return (
     <Card className={cn(
-      "w-full transition-all duration-300 overflow-hidden cursor-pointer",
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
       isExpanded 
-        ? "bg-gray-50 dark:bg-gray-800 shadow-lg ring-2 ring-primary/20" 
-        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
+        ? "shadow-lg border-primary/30" 
+        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
@@ -281,28 +281,28 @@ const AuditCard: React.FC<AuditCardProps> = ({
           <CardContent className="pt-0">
             <div className="space-y-6">
               {/* Navigation Tabs */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <div className="flex flex-wrap gap-1 bg-muted/50 p-1 rounded-lg border overflow-x-auto">
                 <button
                   onClick={() => setActiveSection('general')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <ClipboardList className="h-4 w-4" />
+                  <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4" />
                   Geral
                 </button>
                 
                 <button
                   onClick={() => setActiveSection('findings')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'findings' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
                   Achados
                   {findingsCount > 0 && (
                     <Badge variant="secondary" className="ml-1 h-5 text-xs">
@@ -313,61 +313,61 @@ const AuditCard: React.FC<AuditCardProps> = ({
                 
                 <button
                   onClick={() => setActiveSection('recommendations')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'recommendations' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <Target className="h-4 w-4" />
+                  <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                   Recomendações
                 </button>
                 
                 <button
                   onClick={() => setActiveSection('evidence')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'evidence' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <Upload className="h-4 w-4" />
+                  <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                   Evidências
                 </button>
                 
                 <button
                   onClick={() => setActiveSection('workingpapers')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'workingpapers' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <FileText className="h-4 w-4" />
+                  <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
                   Papéis
                 </button>
                 
                 <button
                   onClick={() => setActiveSection('team')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'team' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                   Equipe
                 </button>
                 
                 <button
                   onClick={() => setActiveSection('history')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                     activeSection === 'history' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
+                      ? 'bg-background shadow-sm text-foreground border border-border' 
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3 w-3 sm:h-4 sm:w-4" />
                   Histórico
                 </button>
               </div>
@@ -375,9 +375,9 @@ const AuditCard: React.FC<AuditCardProps> = ({
               {/* Section Content */}
               {/* 1. INFORMAÇÕES GERAIS */}
               {activeSection === 'general' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-lg font-medium text-muted-foreground">INFORMAÇÕES GERAIS</h4>
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">INFORMAÇÕES GERAIS</h4>
                     {canEdit && (
                       <Button
                         variant="outline"
@@ -560,73 +560,79 @@ const AuditCard: React.FC<AuditCardProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Título</Label>
-                          <p className="text-sm font-medium">{audit.title}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="space-y-6">
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Título</Label>
+                          <p className="text-sm font-semibold text-foreground mt-1">{audit.title}</p>
                         </div>
                         
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Tipo</Label>
-                          <p className="text-sm">{audit.audit_type}</p>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Escopo</Label>
-                          <p className="text-sm">{audit.audit_scope}</p>
-                        </div>
-                        
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Status</Label>
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(audit.status)}
-                            <Badge className={cn("text-xs", getStatusColor(audit.status))}>
-                              {audit.status}
-                            </Badge>
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            {getTypeIcon(audit.audit_type)}
+                            <p className="text-sm font-medium">{audit.audit_type}</p>
                           </div>
                         </div>
-
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Progresso</Label>
-                          <div className="flex items-center gap-2">
-                            <Progress value={calculateProgress()} className="flex-1" />
-                            <span className="text-sm font-medium">{Math.round(calculateProgress())}%</span>
-                          </div>
+                        
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Escopo</Label>
+                          <p className="text-sm font-medium mt-1">{audit.audit_scope}</p>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Prioridade</Label>
-                          <p className={cn("text-sm font-medium", getPriorityColor(audit.priority))}>
-                            {audit.priority}
-                          </p>
+                      <div className="space-y-6">
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status & Prioridade</Label>
+                          <div className="space-y-3 mt-2">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(audit.status)}
+                              <Badge className={cn("text-xs", getStatusColor(audit.status))}>
+                                {audit.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs">Prioridade:</span>
+                              <span className={cn("text-sm font-medium", getPriorityColor(audit.priority))}>
+                                {audit.priority}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                         
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Fase Atual</Label>
-                          <p className="text-sm">{audit.current_phase}</p>
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fase Atual</Label>
+                          <p className="text-sm font-medium mt-1">{audit.current_phase}</p>
                         </div>
                         
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Auditor Líder</Label>
-                          <p className="text-sm">{audit.lead_auditor || 'Não definido'}</p>
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Auditor Líder</Label>
+                          <p className="text-sm font-medium mt-1">{audit.lead_auditor || 'Não definido'}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Progresso</Label>
+                          <div className="flex items-center gap-3 mt-2">
+                            <Progress value={calculateProgress()} className="flex-1" />
+                            <span className="text-sm font-bold">{Math.round(calculateProgress())}%</span>
+                          </div>
                         </div>
 
                         {audit.planned_start_date && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Início Planejado</Label>
-                            <p className="text-sm">
+                          <div className="p-4 bg-muted/30 rounded-lg border">
+                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Início Planejado</Label>
+                            <p className="text-sm font-medium mt-1">
                               {format(audit.planned_start_date, "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                           </div>
                         )}
 
                         {audit.planned_end_date && (
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Fim Planejado</Label>
-                            <p className="text-sm">
+                          <div className="p-4 bg-muted/30 rounded-lg border">
+                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fim Planejado</Label>
+                            <p className="text-sm font-medium mt-1">
                               {format(audit.planned_end_date, "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                           </div>
@@ -634,9 +640,11 @@ const AuditCard: React.FC<AuditCardProps> = ({
                       </div>
 
                       {audit.description && (
-                        <div className="col-span-2">
-                          <Label className="text-xs text-muted-foreground">Descrição</Label>
-                          <p className="text-sm mt-1">{audit.description}</p>
+                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                          <div className="p-4 bg-muted/30 rounded-lg border">
+                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Descrição</Label>
+                            <p className="text-sm text-foreground mt-2 leading-relaxed">{audit.description}</p>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -646,67 +654,99 @@ const AuditCard: React.FC<AuditCardProps> = ({
 
               {/* Other sections would be implemented similarly */}
               {activeSection === 'findings' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">ACHADOS</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhum achado registrado</p>
-                    <p className="text-xs">Clique para adicionar achados</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">ACHADOS</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhum achado registrado</p>
+                    <p className="text-sm">Os achados da auditoria serão exibidos aqui</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs sm:text-sm">
+                      <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Adicionar Achado
+                    </Button>
                   </div>
                 </div>
               )}
 
               {activeSection === 'recommendations' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">RECOMENDAÇÕES</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma recomendação cadastrada</p>
-                    <p className="text-xs">Clique para adicionar recomendações</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">RECOMENDAÇÕES</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhuma recomendação cadastrada</p>
+                    <p className="text-sm">Recomendações de melhoria serão listadas aqui</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs sm:text-sm">
+                      <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Adicionar Recomendação
+                    </Button>
                   </div>
                 </div>
               )}
 
               {activeSection === 'evidence' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">EVIDÊNCIAS</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Upload className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma evidência coletada</p>
-                    <p className="text-xs">Clique para adicionar evidências</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">EVIDÊNCIAS</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhuma evidência coletada</p>
+                    <p className="text-sm">Anexos e documentos de evidência serão exibidos aqui</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs sm:text-sm">
+                      <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Anexar Evidência
+                    </Button>
                   </div>
                 </div>
               )}
 
               {activeSection === 'workingpapers' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">PAPÉIS DE TRABALHO</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhum papel de trabalho criado</p>
-                    <p className="text-xs">Clique para adicionar papéis</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">PAPÉIS DE TRABALHO</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhum papel de trabalho criado</p>
+                    <p className="text-sm">Documentação técnica da auditoria será listada aqui</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs sm:text-sm">
+                      <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Criar Papel de Trabalho
+                    </Button>
                   </div>
                 </div>
               )}
 
               {activeSection === 'team' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">EQUIPE DE AUDITORIA</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Equipe não definida</p>
-                    <p className="text-xs">Clique para definir a equipe</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">EQUIPE DE AUDITORIA</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Equipe não definida</p>
+                    <p className="text-sm">Membros da equipe de auditoria serão listados aqui</p>
+                    <Button variant="outline" size="sm" className="mt-4 text-xs sm:text-sm">
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Gerenciar Equipe
+                    </Button>
                   </div>
                 </div>
               )}
 
               {activeSection === 'history' && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-medium text-muted-foreground">HISTÓRICO</h4>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma alteração registrada</p>
-                    <p className="text-xs">Histórico será exibido aqui</p>
+                <div className="space-y-6">
+                  <div className="pb-4 border-b border-border">
+                    <h4 className="text-lg font-semibold text-foreground">HISTÓRICO</h4>
+                  </div>
+                  <div className="text-center py-12 text-muted-foreground bg-muted/30 rounded-lg border border-dashed">
+                    <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">Nenhuma alteração registrada</p>
+                    <p className="text-sm">Histórico de mudanças será exibido aqui conforme as atualizações</p>
                   </div>
                 </div>
               )}

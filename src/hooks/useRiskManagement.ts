@@ -64,16 +64,10 @@ export const useRiskManagement = () => {
         throw new Error('Acesso negado: tenant não identificado');
       }
 
+      // Buscar riscos com filtro por tenant
       const { data, error } = await supabase
         .from('risk_assessments')
-        .select(`
-          *,
-          risk_action_plans!inner (
-            *,
-            risk_action_activities (*)
-          ),
-          risk_communications (*)
-        `)
+        .select('*')
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
 
@@ -87,13 +81,12 @@ export const useRiskManagement = () => {
 
       // Validar que todos os dados pertencem ao tenant correto
       const validatedData = (data || []).filter(risk => {
-        const isValid = validateAccess(risk.tenant_id, { strictMode: true });
-        if (!isValid.isValid) {
+        if (risk.tenant_id !== userTenantId) {
           logActivity('cross_tenant_attempt', {
             action: 'risk_data_validation_failed',
             riskId: risk.id,
             riskTenant: risk.tenant_id,
-            error: isValid.error
+            userTenant: userTenantId
           });
           return false;
         }
@@ -120,7 +113,7 @@ export const useRiskManagement = () => {
       const { data: riskData, error } = await supabase
         .from('risk_assessments')
         .select('risk_level, status, created_at, due_date, tenant_id')
-        .eq('tenant_id', userTenantId); // FILTRO CRÍTICO POR TENANT
+        .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
 
       if (error) throw error;
 
@@ -128,11 +121,20 @@ export const useRiskManagement = () => {
       const risks = riskData || [];
 
       // Calcular métricas
+      console.log('📊 useRiskManagement: Calculando métricas para', risks.length, 'riscos');
+      console.log('📊 Dados dos riscos para métricas:', risks.map(r => ({
+        id: r.id,
+        risk_level: r.risk_level,
+        status: r.status
+      })));
+      
       const risksByLevel = risks.reduce((acc, risk) => {
         const level = (risk.risk_level || 'Médio') as RiskLevel;
         acc[level] = (acc[level] || 0) + 1;
         return acc;
       }, {} as Record<RiskLevel, number>);
+      
+      console.log('📊 Métricas por nível calculadas:', risksByLevel);
 
       const risksByStatus = risks.reduce((acc, risk) => {
         const status = risk.status as RiskStatus;
@@ -141,15 +143,22 @@ export const useRiskManagement = () => {
       }, {} as Record<RiskStatus, number>);
 
       // Calcular atividades em atraso (ISOLAMENTO POR TENANT)
-      const { data: activities } = await supabase
-        .from('risk_action_activities')
-        .select('deadline, status, tenant_id')
-        .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
-        .lt('deadline', now.toISOString())
-        .neq('status', 'Concluído')
-        .neq('status', 'Cancelado');
-
-      const overdueActivities = activities?.length || 0;
+      // Verificar se a tabela risk_action_activities existe
+      let overdueActivities = 0;
+      try {
+        const { data: activities } = await supabase
+          .from('risk_action_activities')
+          .select('deadline, status')
+          .lt('deadline', now.toISOString())
+          .neq('status', 'Concluído')
+          .neq('status', 'Cancelado');
+        
+        overdueActivities = activities?.length || 0;
+      } catch (error) {
+        // Tabela pode não existir ainda
+        console.warn('Tabela risk_action_activities não encontrada:', error);
+        overdueActivities = 0;
+      }
 
       return {
         totalRisks: risks.length,
@@ -174,28 +183,73 @@ export const useRiskManagement = () => {
       const riskScore = riskData.probability * riskData.impact;
       const riskLevel = calculateRiskLevel(riskScore);
 
-      const { data, error } = await supabase
+      // Validar dados antes de inserir
+      if (!userTenantId) {
+        throw new Error('Tenant ID não encontrado. Faça login novamente.');
+      }
+
+      // Debug simplificado
+      console.log('🔍 Criando risco:', {
+        nome: riskData.name,
+        categoria: riskData.category,
+        responsavel: riskData.assignedTo,
+        riskLevel: riskLevel
+      });
+
+      // Preparar dados mínimos para inserção (apenas campos essenciais)
+      const baseRiskData: any = {
+        title: riskData.name,
+        description: riskData.description,
+        risk_category: riskData.category,
+        probability: Math.max(1, Math.min(5, Math.floor(riskData.probability))),
+        likelihood_score: Math.max(1, Math.min(5, Math.floor(riskData.probability))),
+        impact_score: Math.max(1, Math.min(5, Math.floor(riskData.impact))),
+        risk_level: riskLevel,
+        status: 'Identificado',
+        severity: 'medium'
+      };
+      
+      // Adicionar created_by apenas se for um UUID válido
+      if (user?.id && user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        baseRiskData.created_by = user.id;
+      }
+      
+      // Campo assigned_to agora é TEXT - tabela foi recriada!
+      if (riskData.assignedTo) {
+        baseRiskData.assigned_to = riskData.assignedTo;
+        console.log('✅ Campo assigned_to adicionado:', riskData.assignedTo);
+      }
+      
+      if (riskData.dueDate) {
+        baseRiskData.due_date = riskData.dueDate.toISOString();
+      }
+      
+      // Adicionar tenant_id apenas se for um UUID válido
+      if (userTenantId && userTenantId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        baseRiskData.tenant_id = userTenantId;
+      } else {
+        throw new Error('Tenant ID inválido. Faça login novamente.');
+      }
+      
+      // Adicionar analysisData se fornecido
+      if (riskData.analysisData) {
+        baseRiskData.analysis_data = riskData.analysisData;
+      }
+
+      console.log('🚀 Inserindo no banco...');
+      
+      let { data, error } = await supabase
         .from('risk_assessments')
-        .insert([{
-          title: riskData.name,
-          description: riskData.description,
-          risk_category: riskData.category,
-          probability: riskData.probability.toString(),
-          likelihood_score: riskData.probability,
-          impact_score: riskData.impact,
-          // Remover risk_score pois é coluna gerada
-          // risk_score: riskScore,
-          risk_level: riskLevel,
-          status: 'Identificado',
-          assigned_to: riskData.assignedTo || null,
-          due_date: riskData.dueDate?.toISOString(),
-          created_by: user?.id,
-          severity: 'medium' // valor padrão para compatibilidade
-        }])
+        .insert([baseRiskData])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao criar risco:', error.message);
+        throw error;
+      }
+      
+      console.log('✅ Risco criado com sucesso:', data.title);
 
       // Criar plano de ação se necessário
       if (riskData.treatmentType !== 'Aceitar') {
@@ -231,16 +285,14 @@ export const useRiskManagement = () => {
       if (data.description) updateData.description = data.description;
       if (data.category) updateData.risk_category = data.category;
       if (data.status) updateData.status = data.status;
-      if (data.assignedTo !== undefined) updateData.assigned_to = data.assignedTo || null;
+      if (data.assignedTo !== undefined) {
+        updateData.assigned_to = data.assignedTo || null; // Campo TEXT para nome da pessoa
+      }
       if (data.dueDate !== undefined) updateData.due_date = data.dueDate?.toISOString();
       
-      // Temporariamente salvar analysisData em um campo existente até termos a coluna analysis_data
+      // Salvar analysisData se fornecido
       if (data.analysisData !== undefined) {
-        // Preservar descrição existente mas adicionar analysis_data como um campo separado
-        const currentDesc = data.description || '';
-        const analysisJson = JSON.stringify(data.analysisData);
-        // Usar um padrão reconhecível para extrair depois
-        updateData.description = currentDesc.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '') + '\n---ANALYSIS_DATA---\n' + analysisJson;
+        updateData.analysis_data = data.analysisData;
       }
 
       // Recalcular score se probabilidade ou impacto mudaram
@@ -270,7 +322,19 @@ export const useRiskManagement = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao atualizar no banco:', error);
+        throw error;
+      }
+      
+      console.log('✅ Risco atualizado com sucesso no banco:', {
+        id: result.id,
+        title: result.title,
+        likelihood_score: result.likelihood_score,
+        impact_score: result.impact_score,
+        risk_level: result.risk_level,
+        risk_score: result.risk_score
+      });
 
       // Atualizar tipo de tratamento se fornecido
       if (data.treatmentType) {
@@ -430,30 +494,32 @@ export const useRiskManagement = () => {
   // ============================================================================
 
   const calculateRiskLevel = (score: number): RiskLevel => {
-    if (score >= 21) return 'Muito Alto';
-    if (score >= 16) return 'Alto';
-    if (score >= 9) return 'Médio';
+    console.log('📊 calculateRiskLevel: score =', score);
+    
+    // Usar a mesma lógica que está sendo usada na correção automática
+    if (score >= 20) return 'Muito Alto';
+    if (score >= 15) return 'Alto';
+    if (score >= 8) return 'Médio';
     if (score >= 4) return 'Baixo';
     return 'Muito Baixo';
   };
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
-    // Extrair analysisData da descrição (solução temporária)
-    let description = supabaseRisk.description || '';
-    let analysisData = null;
-    
-    const analysisMatch = description.match(/\n---ANALYSIS_DATA---\n([\s\S]*)$/);
-    if (analysisMatch) {
-      try {
-        analysisData = JSON.parse(analysisMatch[1]);
-        // Remover analysis data da descrição
-        description = description.replace(/\n---ANALYSIS_DATA---[\s\S]*$/, '');
-      } catch (e) {
-        console.warn('Erro ao parsear analysis data:', e);
-      }
-    }
+    // Usar descrição diretamente
+    const description = supabaseRisk.description || '';
+    // Usar analysis_data da coluna se existir
+    const analysisData = supabaseRisk.analysis_data || null;
 
-    return {
+    // Determinar status baseado na análise
+    let finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status);
+    
+    // Se tem analysis_data completa, pode ser "Avaliado"
+    if (analysisData && analysisData.qualitativeRiskLevel && finalStatus === 'Identificado') {
+      finalStatus = 'Avaliado';
+      console.log('🔄 Risco com análise completa - status alterado para "Avaliado"');
+    }
+    
+    const transformedRisk = {
       id: supabaseRisk.id,
       name: supabaseRisk.title,
       description: description,
@@ -462,7 +528,7 @@ export const useRiskManagement = () => {
       impact: supabaseRisk.impact_score,
       riskScore: supabaseRisk.risk_score || 0,
       riskLevel: supabaseRisk.risk_level || 'Médio',
-      status: mapSupabaseStatusToRiskStatus(supabaseRisk.status),
+      status: finalStatus,
       treatmentType: supabaseRisk.risk_action_plans?.[0]?.treatment_type || 'Mitigar',
       owner: supabaseRisk.created_by || '',
       assignedTo: supabaseRisk.assigned_to,
@@ -473,15 +539,37 @@ export const useRiskManagement = () => {
       updatedAt: new Date(supabaseRisk.updated_at),
       analysisData: analysisData
     };
+    
+    console.log('🔄 transformSupabaseRiskToRisk:', {
+      original: {
+        id: supabaseRisk.id,
+        title: supabaseRisk.title,
+        risk_level: supabaseRisk.risk_level,
+        risk_score: supabaseRisk.risk_score
+      },
+      transformed: {
+        id: transformedRisk.id,
+        name: transformedRisk.name,
+        riskLevel: transformedRisk.riskLevel,
+        riskScore: transformedRisk.riskScore
+      }
+    });
+    
+    return transformedRisk;
   };
 
   const mapSupabaseStatusToRiskStatus = (status: string): RiskStatus => {
+    console.log('🔄 mapSupabaseStatusToRiskStatus: status do banco =', status);
+    
     switch (status) {
       case 'open': return 'Identificado';
       case 'in_progress': return 'Em Tratamento';
       case 'mitigated': return 'Monitorado';
       case 'closed': return 'Fechado';
-      default: return 'Avaliado';
+      case 'assessed': return 'Avaliado'; // Apenas quando explicitamente avaliado
+      default: 
+        console.log('🔄 Status não mapeado, usando "Identificado":', status);
+        return 'Identificado'; // Padrão deve ser "Identificado", não "Avaliado"
     }
   };
 

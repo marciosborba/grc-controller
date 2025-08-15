@@ -51,6 +51,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import EthicsReportCard from './EthicsReportCard';
+import SortableEthicsReportCard from './SortableEthicsReportCard';
 
 export interface EthicsReport {
   id: string;
@@ -774,7 +775,7 @@ const EthicsChannelPage = () => {
               >
                 <div className="space-y-4">
                   {sortedReports.map((report) => (
-                    <EthicsReportCard
+                    <SortableEthicsReportCard
                       key={report.id}
                       report={report}
                       onEdit={handleEdit}

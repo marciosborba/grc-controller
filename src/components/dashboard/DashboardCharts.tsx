@@ -138,9 +138,19 @@ const DashboardCharts = () => {
 
   // Preparar dados para gráficos
   const risksBySeverity = data.risks.reduce((acc, risk) => {
-    acc[risk.severity] = (acc[risk.severity] || 0) + 1;
+    const level = risk.risk_level || 'Baixo';
+    // Mapear níveis para chaves em inglês para compatibilidade
+    const severityKey = {
+      'Muito Baixo': 'low',
+      'Baixo': 'low', 
+      'Médio': 'medium',
+      'Alto': 'high',
+      'Muito Alto': 'critical'
+    }[level] || 'low';
+    
+    acc[severityKey] = (acc[severityKey] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   const riskSeverityData = [
     { name: 'Baixo', value: risksBySeverity.low || 0, color: '#22c55e' },

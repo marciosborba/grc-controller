@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Card,
@@ -76,6 +78,7 @@ import { RISK_CATEGORIES, TREATMENT_TYPES } from '@/types/risk-management';
 
 const NewRiskManagementPage: React.FC = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const {
     risks,
     metrics,
@@ -89,6 +92,23 @@ const NewRiskManagementPage: React.FC = () => {
     filterRisks
   } = useRiskManagement();
   
+  // Debug do hook
+  console.log('🔍 NewRiskManagement - Hook data:', {
+    risksCount: risks?.length || 0,
+    hasMetrics: !!metrics,
+    isLoadingRisks,
+    isLoadingMetrics,
+    risksError: risksError?.message
+  });
+  
+  if (risks && risks.length > 0) {
+    console.log('🔍 NewRiskManagement - Risks data:', risks.map(r => ({
+      id: r.id,
+      name: r.name,
+      riskLevel: r.riskLevel
+    })));
+  }
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<RiskCategory[]>([]);
@@ -96,6 +116,13 @@ const NewRiskManagementPage: React.FC = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<RiskStatus[]>([]);
   const [showOverdue, setShowOverdue] = useState(false);
   const [orderedRisks, setOrderedRisks] = useState<Risk[]>([]);
+  
+  // Estado simples para contadores
+  const [simpleMetrics, setSimpleMetrics] = useState({
+    muitoAlto: 0,
+    alto: 0,
+    total: 0
+  });
 
   // Form data for creating new risk
   const [formData, setFormData] = useState<CreateRiskRequest>({
@@ -107,7 +134,7 @@ const NewRiskManagementPage: React.FC = () => {
     probability: 3,
     impact: 3,
     treatmentType: 'Mitigar',
-    owner: user?.id || '',
+    owner: user?.id || null,
     assignedTo: '',
     dueDate: undefined
   });
@@ -135,6 +162,11 @@ const NewRiskManagementPage: React.FC = () => {
       setOrderedRisks(filteredRisks);
     }
   }, [filteredRisks]);
+  
+  // Carregar métricas simples na inicialização
+  useEffect(() => {
+    loadSimpleMetrics();
+  }, []);
 
   // Handle drag end event
   const handleDragEnd = (event: DragEndEvent) => {
@@ -183,7 +215,7 @@ const NewRiskManagementPage: React.FC = () => {
       probability: 3,
       impact: 3,
       treatmentType: 'Mitigar',
-      owner: user?.id || '',
+      owner: user?.id || null,
       assignedTo: '',
       dueDate: undefined
     });
@@ -203,6 +235,229 @@ const NewRiskManagementPage: React.FC = () => {
   const handleDeleteRisk = async (riskId: string) => {
     if (confirm('Tem certeza que deseja excluir este risco?')) {
       deleteRisk(riskId);
+    }
+  };
+  
+  const handleRefreshMetrics = async () => {
+    console.log('🔄 Forçando atualização das métricas...');
+    
+    // Recarregar métricas simples
+    await loadSimpleMetrics();
+    
+    // Recarregar hook também
+    await queryClient.invalidateQueries({ queryKey: ['risks'] });
+    await queryClient.invalidateQueries({ queryKey: ['risk-metrics'] });
+    await queryClient.refetchQueries({ queryKey: ['risks'] });
+    await queryClient.refetchQueries({ queryKey: ['risk-metrics'] });
+    
+    toast.success('Métricas atualizadas!');
+  };
+  
+  const loadSimpleMetrics = async () => {
+    console.log('🔢 Carregando métricas simples...');
+    
+    // Tentar diferentes tabelas para encontrar onde estão os riscos
+    const tablesToTry = ['risk_assessments', 'risks', 'Risk_cards', 'risk_cards'];
+    
+    for (const tableName of tablesToTry) {
+      try {
+        console.log(`🔍 Tentando tabela: ${tableName}`);
+        
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .limit(5);
+        
+        if (error) {
+          console.log(`❌ Tabela ${tableName} não encontrada:`, error.message);
+          continue;
+        }
+        
+        console.log(`✅ Tabela ${tableName} encontrada! Dados:`, data);
+        
+        if (data && data.length > 0) {
+          console.log(`📊 Campos disponíveis em ${tableName}:`, Object.keys(data[0]));
+          
+          // Tentar encontrar o campo de nível de risco
+          const riskLevelFields = ['risk_level', 'riskLevel', 'level', 'severity', 'priority'];
+          let riskLevelField = null;
+          
+          for (const field of riskLevelFields) {
+            if (data[0].hasOwnProperty(field)) {
+              riskLevelField = field;
+              console.log(`🎯 Campo de nível encontrado: ${field}`);
+              break;
+            }
+          }
+          
+          if (riskLevelField) {
+            const total = data.length;
+            const muitoAlto = data.filter(r => 
+              r[riskLevelField] === 'Muito Alto' || 
+              r[riskLevelField] === 'muito alto' ||
+              r[riskLevelField] === 'MUITO ALTO' ||
+              r[riskLevelField] === 'critical' ||
+              r[riskLevelField] === 'Critical'
+            ).length;
+            const alto = data.filter(r => 
+              r[riskLevelField] === 'Alto' || 
+              r[riskLevelField] === 'alto' ||
+              r[riskLevelField] === 'ALTO' ||
+              r[riskLevelField] === 'high' ||
+              r[riskLevelField] === 'High'
+            ).length;
+            
+            console.log(`📊 Métricas de ${tableName}:`, { total, muitoAlto, alto, field: riskLevelField });
+            console.log(`📊 Valores encontrados no campo ${riskLevelField}:`, data.map(r => r[riskLevelField]));
+            
+            // CORREÇÃO: Verificar se os risk_level estão incorretos e corrigir
+            const risksWithWrongLevel = data.filter(r => {
+              const score = r.risk_score || (r.impact_score * r.likelihood_score) || 0;
+              const expectedLevel = score >= 20 ? 'Muito Alto' :
+                                   score >= 15 ? 'Alto' :
+                                   score >= 8 ? 'Médio' :
+                                   score >= 4 ? 'Baixo' : 'Muito Baixo';
+              return r[riskLevelField] !== expectedLevel;
+            });
+            
+            if (risksWithWrongLevel.length > 0) {
+              console.warn(`⚠️ ${risksWithWrongLevel.length} riscos com nível incorreto encontrados!`);
+              
+              // Corrigir cada risco
+              for (const risk of risksWithWrongLevel) {
+                const score = risk.risk_score || (risk.impact_score * risk.likelihood_score) || 0;
+                const correctLevel = score >= 20 ? 'Muito Alto' :
+                                   score >= 15 ? 'Alto' :
+                                   score >= 8 ? 'Médio' :
+                                   score >= 4 ? 'Baixo' : 'Muito Baixo';
+                
+                console.log(`🔧 Corrigindo "${risk.title}": score=${score}, ${risk[riskLevelField]} → ${correctLevel}`);
+                
+                try {
+                  const { error: updateError } = await supabase
+                    .from(tableName)
+                    .update({ 
+                      risk_level: correctLevel,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', risk.id);
+                  
+                  if (updateError) {
+                    console.error('❌ Erro ao corrigir:', updateError);
+                  } else {
+                    console.log('✅ Corrigido com sucesso!');
+                    // Atualizar objeto local
+                    risk[riskLevelField] = correctLevel;
+                  }
+                } catch (error) {
+                  console.error('❌ Erro na correção:', error);
+                }
+              }
+              
+              // Recalcular métricas após correção
+              const newMuitoAlto = data.filter(r => 
+                r[riskLevelField] === 'Muito Alto' || 
+                r[riskLevelField] === 'muito alto' ||
+                r[riskLevelField] === 'MUITO ALTO' ||
+                r[riskLevelField] === 'critical' ||
+                r[riskLevelField] === 'Critical'
+              ).length;
+              const newAlto = data.filter(r => 
+                r[riskLevelField] === 'Alto' || 
+                r[riskLevelField] === 'alto' ||
+                r[riskLevelField] === 'ALTO' ||
+                r[riskLevelField] === 'high' ||
+                r[riskLevelField] === 'High'
+              ).length;
+              
+              console.log(`📊 Métricas corrigidas:`, { total, muitoAlto: newMuitoAlto, alto: newAlto });
+              setSimpleMetrics({ total, muitoAlto: newMuitoAlto, alto: newAlto });
+            } else {
+              setSimpleMetrics({ total, muitoAlto, alto });
+            }
+            
+            return; // Sucesso, sair do loop
+          } else {
+            console.log(`⚠️ Nenhum campo de nível encontrado em ${tableName}`);
+          }
+        }
+        
+      } catch (error) {
+        console.error(`❌ Erro ao acessar tabela ${tableName}:`, error);
+      }
+    }
+    
+    console.error('❌ Nenhuma tabela de riscos encontrada!');
+  };
+  
+  const handleTestDirectQuery = async () => {
+    console.log('🧪 Teste: Query direta ao banco...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('risk_assessments')
+        .select('id, title, risk_level, risk_score, impact_score, likelihood_score')
+        .limit(10);
+      
+      if (error) {
+        console.error('❌ Erro na query direta:', error);
+        toast.error('Erro na query: ' + error.message);
+        return;
+      }
+      
+      console.log('📊 Query direta - Resultados:', data);
+      
+      const muitoAlto = data?.filter(r => r.risk_level === 'Muito Alto').length || 0;
+      const alto = data?.filter(r => r.risk_level === 'Alto').length || 0;
+      console.log('🔴 Query direta - Muito Alto encontrados:', muitoAlto);
+      console.log('🟠 Query direta - Alto encontrados:', alto);
+      
+      toast.success(`Query direta: ${data?.length || 0} riscos, ${muitoAlto} Muito Alto, ${alto} Alto`);
+      
+      // Atualizar métricas simples também
+      await loadSimpleMetrics();
+    } catch (error) {
+      console.error('❌ Erro no teste:', error);
+      toast.error('Erro no teste');
+    }
+  };
+  
+  const handleCreateTestRisk = async () => {
+    console.log('🧪 Criando risco de teste "Alto"...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('risk_assessments')
+        .insert({
+          title: 'Risco Teste Alto',
+          description: 'Risco criado para testar nível Alto',
+          risk_category: 'Operacional',
+          probability: 3,
+          impact_score: 5,
+          likelihood_score: 3,
+          // risk_score será calculado automaticamente: 3 * 5 = 15 (Alto)
+          status: 'Identificado',
+          assigned_to: 'Teste',
+          tenant_id: '46b1c048-85a1-423b-96fc-776007c8de1f'
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Erro ao criar risco de teste:', error);
+        toast.error('Erro ao criar risco: ' + error.message);
+        return;
+      }
+      
+      console.log('✅ Risco de teste criado:', data);
+      toast.success('Risco de teste "Alto" criado!');
+      
+      // Recarregar métricas
+      await loadSimpleMetrics();
+      
+    } catch (error) {
+      console.error('❌ Erro ao criar risco de teste:', error);
+      toast.error('Erro ao criar risco de teste');
     }
   };
 
@@ -250,6 +505,18 @@ const NewRiskManagementPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefreshMetrics}>
+            <Activity className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button variant="outline" onClick={handleTestDirectQuery}>
+            <Settings className="h-4 w-4 mr-2" />
+            Teste DB
+          </Button>
+          <Button variant="outline" onClick={handleCreateTestRisk}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Teste Alto
+          </Button>
           <Button variant="outline">
             <Brain className="h-4 w-4 mr-2" />
             IA Assistente
@@ -447,7 +714,11 @@ const NewRiskManagementPage: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
                   <p className="text-2xl font-bold">
-                    {metrics.risksByLevel['Muito Alto'] || 0}
+                    {(() => {
+                      console.log('📊 Card Muito Alto - Métricas simples:', simpleMetrics.muitoAlto);
+                      console.log('📊 Card Muito Alto - Hook metrics:', metrics?.risksByLevel?.['Muito Alto'] || 0);
+                      return simpleMetrics.muitoAlto;
+                    })()}
                   </p>
                 </div>
               </div>
@@ -461,7 +732,11 @@ const NewRiskManagementPage: React.FC = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-muted-foreground">Alto</p>
                   <p className="text-2xl font-bold">
-                    {metrics.risksByLevel['Alto'] || 0}
+                    {(() => {
+                      console.log('🟠 Card Alto - Métricas simples:', simpleMetrics.alto);
+                      console.log('🟠 Card Alto - Hook metrics:', metrics?.risksByLevel?.['Alto'] || 0);
+                      return simpleMetrics.alto;
+                    })()}
                   </p>
                 </div>
               </div>

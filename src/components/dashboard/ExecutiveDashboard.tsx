@@ -6,6 +6,7 @@ import RiskMatrix from './RiskMatrix';
 import DashboardCharts from './DashboardCharts';
 import ExecutiveReportButton from './ExecutiveReport';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   BarChart,
   Bar,
@@ -61,6 +62,7 @@ const kpiData = [
 ];
 
 export const ExecutiveDashboard = () => {
+  const queryClient = useQueryClient();
   const [realTimeData, setRealTimeData] = useState({
     riskScore: 0,
     complianceScore: 0,
@@ -77,6 +79,14 @@ export const ExecutiveDashboard = () => {
   useEffect(() => {
     const fetchRealTimeData = async () => {
       try {
+        // Debug do usuário e autenticação
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('👤 Usuário autenticado:', user);
+        console.log('🏢 Tenant do contexto:', user?.user_metadata?.tenant_id);
+        
+        if (authError) {
+          console.error('❌ Erro de autenticação:', authError);
+        }
         const [
           risksResult,
           vendorsResult,
@@ -86,7 +96,13 @@ export const ExecutiveDashboard = () => {
           dpiaResult,
           ethicsResult
         ] = await Promise.all([
-          supabase.from('risk_assessments').select('*'),
+          supabase.from('risk_assessments').select('*').then(result => {
+            console.log('🔍 Resultado da query risk_assessments:', result);
+            if (result.error) {
+              console.error('❌ Erro na query risk_assessments:', result.error);
+            }
+            return result;
+          }),
           supabase.from('vendors').select('*'),
           supabase.from('policies').select('*'),
           supabase.from('assessments').select('*'),
@@ -103,10 +119,78 @@ export const ExecutiveDashboard = () => {
         const dpia = dpiaResult.data || [];
         const ethics = ethicsResult.data || [];
         
+        // Debug completo dos dados carregados
+        console.log('🔍 DADOS CARREGADOS:');
+        console.log('📊 risksResult:', risksResult);
+        console.log('📊 risks array:', risks);
+        console.log('📊 risks.length:', risks.length);
+        
+        if (risks.length > 0) {
+          console.log('📊 Primeiro risco:', risks[0]);
+          console.log('📊 Campos disponíveis:', Object.keys(risks[0]));
+          
+          // Verificar todos os valores de risk_level
+          const riskLevels = risks.map(r => r.risk_level);
+          console.log('📊 Todos os risk_level encontrados:', riskLevels);
+          console.log('📊 risk_level únicos:', [...new Set(riskLevels)]);
+          
+          // Debug detalhado de cada risco
+          risks.forEach((risk, index) => {
+            console.log(`🔍 Risco ${index + 1}:`, {
+              title: risk.title,
+              risk_level: risk.risk_level,
+              risk_score: risk.risk_score,
+              impact_score: risk.impact_score,
+              likelihood_score: risk.likelihood_score,
+              status: risk.status
+            });
+          });
+          
+          // Testar diferentes variações do filtro
+          console.log('🧪 Testando filtros:');
+          console.log('- "Muito Alto":', risks.filter(r => r.risk_level === 'Muito Alto').length);
+          console.log('- "muito alto":', risks.filter(r => r.risk_level === 'muito alto').length);
+          console.log('- "MUITO ALTO":', risks.filter(r => r.risk_level === 'MUITO ALTO').length);
+          console.log('- "critical":', risks.filter(r => r.risk_level === 'critical').length);
+          console.log('- "Critical":', risks.filter(r => r.risk_level === 'Critical').length);
+          console.log('- "Alto":', risks.filter(r => r.risk_level === 'Alto').length);
+        } else {
+          console.warn('⚠️ NENHUM RISCO ENCONTRADO! Verificando possíveis causas...');
+          
+          // Tentar query alternativa para debug
+          const debugQuery = await supabase
+            .from('risk_assessments')
+            .select('id, title, risk_level')
+            .limit(5);
+          
+          console.log('🔍 Query de debug (primeiros 5):', debugQuery);
+          
+          // Verificar se é problema de RLS
+          const countQuery = await supabase
+            .from('risk_assessments')
+            .select('id', { count: 'exact', head: true });
+          
+          console.log('🔢 Contagem total na tabela:', countQuery);
+        }
+        
+        // Problema do risk_level incorreto foi corrigido! 🎉
+        
         // Calcular score de risco baseado em dados reais
-        const criticalRisks = risks.filter(r => r.severity === 'critical').length;
-        const highRisks = risks.filter(r => r.severity === 'high').length;
+        const criticalRisks = risks.filter(r => r.risk_level === 'Muito Alto').length;
+        const highRisks = risks.filter(r => r.risk_level === 'Alto').length;
         const totalRisks = risks.length;
+        
+        console.log('📊 ExecutiveDashboard: Riscos por nível:', {
+          total: totalRisks,
+          critical: criticalRisks,
+          high: highRisks,
+          risksData: risks.map(r => ({ title: r.title, level: r.risk_level, status: r.status }))
+        });
+        
+        // Debug detalhado dos riscos
+        console.log('🔍 Todos os riscos encontrados:', risks);
+        console.log('🔴 Riscos Muito Alto:', risks.filter(r => r.risk_level === 'Muito Alto'));
+        console.log('🟠 Riscos Alto:', risks.filter(r => r.risk_level === 'Alto'));
         
         // Score de risco: considera críticos com peso maior
         const riskScore = totalRisks > 0 ? 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getTenantMatrixConfig } from '@/utils/risk-analysis';
 import { Loader2 } from 'lucide-react';
 
 interface Risk {
@@ -10,8 +11,7 @@ interface Risk {
   risk_category: string;
   impact_score: number;
   likelihood_score: number;
-  risk_score: number;
-  severity: string;
+  risk_level: string;
   status: string;
 }
 
@@ -40,22 +40,40 @@ const RiskMatrix = () => {
 
 
   const getRiskColor = (impact: number, likelihood: number) => {
-    const product = impact * likelihood;
-    const maxProduct = matrixConfig.type === '4x4' ? 16 : 25;
+    const riskValue = impact * likelihood;
     
-    // Cores baseadas no tipo de matriz
-    if (matrixConfig.type === '4x4') {
-      if (product >= 16) return 'bg-red-900';
-      if (product >= 12) return 'bg-red-700';  
-      if (product >= 5) return 'bg-orange-400';
-      if (product >= 3) return 'bg-yellow-300';
-      return 'bg-green-500';
-    } else { // 5x5
-      if (product >= 20) return 'bg-red-900';
-      if (product >= 15) return 'bg-red-700';
-      if (product >= 10) return 'bg-orange-400';
-      if (product >= 6) return 'bg-yellow-300';
-      return 'bg-green-500';
+    // Usar as mesmas cores das outras matrizes
+    if (matrixConfig.type === '5x5') {
+      // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-16), Muito Alto (17-25)
+      if (riskValue >= 17) return 'bg-red-500'; // Muito Alto
+      else if (riskValue >= 9) return 'bg-orange-500'; // Alto
+      else if (riskValue >= 5) return 'bg-yellow-500'; // Médio
+      else if (riskValue >= 3) return 'bg-green-500'; // Baixo
+      else return 'bg-blue-500'; // Muito Baixo (azul)
+    } else {
+      // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-9), Muito Alto (10-16)
+      if (riskValue >= 10) return 'bg-red-500'; // Muito Alto
+      else if (riskValue >= 7) return 'bg-orange-500'; // Alto
+      else if (riskValue >= 3) return 'bg-yellow-500'; // Médio
+      else return 'bg-green-500'; // Baixo
+    }
+  };
+
+  const getRiskColorHex = (impact: number, likelihood: number) => {
+    const riskValue = impact * likelihood;
+    
+    // Retornar cores em hex para a legenda
+    if (matrixConfig.type === '5x5') {
+      if (riskValue >= 17) return '#ef4444'; // Muito Alto
+      else if (riskValue >= 9) return '#f97316'; // Alto
+      else if (riskValue >= 5) return '#eab308'; // Médio
+      else if (riskValue >= 3) return '#22c55e'; // Baixo
+      else return '#3b82f6'; // Muito Baixo (azul)
+    } else {
+      if (riskValue >= 10) return '#ef4444'; // Muito Alto
+      else if (riskValue >= 7) return '#f97316'; // Alto
+      else if (riskValue >= 3) return '#eab308'; // Médio
+      else return '#22c55e'; // Baixo
     }
   };
 
@@ -78,20 +96,26 @@ const RiskMatrix = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Buscar configurações da tenant
-        if (user?.tenant) {
-          const tenantSettings = user.tenant.settings;
-          if (tenantSettings?.risk_matrix) {
-            setMatrixConfig(tenantSettings.risk_matrix);
-          }
+        // Buscar configurações da tenant usando a função centralizada
+        if (user?.tenant?.id) {
+          console.log('🏢 Dashboard: Carregando configuração da matriz para tenant:', user.tenant.id);
+          const config = await getTenantMatrixConfig(user.tenant.id);
+          console.log('⚙️ Dashboard: Configuração carregada:', config);
+          setMatrixConfig(config);
         }
 
-        // Buscar riscos
+        // Buscar riscos - CORRIGIDO: usar tabela 'risk_assessments' com campos corretos
+        console.log('🔍 RiskMatrix: Buscando riscos da tabela risk_assessments...');
         const { data, error } = await supabase
           .from('risk_assessments')
           .select('*');
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ Erro ao buscar riscos:', error);
+          throw error;
+        }
+        
+        console.log('📊 RiskMatrix: Riscos carregados:', data?.length || 0);
         setRisks(data || []);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -101,7 +125,7 @@ const RiskMatrix = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user?.tenant?.id]);
 
   useEffect(() => {
     const matrixSize = matrixConfig.type === '4x4' ? 4 : 5;
@@ -167,7 +191,7 @@ const RiskMatrix = () => {
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <CardTitle className="text-lg sm:text-xl">Matriz de Riscos ({matrixConfig.type})</CardTitle>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             {totalRisks} risco{totalRisks !== 1 ? 's' : ''}
           </div>
         </div>
@@ -178,7 +202,7 @@ const RiskMatrix = () => {
           <div className={`grid gap-1 w-full max-w-lg ${matrixConfig.type === '4x4' ? 'grid-cols-5' : 'grid-cols-6'}`}>
             <div></div> {/* Espaço vazio para alinhamento */}
             {Array.from({ length: matrixConfig.type === '4x4' ? 4 : 5 }, (_, i) => i + 1).map((num) => (
-              <div key={num} className="text-center text-sm font-medium text-gray-500">
+              <div key={num} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400">
                 {num}
               </div>
             ))}
@@ -190,7 +214,7 @@ const RiskMatrix = () => {
           <div className={`grid gap-1 w-full max-w-lg ${matrixConfig.type === '4x4' ? 'grid-cols-5' : 'grid-cols-6'}`}>
             {Array.from({ length: matrixConfig.type === '4x4' ? 4 : 5 }, (_, i) => i + 1).reverse().map((likelihoodValue) => (
               <React.Fragment key={`row-${likelihoodValue}`}>
-                <div className="flex items-center justify-center text-sm font-medium text-gray-500">
+                <div className="flex items-center justify-center text-sm font-medium text-gray-500 dark:text-gray-400">
                   {likelihoodValue}
                 </div>
                 
@@ -224,30 +248,41 @@ const RiskMatrix = () => {
           </div>
         </div>
 
-        {/* Legenda */}
+        {/* Legenda Dinâmica */}
         <div className="space-y-4">
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-            {/* CORREÇÃO: Cores da legenda alinhadas com a função getRiskColor */}
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-green-500 border border-white"></div>
-              <span className="text-sm text-gray-500">Baixo</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-yellow-300 border border-white"></div>
-              <span className="text-sm text-gray-500">Médio</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-orange-400 border border-white"></div>
-              <span className="text-sm text-gray-500">Alto</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-red-700 border border-white"></div>
-              <span className="text-sm text-gray-500">Crítico</span>
-            </div>
+            {(
+              matrixConfig.type === '5x5' ? [
+                { level: 'Muito Baixo', color: '#3b82f6', range: '1-2' },
+                { level: 'Baixo', color: '#22c55e', range: '3-4' },
+                { level: 'Médio', color: '#eab308', range: '5-8' },
+                { level: 'Alto', color: '#f97316', range: '9-16' },
+                { level: 'Muito Alto', color: '#ef4444', range: '17-25' }
+              ] : [
+                { level: 'Baixo', color: '#22c55e', range: '1-2' },
+                { level: 'Médio', color: '#eab308', range: '3-6' },
+                { level: 'Alto', color: '#f97316', range: '7-9' },
+                { level: 'Muito Alto', color: '#ef4444', range: '10-16' }
+              ]
+            ).map(({ level, color, range }) => (
+              <div key={level} className="flex items-center gap-2">
+                <div 
+                  className="w-4 h-4 rounded border border-white shadow-sm" 
+                  style={{ backgroundColor: color }}
+                ></div>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {level} <span className="text-xs text-gray-400">({range})</span>
+                </span>
+              </div>
+            ))}
           </div>
           
-          <div className="text-center text-sm text-gray-500">
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
             Probabilidade (vertical) x Impacto (horizontal) • Matriz {matrixConfig.type}
+            <br />
+            <span className="text-xs">
+              {matrixConfig.type === '5x5' ? '5 níveis de risco (incluindo Muito Baixo)' : '4 níveis de risco'}
+            </span>
           </div>
         </div>
       </CardContent>

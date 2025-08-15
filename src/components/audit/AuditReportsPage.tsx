@@ -19,6 +19,25 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { 
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
+import { 
   ClipboardList, 
   Plus, 
   Search, 
@@ -47,6 +66,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AuditCard from './AuditCard';
+import SortableAuditCard from './SortableAuditCard';
 import type { Audit } from '@/types/audit-management';
 
 const AuditReportsPage = () => {
@@ -70,6 +90,17 @@ const AuditReportsPage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para drag and drop
+  const [sortedAudits, setSortedAudits] = useState<Audit[]>([]);
+
+  // Configuração do drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Mock data - substitua por dados reais da API
   useEffect(() => {
@@ -193,6 +224,7 @@ const AuditReportsPage = () => {
 
         setAudits(mockAudits);
         setFilteredAudits(mockAudits);
+        setSortedAudits(mockAudits);
       } catch (error) {
         console.error('Error fetching audits:', error);
         toast.error('Erro ao carregar auditorias');
@@ -233,6 +265,7 @@ const AuditReportsPage = () => {
     }
 
     setFilteredAudits(filtered);
+    setSortedAudits(filtered);
   }, [audits, searchTerm, typeFilter, statusFilter, priorityFilter, phaseFilter]);
 
   const handleCreateAudit = async (data: any) => {
@@ -284,6 +317,7 @@ const AuditReportsPage = () => {
     try {
       // Mock delete - substituir por chamada real à API
       setAudits(prev => prev.filter(audit => audit.id !== id));
+      setSortedAudits(prev => prev.filter(audit => audit.id !== id));
       toast.success('Auditoria excluída com sucesso');
     } catch (error) {
       console.error('Error deleting audit:', error);
@@ -295,6 +329,18 @@ const AuditReportsPage = () => {
 
   const resetForm = () => {
     setEditingAudit(null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setSortedAudits((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   // Estatísticas resumidas
@@ -539,17 +585,29 @@ const AuditReportsPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredAudits.map((audit) => (
-              <AuditCard
-                key={audit.id}
-                audit={audit}
-                onUpdate={handleUpdateAudit}
-                onDelete={handleDeleteAudit}
-                canEdit={true}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext
+              items={sortedAudits.map(a => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {sortedAudits.map((audit) => (
+                  <SortableAuditCard
+                    key={audit.id}
+                    audit={audit}
+                    onUpdate={handleUpdateAudit}
+                    onDelete={handleDeleteAudit}
+                    canEdit={true}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>

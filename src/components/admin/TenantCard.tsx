@@ -71,6 +71,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface Tenant {
   id: string;
@@ -176,24 +177,32 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const [riskMatrix, setRiskMatrix] = useState<RiskMatrixConfig>(() => {
     const savedMatrix = tenant.settings?.risk_matrix;
     
+    console.log('🔍 Inicializando matriz de risco:', {
+      tenantId: tenant.id,
+      savedMatrix,
+      tenantSettings: tenant.settings
+    });
+    
     // Se não há configuração salva, usar padrão 4x4
     if (!savedMatrix) {
+      console.log('⚠️ Nenhuma matriz salva, usando padrão 4x4');
       return DEFAULT_RISK_MATRIX_4X4;
     }
     
-    // Converter configuração salva para estrutura esperada
-    if (savedMatrix.likelihood_labels && !savedMatrix.probability_labels) {
-      // Estrutura nova do banco de dados
-      return {
-        type: savedMatrix.type || '4x4',
-        impact_labels: savedMatrix.impact_labels || DEFAULT_RISK_MATRIX_4X4.impact_labels,
-        likelihood_labels: savedMatrix.likelihood_labels || DEFAULT_RISK_MATRIX_4X4.likelihood_labels,
-        risk_levels: savedMatrix.risk_levels || (savedMatrix.type === '5x5' ? DEFAULT_RISK_MATRIX_5X5.risk_levels : DEFAULT_RISK_MATRIX_4X4.risk_levels)
-      };
-    }
+    // Garantir que o tipo está definido
+    const matrixType = savedMatrix.type || '4x4';
+    const defaultMatrix = matrixType === '4x4' ? DEFAULT_RISK_MATRIX_4X4 : DEFAULT_RISK_MATRIX_5X5;
     
-    // Estrutura antiga ou já compatível
-    return (savedMatrix as RiskMatrixConfig) || DEFAULT_RISK_MATRIX_4X4;
+    // Converter configuração salva para estrutura esperada
+    const initialMatrix = {
+      type: matrixType,
+      impact_labels: savedMatrix.impact_labels || defaultMatrix.impact_labels,
+      likelihood_labels: savedMatrix.likelihood_labels || defaultMatrix.likelihood_labels,
+      risk_levels: savedMatrix.risk_levels || defaultMatrix.risk_levels
+    };
+    
+    console.log('⚙️ Matriz inicializada:', initialMatrix);
+    return initialMatrix;
   });
 
   // Estados para configuração de usuários
@@ -324,24 +333,87 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
     setIsSaving(true);
     try {
+      console.log('💾 Salvando configuração da matriz de risco:', {
+        tenantId: tenant.id,
+        currentRiskMatrix: riskMatrix,
+        currentSettings: tenant.settings
+      });
+
       const updatedSettings = {
         ...tenant.settings,
         risk_matrix: riskMatrix
       };
 
-      const { error } = await supabase.rpc('rpc_manage_tenant', {
-        action: 'update',
-        tenant_data: { settings: updatedSettings },
-        tenant_id_param: tenant.id
+      console.log('📤 Dados que serão enviados (via UPDATE direto):', {
+        settings: updatedSettings,
+        tenant_id: tenant.id
       });
 
-      if (error) throw error;
+      // Usar atualização direta na tabela tenants
+      console.log('📤 Executando UPDATE direto na tabela tenants...');
+      const { data: updateResult, error: directError } = await supabase
+        .from('tenants')
+        .update({ 
+          settings: updatedSettings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tenant.id)
+        .select('id, settings')
+        .single();
 
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('Configuração de matriz de riscos atualizada com sucesso');
+      if (directError) {
+        console.error('❌ Erro na atualização direta:', directError);
+        throw directError;
+      }
+
+      console.log('✅ Configuração salva com sucesso! Resultado:', updateResult);
+      
+      // Verificar se o resultado contém os dados esperados
+      if (updateResult?.settings?.risk_matrix) {
+        console.log('🔍 Verificação imediata - Matriz salva:', {
+          savedType: updateResult.settings.risk_matrix.type,
+          expectedType: riskMatrix.type,
+          typeMatches: updateResult.settings.risk_matrix.type === riskMatrix.type,
+          fullMatrix: updateResult.settings.risk_matrix
+        });
+      }
+      
+      // Forçar recarregamento dos dados
+      await queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      await queryClient.refetchQueries({ queryKey: ['tenants'] });
+      
+      toast.success(`Configuração de matriz ${riskMatrix.type} atualizada com sucesso!`);
       setIsEditingRiskMatrix(false);
+      
+      // Verificar se foi salvo corretamente após um tempo
+      setTimeout(async () => {
+        const { data: verificationTenant, error: fetchError } = await supabase
+          .from('tenants')
+          .select('settings')
+          .eq('id', tenant.id)
+          .single();
+        
+        if (fetchError) {
+          console.error('❌ Erro ao verificar salvamento:', fetchError);
+        } else {
+          console.log('🔍 Verificação pós-salvamento (1s depois):', {
+            savedSettings: verificationTenant?.settings,
+            savedRiskMatrix: verificationTenant?.settings?.risk_matrix,
+            savedType: verificationTenant?.settings?.risk_matrix?.type,
+            expectedType: riskMatrix.type,
+            typeMatches: verificationTenant?.settings?.risk_matrix?.type === riskMatrix.type
+          });
+          
+          if (verificationTenant?.settings?.risk_matrix?.type !== riskMatrix.type) {
+            console.error('⚠️ ATENÇÃO: Tipo da matriz não foi salvo corretamente!');
+            toast.error('Tipo da matriz não foi salvo corretamente. Tente novamente.');
+          }
+        }
+      }, 1000);
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error('❌ Erro ao salvar matriz de risco:', error);
       toast.error(`Erro ao salvar: ${errorMessage}`);
     } finally {
       setIsSaving(false);
@@ -349,9 +421,17 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   };
 
   const switchMatrixType = (newType: '4x4' | '5x5') => {
+    console.log('🔄 Alterando tipo de matriz:', {
+      from: riskMatrix.type,
+      to: newType,
+      currentMatrix: riskMatrix
+    });
+
     const defaultMatrix = newType === '4x4' ? DEFAULT_RISK_MATRIX_4X4 : DEFAULT_RISK_MATRIX_5X5;
-    setRiskMatrix({
+    
+    const newMatrix = {
       ...defaultMatrix,
+      type: newType, // Garantir que o tipo seja definido corretamente
       // Preservar customizações se existirem
       impact_labels: riskMatrix.impact_labels.length === defaultMatrix.impact_labels.length 
         ? riskMatrix.impact_labels 
@@ -359,7 +439,10 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       likelihood_labels: riskMatrix.likelihood_labels?.length === defaultMatrix.likelihood_labels.length
         ? riskMatrix.likelihood_labels
         : defaultMatrix.likelihood_labels
-    });
+    };
+
+    console.log('⚙️ Nova configuração da matriz:', newMatrix);
+    setRiskMatrix(newMatrix);
   };
 
   const saveUserConfig = async (e?: React.MouseEvent) => {
@@ -560,10 +643,15 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   }, [selectedTab, isExpanded]);
 
   return (
-    <Card className={`w-full transition-all duration-300 overflow-hidden ${isExpanded ? 'bg-muted/70 dark:bg-muted/60 shadow-lg ring-1 ring-border border-border' : 'bg-card hover:bg-muted/30 border-border'}`}>
+    <Card className={cn(
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
+      isExpanded 
+        ? "shadow-lg border-primary/30" 
+        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
+    )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className={`cursor-pointer transition-colors py-3 px-4 rounded-t-lg ${isExpanded ? 'bg-muted' : 'hover:bg-muted/40'}`}>
+          <CardHeader className="pb-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
@@ -1318,13 +1406,13 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
             {/* Preview da Matriz */}
             <div>
               <Label>Preview da Matriz</Label>
-              <div className="mt-2 p-4 border rounded-lg bg-gray-50">
+              <div className="mt-2 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
                 <div className="max-w-md mx-auto">
                   {/* Matrix Container */}
                   <div className="inline-block">
                     <div className="flex">
                       <div className="flex flex-col justify-center items-center mr-2">
-                        <div className="text-xs font-medium text-muted-foreground transform -rotate-90 whitespace-nowrap">
+                        <div className="text-xs font-medium text-muted-foreground dark:text-gray-400 transform -rotate-90 whitespace-nowrap">
                           IMPACTO
                         </div>
                       </div>
@@ -1334,37 +1422,46 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         <div className="flex">
                           <div className="flex flex-col space-y-0 mr-1">
                             {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, i) => (
-                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground`}>
+                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground dark:text-gray-400`}>
                                 {(riskMatrix.type === '4x4' ? 4 : 5) - i}
                               </div>
                             ))}
                           </div>
                           
                           {/* Grid Matrix */}
-                          <div className={`grid ${riskMatrix.type === '4x4' ? 'grid-rows-4' : 'grid-rows-5'} gap-0`}>
+                          <div className={`grid ${riskMatrix.type === '4x4' ? 'grid-rows-4' : 'grid-rows-5'} gap-0 border-2 border-white shadow-lg`}>
                             {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, rowIndex) => (
                               <div key={rowIndex} className={`grid ${riskMatrix.type === '4x4' ? 'grid-cols-4' : 'grid-cols-5'} gap-0`}>
                                 {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, colIndex) => {
-                                  const riskValue = ((riskMatrix.type === '4x4' ? 4 : 5) - rowIndex) * (colIndex + 1);
-                                  let backgroundColor = '#22c55e'; // Verde (Muito Baixo)
+                                  const probability = colIndex + 1;
+                                  const impact = (riskMatrix.type === '4x4' ? 4 : 5) - rowIndex;
+                                  const riskValue = probability * impact;
                                   
-                                  if (riskMatrix.risk_levels.critical.includes(riskValue)) {
-                                    backgroundColor = '#ef4444'; // Vermelho (Muito Alto)
-                                  } else if (riskMatrix.risk_levels.high.includes(riskValue)) {
-                                    backgroundColor = '#f97316'; // Laranja (Alto)
-                                  } else if (riskMatrix.risk_levels.medium.includes(riskValue)) {
-                                    backgroundColor = '#eab308'; // Amarelo (Médio)
-                                  } else if (riskMatrix.risk_levels.low && riskMatrix.risk_levels.low.includes(riskValue)) {
-                                    backgroundColor = '#84cc16'; // Verde claro (Baixo)
+                                  // Usar a mesma lógica de cores do RiskMatrix
+                                  let backgroundColor = '#22c55e'; // Verde (Muito Baixo/Baixo)
+                                  
+                                  if (riskMatrix.type === '5x5') {
+                                    // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-16), Muito Alto (17-25)
+                                    if (riskValue >= 17) backgroundColor = '#ef4444'; // Muito Alto
+                                    else if (riskValue >= 9) backgroundColor = '#f97316'; // Alto
+                                    else if (riskValue >= 5) backgroundColor = '#eab308'; // Médio
+                                    else if (riskValue >= 3) backgroundColor = '#22c55e'; // Baixo
+                                    else backgroundColor = '#3b82f6'; // Muito Baixo (azul)
+                                  } else {
+                                    // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-9), Muito Alto (10-16)
+                                    if (riskValue >= 10) backgroundColor = '#ef4444'; // Muito Alto
+                                    else if (riskValue >= 7) backgroundColor = '#f97316'; // Alto
+                                    else if (riskValue >= 3) backgroundColor = '#eab308'; // Médio
+                                    else backgroundColor = '#22c55e'; // Baixo
                                   }
                                   
                                   return (
                                     <div
                                       key={colIndex}
-                                      className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} border border-white/30 flex items-center justify-center`}
+                                      className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} border-2 border-white flex items-center justify-center hover:scale-105 transition-transform`}
                                       style={{ backgroundColor }}
                                     >
-                                      <span className={`${riskMatrix.type === '4x4' ? 'text-xs' : 'text-[10px]'} font-medium text-white drop-shadow-sm`}>
+                                      <span className={`${riskMatrix.type === '4x4' ? 'text-xs' : 'text-[10px]'} font-bold text-white drop-shadow-lg`}>
                                         {riskValue}
                                       </span>
                                     </div>
@@ -1379,7 +1476,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         <div className="flex justify-center mt-1">
                           <div className={`flex space-x-0 ${riskMatrix.type === '4x4' ? 'ml-9' : 'ml-7'}`}>
                             {Array.from({ length: riskMatrix.type === '4x4' ? 4 : 5 }, (_, i) => (
-                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground`}>
+                              <div key={i} className={`${riskMatrix.type === '4x4' ? 'h-8 w-8' : 'h-6 w-6'} flex items-center justify-center text-xs font-medium text-muted-foreground dark:text-gray-400`}>
                                 {i + 1}
                               </div>
                             ))}
@@ -1387,33 +1484,44 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         </div>
                         
                         <div className="text-center mt-1">
-                          <div className="text-xs font-medium text-muted-foreground">PROBABILIDADE</div>
+                          <div className="text-xs font-medium text-muted-foreground dark:text-gray-400">PROBABILIDADE</div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Compact Legend */}
+                  {/* Legenda Dinâmica */}
                   <div className="mt-4">
                     <div className="flex flex-wrap justify-center gap-2 text-xs">
-                      {[
-                        { level: 'Muito Alto', color: '#ef4444' },
-                        { level: 'Alto', color: '#f97316' },
-                        { level: 'Médio', color: '#eab308' },
-                        { level: 'Baixo', color: '#84cc16' },
-                        { level: 'Muito Baixo', color: '#22c55e' }
-                      ].map(({ level, color }) => (
-                        <div key={level} className="flex items-center space-x-1">
+                      {(
+                        riskMatrix.type === '5x5' ? [
+                          { level: 'Muito Baixo', color: '#3b82f6', range: '1-2' },
+                          { level: 'Baixo', color: '#22c55e', range: '3-4' },
+                          { level: 'Médio', color: '#eab308', range: '5-8' },
+                          { level: 'Alto', color: '#f97316', range: '9-16' },
+                          { level: 'Muito Alto', color: '#ef4444', range: '17-25' }
+                        ] : [
+                          { level: 'Baixo', color: '#22c55e', range: '1-2' },
+                          { level: 'Médio', color: '#eab308', range: '3-6' },
+                          { level: 'Alto', color: '#f97316', range: '7-9' },
+                          { level: 'Muito Alto', color: '#ef4444', range: '10-16' }
+                        ]
+                      ).map(({ level, color, range }) => (
+                        <div key={level} className="flex items-center space-x-1 bg-white dark:bg-gray-700 px-2 py-1 rounded shadow-sm">
                           <div className="w-3 h-3 rounded border" style={{ backgroundColor: color }}></div>
-                          <span className="text-xs">{level}</span>
+                          <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{level}</span>
+                          <span className="text-[10px] text-muted-foreground">({range})</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="mt-3 text-center">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground dark:text-gray-400">
                       Matriz {riskMatrix.type} • {(riskMatrix.type === '4x4' ? 4 : 5) * (riskMatrix.type === '4x4' ? 4 : 5)} combinações possíveis
+                    </p>
+                    <p className="text-[10px] text-muted-foreground dark:text-gray-500 mt-1">
+                      {riskMatrix.type === '5x5' ? '5 níveis de risco (incluindo Muito Baixo)' : '4 níveis de risco'}
                     </p>
                   </div>
                 </div>

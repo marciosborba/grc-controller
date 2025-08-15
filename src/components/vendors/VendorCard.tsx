@@ -219,10 +219,10 @@ const VendorCard: React.FC<VendorCardProps> = ({
 
   return (
     <Card className={cn(
-      "w-full transition-all duration-300 overflow-hidden cursor-pointer",
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
       isExpanded 
-        ? "bg-gray-50 dark:bg-gray-800 shadow-lg ring-2 ring-primary/20" 
-        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50"
+        ? "shadow-lg border-primary/30" 
+        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>

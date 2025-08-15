@@ -21,22 +21,38 @@ export const getTenantMatrixConfig = async (tenantId?: string): Promise<TenantRi
     likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável']
   };
 
-  if (!tenantId) return defaultConfig;
+  console.log('🔍 getTenantMatrixConfig chamada com tenantId:', tenantId);
+
+  if (!tenantId) {
+    console.log('⚠️ Nenhum tenantId fornecido, usando configuração padrão:', defaultConfig);
+    return defaultConfig;
+  }
 
   try {
+    console.log('📡 Buscando configuração da tenant no banco...');
     const { data, error } = await supabase
       .from('tenants')
       .select('settings')
       .eq('id', tenantId)
       .single();
 
-    if (error || !data?.settings?.risk_matrix) {
+    console.log('📊 Resposta do banco:', { data, error });
+
+    if (error) {
+      console.error('❌ Erro na consulta:', error);
       return defaultConfig;
     }
 
+    if (!data?.settings?.risk_matrix) {
+      console.log('⚠️ Nenhuma configuração risk_matrix encontrada, usando padrão:', defaultConfig);
+      console.log('📋 Settings disponíveis:', data?.settings);
+      return defaultConfig;
+    }
+
+    console.log('✅ Configuração da matriz encontrada:', data.settings.risk_matrix);
     return data.settings.risk_matrix;
   } catch (error) {
-    console.error('Erro ao buscar configuração da matriz:', error);
+    console.error('❌ Erro ao buscar configuração da matriz:', error);
     return defaultConfig;
   }
 };
@@ -57,22 +73,29 @@ export const calculateQualitativeRiskLevel = (
   // Arredondar scores para inteiros para mapear na matriz
   const prob = Math.round(probabilityScore);
   const impact = Math.round(impactScore);
+  const score = prob * impact;
   
   if (matrixSize === '4x4') {
-    // Matriz 4x4 (valores de 1 a 4)
-    const score = prob * impact;
-    if (score >= 12) return 'Muito Alto';
+    // Matriz 4x4 - Nova classificação
+    // 1 a 2 = Baixo
+    // 3 a 6 = Médio  
+    // 7 a 9 = Alto
+    // 10 a 16 = Muito Alto
+    if (score >= 10) return 'Muito Alto';
+    if (score >= 7) return 'Alto';
+    if (score >= 3) return 'Médio';
+    return 'Baixo';
+  } else {
+    // Matriz 5x5 - Nova classificação
+    // 1 a 2 = Muito Baixo
+    // 3 a 4 = Baixo
+    // 5 a 8 = Médio
+    // 9 a 16 = Alto
+    // 17 a 25 = Muito Alto
+    if (score >= 17) return 'Muito Alto';
     if (score >= 9) return 'Alto';
     if (score >= 5) return 'Médio';
     if (score >= 3) return 'Baixo';
-    return 'Muito Baixo';
-  } else {
-    // Matriz 5x5 (valores de 1 a 5)
-    const score = prob * impact;
-    if (score >= 20) return 'Muito Alto';
-    if (score >= 15) return 'Alto';
-    if (score >= 9) return 'Médio';
-    if (score >= 4) return 'Baixo';
     return 'Muito Baixo';
   }
 };
@@ -148,8 +171,22 @@ export const processRiskAnalysisWithTenantConfig = async (
   gutUrgency?: number,
   gutTendency?: number
 ): Promise<RiskAnalysisData> => {
+  console.log('🔍 processRiskAnalysisWithTenantConfig chamada:', {
+    riskType,
+    tenantId,
+    probabilityAnswersCount: probabilityAnswers.length,
+    impactAnswersCount: impactAnswers.length
+  });
+  
   const config = await getTenantMatrixConfig(tenantId);
-  return processRiskAnalysis(
+  
+  console.log('🏢 Usando configuração da tenant para análise:', {
+    tenantId,
+    matrixType: config.type,
+    config
+  });
+  
+  const result = processRiskAnalysis(
     riskType,
     config.type,
     probabilityAnswers,
@@ -158,6 +195,10 @@ export const processRiskAnalysisWithTenantConfig = async (
     gutUrgency,
     gutTendency
   );
+  
+  console.log('✅ Análise processada com matriz:', config.type, 'Resultado:', result);
+  
+  return result;
 };
 
 // Gera dados para visualização da matriz de risco
@@ -172,10 +213,10 @@ export const generateMatrixData = (matrixSize: MatrixSize): MatrixCell[][] => {
   const size = matrixSize === '4x4' ? 4 : 5;
   const matrix: MatrixCell[][] = [];
 
-  // Cores por nível de risco
+  // Cores por nível de risco - Nova especificação
   const colorMap: Record<RiskLevel, string> = {
-    'Muito Baixo': '#22c55e', // Verde
-    'Baixo': '#84cc16',       // Verde claro
+    'Muito Baixo': '#3b82f6', // Azul (apenas para 5x5)
+    'Baixo': '#22c55e',       // Verde
     'Médio': '#eab308',       // Amarelo
     'Alto': '#f97316',        // Laranja
     'Muito Alto': '#ef4444'   // Vermelho

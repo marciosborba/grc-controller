@@ -19,6 +19,25 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { 
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  restrictToVerticalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
+import { 
   FileText, 
   Plus, 
   Search, 
@@ -44,6 +63,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ComplianceCard from './ComplianceCard';
+import SortableComplianceCard from './SortableComplianceCard';
 import type { ComplianceAssessment } from '@/types/compliance-management';
 
 const CompliancePage = () => {
@@ -54,6 +74,7 @@ const CompliancePage = () => {
   const [editingAssessment, setEditingAssessment] = useState<ComplianceAssessment | null>(null);
   const [assessments, setAssessments] = useState<ComplianceAssessment[]>([]);
   const [filteredAssessments, setFilteredAssessments] = useState<ComplianceAssessment[]>([]);
+  const [sortedAssessments, setSortedAssessments] = useState<ComplianceAssessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Estados de filtro
@@ -66,6 +87,14 @@ const CompliancePage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Mock data - substitua por dados reais da API
   useEffect(() => {
@@ -141,6 +170,7 @@ const CompliancePage = () => {
 
         setAssessments(mockAssessments);
         setFilteredAssessments(mockAssessments);
+        setSortedAssessments(mockAssessments);
       } catch (error) {
         console.error('Error fetching assessments:', error);
         toast.error('Erro ao carregar avaliações de compliance');
@@ -177,6 +207,7 @@ const CompliancePage = () => {
     }
 
     setFilteredAssessments(filtered);
+    setSortedAssessments(filtered);
   }, [assessments, searchTerm, frameworkFilter, statusFilter, priorityFilter]);
 
   const handleCreateAssessment = async (data: any) => {
@@ -227,6 +258,7 @@ const CompliancePage = () => {
     try {
       // Mock delete - substituir por chamada real à API
       setAssessments(prev => prev.filter(assessment => assessment.id !== id));
+      setSortedAssessments(prev => prev.filter(assessment => assessment.id !== id));
       toast.success('Avaliação de compliance excluída com sucesso');
     } catch (error) {
       console.error('Error deleting assessment:', error);
@@ -238,6 +270,18 @@ const CompliancePage = () => {
 
   const resetForm = () => {
     setEditingAssessment(null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setSortedAssessments((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -472,7 +516,7 @@ const CompliancePage = () => {
 
       {/* Content */}
       <div className="space-y-4">
-        {filteredAssessments.length === 0 ? (
+        {sortedAssessments.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
               <Shield className="h-16 w-16 text-muted-foreground mb-4" />
@@ -489,17 +533,29 @@ const CompliancePage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredAssessments.map((assessment) => (
-              <ComplianceCard
-                key={assessment.id}
-                compliance={assessment}
-                onUpdate={handleUpdateAssessment}
-                onDelete={handleDeleteAssessment}
-                canEdit={true}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext
+              items={sortedAssessments.map(a => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-4">
+                {sortedAssessments.map((assessment) => (
+                  <SortableComplianceCard
+                    key={assessment.id}
+                    item={assessment}
+                    onUpdate={handleUpdateAssessment}
+                    onDelete={handleDeleteAssessment}
+                    canEdit={true}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
