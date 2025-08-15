@@ -33,6 +33,7 @@ import WebhooksSection from './sections/WebhooksSection';
 import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
 import DocumentationModal from './DocumentationModal';
+import RolePermissionCard from './RolePermissionCard';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
 import type { IntegrationStatus as IntegrationStatusType } from '@/types/general-settings';
 
@@ -500,183 +501,107 @@ export const GeneralSettingsPage = () => {
                       <label className="text-sm font-medium mb-3 block">Papéis Existentes</label>
                       <div className="space-y-3">
                         {/* Admin Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="Administrador" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">admin</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {[
+                        <RolePermissionCard 
+                          role={{
+                            name: "Administrador",
+                            key: "admin",
+                            permissions: [
                               'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
                               'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
                               'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
-                            ].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                            ]
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
 
                         {/* CISO Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="CISO" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">ciso</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {[
+                        <RolePermissionCard 
+                          role={{
+                            name: "CISO",
+                            key: "ciso",
+                            permissions: [
                               'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
                               'Auditoria', 'Incidentes', 'Fornecedores', 'Relatórios', 'LGPD'
-                            ].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                            {['Usuários', 'Configurações', 'Canal de Ética'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                            ]
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
 
                         {/* Risk Manager Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="Gestor de Riscos" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">risk_manager</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {['Dashboard', 'Gestão de Risco', 'Incidentes', 'Fornecedores', 'Relatórios'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                            {[
-                              'Políticas', 'Compliance', 'Auditoria', 'Usuários', 
-                              'Configurações', 'LGPD', 'Canal de Ética'
-                            ].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                        <RolePermissionCard 
+                          role={{
+                            name: "Gestor de Riscos",
+                            key: "risk_manager",
+                            permissions: ['Dashboard', 'Gestão de Risco', 'Incidentes', 'Fornecedores', 'Relatórios']
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
 
                         {/* Compliance Officer Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="Oficial de Compliance" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">compliance_officer</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {['Dashboard', 'Políticas', 'Compliance', 'Auditoria', 'LGPD', 'Canal de Ética', 'Relatórios'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                            {['Gestão de Risco', 'Incidentes', 'Fornecedores', 'Usuários', 'Configurações'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                        <RolePermissionCard 
+                          role={{
+                            name: "Oficial de Compliance",
+                            key: "compliance_officer",
+                            permissions: ['Dashboard', 'Políticas', 'Compliance', 'Auditoria', 'LGPD', 'Canal de Ética', 'Relatórios']
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
 
                         {/* Auditor Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="Auditor" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">auditor</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {['Dashboard', 'Auditoria', 'Compliance', 'Relatórios'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                            {[
-                              'Gestão de Risco', 'Políticas', 'Incidentes', 'Fornecedores', 
-                              'Usuários', 'Configurações', 'LGPD', 'Canal de Ética'
-                            ].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                        <RolePermissionCard 
+                          role={{
+                            name: "Auditor",
+                            key: "auditor",
+                            permissions: ['Dashboard', 'Auditoria', 'Compliance', 'Relatórios']
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
 
                         {/* User Role */}
-                        <div className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input type="text" defaultValue="Usuário" className="font-medium px-2 py-1 border rounded text-sm" />
-                              <Badge variant="secondary">user</Badge>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">Editar</Button>
-                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
-                            {['Dashboard'].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" defaultChecked className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                            {[
-                              'Gestão de Risco', 'Políticas', 'Compliance', 'Auditoria', 
-                              'Incidentes', 'Fornecedores', 'Usuários', 'Configurações', 
-                              'Relatórios', 'LGPD', 'Canal de Ética'
-                            ].map((module) => (
-                              <label key={module} className="flex items-center gap-2">
-                                <input type="checkbox" className="rounded" />
-                                <span>{module}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
+                        <RolePermissionCard 
+                          role={{
+                            name: "Usuário",
+                            key: "user",
+                            permissions: ['Dashboard']
+                          }}
+                          allModules={[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ]}
+                          onSave={(updatedRole) => console.log('Role updated:', updatedRole)}
+                          onDelete={(roleKey) => console.log('Role deleted:', roleKey)}
+                        />
                       </div>
                     </div>
 
