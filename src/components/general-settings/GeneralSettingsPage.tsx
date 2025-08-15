@@ -491,6 +491,289 @@ export const GeneralSettingsPage = () => {
 
                 <Separator />
 
+                {/* User Roles and Permissions */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Papéis de Usuário e Permissões</h3>
+                  <div className="space-y-4">
+                    {/* Existing Roles */}
+                    <div>
+                      <label className="text-sm font-medium mb-3 block">Papéis Existentes</label>
+                      <div className="space-y-3">
+                        {/* Admin Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="Administrador" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">admin</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {[
+                              'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                              'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                              'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                            ].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* CISO Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="CISO" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">ciso</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {[
+                              'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                              'Auditoria', 'Incidentes', 'Fornecedores', 'Relatórios', 'LGPD'
+                            ].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                            {['Usuários', 'Configurações', 'Canal de Ética'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Risk Manager Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="Gestor de Riscos" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">risk_manager</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {['Dashboard', 'Gestão de Risco', 'Incidentes', 'Fornecedores', 'Relatórios'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                            {[
+                              'Políticas', 'Compliance', 'Auditoria', 'Usuários', 
+                              'Configurações', 'LGPD', 'Canal de Ética'
+                            ].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Compliance Officer Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="Oficial de Compliance" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">compliance_officer</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {['Dashboard', 'Políticas', 'Compliance', 'Auditoria', 'LGPD', 'Canal de Ética', 'Relatórios'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                            {['Gestão de Risco', 'Incidentes', 'Fornecedores', 'Usuários', 'Configurações'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Auditor Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="Auditor" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">auditor</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {['Dashboard', 'Auditoria', 'Compliance', 'Relatórios'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                            {[
+                              'Gestão de Risco', 'Políticas', 'Incidentes', 'Fornecedores', 
+                              'Usuários', 'Configurações', 'LGPD', 'Canal de Ética'
+                            ].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* User Role */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <input type="text" defaultValue="Usuário" className="font-medium px-2 py-1 border rounded text-sm" />
+                              <Badge variant="secondary">user</Badge>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">Editar</Button>
+                              <Button variant="outline" size="sm" className="text-red-600">Remover</Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                            {['Dashboard'].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" defaultChecked className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                            {[
+                              'Gestão de Risco', 'Políticas', 'Compliance', 'Auditoria', 
+                              'Incidentes', 'Fornecedores', 'Usuários', 'Configurações', 
+                              'Relatórios', 'LGPD', 'Canal de Ética'
+                            ].map((module) => (
+                              <label key={module} className="flex items-center gap-2">
+                                <input type="checkbox" className="rounded" />
+                                <span>{module}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Add New Role */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Button variant="outline">
+                        Adicionar Novo Papel
+                      </Button>
+                    </div>
+
+                    {/* Role Creation Form (Hidden by default) */}
+                    <div className="border rounded-lg p-4 space-y-4 bg-gray-50 dark:bg-gray-900" style={{ display: 'none' }}>
+                      <h4 className="font-medium">Criar Novo Papel</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Nome do Papel</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ex: Analista de Segurança" 
+                            className="w-full px-3 py-2 border rounded-md" 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Código do Papel</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ex: security_analyst" 
+                            className="w-full px-3 py-2 border rounded-md" 
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Descrição</label>
+                        <textarea 
+                          placeholder="Descreva as responsabilidades deste papel..." 
+                          className="w-full px-3 py-2 border rounded-md h-20"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Permissões</label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm">
+                          {[
+                            'Dashboard', 'Gestão de Risco', 'Políticas', 'Compliance', 
+                            'Auditoria', 'Incidentes', 'Fornecedores', 'Usuários',
+                            'Configurações', 'Relatórios', 'LGPD', 'Canal de Ética'
+                          ].map((module) => (
+                            <label key={module} className="flex items-center gap-2">
+                              <input type="checkbox" className="rounded" />
+                              <span>{module}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline">Cancelar</Button>
+                        <Button>Criar Papel</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Module Access Control */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Controle de Acesso por Módulo</h3>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'Dashboard', description: 'Acesso ao painel principal com métricas e KPIs' },
+                      { name: 'Gestão de Risco', description: 'Criar, editar e gerenciar riscos organizacionais' },
+                      { name: 'Políticas', description: 'Gerenciar políticas e procedimentos da organização' },
+                      { name: 'Compliance', description: 'Avaliar conformidade com frameworks e regulamentações' },
+                      { name: 'Auditoria', description: 'Conduzir auditorias internas e externas' },
+                      { name: 'Incidentes', description: 'Registrar e gerenciar incidentes de segurança' },
+                      { name: 'Fornecedores', description: 'Avaliar e monitorar riscos de terceiros' },
+                      { name: 'Usuários', description: 'Gerenciar usuários e permissões do sistema' },
+                      { name: 'Configurações', description: 'Configurar sistema e integrações' },
+                      { name: 'Relatórios', description: 'Gerar relatórios gerenciais e executivos' },
+                      { name: 'LGPD', description: 'Gerenciar conformidade com a Lei Geral de Proteção de Dados' },
+                      { name: 'Canal de Ética', description: 'Receber e tratar denúncias éticas' }
+                    ].map((module) => (
+                      <div key={module.name} className="flex items-center justify-between py-2 border-b">
+                        <div className="flex-1">
+                          <div className="font-medium">{module.name}</div>
+                          <div className="text-sm text-muted-foreground">{module.description}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">6 papéis</Badge>
+                          <Button variant="outline" size="sm">Configurar</Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2">
                   <Button variant="outline">Resetar Padrões</Button>
