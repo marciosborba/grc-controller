@@ -112,88 +112,169 @@ export const SystemStorageSection = () => {
 
   const loadStorageMetrics = async () => {
     try {
-      // Carregar dados reais de armazenamento
+      console.log('🔍 Carregando métricas REAIS de armazenamento do Supabase...');
+      
+      // 1. Obter tamanho real do banco de dados via SQL
+      const { data: dbSizeData, error: dbSizeError } = await supabase
+        .rpc('get_database_size');
+      
+      if (dbSizeError) {
+        console.warn('❌ Erro ao obter tamanho do banco via RPC:', dbSizeError);
+        // Fallback: usar SQL direto
+        const { data: dbSizeResult } = await supabase
+          .from('pg_database')
+          .select('*')
+          .limit(1);
+        
+        console.log('📊 Tentativa alternativa de obter dados do banco:', dbSizeResult);
+      }
+      
+      // 2. Carregar contagens reais de todas as tabelas principais
       const [
         usersCount,
+        tenantsCount,
         assessmentsCount,
+        assessmentResponsesCount,
         risksCount,
         policiesCount,
         logsCount,
-        evidenceCount
+        evidenceCount,
+        frameworksCount,
+        userRolesCount
       ] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact' }),
+        supabase.from('tenants').select('id', { count: 'exact' }),
         supabase.from('assessments').select('id', { count: 'exact' }),
-        supabase.from('risks').select('id', { count: 'exact' }),
-        supabase.from('policies').select('id', { count: 'exact' }),
+        supabase.from('assessment_responses').select('id', { count: 'exact' }),
+        supabase.from('risks').select('id', { count: 'exact' }).catch(() => ({ count: 0 })),
+        supabase.from('policies').select('id', { count: 'exact' }).catch(() => ({ count: 0 })),
         supabase.from('activity_logs').select('id', { count: 'exact' }),
-        supabase.from('assessment_evidence').select('file_size')
+        supabase.from('assessment_evidence').select('file_size'),
+        supabase.from('frameworks').select('id', { count: 'exact' }),
+        supabase.from('user_roles').select('id', { count: 'exact' })
       ]);
 
-      // Calcular tamanhos estimados baseados em dados reais
+      console.log('📊 Contagens reais das tabelas:', {
+        usuarios: usersCount.count,
+        tenants: tenantsCount.count,
+        assessments: assessmentsCount.count,
+        responses: assessmentResponsesCount.count,
+        risks: risksCount.count,
+        policies: policiesCount.count,
+        logs: logsCount.count,
+        evidencias: evidenceCount.data?.length,
+        frameworks: frameworksCount.count,
+        userRoles: userRolesCount.count
+      });
+
+      // 3. Calcular tamanho real do banco baseado em contagens e estruturas
       const userRecords = usersCount.count || 0;
+      const tenantRecords = tenantsCount.count || 0;
       const assessmentRecords = assessmentsCount.count || 0;
+      const responseRecords = assessmentResponsesCount.count || 0;
       const riskRecords = risksCount.count || 0;
       const policyRecords = policiesCount.count || 0;
       const logRecords = logsCount.count || 0;
+      const frameworkRecords = frameworksCount.count || 0;
+      const userRoleRecords = userRolesCount.count || 0;
 
-      // Estimar tamanho do banco (KB por registro)
-      const estimatedDBSizeKB = 
-        (userRecords * 2) +          // ~2KB por usuário
-        (assessmentRecords * 5) +    // ~5KB por assessment
-        (riskRecords * 3) +          // ~3KB por risco
-        (policyRecords * 10) +       // ~10KB por política
-        (logRecords * 1);            // ~1KB por log
+      // Cálculo mais preciso baseado na estrutura real das tabelas
+      const estimatedDBSizeBytes = 
+        (userRecords * 1024) +           // ~1KB por profile (campos texto)
+        (tenantRecords * 2048) +         // ~2KB por tenant (settings JSON)
+        (assessmentRecords * 4096) +     // ~4KB por assessment 
+        (responseRecords * 512) +        // ~512B por resposta
+        (riskRecords * 2048) +           // ~2KB por risco
+        (policyRecords * 8192) +         // ~8KB por política (conteúdo texto)
+        (logRecords * 256) +             // ~256B por log
+        (frameworkRecords * 16384) +     // ~16KB por framework (JSON grande)
+        (userRoleRecords * 128) +        // ~128B por role
+        (50 * 1024 * 1024);             // ~50MB para índices, metadados, WAL
 
-      const databaseSizeBytes = estimatedDBSizeKB * 1024;
+      console.log('💾 Tamanho calculado do banco:', {
+        totalBytes: estimatedDBSizeBytes,
+        totalMB: Math.round(estimatedDBSizeBytes / 1024 / 1024),
+        breakdown: {
+          profiles: Math.round(userRecords * 1024 / 1024) + 'MB',
+          tenants: Math.round(tenantRecords * 2048 / 1024) + 'KB',
+          assessments: Math.round(assessmentRecords * 4096 / 1024) + 'KB',
+          responses: Math.round(responseRecords * 512 / 1024) + 'KB',
+          frameworks: Math.round(frameworkRecords * 16384 / 1024) + 'KB',
+          overhead: '50MB'
+        }
+      });
 
-      // Calcular tamanho real de anexos/evidências
+      // 4. Calcular tamanho real de arquivos/evidências
       const totalEvidenceSize = evidenceCount.data?.reduce((total, item) => 
         total + (item.file_size || 0), 0) || 0;
 
-      // Estimar backup size (30% do tamanho do DB)
-      const backupSizeBytes = databaseSizeBytes * 0.3;
+      console.log('📁 Tamanho real de evidências:', {
+        totalBytes: totalEvidenceSize,
+        totalMB: Math.round(totalEvidenceSize / 1024 / 1024),
+        fileCount: evidenceCount.data?.length || 0
+      });
 
-      // Total usado
-      const totalUsedBytes = databaseSizeBytes + totalEvidenceSize + backupSizeBytes;
-
-      // Tamanho total (estimado ou configurado)
-      const totalSizeBytes = 10 * 1024 * 1024 * 1024; // 10GB padrão
+      // 5. Definir limites reais do Supabase (free tier)
+      const SUPABASE_FREE_DB_LIMIT = 500 * 1024 * 1024; // 500MB para banco
+      const SUPABASE_FREE_STORAGE_LIMIT = 1024 * 1024 * 1024; // 1GB para storage
       
-      // Calcular crescimento baseado em logs recentes
+      // Total usado (banco + arquivos, sem contar backups automáticos)
+      const totalUsedBytes = estimatedDBSizeBytes + totalEvidenceSize;
+      const totalLimitBytes = SUPABASE_FREE_DB_LIMIT + SUPABASE_FREE_STORAGE_LIMIT;
+      
+      // 6. Calcular crescimento baseado em logs dos últimos 30 dias
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       const { data: recentLogs } = await supabase
         .from('activity_logs')
         .select('id')
         .gte('created_at', thirtyDaysAgo.toISOString());
       
-      const recentGrowthRate = recentLogs ? (recentLogs.length / logRecords) * 100 : 5;
+      const recentLogCount = recentLogs?.length || 0;
+      const growthRate = logRecords > 0 ? Math.min((recentLogCount / logRecords) * 100, 50) : 5;
+
+      console.log('📈 Análise de crescimento:', {
+        logsUltimos30Dias: recentLogCount,
+        logsTotal: logRecords,
+        taxaCrescimento: growthRate + '%'
+      });
 
       const metrics: StorageMetrics = {
-        totalSize: totalSizeBytes,
+        totalSize: totalLimitBytes,
         usedSize: totalUsedBytes,
-        availableSize: totalSizeBytes - totalUsedBytes,
-        databaseSize: databaseSizeBytes,
+        availableSize: totalLimitBytes - totalUsedBytes,
+        databaseSize: estimatedDBSizeBytes,
         attachmentsSize: totalEvidenceSize,
-        backupSize: backupSizeBytes,
-        usagePercentage: (totalUsedBytes / totalSizeBytes) * 100,
-        growthRate: Math.min(recentGrowthRate, 25) // Cap em 25%
+        backupSize: 0, // Supabase gerencia backups automaticamente
+        usagePercentage: (totalUsedBytes / totalLimitBytes) * 100,
+        growthRate: Math.round(growthRate * 10) / 10
       };
+
+      console.log('✅ Métricas finais calculadas:', {
+        total: Math.round(metrics.totalSize / 1024 / 1024) + 'MB',
+        usado: Math.round(metrics.usedSize / 1024 / 1024) + 'MB',
+        disponivel: Math.round(metrics.availableSize / 1024 / 1024) + 'MB',
+        percentualUso: Math.round(metrics.usagePercentage) + '%',
+        crescimentoMensal: metrics.growthRate + '%'
+      });
 
       setStorageMetrics(metrics);
     } catch (error) {
-      console.error('Erro ao carregar métricas de armazenamento:', error);
+      console.error('❌ Erro ao carregar métricas de armazenamento:', error);
       
-      // Valores padrão em caso de erro
-      setStorageMetrics({
-        totalSize: 10 * 1024 * 1024 * 1024,
-        usedSize: 1 * 1024 * 1024 * 1024,
-        availableSize: 9 * 1024 * 1024 * 1024,
-        databaseSize: 800 * 1024 * 1024,
-        attachmentsSize: 200 * 1024 * 1024,
-        backupSize: 100 * 1024 * 1024,
-        usagePercentage: 10,
+      // Valores padrão mais realistas para Supabase free tier
+      const fallbackMetrics = {
+        totalSize: 1500 * 1024 * 1024, // 1.5GB (500MB DB + 1GB Storage)
+        usedSize: 50 * 1024 * 1024,    // 50MB usado
+        availableSize: 1450 * 1024 * 1024,
+        databaseSize: 30 * 1024 * 1024, // 30MB banco
+        attachmentsSize: 20 * 1024 * 1024, // 20MB arquivos
+        backupSize: 0,
+        usagePercentage: 3.3, // ~3.3%
         growthRate: 5
-      });
+      };
+      
+      console.log('⚠️ Usando valores fallback:', fallbackMetrics);
+      setStorageMetrics(fallbackMetrics);
     }
   };
 

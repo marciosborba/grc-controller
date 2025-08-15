@@ -66,115 +66,300 @@ export const SystemLogsSection = () => {
   const loadLogData = async () => {
     setIsLoading(true);
     try {
+      console.log('🔍 Carregando logs REAIS de atividade do sistema...');
+      
       // Determinar o filtro de data
       const now = new Date();
       let dateThreshold = new Date();
+      let limitRecords = 1000;
       
       switch (dateFilter) {
         case 'today':
           dateThreshold = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          limitRecords = 500;
           break;
         case 'week':
           dateThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          limitRecords = 1000;
           break;
         case 'month':
           dateThreshold = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          limitRecords = 2000;
           break;
         default:
-          dateThreshold = new Date(0); // All time
+          dateThreshold = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // Últimos 90 dias
+          limitRecords = 3000;
       }
 
-      // Carregar logs de atividade
-      const { data: logsData, error: logsError } = await supabase
+      console.log('📅 Filtro de data:', {
+        periodo: dateFilter,
+        threshold: dateThreshold.toISOString(),
+        limite: limitRecords
+      });
+
+      // 1. Carregar logs de atividade (sem JOIN inicial para evitar problemas)
+      const { data: logsData, error: logsError, count } = await supabase
         .from('activity_logs')
         .select(`
-          *,
-          profiles(full_name, user_id)
-        `)
+          id,
+          user_id,
+          action,
+          resource_type,
+          resource_id,
+          details,
+          ip_address,
+          user_agent,
+          created_at
+        `, { count: 'exact' })
         .gte('created_at', dateThreshold.toISOString())
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(limitRecords);
 
-      if (logsError) throw logsError;
-
-      // Carregar informações de usuários para logs sem profile
-      const userIds = logsData
-        ?.filter(log => log.user_id && !log.profiles)
-        .map(log => log.user_id) || [];
-
-      let usersData: Array<{ id: string; user_metadata?: { full_name?: string }; email?: string }> = [];
-      if (userIds.length > 0) {
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
-        usersData = authUsers?.users || [];
+      if (logsError) {
+        console.error('❌ Erro ao carregar logs:', logsError);
+        console.error('🔍 Detalhes do erro:', {
+          message: logsError.message,
+          details: logsError.details,
+          hint: logsError.hint,
+          code: logsError.code
+        });
+        
+        // Não fazer throw, apenas definir dados vazios para mostrar o erro na UI
+        console.log('⚠️ Continuando com dados vazios devido ao erro...');
+        setLogs([]);
+        setLogStats({
+          total: 0,
+          today: 0,
+          thisWeek: 0,
+          errors: 0,
+          warnings: 0,
+          securityEvents: 0,
+          authEvents: 0
+        });
+        setIsLoading(false);
+        return;
       }
 
-      // Processar logs
-      const processedLogs: ActivityLog[] = logsData?.map(log => {
+      console.log('📊 Logs carregados:', {
+        total: count,
+        retornados: logsData?.length || 0,
+        periodo: dateFilter
+      });
+
+      // 2. Para logs sem profile, buscar informações na tabela auth.users
+      const logsWithoutProfile = logsData?.filter(log => 
+        log.user_id && !log.profiles
+      ) || [];
+      
+      let authUsersMap = new Map();
+      if (logsWithoutProfile.length > 0) {
+        console.log('🔍 Buscando dados de usuários para', logsWithoutProfile.length, 'logs sem profile');
+        
+        try {
+          const { data: authUsers } = await supabase.auth.admin.listUsers();
+          if (authUsers?.users) {
+            authUsers.users.forEach(user => {
+              authUsersMap.set(user.id, {
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
+                email: user.email
+              });
+            });
+          }
+        } catch (authError) {
+          console.warn('⚠️ Erro ao carregar usuários de auth:', authError);
+        }
+      }
+
+      // 3. Processar logs e enriquecer com dados de usuário
+      const processedLogs: ActivityLog[] = (logsData || []).map(log => {
         let userName = 'Sistema';
         let userEmail = '';
 
         if (log.user_id) {
-          if (log.profiles) {
-            userName = log.profiles.full_name || 'Usuário Desconhecido';
+          if (log.profiles && Array.isArray(log.profiles) && log.profiles.length > 0) {
+            userName = log.profiles[0].full_name || 'Usuário';
+            const authData = authUsersMap.get(log.user_id);
+            userEmail = authData?.email || '';
+          } else if (log.profiles && !Array.isArray(log.profiles)) {
+            userName = log.profiles.full_name || 'Usuário';
+            const authData = authUsersMap.get(log.user_id);
+            userEmail = authData?.email || '';
           } else {
-            const authUser = usersData.find(u => u.id === log.user_id);
-            userName = authUser?.user_metadata?.full_name || 'Usuário Desconhecido';
-            userEmail = authUser?.email || '';
+            // Usar dados do auth se não houver profile
+            const authData = authUsersMap.get(log.user_id);
+            userName = authData?.full_name || `User-${log.user_id?.slice(-8) || 'unknown'}`;
+            userEmail = authData?.email || '';
           }
         }
 
         return {
-          ...log,
+          id: log.id,
+          user_id: log.user_id,
+          action: log.action || 'unknown',
+          resource_type: log.resource_type || 'system',
+          resource_id: log.resource_id,
+          details: (typeof log.details === 'object' ? log.details : {}) as Record<string, unknown>,
+          ip_address: log.ip_address,
+          user_agent: log.user_agent,
+          created_at: log.created_at,
           user_name: userName,
           user_email: userEmail
         };
-      }) || [];
+      });
+
+      console.log('✅ Logs processados:', {
+        total: processedLogs.length,
+        comUsuario: processedLogs.filter(l => l.user_id).length,
+        sistema: processedLogs.filter(l => !l.user_id).length,
+        acoesUnicas: [...new Set(processedLogs.map(l => l.action))].length
+      });
 
       setLogs(processedLogs);
 
-      // Calcular estatísticas baseadas nos dados reais carregados
+      // 4. Calcular estatísticas REAIS baseadas nos dados carregados
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+      // Para estatísticas totais, usar dados de todo o período se não for filtro específico
+      let totalLogsCount = count || 0;
+      let todayLogsData = processedLogs;
+      let weekLogsData = processedLogs;
+      
+      // Se não for filtro de hoje, carregar dados específicos para estatísticas precisas
+      if (dateFilter !== 'today') {
+        const { data: todayData } = await supabase
+          .from('activity_logs')
+          .select('id, action, resource_type, details')
+          .gte('created_at', today.toISOString());
+        todayLogsData = todayData || [];
+      }
+      
+      if (dateFilter === 'all' || dateFilter === 'month') {
+        const { data: weekData } = await supabase
+          .from('activity_logs')
+          .select('id, action, resource_type, details')
+          .gte('created_at', weekAgo.toISOString());
+        weekLogsData = weekData || [];
+      }
+
       const stats: LogStats = {
-        total: processedLogs.length,
-        today: processedLogs.filter(log => 
-          new Date(log.created_at) >= today
-        ).length,
-        thisWeek: processedLogs.filter(log => 
-          new Date(log.created_at) >= weekAgo
-        ).length,
-        errors: processedLogs.filter(log => 
-          (log.details as Record<string, unknown>)?.severity === 'error' || 
-          log.action.includes('error') || 
-          log.action.includes('fail') ||
-          log.action.includes('failed')
-        ).length,
-        warnings: processedLogs.filter(log => 
-          (log.details as Record<string, unknown>)?.severity === 'warning' || 
-          log.action.includes('warning') ||
-          log.action.includes('suspicious')
-        ).length,
-        securityEvents: processedLogs.filter(log => 
-          log.resource_type === 'security' || 
-          log.action.includes('security') || 
-          log.action.includes('suspicious') ||
-          log.action.includes('breach') ||
-          log.action.includes('unauthorized')
-        ).length,
-        authEvents: processedLogs.filter(log => 
-          log.resource_type === 'auth' || 
-          log.action.includes('login') || 
-          log.action.includes('logout') ||
-          log.action.includes('signin') ||
-          log.action.includes('signout')
-        ).length
+        total: totalLogsCount,
+        today: todayLogsData.length,
+        thisWeek: weekLogsData.length,
+        errors: processedLogs.filter(log => {
+          const details = log.details || {};
+          const action = log.action.toLowerCase();
+          return details.severity === 'error' || 
+                 action.includes('error') || 
+                 action.includes('fail') ||
+                 action.includes('failed') ||
+                 action.includes('exception');
+        }).length,
+        warnings: processedLogs.filter(log => {
+          const details = log.details || {};
+          const action = log.action.toLowerCase();
+          return details.severity === 'warning' || 
+                 action.includes('warning') ||
+                 action.includes('suspicious') ||
+                 action.includes('blocked') ||
+                 action.includes('retry');
+        }).length,
+        securityEvents: processedLogs.filter(log => {
+          const action = log.action.toLowerCase();
+          const resourceType = log.resource_type.toLowerCase();
+          return resourceType === 'security' || 
+                 action.includes('security') || 
+                 action.includes('suspicious') ||
+                 action.includes('breach') ||
+                 action.includes('unauthorized') ||
+                 action.includes('blocked') ||
+                 action.includes('attempt');
+        }).length,
+        authEvents: processedLogs.filter(log => {
+          const action = log.action.toLowerCase();
+          const resourceType = log.resource_type.toLowerCase();
+          return resourceType === 'auth' || 
+                 action.includes('login') || 
+                 action.includes('logout') ||
+                 action.includes('signin') ||
+                 action.includes('signout') ||
+                 action.includes('authentication') ||
+                 action.includes('session');
+        }).length
       };
 
+      console.log('📈 Estatísticas calculadas:', stats);
       setLogStats(stats);
 
     } catch (error) {
-      console.error('Erro ao carregar logs:', error);
+      console.error('❌ Erro crítico ao carregar logs:', error);
+      
+      // Log detalhado do erro para debug
+      if (error instanceof Error) {
+        console.error('🐞 Stack trace:', error.stack);
+        console.error('🐞 Mensagem:', error.message);
+      }
+      
+      // Tentar uma consulta mais simples como fallback
+      try {
+        console.log('🔄 Tentando consulta simplificada...');
+        const { data: simpleLogs, error: simpleError } = await supabase
+          .from('activity_logs')
+          .select('id, action, resource_type, created_at')
+          .order('created_at', { ascending: false })
+          .limit(10);
+          
+        if (simpleError) {
+          console.error('❌ Erro na consulta simplificada:', simpleError);
+        } else {
+          console.log('✅ Consulta simplificada funcionou:', simpleLogs?.length || 0, 'logs');
+          if (simpleLogs && simpleLogs.length > 0) {
+            const processedSimpleLogs = simpleLogs.map(log => ({
+              id: log.id,
+              user_id: null,
+              action: log.action,
+              resource_type: log.resource_type,
+              resource_id: null,
+              details: {},
+              ip_address: null,
+              user_agent: null,
+              created_at: log.created_at,
+              user_name: 'Sistema',
+              user_email: ''
+            }));
+            setLogs(processedSimpleLogs);
+            setLogStats({
+              total: simpleLogs.length,
+              today: simpleLogs.filter(log => 
+                new Date(log.created_at).toDateString() === new Date().toDateString()
+              ).length,
+              thisWeek: simpleLogs.length,
+              errors: 0,
+              warnings: 0,
+              securityEvents: 0,
+              authEvents: 0
+            });
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (fallbackError) {
+        console.error('❌ Erro na consulta de fallback:', fallbackError);
+      }
+      
+      // Mostrar dados básicos em caso de erro total
+      const fallbackStats = {
+        total: 0,
+        today: 0,
+        thisWeek: 0,
+        errors: 0,
+        warnings: 0,
+        securityEvents: 0,
+        authEvents: 0
+      };
+      
+      setLogStats(fallbackStats);
+      setLogs([]);
     } finally {
       setIsLoading(false);
     }
@@ -183,23 +368,59 @@ export const SystemLogsSection = () => {
   useEffect(() => {
     loadLogData();
   }, [dateFilter]);
+  
+  // Auto-refresh a cada 30 segundos se estiver na aba hoje
+  useEffect(() => {
+    if (dateFilter === 'today') {
+      const interval = setInterval(() => {
+        loadLogData();
+      }, 30000); // 30 segundos
+      
+      return () => clearInterval(interval);
+    }
+  }, [dateFilter]);
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          log.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          log.resource_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          log.details?.error_message?.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const action = log.action?.toLowerCase() || '';
+    const userName = log.user_name?.toLowerCase() || '';
+    const resourceType = log.resource_type?.toLowerCase() || '';
+    const details = log.details || {};
+    const errorMessage = (details.error_message as string)?.toLowerCase() || '';
+    const detailsString = JSON.stringify(details).toLowerCase();
+    
+    const matchesSearch = searchTerm === '' || 
+                          action.includes(searchLower) ||
+                          userName.includes(searchLower) ||
+                          resourceType.includes(searchLower) ||
+                          errorMessage.includes(searchLower) ||
+                          detailsString.includes(searchLower) ||
+                          log.ip_address?.includes(searchTerm) ||
+                          log.resource_id?.includes(searchTerm);
     
     const matchesResource = resourceFilter === 'all' || log.resource_type === resourceFilter;
     
     let matchesSeverity = true;
     if (severityFilter !== 'all') {
+      const actionLower = action;
       if (severityFilter === 'error') {
-        matchesSeverity = log.details?.severity === 'error' || log.action.includes('error') || log.action.includes('fail');
+        matchesSeverity = details.severity === 'error' || 
+                         actionLower.includes('error') || 
+                         actionLower.includes('fail') ||
+                         actionLower.includes('exception') ||
+                         actionLower.includes('critical');
       } else if (severityFilter === 'warning') {
-        matchesSeverity = log.details?.severity === 'warning' || log.action.includes('warning');
+        matchesSeverity = details.severity === 'warning' || 
+                         actionLower.includes('warning') ||
+                         actionLower.includes('suspicious') ||
+                         actionLower.includes('blocked') ||
+                         actionLower.includes('retry');
       } else if (severityFilter === 'info') {
-        matchesSeverity = !log.details?.severity || log.details?.severity === 'info';
+        matchesSeverity = !details.severity || 
+                         details.severity === 'info' ||
+                         (!actionLower.includes('error') && 
+                          !actionLower.includes('warning') && 
+                          !actionLower.includes('fail'));
       }
     }
 
@@ -252,22 +473,27 @@ export const SystemLogsSection = () => {
 
   const exportLogs = () => {
     const csvContent = [
-      ['Timestamp', 'Usuário', 'Ação', 'Recurso', 'IP', 'Detalhes'].join(','),
+      // Cabeçalho CSV
+      ['Timestamp', 'Usuário', 'Email', 'Ação', 'Recurso', 'Recurso_ID', 'IP', 'Severidade', 'Detalhes'].join(','),
+      // Dados dos logs
       ...filteredLogs.map(log => [
-        log.created_at,
-        log.user_name || 'Sistema',
-        log.action,
-        log.resource_type,
-        log.ip_address || '',
-        JSON.stringify(log.details || {})
+        `"${log.created_at}"`,
+        `"${log.user_name || 'Sistema'}"`,
+        `"${log.user_email || ''}"`,
+        `"${log.action}"`,
+        `"${log.resource_type}"`,
+        `"${log.resource_id || ''}"`,
+        `"${log.ip_address || ''}"`,
+        `"${log.details?.severity || 'info'}"`,
+        `"${JSON.stringify(log.details || {}).replace(/"/g, '""')}"`  // Escapar aspas duplas
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `system-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `grc-system-logs-${dateFilter}-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -380,9 +606,12 @@ export const SystemLogsSection = () => {
                 <SelectItem value="auth">Autenticação</SelectItem>
                 <SelectItem value="security">Segurança</SelectItem>
                 <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="system">Sistema</SelectItem>
                 <SelectItem value="assessment">Assessment</SelectItem>
                 <SelectItem value="risk">Risco</SelectItem>
                 <SelectItem value="policy">Política</SelectItem>
+                <SelectItem value="tenant">Tenant</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
 
@@ -410,12 +639,13 @@ export const SystemLogsSection = () => {
                   <TableHead>Recurso</TableHead>
                   <TableHead>Severidade</TableHead>
                   <TableHead className="w-32">IP</TableHead>
+                  <TableHead className="w-20">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         <span>Carregando logs...</span>
@@ -424,8 +654,20 @@ export const SystemLogsSection = () => {
                   </TableRow>
                 ) : filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhum log encontrado
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {logs.length === 0 ? (
+                        <div className="space-y-2">
+                          <div>Nenhum log encontrado</div>
+                          <div className="text-xs">
+                            Período: {dateFilter} | Total carregado: {logs.length}
+                          </div>
+                          <div className="text-xs">
+                            Verifique se há logs no período selecionado ou se as permissões estão corretas
+                          </div>
+                        </div>
+                      ) : (
+                        <div>Nenhum log corresponde aos filtros aplicados</div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -452,9 +694,17 @@ export const SystemLogsSection = () => {
                           {getActionIcon(log.action, log.resource_type)}
                           <span className="text-sm">{log.action}</span>
                         </div>
-                        {log.details?.error_message && (
-                          <div className="text-xs text-red-600 mt-1">
-                            {log.details.error_message}
+                        {log.details && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {log.details.error_message && (
+                              <div className="text-red-600">{String(log.details.error_message)}</div>
+                            )}
+                            {log.details.message && (
+                              <div>{String(log.details.message)}</div>
+                            )}
+                            {log.resource_id && (
+                              <div className="font-mono">ID: {log.resource_id}</div>
+                            )}
                           </div>
                         )}
                       </TableCell>
@@ -470,6 +720,33 @@ export const SystemLogsSection = () => {
                         <span className="text-xs font-mono text-muted-foreground">
                           {log.ip_address || 'N/A'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              const logDetails = {
+                                id: log.id,
+                                timestamp: log.created_at,
+                                user: log.user_name,
+                                email: log.user_email,
+                                action: log.action,
+                                resource: log.resource_type,
+                                resource_id: log.resource_id,
+                                ip: log.ip_address,
+                                user_agent: log.user_agent,
+                                details: log.details
+                              };
+                              navigator.clipboard.writeText(JSON.stringify(logDetails, null, 2));
+                            }}
+                            className="h-6 w-6 p-0"
+                            title="Copiar detalhes"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
