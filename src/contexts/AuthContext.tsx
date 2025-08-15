@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { cleanupAuthState, performSecureSignOut, validateEmailFormat, validatePassword, sanitizeInput } from '@/utils/authCleanup';
-import { logAuthEvent, logSuspiciousActivity } from '@/utils/securityLogger';
+import { logAuthEvent, logSuspiciousActivity, captureSessionInfo } from '@/utils/securityLogger';
 
 interface UserProfile {
   id: string;
@@ -251,7 +251,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Senha não atende aos critérios de segurança');
       }
 
-      await logAuthEvent('login_attempt', { email });
+      // Capturar informações de sessão (IP, localização, etc.)
+      const sessionInfo = await captureSessionInfo();
+      
+      await logAuthEvent('login_attempt', { 
+        email,
+        ip_address: sessionInfo.ip_address,
+        user_agent: sessionInfo.user_agent,
+        location: sessionInfo.location
+      });
 
       // Clean up existing state before new login
       cleanupAuthState();
@@ -269,7 +277,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) {
-        await logAuthEvent('login_failure', { reason: error.message, email });
+        await logAuthEvent('login_failure', { 
+          reason: error.message, 
+          email,
+          ip_address: sessionInfo.ip_address,
+          user_agent: sessionInfo.user_agent,
+          location: sessionInfo.location
+        });
         throw error;
       }
       
@@ -277,9 +291,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(data.session);
         const authUser = await buildUserObject(data.user);
         setUser(authUser);
+        
+        // Registrar login bem-sucedido com informações completas
+        await logAuthEvent('login_success', {
+          user_id: data.user.id,
+          email,
+          ip_address: sessionInfo.ip_address,
+          user_agent: sessionInfo.user_agent,
+          location: sessionInfo.location,
+          session_info: sessionInfo
+        });
       }
     } catch (error: any) {
-      await logAuthEvent('login_failure', { reason: error.message, email });
+      // Capturar informações de sessão para falhas também
+      const sessionInfo = await captureSessionInfo();
+      
+      await logAuthEvent('login_failure', { 
+        reason: error.message, 
+        email,
+        ip_address: sessionInfo.ip_address,
+        user_agent: sessionInfo.user_agent,
+        location: sessionInfo.location
+      });
       throw new Error(error.message || 'Falha no login');
     } finally {
       setIsLoading(false);

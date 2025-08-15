@@ -38,6 +38,7 @@ interface DiagnosticCheck {
   recommendation?: string;
   lastRun?: string;
   duration?: number;
+  realData?: any; // Para armazenar dados reais
 }
 
 interface DiagnosticSummary {
@@ -71,34 +72,26 @@ export const SystemDiagnosticSection = () => {
     return [
       // System Checks
       {
-        id: 'sys_disk_space',
-        category: 'system',
-        name: 'Espaço em Disco',
-        description: 'Verificar se há espaço suficiente em disco',
-        status: 'pending',
-        severity: 'high'
-      },
-      {
-        id: 'sys_memory_usage',
-        category: 'system',
-        name: 'Uso de Memória',
-        description: 'Monitorar o consumo de memória do sistema',
-        status: 'pending',
-        severity: 'medium'
-      },
-      {
         id: 'sys_db_connection',
         category: 'system',
         name: 'Conexão com Banco',
-        description: 'Testar conectividade com o banco de dados',
+        description: 'Testar conectividade e performance do banco de dados',
         status: 'pending',
         severity: 'critical'
       },
       {
-        id: 'sys_edge_functions',
+        id: 'sys_table_integrity',
         category: 'system',
-        name: 'Edge Functions',
-        description: 'Verificar status das funções serverless',
+        name: 'Integridade das Tabelas',
+        description: 'Verificar se todas as tabelas principais existem',
+        status: 'pending',
+        severity: 'high'
+      },
+      {
+        id: 'sys_storage_usage',
+        category: 'system',
+        name: 'Uso de Armazenamento',
+        description: 'Monitorar o consumo de storage do banco',
         status: 'pending',
         severity: 'medium'
       },
@@ -108,33 +101,25 @@ export const SystemDiagnosticSection = () => {
         id: 'sec_failed_logins',
         category: 'security',
         name: 'Tentativas de Login Falhadas',
-        description: 'Detectar padrões suspeitos de login',
+        description: 'Detectar padrões suspeitos de login nas últimas 24h',
         status: 'pending',
         severity: 'high'
-      },
-      {
-        id: 'sec_mfa_coverage',
-        category: 'security',
-        name: 'Cobertura MFA',
-        description: 'Verificar percentual de usuários com MFA',
-        status: 'pending',
-        severity: 'medium'
-      },
-      {
-        id: 'sec_password_policy',
-        category: 'security',
-        name: 'Políticas de Senha',
-        description: 'Validar conformidade com políticas de senha',
-        status: 'pending',
-        severity: 'medium'
       },
       {
         id: 'sec_inactive_users',
         category: 'security',
         name: 'Usuários Inativos',
-        description: 'Identificar contas não utilizadas',
+        description: 'Identificar contas não utilizadas há mais de 30 dias',
         status: 'pending',
-        severity: 'low'
+        severity: 'medium'
+      },
+      {
+        id: 'sec_locked_accounts',
+        category: 'security',
+        name: 'Contas Bloqueadas',
+        description: 'Verificar usuários com contas bloqueadas',
+        status: 'pending',
+        severity: 'medium'
       },
 
       // Performance Checks
@@ -142,23 +127,15 @@ export const SystemDiagnosticSection = () => {
         id: 'perf_query_time',
         category: 'performance',
         name: 'Tempo de Consultas',
-        description: 'Analisar performance das consultas SQL',
+        description: 'Analisar performance das consultas SQL principais',
         status: 'pending',
         severity: 'medium'
       },
       {
-        id: 'perf_api_response',
+        id: 'perf_large_tables',
         category: 'performance',
-        name: 'Tempo de Resposta API',
-        description: 'Medir latência das APIs',
-        status: 'pending',
-        severity: 'medium'
-      },
-      {
-        id: 'perf_concurrent_users',
-        category: 'performance',
-        name: 'Usuários Concorrentes',
-        description: 'Verificar capacidade de usuários simultâneos',
+        name: 'Tabelas Grandes',
+        description: 'Identificar tabelas com muitos registros',
         status: 'pending',
         severity: 'low'
       },
@@ -173,36 +150,36 @@ export const SystemDiagnosticSection = () => {
         severity: 'medium'
       },
       {
-        id: 'data_backup_integrity',
+        id: 'data_tenant_consistency',
         category: 'data',
-        name: 'Integridade dos Backups',
-        description: 'Verificar se os backups estão íntegros',
+        name: 'Consistência de Tenants',
+        description: 'Verificar integridade dos dados de organizações',
         status: 'pending',
         severity: 'high'
       },
       {
-        id: 'data_foreign_keys',
+        id: 'data_user_profiles',
         category: 'data',
-        name: 'Chaves Estrangeiras',
-        description: 'Validar integridade referencial',
+        name: 'Perfis de Usuário',
+        description: 'Validar consistência entre auth e profiles',
         status: 'pending',
         severity: 'medium'
       },
 
       // User Experience Checks
       {
-        id: 'user_error_rates',
+        id: 'user_activity_patterns',
         category: 'user',
-        name: 'Taxa de Erros do Usuário',
-        description: 'Monitorar erros reportados pelos usuários',
+        name: 'Padrões de Atividade',
+        description: 'Analisar padrões de uso dos usuários',
         status: 'pending',
-        severity: 'medium'
+        severity: 'low'
       },
       {
-        id: 'user_session_duration',
+        id: 'user_engagement',
         category: 'user',
-        name: 'Duração das Sessões',
-        description: 'Analisar padrões de uso das sessões',
+        name: 'Engajamento de Usuários',
+        description: 'Medir engajamento baseado em atividade recente',
         status: 'pending',
         severity: 'low'
       }
@@ -219,7 +196,6 @@ export const SystemDiagnosticSection = () => {
 
   const loadLastDiagnosticResults = async () => {
     try {
-      // Implementar carregamento dos últimos resultados do localStorage ou banco
       const savedResults = localStorage.getItem('lastDiagnosticResults');
       if (savedResults) {
         const results = JSON.parse(savedResults);
@@ -237,6 +213,7 @@ export const SystemDiagnosticSection = () => {
     
     const checks = [...diagnosticChecks];
     const total = checks.length;
+    const startTime = Date.now();
     
     try {
       for (let i = 0; i < checks.length; i++) {
@@ -246,26 +223,29 @@ export const SystemDiagnosticSection = () => {
         check.status = 'running';
         setDiagnosticChecks([...checks]);
         
-        // Simular execução do check
+        // Executar check real
         await runIndividualCheck(check);
         
         // Atualizar progresso
         setScanProgress(((i + 1) / total) * 100);
         
         // Pequena pausa para visualização
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
       // Calcular resumo
-      const summary = calculateDiagnosticSummary(checks);
+      const scanDuration = Date.now() - startTime;
+      const summary = calculateDiagnosticSummary(checks, scanDuration);
       setDiagnosticSummary(summary);
       
       // Salvar resultados
       const results = { checks, summary };
       localStorage.setItem('lastDiagnosticResults', JSON.stringify(results));
       
+      console.log('✅ Diagnóstico completo finalizado:', summary);
+      
     } catch (error) {
-      console.error('Erro durante diagnóstico:', error);
+      console.error('❌ Erro durante diagnóstico:', error);
     } finally {
       setIsScanning(false);
       setScanProgress(100);
@@ -277,53 +257,44 @@ export const SystemDiagnosticSection = () => {
       const startTime = Date.now();
       
       switch (check.id) {
-        case 'sys_disk_space':
-          await checkDiskSpace(check);
-          break;
-        case 'sys_memory_usage':
-          await checkMemoryUsage(check);
-          break;
         case 'sys_db_connection':
           await checkDatabaseConnection(check);
           break;
-        case 'sys_edge_functions':
-          await checkEdgeFunctions(check);
+        case 'sys_table_integrity':
+          await checkTableIntegrity(check);
+          break;
+        case 'sys_storage_usage':
+          await checkStorageUsage(check);
           break;
         case 'sec_failed_logins':
           await checkFailedLogins(check);
           break;
-        case 'sec_mfa_coverage':
-          await checkMFACoverage(check);
-          break;
-        case 'sec_password_policy':
-          await checkPasswordPolicy(check);
-          break;
         case 'sec_inactive_users':
           await checkInactiveUsers(check);
+          break;
+        case 'sec_locked_accounts':
+          await checkLockedAccounts(check);
           break;
         case 'perf_query_time':
           await checkQueryPerformance(check);
           break;
-        case 'perf_api_response':
-          await checkAPIResponse(check);
-          break;
-        case 'perf_concurrent_users':
-          await checkConcurrentUsers(check);
+        case 'perf_large_tables':
+          await checkLargeTables(check);
           break;
         case 'data_orphaned_records':
           await checkOrphanedRecords(check);
           break;
-        case 'data_backup_integrity':
-          await checkBackupIntegrity(check);
+        case 'data_tenant_consistency':
+          await checkTenantConsistency(check);
           break;
-        case 'data_foreign_keys':
-          await checkForeignKeys(check);
+        case 'data_user_profiles':
+          await checkUserProfiles(check);
           break;
-        case 'user_error_rates':
-          await checkUserErrorRates(check);
+        case 'user_activity_patterns':
+          await checkActivityPatterns(check);
           break;
-        case 'user_session_duration':
-          await checkSessionDuration(check);
+        case 'user_engagement':
+          await checkUserEngagement(check);
           break;
         default:
           check.status = 'warning';
@@ -340,98 +311,159 @@ export const SystemDiagnosticSection = () => {
     }
   };
 
-  // Implementações dos checks individuais
-  const checkDiskSpace = async (check: DiagnosticCheck) => {
-    // Simular verificação de espaço em disco
-    const usagePercent = 75; // Mock data
-    
-    if (usagePercent > 90) {
-      check.status = 'failed';
-      check.result = `Espaço em disco crítico: ${usagePercent}% usado`;
-      check.recommendation = 'Libere espaço em disco imediatamente ou expanda o armazenamento';
-    } else if (usagePercent > 80) {
-      check.status = 'warning';
-      check.result = `Espaço em disco alto: ${usagePercent}% usado`;
-      check.recommendation = 'Considere fazer limpeza ou expandir o armazenamento em breve';
-    } else {
-      check.status = 'passed';
-      check.result = `Espaço em disco OK: ${usagePercent}% usado`;
-    }
-  };
-
-  const checkMemoryUsage = async (check: DiagnosticCheck) => {
-    const memoryUsage = 65; // Mock data
-    
-    if (memoryUsage > 90) {
-      check.status = 'failed';
-      check.result = `Uso de memória crítico: ${memoryUsage}%`;
-      check.recommendation = 'Reinicie serviços ou adicione mais memória';
-    } else if (memoryUsage > 80) {
-      check.status = 'warning';
-      check.result = `Uso de memória alto: ${memoryUsage}%`;
-      check.recommendation = 'Monitore processos que consomem muita memória';
-    } else {
-      check.status = 'passed';
-      check.result = `Uso de memória OK: ${memoryUsage}%`;
-    }
-  };
-
+  // Implementações dos checks com dados reais
   const checkDatabaseConnection = async (check: DiagnosticCheck) => {
     try {
-      const { data, error } = await supabase.from('profiles').select('id').limit(1);
+      const startTime = Date.now();
       
-      if (error) {
-        check.status = 'failed';
-        check.result = `Erro de conexão: ${error.message}`;
-        check.recommendation = 'Verifique configurações de conexão e credenciais do banco';
-      } else {
+      // Testar múltiplas consultas para medir performance
+      const results = await Promise.allSettled([
+        supabase.from('profiles').select('id').limit(1),
+        supabase.from('tenants').select('id').limit(1),
+        supabase.from('activity_logs').select('id').limit(1)
+      ]);
+      
+      const endTime = Date.now();
+      const responseTime = endTime - startTime;
+      
+      const successfulQueries = results.filter(r => r.status === 'fulfilled').length;
+      const totalQueries = results.length;
+      
+      check.realData = { responseTime, successfulQueries, totalQueries };
+      
+      if (successfulQueries === totalQueries && responseTime < 500) {
         check.status = 'passed';
-        check.result = 'Conexão com banco de dados OK';
+        check.result = `Conexão OK - ${responseTime}ms para ${totalQueries} consultas`;
+      } else if (successfulQueries === totalQueries && responseTime < 1000) {
+        check.status = 'warning';
+        check.result = `Conexão lenta - ${responseTime}ms para ${totalQueries} consultas`;
+        check.recommendation = 'Monitorar performance da rede ou banco';
+      } else {
+        check.status = 'failed';
+        check.result = `Falhas na conexão - ${successfulQueries}/${totalQueries} consultas OK, ${responseTime}ms`;
+        check.recommendation = 'Verificar conectividade e status do banco';
       }
     } catch (error) {
       check.status = 'failed';
-      check.result = `Falha na conexão: ${error}`;
-      check.recommendation = 'Verifique se o serviço de banco está ativo';
+      check.result = `Erro de conexão: ${error}`;
+      check.recommendation = 'Verificar configurações de rede e credenciais';
     }
   };
 
-  const checkEdgeFunctions = async (check: DiagnosticCheck) => {
-    // Mock check - implementar teste real das edge functions
-    const functionsWorking = true;
-    
-    if (functionsWorking) {
-      check.status = 'passed';
-      check.result = 'Edge Functions operacionais';
-    } else {
+  const checkTableIntegrity = async (check: DiagnosticCheck) => {
+    try {
+      // Usar apenas tabelas que realmente existem no banco
+      const requiredTables = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'];
+      const tableResults = [];
+      
+      for (const table of requiredTables) {
+        try {
+          const { error } = await supabase.from(table).select('id').limit(1);
+          tableResults.push({ table, exists: !error, error: error?.message });
+        } catch (err) {
+          tableResults.push({ table, exists: false, error: err });
+        }
+      }
+      
+      const existingTables = tableResults.filter(t => t.exists).length;
+      const missingTables = tableResults.filter(t => !t.exists);
+      
+      check.realData = { tableResults, existingTables, totalTables: requiredTables.length };
+      
+      if (existingTables === requiredTables.length) {
+        check.status = 'passed';
+        check.result = `Todas as ${requiredTables.length} tabelas principais existem`;
+      } else {
+        check.status = 'failed';
+        check.result = `${missingTables.length} tabelas faltando: ${missingTables.map(t => t.table).join(', ')}`;
+        check.recommendation = 'Executar migrations ou verificar estrutura do banco';
+      }
+    } catch (error) {
       check.status = 'failed';
-      check.result = 'Edge Functions não respondem';
-      check.recommendation = 'Verifique deploy e configuração das edge functions';
+      check.result = `Erro ao verificar tabelas: ${error}`;
+    }
+  };
+
+  const checkStorageUsage = async (check: DiagnosticCheck) => {
+    try {
+      // Contar registros em tabelas principais
+      const tableCounts = await Promise.allSettled([
+        supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('tenants').select('id', { count: 'exact', head: true }),
+        supabase.from('assessments').select('id', { count: 'exact', head: true }),
+        supabase.from('risk_assessments').select('id', { count: 'exact', head: true }),
+        supabase.from('policies').select('id', { count: 'exact', head: true }),
+        supabase.from('activity_logs').select('id', { count: 'exact', head: true })
+      ]);
+      
+      const counts = tableCounts.map((result, index) => {
+        const tableName = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'][index];
+        const count = result.status === 'fulfilled' ? result.value.count || 0 : 0;
+        return { table: tableName, count };
+      });
+      
+      const totalRecords = counts.reduce((sum, item) => sum + item.count, 0);
+      const estimatedSizeKB = totalRecords * 2; // ~2KB por registro
+      const estimatedSizeMB = estimatedSizeKB / 1024;
+      
+      check.realData = { counts, totalRecords, estimatedSizeMB };
+      
+      if (estimatedSizeMB < 100) {
+        check.status = 'passed';
+        check.result = `${totalRecords} registros (~${estimatedSizeMB.toFixed(1)}MB estimado)`;
+      } else if (estimatedSizeMB < 500) {
+        check.status = 'warning';
+        check.result = `${totalRecords} registros (~${estimatedSizeMB.toFixed(1)}MB estimado)`;
+        check.recommendation = 'Monitorar crescimento e considerar arquivamento';
+      } else {
+        check.status = 'failed';
+        check.result = `${totalRecords} registros (~${estimatedSizeMB.toFixed(1)}MB estimado)`;
+        check.recommendation = 'Implementar estratégia de arquivamento ou limpeza';
+      }
+    } catch (error) {
+      check.status = 'warning';
+      check.result = 'Não foi possível calcular uso de storage';
     }
   };
 
   const checkFailedLogins = async (check: DiagnosticCheck) => {
     try {
-      const { data, error } = await supabase
+      const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: failedLogins, error } = await supabase
         .from('activity_logs')
         .select('*')
         .eq('action', 'login_failed')
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        .gte('created_at', last24Hours);
 
       if (error) throw error;
 
-      const failedCount = data?.length || 0;
+      const failedCount = failedLogins?.length || 0;
       
-      if (failedCount > 50) {
+      // Analisar IPs únicos para detectar ataques
+      const uniqueIPs = new Set(failedLogins?.map(log => log.ip_address).filter(Boolean));
+      const suspiciousIPs = [];
+      
+      for (const ip of uniqueIPs) {
+        const ipFailures = failedLogins?.filter(log => log.ip_address === ip).length || 0;
+        if (ipFailures > 5) {
+          suspiciousIPs.push({ ip, failures: ipFailures });
+        }
+      }
+      
+      check.realData = { failedCount, uniqueIPs: uniqueIPs.size, suspiciousIPs };
+      
+      if (failedCount > 50 || suspiciousIPs.length > 0) {
         check.status = 'failed';
-        check.result = `${failedCount} tentativas de login falhadas nas últimas 24h`;
+        check.result = `${failedCount} tentativas falhadas, ${suspiciousIPs.length} IPs suspeitos`;
         check.recommendation = 'Investigar possível ataque de força bruta';
       } else if (failedCount > 20) {
         check.status = 'warning';
-        check.result = `${failedCount} tentativas de login falhadas nas últimas 24h`;
+        check.result = `${failedCount} tentativas falhadas nas últimas 24h`;
         check.recommendation = 'Monitorar atividade suspeita';
       } else {
         check.status = 'passed';
-        check.result = `${failedCount} tentativas de login falhadas (normal)`;
+        check.result = `${failedCount} tentativas falhadas (normal)`;
       }
     } catch (error) {
       check.status = 'warning';
@@ -439,46 +471,11 @@ export const SystemDiagnosticSection = () => {
     }
   };
 
-  const checkMFACoverage = async (check: DiagnosticCheck) => {
-    try {
-      // Carregar dados reais de usuários
-      const { data: usersData } = await supabase.from('profiles').select('id');
-      const totalUsers = usersData?.length || 0;
-      
-      // Por enquanto, estimativa de MFA (implementar quando MFA estiver disponível)
-      const mfaPercentage = Math.floor(totalUsers * 0.4); // 40% estimado
-      const mfaPercent = totalUsers > 0 ? (mfaPercentage / totalUsers) * 100 : 0;
-      
-      if (mfaPercent < 30) {
-        check.status = 'failed';
-        check.result = `Apenas ${mfaPercent.toFixed(1)}% dos usuários têm MFA ativo (${mfaPercentage}/${totalUsers})`;
-        check.recommendation = 'Implementar política obrigatória de MFA para administradores';
-      } else if (mfaPercent < 60) {
-        check.status = 'warning';
-        check.result = `${mfaPercent.toFixed(1)}% dos usuários têm MFA ativo (${mfaPercentage}/${totalUsers})`;
-        check.recommendation = 'Incentivar mais usuários a ativarem MFA';
-      } else {
-        check.status = 'passed';
-        check.result = `${mfaPercent.toFixed(1)}% dos usuários têm MFA ativo (${mfaPercentage}/${totalUsers})`;
-      }
-    } catch (error) {
-      check.status = 'warning';
-      check.result = 'Não foi possível verificar cobertura de MFA';
-      check.recommendation = 'Verifique conectividade com o banco de dados';
-    }
-  };
-
-  const checkPasswordPolicy = async (check: DiagnosticCheck) => {
-    // Mock check - implementar verificação de políticas de senha
-    check.status = 'passed';
-    check.result = 'Políticas de senha em conformidade';
-  };
-
   const checkInactiveUsers = async (check: DiagnosticCheck) => {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
-      // Carregar dados reais de usuários
+      // Buscar usuários de autenticação
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       
       if (!authUsers?.users) {
@@ -491,166 +488,355 @@ export const SystemDiagnosticSection = () => {
         !user.last_sign_in_at || new Date(user.last_sign_in_at) < thirtyDaysAgo
       );
       
-      const inactiveCount = inactiveUsers.length;
       const totalUsers = authUsers.users.length;
+      const inactiveCount = inactiveUsers.length;
       const inactivePercentage = totalUsers > 0 ? (inactiveCount / totalUsers) * 100 : 0;
+      
+      check.realData = { 
+        totalUsers, 
+        inactiveCount, 
+        inactivePercentage,
+        oldestInactive: inactiveUsers.length > 0 ? 
+          Math.min(...inactiveUsers.map(u => u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : 0)) : null
+      };
       
       if (inactivePercentage > 70) {
         check.status = 'failed';
-        check.result = `${inactiveCount} usuários inativos (${inactivePercentage.toFixed(1)}% do total)`;
-        check.recommendation = 'Taxa muito alta de usuários inativos - revisar estratégia de engajamento';
-      } else if (inactiveCount > 20) {
+        check.result = `${inactiveCount}/${totalUsers} usuários inativos (${inactivePercentage.toFixed(1)}%)`;
+        check.recommendation = 'Taxa muito alta - revisar estratégia de engajamento';
+      } else if (inactiveCount > 10) {
         check.status = 'warning';
-        check.result = `${inactiveCount} usuários inativos por mais de 30 dias (${inactivePercentage.toFixed(1)}%)`;
-        check.recommendation = 'Considere desativar contas não utilizadas ou enviar lembretes';
+        check.result = `${inactiveCount}/${totalUsers} usuários inativos (${inactivePercentage.toFixed(1)}%)`;
+        check.recommendation = 'Considerar desativar contas não utilizadas';
       } else {
         check.status = 'passed';
-        check.result = `${inactiveCount} usuários inativos (${inactivePercentage.toFixed(1)}% - aceitável)`;
+        check.result = `${inactiveCount}/${totalUsers} usuários inativos (${inactivePercentage.toFixed(1)}%)`;
       }
     } catch (error) {
       check.status = 'warning';
       check.result = 'Não foi possível verificar usuários inativos';
-      check.recommendation = 'Verifique conectividade com o serviço de autenticação';
+    }
+  };
+
+  const checkLockedAccounts = async (check: DiagnosticCheck) => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, locked_until, is_active')
+        .or('locked_until.gte.now(),is_active.eq.false');
+
+      if (error) throw error;
+
+      const now = new Date();
+      const lockedUsers = profiles?.filter(profile => 
+        !profile.is_active || (profile.locked_until && new Date(profile.locked_until) > now)
+      ) || [];
+      
+      const temporaryLocks = lockedUsers.filter(u => u.locked_until && new Date(u.locked_until) > now).length;
+      const permanentLocks = lockedUsers.filter(u => !u.is_active).length;
+      
+      check.realData = { 
+        totalLocked: lockedUsers.length, 
+        temporaryLocks, 
+        permanentLocks 
+      };
+      
+      if (lockedUsers.length > 20) {
+        check.status = 'warning';
+        check.result = `${lockedUsers.length} contas bloqueadas (${temporaryLocks} temporárias, ${permanentLocks} permanentes)`;
+        check.recommendation = 'Revisar motivos dos bloqueios e considerar desbloqueios';
+      } else {
+        check.status = 'passed';
+        check.result = `${lockedUsers.length} contas bloqueadas (${temporaryLocks} temporárias, ${permanentLocks} permanentes)`;
+      }
+    } catch (error) {
+      check.status = 'warning';
+      check.result = 'Não foi possível verificar contas bloqueadas';
     }
   };
 
   const checkQueryPerformance = async (check: DiagnosticCheck) => {
     try {
-      // Testar performance com algumas consultas reais
-      const startTime = Date.now();
+      const queries = [
+        { name: 'profiles', query: () => supabase.from('profiles').select('id').limit(100) },
+        { name: 'tenants', query: () => supabase.from('tenants').select('id').limit(50) },
+        { name: 'activity_logs', query: () => supabase.from('activity_logs').select('id').limit(50) },
+        { name: 'assessments', query: () => supabase.from('assessments').select('id').limit(25) }
+      ];
       
-      await Promise.all([
-        supabase.from('profiles').select('id').limit(100),
-        supabase.from('activity_logs').select('id').limit(50),
-        supabase.from('assessments').select('id').limit(25)
-      ]);
+      const results = [];
       
-      const endTime = Date.now();
-      const avgQueryTime = (endTime - startTime) / 3; // Média das 3 consultas
+      for (const { name, query } of queries) {
+        const startTime = Date.now();
+        try {
+          await query();
+          const duration = Date.now() - startTime;
+          results.push({ table: name, duration, success: true });
+        } catch (error) {
+          results.push({ table: name, duration: Date.now() - startTime, success: false, error });
+        }
+      }
       
-      if (avgQueryTime > 500) {
+      const avgQueryTime = results.reduce((sum, r) => sum + r.duration, 0) / results.length;
+      const slowQueries = results.filter(r => r.duration > 300);
+      const failedQueries = results.filter(r => !r.success);
+      
+      check.realData = { results, avgQueryTime, slowQueries: slowQueries.length, failedQueries: failedQueries.length };
+      
+      if (failedQueries.length > 0 || avgQueryTime > 500) {
         check.status = 'failed';
-        check.result = `Tempo médio de consulta muito alto: ${avgQueryTime.toFixed(0)}ms`;
-        check.recommendation = 'Otimizar consultas SQL e verificar conectividade de rede';
-      } else if (avgQueryTime > 200) {
+        check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms, ${failedQueries.length} falhas, ${slowQueries.length} lentas`;
+        check.recommendation = 'Otimizar consultas SQL e verificar conectividade';
+      } else if (avgQueryTime > 200 || slowQueries.length > 0) {
         check.status = 'warning';
-        check.result = `Tempo médio de consulta alto: ${avgQueryTime.toFixed(0)}ms`;
-        check.recommendation = 'Monitorar consultas lentas e considerar otimizações';
+        check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms, ${slowQueries.length} consultas lentas`;
+        check.recommendation = 'Monitorar consultas lentas';
       } else {
         check.status = 'passed';
-        check.result = `Tempo médio de consulta OK: ${avgQueryTime.toFixed(0)}ms`;
+        check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms - Performance OK`;
       }
     } catch (error) {
       check.status = 'failed';
       check.result = 'Erro ao testar performance de consultas';
-      check.recommendation = 'Verificar conectividade com o banco de dados';
     }
   };
 
-  const checkAPIResponse = async (check: DiagnosticCheck) => {
-    // Mock data - implementar teste real de API
-    const responseTime = 150; // ms
-    
-    if (responseTime > 500) {
-      check.status = 'failed';
-      check.result = `Tempo de resposta da API muito alto: ${responseTime}ms`;
-    } else if (responseTime > 300) {
+  const checkLargeTables = async (check: DiagnosticCheck) => {
+    try {
+      // Usar tabelas reais do banco
+      const tables = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'];
+      const tableSizes = [];
+      
+      for (const table of tables) {
+        try {
+          const { count, error } = await supabase
+            .from(table)
+            .select('id', { count: 'exact', head: true });
+            
+          if (!error) {
+            tableSizes.push({ table, count: count || 0 });
+          }
+        } catch (err) {
+          tableSizes.push({ table, count: 0, error: err });
+        }
+      }
+      
+      const largeTables = tableSizes.filter(t => t.count > 10000);
+      const totalRecords = tableSizes.reduce((sum, t) => sum + t.count, 0);
+      
+      check.realData = { tableSizes, largeTables: largeTables.length, totalRecords };
+      
+      if (largeTables.length > 3) {
+        check.status = 'warning';
+        check.result = `${largeTables.length} tabelas grandes (>10k registros), ${totalRecords} total`;
+        check.recommendation = 'Considerar estratégias de otimização ou arquivamento';
+      } else {
+        check.status = 'passed';
+        check.result = `${largeTables.length} tabelas grandes, ${totalRecords} registros total`;
+      }
+    } catch (error) {
       check.status = 'warning';
-      check.result = `Tempo de resposta da API alto: ${responseTime}ms`;
-    } else {
-      check.status = 'passed';
-      check.result = `Tempo de resposta da API OK: ${responseTime}ms`;
-    }
-  };
-
-  const checkConcurrentUsers = async (check: DiagnosticCheck) => {
-    // Mock data
-    const maxConcurrent = 89;
-    const capacity = 200;
-    const utilizationPercent = (maxConcurrent / capacity) * 100;
-    
-    if (utilizationPercent > 90) {
-      check.status = 'warning';
-      check.result = `Alta utilização: ${maxConcurrent}/${capacity} usuários (${utilizationPercent.toFixed(1)}%)`;
-      check.recommendation = 'Considere expandir capacidade do sistema';
-    } else {
-      check.status = 'passed';
-      check.result = `Capacidade OK: ${maxConcurrent}/${capacity} usuários (${utilizationPercent.toFixed(1)}%)`;
+      check.result = 'Não foi possível verificar tamanho das tabelas';
     }
   };
 
   const checkOrphanedRecords = async (check: DiagnosticCheck) => {
-    // Mock data - implementar verificação real
-    const orphanedCount = 0;
-    
-    if (orphanedCount > 0) {
+    try {
+      // Verificar profiles sem usuário de auth correspondente
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: profiles } = await supabase.from('profiles').select('user_id');
+      
+      if (!authUsers?.users || !profiles) {
+        check.status = 'warning';
+        check.result = 'Não foi possível verificar consistência';
+        return;
+      }
+      
+      const authUserIds = new Set(authUsers.users.map(u => u.id));
+      const orphanedProfiles = profiles.filter(p => !authUserIds.has(p.user_id));
+      
+      check.realData = { 
+        totalProfiles: profiles.length, 
+        totalAuthUsers: authUsers.users.length,
+        orphanedProfiles: orphanedProfiles.length 
+      };
+      
+      if (orphanedProfiles.length > 0) {
+        check.status = 'warning';
+        check.result = `${orphanedProfiles.length} perfis órfãos encontrados`;
+        check.recommendation = 'Execute script de limpeza de dados órfãos';
+      } else {
+        check.status = 'passed';
+        check.result = 'Nenhum registro órfão encontrado';
+      }
+    } catch (error) {
       check.status = 'warning';
-      check.result = `${orphanedCount} registros órfãos encontrados`;
-      check.recommendation = 'Execute script de limpeza de dados';
-    } else {
-      check.status = 'passed';
-      check.result = 'Nenhum registro órfão encontrado';
+      check.result = 'Erro ao verificar registros órfãos';
     }
   };
 
-  const checkBackupIntegrity = async (check: DiagnosticCheck) => {
-    // Mock data - implementar verificação real
-    const lastBackup = new Date(Date.now() - 12 * 60 * 60 * 1000); // 12 horas atrás
-    const hoursAgo = (Date.now() - lastBackup.getTime()) / (1000 * 60 * 60);
-    
-    if (hoursAgo > 48) {
-      check.status = 'failed';
-      check.result = `Último backup há ${hoursAgo.toFixed(1)} horas`;
-      check.recommendation = 'Execute backup imediatamente';
-    } else if (hoursAgo > 24) {
+  const checkTenantConsistency = async (check: DiagnosticCheck) => {
+    try {
+      const { data: tenants } = await supabase.from('tenants').select('id, name, is_active');
+      const { data: profiles } = await supabase.from('profiles').select('tenant_id');
+      
+      if (!tenants || !profiles) {
+        check.status = 'warning';
+        check.result = 'Não foi possível verificar consistência de tenants';
+        return;
+      }
+      
+      const tenantIds = new Set(tenants.map(t => t.id));
+      const profilesWithInvalidTenant = profiles.filter(p => p.tenant_id && !tenantIds.has(p.tenant_id));
+      const activeTenants = tenants.filter(t => t.is_active).length;
+      
+      check.realData = {
+        totalTenants: tenants.length,
+        activeTenants,
+        profilesWithInvalidTenant: profilesWithInvalidTenant.length
+      };
+      
+      if (profilesWithInvalidTenant.length > 0) {
+        check.status = 'failed';
+        check.result = `${profilesWithInvalidTenant.length} perfis com tenant inválido`;
+        check.recommendation = 'Corrigir referências de tenant nos perfis';
+      } else {
+        check.status = 'passed';
+        check.result = `${tenants.length} tenants (${activeTenants} ativas) - Consistência OK`;
+      }
+    } catch (error) {
       check.status = 'warning';
-      check.result = `Último backup há ${hoursAgo.toFixed(1)} horas`;
-      check.recommendation = 'Verifique agendamento de backups';
-    } else {
-      check.status = 'passed';
-      check.result = `Último backup há ${hoursAgo.toFixed(1)} horas`;
+      check.result = 'Erro ao verificar consistência de tenants';
     }
   };
 
-  const checkForeignKeys = async (check: DiagnosticCheck) => {
-    // Mock data - implementar verificação real
-    check.status = 'passed';
-    check.result = 'Integridade referencial OK';
-  };
-
-  const checkUserErrorRates = async (check: DiagnosticCheck) => {
-    // Mock data - implementar análise real de erros
-    const errorRate = 2.1; // %
-    
-    if (errorRate > 5) {
-      check.status = 'failed';
-      check.result = `Taxa de erro alta: ${errorRate}%`;
-      check.recommendation = 'Investigar causas dos erros e melhorar UX';
-    } else if (errorRate > 3) {
+  const checkUserProfiles = async (check: DiagnosticCheck) => {
+    try {
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: profiles } = await supabase.from('profiles').select('user_id, is_active');
+      
+      if (!authUsers?.users || !profiles) {
+        check.status = 'warning';
+        check.result = 'Não foi possível verificar perfis';
+        return;
+      }
+      
+      const profileUserIds = new Set(profiles.map(p => p.user_id));
+      const usersWithoutProfile = authUsers.users.filter(u => !profileUserIds.has(u.id));
+      const activeProfiles = profiles.filter(p => p.is_active).length;
+      
+      check.realData = {
+        totalAuthUsers: authUsers.users.length,
+        totalProfiles: profiles.length,
+        activeProfiles,
+        usersWithoutProfile: usersWithoutProfile.length
+      };
+      
+      if (usersWithoutProfile.length > 0) {
+        check.status = 'warning';
+        check.result = `${usersWithoutProfile.length} usuários sem perfil`;
+        check.recommendation = 'Criar perfis para usuários sem perfil';
+      } else {
+        check.status = 'passed';
+        check.result = `${profiles.length} perfis (${activeProfiles} ativos) - Consistência OK`;
+      }
+    } catch (error) {
       check.status = 'warning';
-      check.result = `Taxa de erro moderada: ${errorRate}%`;
-      check.recommendation = 'Monitorar erros frequentes';
-    } else {
-      check.status = 'passed';
-      check.result = `Taxa de erro baixa: ${errorRate}%`;
+      check.result = 'Erro ao verificar perfis de usuário';
     }
   };
 
-  const checkSessionDuration = async (check: DiagnosticCheck) => {
-    // Mock data
-    const avgDuration = 45; // minutos
-    
-    if (avgDuration < 10) {
+  const checkActivityPatterns = async (check: DiagnosticCheck) => {
+    try {
+      const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: recentActivity } = await supabase
+        .from('activity_logs')
+        .select('action, created_at')
+        .gte('created_at', last7Days);
+      
+      if (!recentActivity) {
+        check.status = 'warning';
+        check.result = 'Não foi possível analisar padrões de atividade';
+        return;
+      }
+      
+      const dailyActivity = {};
+      recentActivity.forEach(log => {
+        const date = new Date(log.created_at).toDateString();
+        dailyActivity[date] = (dailyActivity[date] || 0) + 1;
+      });
+      
+      const avgDailyActivity = Object.values(dailyActivity).reduce((sum: number, count: number) => sum + count, 0) / 7;
+      const actionTypes = {};
+      recentActivity.forEach(log => {
+        actionTypes[log.action] = (actionTypes[log.action] || 0) + 1;
+      });
+      
+      check.realData = {
+        totalActivity: recentActivity.length,
+        avgDailyActivity: Math.round(avgDailyActivity),
+        uniqueActions: Object.keys(actionTypes).length,
+        topActions: Object.entries(actionTypes).sort(([,a], [,b]) => (b as number) - (a as number)).slice(0, 3)
+      };
+      
+      if (avgDailyActivity < 10) {
+        check.status = 'warning';
+        check.result = `Baixa atividade: ${Math.round(avgDailyActivity)} ações/dia em média`;
+        check.recommendation = 'Investigar baixo engajamento dos usuários';
+      } else {
+        check.status = 'passed';
+        check.result = `Atividade normal: ${Math.round(avgDailyActivity)} ações/dia em média`;
+      }
+    } catch (error) {
       check.status = 'warning';
-      check.result = `Duração média muito baixa: ${avgDuration} min`;
-      check.recommendation = 'Investigar usabilidade e engajamento';
-    } else {
-      check.status = 'passed';
-      check.result = `Duração média das sessões: ${avgDuration} min`;
+      check.result = 'Erro ao analisar padrões de atividade';
     }
   };
 
-  const calculateDiagnosticSummary = (checks: DiagnosticCheck[]): DiagnosticSummary => {
+  const checkUserEngagement = async (check: DiagnosticCheck) => {
+    try {
+      const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      
+      const { data: recentActivity } = await supabase
+        .from('activity_logs')
+        .select('user_id, created_at')
+        .gte('created_at', last30Days);
+      
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      
+      if (!recentActivity || !authUsers?.users) {
+        check.status = 'warning';
+        check.result = 'Não foi possível calcular engajamento';
+        return;
+      }
+      
+      const activeUserIds = new Set(recentActivity.map(log => log.user_id).filter(Boolean));
+      const totalUsers = authUsers.users.length;
+      const engagementRate = totalUsers > 0 ? (activeUserIds.size / totalUsers) * 100 : 0;
+      
+      check.realData = {
+        totalUsers,
+        activeUsers: activeUserIds.size,
+        engagementRate: Math.round(engagementRate * 100) / 100,
+        totalActivity: recentActivity.length
+      };
+      
+      if (engagementRate < 30) {
+        check.status = 'warning';
+        check.result = `Baixo engajamento: ${engagementRate.toFixed(1)}% usuários ativos (${activeUserIds.size}/${totalUsers})`;
+        check.recommendation = 'Implementar estratégias para aumentar engajamento';
+      } else {
+        check.status = 'passed';
+        check.result = `Engajamento OK: ${engagementRate.toFixed(1)}% usuários ativos (${activeUserIds.size}/${totalUsers})`;
+      }
+    } catch (error) {
+      check.status = 'warning';
+      check.result = 'Erro ao calcular engajamento';
+    }
+  };
+
+  const calculateDiagnosticSummary = (checks: DiagnosticCheck[], scanDuration: number): DiagnosticSummary => {
     const passed = checks.filter(c => c.status === 'passed').length;
     const warnings = checks.filter(c => c.status === 'warning').length;
     const failed = checks.filter(c => c.status === 'failed').length;
@@ -665,7 +851,7 @@ export const SystemDiagnosticSection = () => {
       failed,
       critical,
       lastFullScan: new Date().toISOString(),
-      scanDuration: 0, // Calcular tempo real
+      scanDuration,
       systemHealth: healthScore
     };
   };
@@ -705,14 +891,17 @@ export const SystemDiagnosticSection = () => {
     const report = {
       timestamp: new Date().toISOString(),
       summary: diagnosticSummary,
-      checks: diagnosticChecks
+      checks: diagnosticChecks.map(check => ({
+        ...check,
+        realData: check.realData // Incluir dados reais no relatório
+      }))
     };
     
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `diagnostic-report-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `diagnostic-report-real-data-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -734,7 +923,7 @@ export const SystemDiagnosticSection = () => {
             <div className="text-2xl font-bold">{diagnosticSummary.systemHealth}%</div>
             <Progress value={diagnosticSummary.systemHealth} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              Score geral de saúde
+              Score baseado em dados reais
             </p>
           </CardContent>
         </Card>
@@ -791,10 +980,10 @@ export const SystemDiagnosticSection = () => {
             <div>
               <CardTitle className="flex items-center space-x-2">
                 <Search className="h-5 w-5" />
-                <span>Diagnóstico do Sistema</span>
+                <span>Diagnóstico do Sistema - Dados Reais</span>
               </CardTitle>
               <CardDescription>
-                Escaneie o sistema em busca de problemas e oportunidades de melhoria
+                Escaneie o sistema usando dados reais do banco de dados para identificar problemas
               </CardDescription>
             </div>
             <div className="flex space-x-2">
@@ -830,7 +1019,8 @@ export const SystemDiagnosticSection = () => {
 
           {diagnosticSummary.lastFullScan && (
             <div className="mb-4 text-sm text-muted-foreground">
-              Último scan completo: {new Date(diagnosticSummary.lastFullScan).toLocaleString('pt-BR')}
+              Último scan completo: {new Date(diagnosticSummary.lastFullScan).toLocaleString('pt-BR')} 
+              (duração: {(diagnosticSummary.scanDuration / 1000).toFixed(1)}s)
             </div>
           )}
 
@@ -925,6 +1115,15 @@ export const SystemDiagnosticSection = () => {
                         </div>
                       )}
                       
+                      {check.realData && (
+                        <div className="mb-2">
+                          <p className="text-sm font-medium text-gray-600">Dados Reais:</p>
+                          <pre className="text-xs text-gray-600 bg-gray-50 p-2 rounded mt-1 overflow-x-auto">
+                            {JSON.stringify(check.realData, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                      
                       {check.lastRun && (
                         <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                           <span>Executado: {new Date(check.lastRun).toLocaleString('pt-BR')}</span>
@@ -961,6 +1160,15 @@ export const SystemDiagnosticSection = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Real Data Indicator */}
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Dados Reais:</strong> Todos os diagnósticos são baseados em dados reais do banco de dados. 
+          Os resultados refletem o estado atual do sistema e são atualizados em tempo real.
+        </AlertDescription>
+      </Alert>
 
       {/* Critical Issues Alert */}
       {diagnosticSummary.critical > 0 && (
