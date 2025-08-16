@@ -1,0 +1,1073 @@
+// ============================================================================
+// PÁGINA COMPLETA DE NOTIFICAÇÕES
+// ============================================================================
+// Sistema abrangente de gestão de notificações para workflow de processos GRC
+
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { 
+  Bell, 
+  Filter, 
+  Search, 
+  CheckCheck, 
+  Archive, 
+  Trash2, 
+  Settings, 
+  RefreshCw,
+  Plus,
+  MoreVertical,
+  Eye,
+  EyeOff,
+  Clock,
+  AlertTriangle,
+  Info,
+  CheckCircle,
+  XCircle,
+  ArrowUp,
+  ArrowDown,
+  Calendar,
+  User,
+  Tag,
+  Mail,
+  Phone,
+  Smartphone
+} from 'lucide-react';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
+
+import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsRealtime } from '@/contexts/NotificationsRealtimeContext';
+import { 
+  Notification, 
+  NotificationFilters, 
+  NotificationPriority, 
+  NotificationStatus, 
+  NotificationModule 
+} from '@/types/notifications';
+import { cn } from '@/lib/utils';
+import { formatDistanceToNow, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { NotificationPreferences } from './NotificationPreferences';
+
+// Componente principal da página
+export const NotificationsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const {
+    notifications,
+    loading,
+    error,
+    stats,
+    unreadCount,
+    markAsRead,
+    markAsUnread,
+    markAllAsRead,
+    archiveNotification,
+    dismissNotification,
+    searchNotifications,
+    filterNotifications,
+    clearFilters,
+    refreshNotifications,
+    executeAction
+  } = useNotifications();
+
+  const {
+    isConnected,
+    connectionStatus,
+    lastError,
+    reconnect,
+    messagesReceived,
+    connectionTime
+  } = useNotificationsRealtime();
+
+  // Estados locais
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'cards' | 'compact'>('list');
+  const [activeTab, setActiveTab] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filtros
+  const [currentFilters, setCurrentFilters] = useState<NotificationFilters>({});
+
+  // Mapeamento de prioridades para cores e ícones
+  const priorityConfig = {
+    low: { color: 'bg-green-100 text-green-800 border-green-200', icon: ArrowDown },
+    medium: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: ArrowUp },
+    high: { color: 'bg-orange-100 text-orange-800 border-orange-200', icon: AlertTriangle },
+    critical: { color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle }
+  };
+
+  // Mapeamento de status para cores
+  const statusConfig = {
+    unread: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Bell },
+    read: { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: CheckCircle },
+    archived: { color: 'bg-purple-100 text-purple-800 border-purple-200', icon: Archive },
+    dismissed: { color: 'bg-gray-100 text-gray-600 border-gray-200', icon: XCircle }
+  };
+
+  // Mapeamento de módulos para cores
+  const moduleConfig: Record<NotificationModule, { color: string; label: string }> = {
+    assessments: { color: 'bg-blue-100 text-blue-800', label: 'Assessments' },
+    risks: { color: 'bg-red-100 text-red-800', label: 'Riscos' },
+    compliance: { color: 'bg-green-100 text-green-800', label: 'Compliance' },
+    policies: { color: 'bg-purple-100 text-purple-800', label: 'Políticas' },
+    privacy: { color: 'bg-indigo-100 text-indigo-800', label: 'Privacidade' },
+    audit: { color: 'bg-yellow-100 text-yellow-800', label: 'Auditoria' },
+    users: { color: 'bg-teal-100 text-teal-800', label: 'Usuários' },
+    system: { color: 'bg-gray-100 text-gray-800', label: 'Sistema' },
+    'general-settings': { color: 'bg-slate-100 text-slate-800', label: 'Configurações' },
+    frameworks: { color: 'bg-orange-100 text-orange-800', label: 'Frameworks' },
+    incidents: { color: 'bg-pink-100 text-pink-800', label: 'Incidentes' }
+  };
+
+  // Aplicar filtros da URL
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    const priorityParam = searchParams.get('priority');
+    const moduleParam = searchParams.get('module');
+    const searchParam = searchParams.get('search');
+
+    const urlFilters: NotificationFilters = {};
+    
+    if (statusParam) urlFilters.status = [statusParam as NotificationStatus];
+    if (priorityParam) urlFilters.priority = [priorityParam as NotificationPriority];
+    if (moduleParam) urlFilters.module = [moduleParam as NotificationModule];
+    
+    setCurrentFilters(urlFilters);
+    filterNotifications(urlFilters);
+    
+    if (searchParam) {
+      setSearchQuery(searchParam);
+      searchNotifications(searchParam);
+    }
+  }, [searchParams, filterNotifications, searchNotifications]);
+
+  // Handlers
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    searchNotifications(query);
+    
+    if (query) {
+      searchParams.set('search', query);
+    } else {
+      searchParams.delete('search');
+    }
+    setSearchParams(searchParams);
+  };
+
+  const handleFilterChange = (newFilters: NotificationFilters) => {
+    setCurrentFilters(newFilters);
+    filterNotifications(newFilters);
+    
+    // Atualizar URL
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value && Array.isArray(value) && value.length > 0) {
+        searchParams.set(key, value[0]);
+      } else {
+        searchParams.delete(key);
+      }
+    });
+    setSearchParams(searchParams);
+  };
+
+  const handleSelectNotification = (id: string, selected: boolean) => {
+    if (selected) {
+      setSelectedNotifications(prev => [...prev, id]);
+    } else {
+      setSelectedNotifications(prev => prev.filter(nId => nId !== id));
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedNotifications.length === notifications.length) {
+      setSelectedNotifications([]);
+    } else {
+      setSelectedNotifications(notifications.map(n => n.id));
+    }
+  };
+
+  const handleBulkAction = async (action: 'read' | 'unread' | 'archive' | 'delete') => {
+    try {
+      const promises = selectedNotifications.map(id => {
+        switch (action) {
+          case 'read':
+            return markAsRead(id);
+          case 'unread':
+            return markAsUnread(id);
+          case 'archive':
+            return archiveNotification(id);
+          case 'delete':
+            return dismissNotification(id);
+          default:
+            return Promise.resolve();
+        }
+      });
+
+      await Promise.all(promises);
+      setSelectedNotifications([]);
+      toast.success(`${selectedNotifications.length} notificações processadas`);
+    } catch (error) {
+      toast.error('Erro ao processar notificações');
+    }
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    if (notification.status === 'unread') {
+      markAsRead(notification.id);
+    }
+  };
+
+  const handleActionClick = async (notification: Notification, actionId: string) => {
+    try {
+      const action = notification.actions?.find(a => a.id === actionId);
+      if (!action) return;
+
+      if (action.url) {
+        navigate(action.url);
+      } else {
+        await executeAction(notification.id, actionId);
+        toast.success('Ação executada com sucesso');
+      }
+    } catch (error) {
+      toast.error('Erro ao executar ação');
+    }
+  };
+
+  // Filtrar notificações por aba
+  const getFilteredNotifications = () => {
+    switch (activeTab) {
+      case 'unread':
+        return notifications.filter(n => n.status === 'unread');
+      case 'important':
+        return notifications.filter(n => n.priority === 'high' || n.priority === 'critical');
+      case 'archived':
+        return notifications.filter(n => n.status === 'archived');
+      default:
+        return notifications;
+    }
+  };
+
+  const filteredNotifications = getFilteredNotifications();
+
+  return (
+    <div className="h-full flex flex-col space-y-6 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+            <Bell className="h-6 w-6 sm:h-8 sm:w-8" />
+            Notificações
+          </h1>
+          <div className="flex items-center gap-3 mt-2">
+            <p className="text-muted-foreground">
+              Gerencie notificações e workflow dos processos
+            </p>
+            {/* Indicador de conexão em tempo real */}
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                isConnected ? "bg-green-500 animate-pulse" : 
+                connectionStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : 
+                "bg-red-500"
+              )} />
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {isConnected ? 'Tempo real ativo' : 
+                 connectionStatus === 'connecting' ? 'Conectando...' : 
+                 'Desconectado'}
+              </span>
+              {!isConnected && connectionStatus === 'error' && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={reconnect}
+                  className="text-xs h-auto p-0 text-primary"
+                >
+                  Reconectar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshNotifications}
+            disabled={loading}
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            <span className="hidden sm:inline ml-1">Atualizar</span>
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Filtros</span>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1">Configurações</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setViewMode('list')}>
+                <Eye className="h-4 w-4 mr-2" />
+                Lista
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('cards')}>
+                <Bell className="h-4 w-4 mr-2" />
+                Cards
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setViewMode('compact')}>
+                <CheckCheck className="h-4 w-4 mr-2" />
+                Compacto
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuItem onClick={markAllAsRead}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Marcar todas como lidas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={clearFilters}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Limpar filtros
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Estatísticas */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <Bell className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Não Lidas</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.unread}</p>
+              </div>
+              <EyeOff className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Críticas</p>
+                <p className="text-2xl font-bold text-red-600">{stats.byPriority.critical || 0}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Ação Requerida</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
+              </div>
+              <Clock className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros */}
+      {showFilters && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Status</Label>
+                <Select
+                  value={currentFilters.status?.[0] || ''}
+                  onValueChange={(value) => 
+                    handleFilterChange({ 
+                      ...currentFilters, 
+                      status: value ? [value as NotificationStatus] : undefined 
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os status</SelectItem>
+                    <SelectItem value="unread">Não lidas</SelectItem>
+                    <SelectItem value="read">Lidas</SelectItem>
+                    <SelectItem value="archived">Arquivadas</SelectItem>
+                    <SelectItem value="dismissed">Descartadas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Prioridade</Label>
+                <Select
+                  value={currentFilters.priority?.[0] || ''}
+                  onValueChange={(value) =>
+                    handleFilterChange({
+                      ...currentFilters,
+                      priority: value ? [value as NotificationPriority] : undefined
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as prioridades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as prioridades</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="low">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Módulo</Label>
+                <Select
+                  value={currentFilters.module?.[0] || ''}
+                  onValueChange={(value) =>
+                    handleFilterChange({
+                      ...currentFilters,
+                      module: value ? [value as NotificationModule] : undefined
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os módulos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os módulos</SelectItem>
+                    {Object.entries(moduleConfig).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Buscar</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar notificações..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ações em lote */}
+      {selectedNotifications.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {selectedNotifications.length} notificação(ões) selecionada(s)
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('read')}
+                >
+                  <Eye className="h-4 w-4 mr-1" />
+                  Marcar como lida
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('archive')}
+                >
+                  <Archive className="h-4 w-4 mr-1" />
+                  Arquivar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleBulkAction('delete')}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Excluir
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Conteúdo principal */}
+      <div className="flex-1 flex gap-6">
+        {/* Lista de notificações */}
+        <div className="flex-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="all" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Todas ({stats.total})
+              </TabsTrigger>
+              <TabsTrigger value="unread" className="flex items-center gap-2">
+                <EyeOff className="h-4 w-4" />
+                Não lidas ({stats.unread})
+              </TabsTrigger>
+              <TabsTrigger value="important" className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Importantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})
+              </TabsTrigger>
+              <TabsTrigger value="archived" className="flex items-center gap-2">
+                <Archive className="h-4 w-4" />
+                Arquivadas ({stats.byStatus.archived || 0})
+              </TabsTrigger>
+              <TabsTrigger value="preferences" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configurações
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab} className="mt-4">
+              {activeTab === 'preferences' ? (
+                <NotificationPreferences />
+              ) : loading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Card key={i} className="animate-pulse">
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : filteredNotifications.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                      Nenhuma notificação encontrada
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {activeTab === 'all' 
+                        ? 'Você não tem notificações no momento.' 
+                        : `Nenhuma notificação ${activeTab === 'unread' ? 'não lida' : activeTab} encontrada.`
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <NotificationsList
+                  notifications={filteredNotifications}
+                  viewMode={viewMode}
+                  selectedNotifications={selectedNotifications}
+                  onSelectNotification={handleSelectNotification}
+                  onSelectAll={handleSelectAll}
+                  onNotificationClick={handleNotificationClick}
+                  onActionClick={handleActionClick}
+                  priorityConfig={priorityConfig}
+                  statusConfig={statusConfig}
+                  moduleConfig={moduleConfig}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Painel de detalhes */}
+        {selectedNotification && (
+          <NotificationDetailPanel
+            notification={selectedNotification}
+            onClose={() => setSelectedNotification(null)}
+            onActionClick={handleActionClick}
+            priorityConfig={priorityConfig}
+            statusConfig={statusConfig}
+            moduleConfig={moduleConfig}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Componente de lista de notificações
+interface NotificationsListProps {
+  notifications: Notification[];
+  viewMode: 'list' | 'cards' | 'compact';
+  selectedNotifications: string[];
+  onSelectNotification: (id: string, selected: boolean) => void;
+  onSelectAll: () => void;
+  onNotificationClick: (notification: Notification) => void;
+  onActionClick: (notification: Notification, actionId: string) => void;
+  priorityConfig: any;
+  statusConfig: any;
+  moduleConfig: any;
+}
+
+const NotificationsList: React.FC<NotificationsListProps> = ({
+  notifications,
+  viewMode,
+  selectedNotifications,
+  onSelectNotification,
+  onSelectAll,
+  onNotificationClick,
+  onActionClick,
+  priorityConfig,
+  statusConfig,
+  moduleConfig
+}) => {
+  const allSelected = notifications.length > 0 && selectedNotifications.length === notifications.length;
+  const someSelected = selectedNotifications.length > 0 && selectedNotifications.length < notifications.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Header da lista */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = someSelected;
+            }}
+            onCheckedChange={onSelectAll}
+          />
+          <span className="text-sm text-muted-foreground">
+            Selecionar todas
+          </span>
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {notifications.length} notificação(ões)
+        </span>
+      </div>
+
+      {/* Lista */}
+      <div className="space-y-2">
+        {notifications.map((notification) => (
+          <NotificationItem
+            key={notification.id}
+            notification={notification}
+            viewMode={viewMode}
+            isSelected={selectedNotifications.includes(notification.id)}
+            onSelect={(selected) => onSelectNotification(notification.id, selected)}
+            onClick={() => onNotificationClick(notification)}
+            onActionClick={onActionClick}
+            priorityConfig={priorityConfig}
+            statusConfig={statusConfig}
+            moduleConfig={moduleConfig}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Componente de item de notificação
+interface NotificationItemProps {
+  notification: Notification;
+  viewMode: 'list' | 'cards' | 'compact';
+  isSelected: boolean;
+  onSelect: (selected: boolean) => void;
+  onClick: () => void;
+  onActionClick: (notification: Notification, actionId: string) => void;
+  priorityConfig: any;
+  statusConfig: any;
+  moduleConfig: any;
+}
+
+const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  viewMode,
+  isSelected,
+  onSelect,
+  onClick,
+  onActionClick,
+  priorityConfig,
+  statusConfig,
+  moduleConfig
+}) => {
+  const PriorityIcon = priorityConfig[notification.priority].icon;
+  const StatusIcon = statusConfig[notification.status].icon;
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+  };
+
+  return (
+    <Card 
+      className={cn(
+        "cursor-pointer transition-all hover:shadow-md",
+        notification.status === 'unread' && "border-l-4 border-l-blue-500",
+        isSelected && "ring-2 ring-primary",
+        notification.isSticky && "border-orange-200 bg-orange-50/50"
+      )}
+      onClick={onClick}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start space-x-3">
+          {/* Checkbox */}
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={onSelect}
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Ícone de prioridade */}
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center",
+            priorityConfig[notification.priority].color
+          )}>
+            <PriorityIcon className="h-4 w-4" />
+          </div>
+
+          {/* Conteúdo */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <h3 className={cn(
+                  "font-medium truncate",
+                  notification.status === 'unread' && "font-semibold"
+                )}>
+                  {notification.title}
+                </h3>
+                {notification.isSticky && (
+                  <Badge variant="outline" className="text-xs">
+                    Fixado
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant="outline" 
+                  className={cn("text-xs", moduleConfig[notification.module].color)}
+                >
+                  {moduleConfig[notification.module].label}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(notification.createdAt)}
+                </span>
+              </div>
+            </div>
+
+            <p className={cn(
+              "text-sm text-muted-foreground line-clamp-2 mb-3",
+              notification.status === 'unread' && "text-foreground"
+            )}>
+              {notification.message}
+            </p>
+
+            {/* Metadados */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant="outline" 
+                  className={cn("text-xs", statusConfig[notification.status].color)}
+                >
+                  <StatusIcon className="h-3 w-3 mr-1" />
+                  {notification.status === 'unread' ? 'Não lida' : 
+                   notification.status === 'read' ? 'Lida' :
+                   notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
+                </Badge>
+                
+                {notification.metadata.dueDate && (
+                  <Badge variant="outline" className="text-xs">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Vence {formatDate(notification.metadata.dueDate)}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Ações */}
+              {notification.actions && notification.actions.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {notification.actions.slice(0, 2).map((action) => (
+                    <Button
+                      key={action.id}
+                      size="sm"
+                      variant={action.type === 'primary' ? 'default' : 'outline'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onActionClick(notification, action.id);
+                      }}
+                      className="text-xs h-7"
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                  {notification.actions.length > 2 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-7 w-7 p-0">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {notification.actions.slice(2).map((action) => (
+                          <DropdownMenuItem
+                            key={action.id}
+                            onClick={() => onActionClick(notification, action.id)}
+                          >
+                            {action.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Componente de painel de detalhes
+interface NotificationDetailPanelProps {
+  notification: Notification;
+  onClose: () => void;
+  onActionClick: (notification: Notification, actionId: string) => void;
+  priorityConfig: any;
+  statusConfig: any;
+  moduleConfig: any;
+}
+
+const NotificationDetailPanel: React.FC<NotificationDetailPanelProps> = ({
+  notification,
+  onClose,
+  onActionClick,
+  priorityConfig,
+  statusConfig,
+  moduleConfig
+}) => {
+  const PriorityIcon = priorityConfig[notification.priority].icon;
+  const StatusIcon = statusConfig[notification.status].icon;
+
+  return (
+    <Card className="w-80 flex-shrink-0">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Detalhes</CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+          >
+            <XCircle className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Título e módulo */}
+        <div>
+          <h3 className="font-semibold mb-2">{notification.title}</h3>
+          <Badge 
+            variant="outline" 
+            className={moduleConfig[notification.module].color}
+          >
+            {moduleConfig[notification.module].label}
+          </Badge>
+        </div>
+
+        {/* Mensagem */}
+        <div>
+          <Label className="text-sm font-medium">Mensagem</Label>
+          <p className="text-sm text-muted-foreground mt-1">
+            {notification.message}
+          </p>
+        </div>
+
+        {/* Status e Prioridade */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Status</Label>
+            <div className={cn(
+              "flex items-center gap-2 mt-1 p-2 rounded",
+              statusConfig[notification.status].color
+            )}>
+              <StatusIcon className="h-4 w-4" />
+              <span className="text-sm">
+                {notification.status === 'unread' ? 'Não lida' : 
+                 notification.status === 'read' ? 'Lida' :
+                 notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-medium">Prioridade</Label>
+            <div className={cn(
+              "flex items-center gap-2 mt-1 p-2 rounded",
+              priorityConfig[notification.priority].color
+            )}>
+              <PriorityIcon className="h-4 w-4" />
+              <span className="text-sm capitalize">{notification.priority}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Datas */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Criada em:</span>
+            <span>{format(new Date(notification.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+          </div>
+          
+          {notification.readAt && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Lida em:</span>
+              <span>{format(new Date(notification.readAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
+            </div>
+          )}
+
+          {notification.metadata.dueDate && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Vencimento:</span>
+              <span className={cn(
+                new Date(notification.metadata.dueDate) < new Date() && "text-red-600"
+              )}>
+                {format(new Date(notification.metadata.dueDate), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Metadados específicos */}
+        {Object.keys(notification.metadata).length > 0 && (
+          <div>
+            <Label className="text-sm font-medium">Metadados</Label>
+            <div className="mt-1 space-y-1">
+              {notification.metadata.assessmentId && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Assessment:</span>
+                  <span className="font-mono text-xs">{notification.metadata.assessmentId}</span>
+                </div>
+              )}
+              {notification.metadata.riskId && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Risco:</span>
+                  <span className="font-mono text-xs">{notification.metadata.riskId}</span>
+                </div>
+              )}
+              {notification.metadata.workflowStage && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Etapa:</span>
+                  <span>{notification.metadata.workflowStage}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Configurações de e-mail */}
+        {notification.emailSettings && (
+          <div>
+            <Label className="text-sm font-medium">Configurações de E-mail</Label>
+            <div className="mt-1 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4" />
+                <span>{notification.emailSettings.enabled ? 'Habilitado' : 'Desabilitado'}</span>
+              </div>
+              {notification.emailSettings.template && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Template:</span>
+                  <span className="font-mono text-xs">{notification.emailSettings.template}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Ações */}
+        {notification.actions && notification.actions.length > 0 && (
+          <div>
+            <Label className="text-sm font-medium mb-2 block">Ações Disponíveis</Label>
+            <div className="space-y-2">
+              {notification.actions.map((action) => (
+                <Button
+                  key={action.id}
+                  variant={action.type === 'primary' ? 'default' : 
+                           action.type === 'danger' ? 'destructive' : 'outline'}
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => onActionClick(notification, action.id)}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default NotificationsPage;

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
@@ -44,6 +45,7 @@ import { ConsentsPage } from "@/components/privacy/ConsentsPage";
 import { ProcessingActivitiesPage } from "@/components/privacy/ProcessingActivitiesPage";
 import { RATReport } from "@/components/privacy/RATReport";
 import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
+import { NotificationsPage } from "@/components/notifications/NotificationsPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -117,11 +119,12 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+        <NotificationsRealtimeProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={
@@ -180,6 +183,7 @@ const App = () => (
                   <Route path="settings" element={<UserManagementPage />} />
                   <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
                   <Route path="settings/general" element={<GeneralSettingsPage />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="help" element={<HelpPage />} />
                 </Route>
                 
@@ -189,6 +193,7 @@ const App = () => (
             </BrowserRouter>
           </TooltipProvider>
         </ThemeProvider>
+        </NotificationsRealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

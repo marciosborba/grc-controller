@@ -189,12 +189,12 @@ export const GeneralSettingsPage = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className={cn(
           "grid w-full",
-          user?.isPlatformAdmin 
+          (user?.isPlatformAdmin || user?.role === 'admin') 
             ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8" 
             : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
         )}>
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-          {user?.isPlatformAdmin && (
+          {(user?.isPlatformAdmin || user?.role === 'admin') && (
             <TabsTrigger value="global-rules" className="text-xs sm:text-sm flex items-center gap-1">
               <Crown className="h-3 w-3" />
               Regras Globais
@@ -286,8 +286,8 @@ export const GeneralSettingsPage = () => {
           </Card>
         </TabsContent>
 
-        {/* Global Rules Tab - Only for Platform Admins */}
-        {user?.isPlatformAdmin && (
+        {/* Global Rules Tab - Only for Platform Admins or System Admins */}
+        {(user?.isPlatformAdmin || user?.role === 'admin') && (
           <TabsContent value="global-rules">
             <GlobalRulesSection />
           </TabsContent>

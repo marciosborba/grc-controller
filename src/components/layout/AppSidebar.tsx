@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
@@ -56,6 +56,13 @@ const navigationItems = [{
       icon: LayoutDashboard,
       permissions: ['all'],
       description: 'Visão geral e métricas principais'
+    },
+    {
+      title: 'Notificações',
+      url: '/notifications',
+      icon: Bell,
+      permissions: ['all'],
+      description: 'Central de notificações e alertas'
     },
     {
       title: 'Gestão de Riscos',
