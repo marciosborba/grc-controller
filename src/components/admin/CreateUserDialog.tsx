@@ -30,21 +30,32 @@ import { useDepartmentOptions, useJobTitleOptions } from '@/hooks/useExtensibleD
 import type { CreateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
 
-const createUserSchema = z.object({
+// Schema dinâmico baseado no tipo de usuário
+const createUserSchema = (isPlatformAdmin: boolean) => z.object({
   email: z.string().email('Email inválido'),
   full_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   job_title: z.string().optional(),
   department: z.string().optional(),
   phone: z.string().optional(),
   roles: z.array(z.string()).min(1, 'Selecione pelo menos uma role'),
-  tenant_id: z.string().optional(),
+  tenant_id: isPlatformAdmin 
+    ? z.string().min(1, 'Selecione uma organização')
+    : z.string().optional(),
   send_invitation: z.boolean().default(true),
   must_change_password: z.boolean().default(false),
   permissions: z.array(z.string()).default([])
 });
 
-type CreateUserFormData = z.infer<typeof createUserSchema>;
+type CreateUserFormData = z.infer<ReturnType<typeof createUserSchema>>;
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -72,11 +83,42 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   const { user } = useAuth();
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [availableTenants, setAvailableTenants] = useState<Array<{id: string; name: string}>>([]);
+  const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   const wasLoadingRef = useRef(false);
   
   // Hooks para opções dos dropdowns
   const departmentOptions = useDepartmentOptions();
   const jobTitleOptions = useJobTitleOptions();
+
+  // Buscar tenants disponíveis para platform admins
+  useEffect(() => {
+    if (user?.isPlatformAdmin && open) {
+      const fetchTenants = async () => {
+        setIsLoadingTenants(true);
+        try {
+          const { data, error } = await supabase
+            .from('tenants')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name');
+          
+          if (error) {
+            console.error('Erro ao buscar tenants:', error);
+            return;
+          }
+          
+          setAvailableTenants(data || []);
+        } catch (error) {
+          console.error('Erro ao buscar tenants:', error);
+        } finally {
+          setIsLoadingTenants(false);
+        }
+      };
+      
+      fetchTenants();
+    }
+  }, [user?.isPlatformAdmin, open]);
 
   // Fechar dialog automaticamente após sucesso
   useEffect(() => {
@@ -91,7 +133,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   }, [isLoading]);
 
   const form = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserSchema),
+    resolver: zodResolver(createUserSchema(user?.isPlatformAdmin || false)),
     defaultValues: {
       email: '',
       full_name: '',
@@ -99,7 +141,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       department: '',
       phone: '',
       roles: [],
-      tenant_id: user?.tenantId || '',
+      tenant_id: user?.isPlatformAdmin ? '' : (user?.tenantId || ''),
       send_invitation: true,
       must_change_password: false,
       permissions: []
@@ -148,6 +190,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     form.reset();
     setSelectedRoles([]);
     setSelectedPermissions([]);
+    setAvailableTenants([]);
     onOpenChange(false);
   };
 
@@ -168,7 +211,14 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Informações Básicas */}
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">Informações Básicas</h3>
+              <div>
+                <h3 className="text-lg font-medium">Informações Básicas</h3>
+                {user?.isPlatformAdmin && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Como administrador da plataforma, você pode criar usuários em qualquer organização.
+                  </p>
+                )}
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -266,6 +316,42 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                   </FormItem>
                 )}
               />
+
+              {/* Seleção de Tenant - apenas para Platform Admins */}
+              {user?.isPlatformAdmin && (
+                <FormField
+                  control={form.control}
+                  name="tenant_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organização *</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isLoadingTenants}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              isLoadingTenants 
+                                ? "Carregando organizações..." 
+                                : "Selecione uma organização"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTenants.map((tenant) => (
+                              <SelectItem key={tenant.id} value={tenant.id}>
+                                {tenant.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <Separator />

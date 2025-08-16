@@ -214,6 +214,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   // Estados para gerenciamento de usuários da tenant
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersLoaded, setUsersLoaded] = useState(false);
   const [selectedTab, setSelectedTab] = useState("info");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [isAddingUser, setIsAddingUser] = useState(false);
@@ -255,7 +256,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
   // Helper para obter a contagem real de usuários
   const getCurrentUserCount = () => {
-    return tenantUsers.length > 0 ? tenantUsers.length : tenant.current_users_count;
+    // Se os usuários já foram carregados pelo menos uma vez, usar o length real
+    // Caso contrário, usar o valor do tenant
+    return usersLoaded ? tenantUsers.length : tenant.current_users_count;
   };
 
   // Helper para obter o nome de exibição da tenant (prioriza nome fantasia)
@@ -496,6 +499,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
       if (error) throw error;
       setTenantUsers(data || []);
+      setUsersLoaded(true); // Marcar como carregado
     } catch (error) {
       console.error('Erro ao carregar usuários:', error);
       toast.error('Erro ao carregar usuários da tenant');
@@ -629,15 +633,22 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     (user.job_title && user.job_title.toLowerCase().includes(userSearchTerm.toLowerCase()))
   );
 
-  // Carregar usuários quando a guia for selecionada ou quando o card for expandido
+  // Carregar usuários imediatamente quando o componente for montado
   useEffect(() => {
-    if (isExpanded && tenantUsers.length === 0) {
+    if (!usersLoaded) {
+      loadTenantUsers();
+    }
+  }, []); // Executar apenas uma vez na montagem
+
+  // Carregar usuários quando a guia for selecionada ou quando o card for expandido (backup)
+  useEffect(() => {
+    if (isExpanded && !usersLoaded) {
       loadTenantUsers();
     }
   }, [isExpanded]);
 
   useEffect(() => {
-    if (selectedTab === 'users' && isExpanded && tenantUsers.length === 0) {
+    if (selectedTab === 'users' && isExpanded && !usersLoaded) {
       loadTenantUsers();
     }
   }, [selectedTab, isExpanded]);
