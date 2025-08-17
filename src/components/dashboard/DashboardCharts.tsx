@@ -240,7 +240,7 @@ const DashboardCharts = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Riscos por Severidade */}
-      <Card className="grc-card overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
@@ -360,7 +360,7 @@ const DashboardCharts = () => {
       </Card>
 
       {/* Módulo LGPD e Privacidade - Span 2 columns */}
-      <Card className="grc-card lg:col-span-2 overflow-hidden">
+      <Card className="lg:col-span-2 overflow-hidden">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center space-x-2">
             <Shield className="h-5 w-5 text-primary" />

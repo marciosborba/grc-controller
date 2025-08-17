@@ -39,37 +39,61 @@ const hexToHSL = (hex: string): [number, number, number] => {
   return [h * 360, s * 100, l * 100];
 };
 
-export const useTheme = (palette: ColorPalette) => {
+export const useCustomTheme = (palette: ColorPalette) => {
   useEffect(() => {
+    // Check if colors are already the default ones to avoid unnecessary updates
+    const isDefaultPalette = 
+      palette.primary === '#0d26e3' && 
+      palette.secondary === '#7e22ce' && 
+      palette.tertiary === '#be185d';
+    
+    // If using default colors, don't override CSS (they're already set in index.css)
+    if (isDefaultPalette) {
+      return;
+    }
+
     const primaryHSL = hexToHSL(palette.primary);
     const secondaryHSL = hexToHSL(palette.secondary);
     const tertiaryHSL = hexToHSL(palette.tertiary);
 
-    const style = document.createElement('style');
-    style.innerHTML = `
-      :root {
-        --primary: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2]}%;
-        --primary-foreground: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] > 50 ? 10 : 90}%;
-        --secondary: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2]}%;
-        --secondary-foreground: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] > 50 ? 10 : 90}%;
-        --accent: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2]}%;
-        --accent-foreground: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] > 50 ? 10 : 90}%;
-      }
+    // Use CSS custom properties directly on document root for better performance
+    const root = document.documentElement;
+    
+    // Apply light mode colors
+    root.style.setProperty('--primary', `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2]}%`);
+    root.style.setProperty('--primary-foreground', `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] > 50 ? 10 : 90}%`);
+    root.style.setProperty('--secondary', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2]}%`);
+    root.style.setProperty('--secondary-foreground', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] > 50 ? 10 : 90}%`);
+    root.style.setProperty('--accent', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2]}%`);
+    root.style.setProperty('--accent-foreground', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] > 50 ? 10 : 90}%`);
 
+    // Create or update dark mode styles
+    let darkModeStyle = document.getElementById('custom-dark-theme');
+    if (!darkModeStyle) {
+      darkModeStyle = document.createElement('style');
+      darkModeStyle.id = 'custom-dark-theme';
+      document.head.appendChild(darkModeStyle);
+    }
+
+    darkModeStyle.innerHTML = `
       .dark {
-        --primary: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] < 50 ? 100 - primaryHSL[2] : primaryHSL[2]}%;
+        --primary: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] < 50 ? Math.min(100 - primaryHSL[2] + 10, 90) : primaryHSL[2]}%;
         --primary-foreground: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] < 50 ? 10 : 90}%;
-        --secondary: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] < 50 ? 100 - secondaryHSL[2] : secondaryHSL[2]}%;
+        --secondary: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] < 50 ? Math.min(100 - secondaryHSL[2] + 10, 90) : secondaryHSL[2]}%;
         --secondary-foreground: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] < 50 ? 10 : 90}%;
-        --accent: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] < 50 ? 100 - tertiaryHSL[2] : tertiaryHSL[2]}%;
+        --accent: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] < 50 ? Math.min(100 - tertiaryHSL[2] + 10, 90) : tertiaryHSL[2]}%;
         --accent-foreground: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] < 50 ? 10 : 90}%;
       }
     `;
 
-    document.head.appendChild(style);
-
     return () => {
-      document.head.removeChild(style);
+      // Reset to default values when component unmounts
+      if (darkModeStyle) {
+        document.head.removeChild(darkModeStyle);
+      }
     };
   }, [palette]);
 };
+
+// Manter a exportação original para compatibilidade
+export const useTheme = useCustomTheme;

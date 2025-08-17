@@ -917,18 +917,25 @@ export const AIPromptsSection: React.FC = () => {
   
   // Templates personalizados: is_public=false OU (is_public=true E is_active=false)
   const personalizedTemplates = templates.filter(template => {
-    // Templates criados pelo usuário (privados)
-    const isPersonalized = (template.is_public === false && template.created_by === user?.id);
+    // Se for admin, pode ver todos os templates não públicos ativos
+    if (user?.isPlatformAdmin) {
+      return (
+        // Templates privados do usuário
+        (template.is_public === false && template.created_by === user?.id) ||
+        // Templates públicos desativados
+        (template.is_public === true && template.is_active === false) ||
+        // Templates que foram tornados privados por admin
+        (template.is_public === false && template.created_by !== user?.id)
+      );
+    }
     
-    // Templates públicos que foram desativados
-    const isDeactivatedPublic = (template.is_public === true && template.is_active === false);
-    
-    // Templates que foram tornados privados (eram públicos e agora são privados)
-    const wasMadePrivate = (template.is_public === false && !template.created_by);
-    
-
-    
-    return isPersonalized || isDeactivatedPublic || wasMadePrivate;
+    // Para usuários normais: apenas templates próprios ou desativados
+    return (
+      // Templates criados pelo usuário (privados)
+      (template.is_public === false && template.created_by === user?.id) ||
+      // Templates públicos que foram desativados
+      (template.is_public === true && template.is_active === false)
+    );
   });
   
 

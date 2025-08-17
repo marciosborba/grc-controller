@@ -1,5 +1,5 @@
 /* Controller GRC - Modern Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
 
 @tailwind base;
 @tailwind components;
@@ -18,15 +18,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 225 71% 12%;
 
-    /* Primary - Professional Blue */
-    --primary: 219 78% 26%;
+    /* Primary - Blue (matching useCustomTheme default #0d26e3) */
+    --primary: 233 79% 47%;
     --primary-foreground: 210 40% 98%;
-    --primary-hover: 219 78% 22%;
-    --primary-glow: 219 95% 68%;
+    --primary-hover: 233 79% 43%;
+    --primary-glow: 233 79% 67%;
 
-    /* Secondary - Elegant Gray */
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 225 71% 12%;
+    /* Secondary - Purple (matching useCustomTheme default #7e22ce) */
+    --secondary: 272 64% 47%;
+    --secondary-foreground: 210 40% 98%;
 
     /* Success - Trust Green */
     --success: 142 76% 36%;
@@ -46,7 +46,8 @@
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 142 76% 36%;
+    /* Accent - Pink (matching useCustomTheme default #be185d) */
+    --accent: 335 56% 42%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84% 60%;
@@ -68,16 +69,12 @@
     --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(0 84% 70%));
     --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
 
-    /* Shadows */
-    --shadow-elevation-1: 0 2px 4px -1px hsl(var(--primary) / 0.1);
-    --shadow-elevation-2: 0 4px 8px -2px hsl(var(--primary) / 0.15);
-    --shadow-elevation-3: 0 8px 16px -4px hsl(var(--primary) / 0.2);
-    --shadow-glow: 0 0 32px hsl(var(--primary-glow) / 0.3);
-
-    /* Animations */
-    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Simplified shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
     --radius: 0.75rem;
 
@@ -109,13 +106,15 @@
     --popover: 225 39% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 219 95% 68%;
+    /* Primary - Blue (dark mode, matching useCustomTheme default) */
+    --primary: 233 79% 67%;
     --primary-foreground: 225 39% 5%;
-    --primary-hover: 219 95% 72%;
-    --primary-glow: 219 95% 68%;
+    --primary-hover: 233 79% 71%;
+    --primary-glow: 233 79% 67%;
 
-    --secondary: 225 20% 15%;
-    --secondary-foreground: 210 40% 98%;
+    /* Secondary - Purple (dark mode) */
+    --secondary: 272 64% 67%;
+    --secondary-foreground: 225 39% 5%;
 
     --success: 142 76% 46%;
     --success-foreground: 225 39% 5%;
@@ -132,7 +131,8 @@
     --muted: 225 20% 15%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 142 76% 46%;
+    /* Accent - Pink (dark mode) */
+    --accent: 335 56% 62%;
     --accent-foreground: 225 39% 5%;
 
     --destructive: 0 84% 70%;
@@ -165,34 +165,73 @@
     @apply border-border;
   }
 
+  html {
+    /* Improve text rendering and sharpness */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
+    font-kerning: normal;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-display: swap;
+    font-variant-ligatures: normal;
+    font-variant-numeric: tabular-nums;
+    /* Additional sharpness improvements */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
   }
 
-  /* GRC-specific component styles */
-  .grc-card {
-    @apply bg-card border border-border rounded-lg shadow-[var(--shadow-elevation-1)] transition-[var(--transition-smooth)];
+  /* Improve rendering for all elements */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    -webkit-font-smoothing: inherit;
+    -moz-osx-font-smoothing: inherit;
   }
 
-  .grc-button-primary {
-    @apply bg-[var(--gradient-brand)] text-primary-foreground font-medium rounded-lg px-4 py-2 shadow-[var(--shadow-elevation-2)] hover:shadow-[var(--shadow-elevation-3)] transition-[var(--transition-smooth)];
+  /* Improve SVG and icon rendering */
+  svg {
+    shape-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
   }
 
-  .grc-button-success {
-    @apply bg-[var(--gradient-success)] text-success-foreground font-medium rounded-lg px-4 py-2 shadow-[var(--shadow-elevation-2)] hover:shadow-[var(--shadow-elevation-3)] transition-[var(--transition-smooth)];
+  /* Improve button and interactive element rendering */
+  button,
+  input,
+  select,
+  textarea {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  .grc-button-danger {
-    @apply bg-[var(--gradient-danger)] text-danger-foreground font-medium rounded-lg px-4 py-2 shadow-[var(--shadow-elevation-2)] hover:shadow-[var(--shadow-elevation-3)] transition-[var(--transition-smooth)];
+  /* High DPI display optimizations */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    html {
+      -webkit-font-smoothing: subpixel-antialiased;
+    }
   }
 
-  .grc-hero-gradient {
-    @apply bg-[var(--gradient-hero)];
+  /* Improve text contrast and readability */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
   }
 
-  .grc-shadow-glow {
-    @apply shadow-[var(--shadow-glow)];
+  p, span, div {
+    line-height: 1.5;
+  }
+
+  /* Improve card rendering for all cards */
+  .card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   /* Risk level indicators */

@@ -48,6 +48,7 @@ import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettin
 import { NotificationsPage } from "@/components/notifications/NotificationsPage";
 import { AIManagementPage } from "@/components/ai/AIManagementPage";
 
+
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
   defaultOptions: {

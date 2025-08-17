@@ -36,6 +36,7 @@ import {
   Clock
 } from 'lucide-react';
 
+
 const riskTrendData = [
   { month: 'Jan', critical: 4, high: 12, medium: 8, low: 3 },
   { month: 'Fev', critical: 3, high: 10, medium: 12, low: 5 },
@@ -252,13 +253,13 @@ export const ExecutiveDashboard = () => {
           </Button>
           <ExecutiveReportButton 
             size="sm" 
-            className="grc-button-primary text-xs sm:text-sm"
+            className="text-xs sm:text-sm"
           />
         </div>
       </div>
 
       {/* AI Assistant Banner - Responsivo */}
-      <Card className="grc-card bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20 overflow-hidden">
+      <Card className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-6">
           <div className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4">
             <div className="p-2 sm:p-3 bg-primary/10 rounded-lg self-center sm:self-start">
@@ -289,7 +290,7 @@ export const ExecutiveDashboard = () => {
 
       {/* KPI Cards - Melhor espaçamento em mobile */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        <Card className="grc-card overflow-hidden">
+        <Card className="overflow-hidden">
           <CardContent className="p-2 sm:p-3 md:p-4 h-full">
             <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
               <div className="flex items-start justify-between mb-2 sm:mb-3">
@@ -422,7 +423,7 @@ export const ExecutiveDashboard = () => {
 
       {/* Quick Actions with Real Data - Responsivo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
+        <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
           <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
             <div className="p-2 sm:p-3 md:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-danger/20 transition-colors">
               <XCircle className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-danger" />

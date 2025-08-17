@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { ThemeProvider as NextThemeProvider, useTheme as useNextTheme } from 'next-themes';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
-import { useTheme } from '@/hooks/useTheme';
+import { useCustomTheme } from '@/hooks/useTheme';
 
 interface ColorPalette {
   primary: string;
@@ -44,6 +44,7 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
   const { user } = useAuth();
   const { theme, setTheme, systemTheme, resolvedTheme } = useNextTheme();
   const [saving, setSaving] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [preferences, setPreferences] = useState<ThemePreferences>({
     theme: 'system',
     language: 'pt-BR',
@@ -64,7 +65,12 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
     },
   });
 
-  useTheme(preferences.colorPalette);
+  // Ensure component is mounted before accessing theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useCustomTheme(preferences.colorPalette);
 
   const savePreferences = async () => {
     if (!user?.id) return;
@@ -150,7 +156,28 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
     if (theme && theme !== preferences.theme) {
       setPreferences(prev => ({ ...prev, theme: theme as 'light' | 'dark' | 'system' }));
     }
-  }, [theme, preferences.theme]);
+  }, [theme]);
+
+  // Force theme application on mount and changes
+  useEffect(() => {
+    if (mounted && resolvedTheme) {
+      // Ensure the theme is applied to the document
+      const html = document.documentElement;
+      
+      // Remove all theme classes first
+      html.classList.remove('dark', 'light');
+      
+      // Apply the resolved theme
+      if (resolvedTheme === 'dark') {
+        html.classList.add('dark');
+      }
+      
+      // Dispatch a custom event to notify components
+      window.dispatchEvent(new CustomEvent('themeChange', {
+        detail: { theme: resolvedTheme }
+      }));
+    }
+  }, [mounted, resolvedTheme]);
 
   const value = useMemo(() => ({ 
     preferences, 
@@ -162,6 +189,11 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
     systemTheme,
     resolvedTheme
   }), [preferences, saving, theme, setTheme, systemTheme, resolvedTheme]);
+
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={value}>
@@ -177,6 +209,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       defaultTheme="system"
       enableSystem
       disableTransitionOnChange
+      storageKey="grc-theme"
+      themes={['light', 'dark', 'system']}
     >
       <ThemeContextInner>
         {children}
