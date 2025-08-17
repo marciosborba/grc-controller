@@ -492,8 +492,14 @@ const GlobalRulesSection: React.FC = () => {
   // ============================================================================
   
   useEffect(() => {
-    loadThemes();
-    loadFonts();
+    // Só carregar temas quando o componente estiver realmente visível
+    // Adicionar delay para evitar interferir com carregamento inicial
+    const timer = setTimeout(() => {
+      loadThemes();
+      loadFonts();
+    }, 1000); // 1 segundo de delay para não interferir com carregamento inicial
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Efeito para aplicar tema na inicialização - DESABILITADO para preservar dark mode nativo
@@ -525,8 +531,11 @@ const GlobalRulesSection: React.FC = () => {
       const active = themesData?.find(t => t.is_active);
       if (active) {
         setActiveTheme(active);
-        // Aplicar o tema ativo automaticamente
-        await applyThemeColors(active);
+        // APLICAÇÃO AUTOMÁTICA COMPLETAMENTE DESABILITADA
+        // Para evitar flash de cores, temas só são aplicados quando solicitado manualmente
+        console.log('🎨 Tema encontrado:', active.name, '- Aplicação automática desabilitada');
+        console.log('💡 Use o botão "Aplicar" no tema para ativá-lo quando necessário');
+        // await applyThemeColors(active); // SEMPRE desabilitado
       }
     } catch (error) {
       console.error('Erro ao carregar temas:', error);

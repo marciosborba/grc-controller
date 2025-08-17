@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Debug Color Loader - GRC Controller</title>
+    
+    <!-- CSS OBSERVER - Monitora mudanças nas CSS variables -->
+    <script>
+      // Array para armazenar todo o histórico de mudanças
+      window.colorDebugLog = [];
+      window.debugStartTime = performance.now();
+      
+      function logColorChange(source, details) {
+        const timestamp = performance.now() - window.debugStartTime;
+        const logEntry = {
+          timestamp: Math.round(timestamp),
+          source,
+          details,
+          domReady: document.readyState,
+          url: window.location.href
+        };
+        
+        window.colorDebugLog.push(logEntry);
+        console.log(`🎨 [${Math.round(timestamp)}ms] ${source}:`, details);
+      }
+      
+      // Função para capturar estado atual das CSS variables
+      function captureCurrentColors() {
+        const style = getComputedStyle(document.documentElement);
+        return {
+          primary: style.getPropertyValue('--primary').trim(),
+          primaryForeground: style.getPropertyValue('--primary-foreground').trim(),
+          background: style.getPropertyValue('--background').trim(),
+          foreground: style.getPropertyValue('--foreground').trim(),
+          border: style.getPropertyValue('--border').trim(),
+          muted: style.getPropertyValue('--muted').trim(),
+          secondary: style.getPropertyValue('--secondary').trim(),
+          accent: style.getPropertyValue('--accent').trim()
+        };
+      }
+      
+      // Observer para mudanças no DOM
+      let lastColors = {};
+      function checkColorChanges(source) {
+        const currentColors = captureCurrentColors();
+        const changed = [];
+        
+        for (const [key, value] of Object.entries(currentColors)) {
+          if (lastColors[key] !== value && value !== '') {
+            changed.push(`${key}: "${lastColors[key] || 'undefined'}" → "${value}"`);
+          }
+        }
+        
+        if (changed.length > 0) {
+          logColorChange(source, {
+            changes: changed,
+            allColors: currentColors
+          });
+        }
+        
+        lastColors = currentColors;
+      }
+      
+      // Log inicial
+      logColorChange('🚀 INIT', {
+        message: 'Debug iniciado',
+        localStorage: localStorage.getItem('grc-theme-preferences'),
+        userAgent: navigator.userAgent
+      });
+    </script>
+    
+    <!-- TEMA DINÂMICO COM DEBUG DETALHADO -->
+    <script>
+      logColorChange('📋 PRE-SCRIPT', { message: 'Executando script de tema dinâmico' });
+      
+      (function() {
+        try {
+          logColorChange('🔍 CHECKING-STORAGE', { 
+            localStorage: localStorage.getItem('grc-theme-preferences'),
+            storageLength: localStorage.length 
+          });
+          
+          const savedTheme = localStorage.getItem('grc-theme-preferences');
+          let themeColors = {
+            primary: '233 79% 47%', // Default blue
+            primaryForeground: '210 40% 98%',
+            background: '0 0% 100%',
+            foreground: '225 71% 12%',
+            border: '214 32% 91%',
+            muted: '210 20% 96%'
+          };
+          
+          logColorChange('🎯 INITIAL-COLORS', { 
+            themeColors: { ...themeColors },
+            source: 'default' 
+          });
+          
+          if (savedTheme) {
+            try {
+              const parsed = JSON.parse(savedTheme);
+              logColorChange('📖 PARSING-THEME', { 
+                rawTheme: savedTheme,
+                parsedTheme: parsed 
+              });
+              
+              if (parsed.colorPalette) {
+                const hexToHSL = (hex) => {
+                  let r = 0, g = 0, b = 0;
+                  if (hex.length === 4) {
+                    r = parseInt(hex[1] + hex[1], 16);
+                    g = parseInt(hex[2] + hex[2], 16);
+                    b = parseInt(hex[3] + hex[3], 16);
+                  } else if (hex.length === 7) {
+                    r = parseInt(hex.substring(1, 3), 16);
+                    g = parseInt(hex.substring(3, 5), 16);
+                    b = parseInt(hex.substring(5, 7), 16);
+                  }
+                  r /= 255; g /= 255; b /= 255;
+                  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+                  let h = 0, s = 0;
+                  const l = (max + min) / 2;
+                  if (max !== min) {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                      case g: h = (b - r) / d + 2; break;
+                      case b: h = (r - g) / d + 4; break;
+                    }
+                    h /= 6;
+                  }
+                  return Math.round(h * 360) + ' ' + Math.round(s * 100) + '% ' + Math.round(l * 100) + '%';
+                };
+                
+                if (parsed.colorPalette.primary) {
+                  const oldPrimary = themeColors.primary;
+                  themeColors.primary = hexToHSL(parsed.colorPalette.primary);
+                  
+                  logColorChange('🎨 COLOR-CONVERSION', {
+                    hex: parsed.colorPalette.primary,
+                    hsl: themeColors.primary,
+                    oldPrimary: oldPrimary
+                  });
+                }
+              }
+            } catch (e) {
+              logColorChange('❌ PARSE-ERROR', { 
+                error: e.message,
+                savedTheme: savedTheme 
+              });
+            }
+          }
+          
+          // Criar e aplicar estilo
+          const style = document.createElement('style');
+          const cssText = `
+            :root {
+              --primary: ${themeColors.primary} !important;
+              --primary-foreground: ${themeColors.primaryForeground} !important;
+              --background: ${themeColors.background} !important;
+              --foreground: ${themeColors.foreground} !important;
+              --border: ${themeColors.border} !important;
+              --muted: ${themeColors.muted} !important;
+            }
+            
+            * { box-sizing: border-box; }
+            
+            body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: hsl(var(--background));
+              color: hsl(var(--foreground));
+              margin: 0;
+              padding: 0;
+              -webkit-font-smoothing: antialiased;
+              -moz-osx-font-smoothing: grayscale;
+            }
+            
+            #root { min-height: 100vh; }
+            
+            .loading-spinner {
+              width: 48px;
+              height: 48px;
+              border: 3px solid hsl(var(--border)) !important;
+              border-top: 3px solid hsl(var(--primary)) !important;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            
+            #root:empty::before {
+              content: '';
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 48px;
+              height: 48px;
+              border: 3px solid hsl(var(--border)) !important;
+              border-top: 3px solid hsl(var(--primary)) !important;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+          `;
+          
+          style.textContent = cssText;
+          document.head.appendChild(style);
+          
+          logColorChange('✅ STYLE-APPLIED', {
+            finalColors: { ...themeColors },
+            cssTextLength: cssText.length,
+            elementAdded: true
+          });
+          
+          // Verificação imediata
+          setTimeout(() => {
+            checkColorChanges('⚡ IMMEDIATE-CHECK');
+          }, 10);
+          
+        } catch (error) {
+          logColorChange('💥 SCRIPT-ERROR', { 
+            error: error.message,
+            stack: error.stack 
+          });
+        }
+      })();
+    </script>
+    
+    <!-- FONT LOADING -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet';logColorChange('📝 FONT-LOADED', {});">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+</head>
+
+<body>
+    <!-- BODY CARREGADO -->
+    <script>
+      logColorChange('🏗️ BODY-START', { message: 'Body começou a carregar' });
+      checkColorChanges('🏗️ BODY-START-CHECK');
+    </script>
+    
+    <!-- DEBUG INTERFACE -->
+    <div id="debug-interface" style="position: fixed; top: 10px; right: 10px; background: white; border: 2px solid #333; padding: 15px; border-radius: 8px; max-width: 400px; z-index: 10000; font-family: monospace; font-size: 12px; max-height: 80vh; overflow-y: auto;">
+        <h3 style="margin: 0 0 10px 0; color: #333;">🔍 Color Debug Monitor</h3>
+        <div id="debug-content">Iniciando...</div>
+        <button onclick="exportDebugLog()" style="margin-top: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Export Log</button>
+        <button onclick="clearDebugLog()" style="margin-top: 10px; padding: 5px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear</button>
+    </div>
+    
+    <!-- ROOT DIV SIMULADO -->
+    <div id="root" style="padding: 20px; margin-top: 100px;">
+        <h1 style="color: hsl(var(--primary));">🎨 Debug Page - GRC Controller</h1>
+        <p style="color: hsl(var(--foreground));">Esta página simula o carregamento da aplicação GRC para debug de cores.</p>
+        
+        <div style="margin: 20px 0;">
+            <div class="loading-spinner"></div>
+            <p>Spinner de teste</p>
+        </div>
+        
+        <div style="background: hsl(var(--muted)); padding: 15px; border-radius: 6px; margin: 20px 0;">
+            <h3 style="color: hsl(var(--primary));">Área de Teste</h3>
+            <p style="color: hsl(var(--foreground));">Este texto usa hsl(var(--foreground))</p>
+            <button style="background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border: none; padding: 10px 20px; border-radius: 4px;">Botão Primário</button>
+        </div>
+    </div>
+    
+    <script>
+      // Observer contínuo
+      let observer;
+      let debugUpdateInterval;
+      
+      function startDebugging() {
+        logColorChange('🎯 DEBUG-START', { message: 'Debug interface ativa' });
+        
+        // MutationObserver para mudanças no DOM
+        observer = new MutationObserver(() => {
+          checkColorChanges('🔄 DOM-MUTATION');
+        });
+        
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['style', 'class'],
+          subtree: true
+        });
+        
+        // Verificação periódica
+        debugUpdateInterval = setInterval(() => {
+          checkColorChanges('⏰ PERIODIC-CHECK');
+          updateDebugInterface();
+        }, 500);
+        
+        // Eventos importantes
+        document.addEventListener('DOMContentLoaded', () => {
+          logColorChange('📄 DOM-READY', { readyState: document.readyState });
+          checkColorChanges('📄 DOM-READY-CHECK');
+        });
+        
+        window.addEventListener('load', () => {
+          logColorChange('🏁 WINDOW-LOAD', { readyState: document.readyState });
+          checkColorChanges('🏁 WINDOW-LOAD-CHECK');
+        });
+      }
+      
+      function updateDebugInterface() {
+        const debugContent = document.getElementById('debug-content');
+        if (debugContent) {
+          const lastEntries = window.colorDebugLog.slice(-10);
+          debugContent.innerHTML = lastEntries.map(entry => 
+            `<div style="margin: 5px 0; padding: 5px; background: #f8f9fa; border-radius: 3px;">
+              <strong>[${entry.timestamp}ms]</strong> ${entry.source}<br>
+              <small>${JSON.stringify(entry.details).substring(0, 200)}...</small>
+            </div>`
+          ).join('');
+        }
+      }
+      
+      function exportDebugLog() {
+        const blob = new Blob([JSON.stringify(window.colorDebugLog, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `color-debug-log-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      
+      function clearDebugLog() {
+        window.colorDebugLog = [];
+        updateDebugInterface();
+      }
+      
+      // Interceptar console.log para capturar logs do React/outras bibliotecas
+      const originalConsoleLog = console.log;
+      console.log = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('🎨')) {
+          logColorChange('🖥️ CONSOLE-LOG', { args: args });
+        }
+        return originalConsoleLog.apply(console, args);
+      };
+      
+      // Iniciar debugging
+      startDebugging();
+      
+      // Log quando body termina
+      logColorChange('🏗️ BODY-END', { message: 'Body carregado completamente' });
+      checkColorChanges('🏗️ BODY-END-CHECK');
+    </script>
+    
+    <!-- SIMULAR CARREGAMENTO DE CSS (como index.css) -->
+    <script>
+      setTimeout(() => {
+        logColorChange('📄 SIMULATE-CSS-LOAD', { message: 'Simulando carregamento de CSS externo' });
+        
+        const simulatedCSS = document.createElement('style');
+        simulatedCSS.textContent = `
+          :root {
+            --primary: 219 78% 26%;
+            --secondary: 272 64% 47%;
+            --background: 0 0% 100%;
+            --foreground: 225 71% 12%;
+          }
+        `;
+        document.head.appendChild(simulatedCSS);
+        
+        setTimeout(() => {
+          checkColorChanges('📄 POST-CSS-LOAD');
+        }, 50);
+      }, 1000);
+      
+      // Simular carregamento do React
+      setTimeout(() => {
+        logColorChange('⚛️ SIMULATE-REACT', { message: 'Simulando inicialização do React' });
+        checkColorChanges('⚛️ REACT-START');
+        
+        // Simular ThemeContext
+        setTimeout(() => {
+          logColorChange('🎨 SIMULATE-THEME-CONTEXT', { message: 'Simulando ThemeContext aplicando cores' });
+          
+          document.documentElement.style.setProperty('--primary', '142 71% 45%', 'important');
+          document.documentElement.style.setProperty('--secondary', '272 64% 47%', 'important');
+          
+          setTimeout(() => {
+            checkColorChanges('🎨 POST-THEME-CONTEXT');
+          }, 50);
+        }, 500);
+      }, 2000);
+    </script>
+</body>
+</html>

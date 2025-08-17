@@ -63,7 +63,7 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
           <div className="max-w-md w-full space-y-4">
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -79,7 +79,7 @@ class ErrorBoundary extends Component<Props, State> {
                   {process.env.NODE_ENV === 'development' && this.state.error && (
                     <details className="text-xs">
                       <summary className="cursor-pointer">Detalhes técnicos</summary>
-                      <div className="mt-2 p-2 bg-gray-100 rounded">
+                      <div className="mt-2 p-2 bg-muted rounded">
                         <p><strong>Erro:</strong> {this.state.error.message}</p>
                         {this.state.error.stack && (
                           <pre className="mt-1 text-xs overflow-x-auto">

@@ -15,12 +15,419 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+    
+    <!-- Color Debug System -->
+    <script>
+      // Array para armazenar todo o histórico de mudanças
+      window.colorDebugLog = [];
+      window.debugStartTime = performance.now();
+      
+      // Manter referência ao console original antes de qualquer interceptação
+      const originalConsole = console.log;
+      
+      function logColorChange(source, details) {
+        const timestamp = performance.now() - window.debugStartTime;
+        const logEntry = {
+          timestamp: Math.round(timestamp),
+          source,
+          details,
+          domReady: document.readyState,
+          url: window.location.href
+        };
+        
+        window.colorDebugLog.push(logEntry);
+        // Usar console original para evitar recursão
+        originalConsole.call(console, `🎨 [${Math.round(timestamp)}ms] ${source}:`, details);
+      }
+      
+      // Função para capturar estado atual das CSS variables
+      function captureCurrentColors() {
+        const style = getComputedStyle(document.documentElement);
+        return {
+          primary: style.getPropertyValue('--primary').trim(),
+          primaryForeground: style.getPropertyValue('--primary-foreground').trim(),
+          background: style.getPropertyValue('--background').trim(),
+          foreground: style.getPropertyValue('--foreground').trim(),
+          border: style.getPropertyValue('--border').trim(),
+          muted: style.getPropertyValue('--muted').trim(),
+          secondary: style.getPropertyValue('--secondary').trim(),
+          accent: style.getPropertyValue('--accent').trim()
+        };
+      }
+      
+      // Observer para mudanças no DOM
+      let lastColors = {};
+      function checkColorChanges(source) {
+        const currentColors = captureCurrentColors();
+        const changed = [];
+        
+        for (const [key, value] of Object.entries(currentColors)) {
+          if (lastColors[key] !== value && value !== '') {
+            changed.push(`${key}: "${lastColors[key] || 'undefined'}" → "${value}"`);
+          }
+        }
+        
+        if (changed.length > 0) {
+          logColorChange(source, {
+            changes: changed,
+            allColors: currentColors
+          });
+        }
+        
+        lastColors = currentColors;
+      }
+      
+      // Log inicial
+      logColorChange('🚀 INIT', {
+        message: 'Debug iniciado na aplicação real',
+        localStorage: localStorage.getItem('grc-theme-preferences'),
+        userAgent: navigator.userAgent.substring(0, 100)
+      });
+    </script>
+
+    <!-- Dynamic theme loader script -->
+    <script>
+      logColorChange('📋 PRE-SCRIPT', { message: 'Executando script de tema dinâmico' });
+      
+      // Load user theme preferences before React renders
+      (function() {
+        try {
+          logColorChange('🔍 CHECKING-STORAGE', { 
+            localStorage: localStorage.getItem('grc-theme-preferences'),
+            storageLength: localStorage.length 
+          });
+          
+          // Try to get theme from localStorage or use system default
+          const savedTheme = localStorage.getItem('grc-theme-preferences');
+          let themeColors = {
+            primary: '173 88% 58%', // Default green/teal (UI Nativa theme)
+            primaryForeground: '210 40% 98%',
+            background: '0 0% 100%',
+            foreground: '225 71% 12%',
+            border: '214 32% 91%',
+            muted: '210 20% 96%'
+          };
+          
+          let colorSource = 'default';
+          
+          logColorChange('🎯 INITIAL-COLORS', { 
+            themeColors: { ...themeColors },
+            source: colorSource 
+          });
+          
+          // PRIORIDADE 1: Preferências do usuário (localStorage)
+          if (savedTheme) {
+            try {
+              const parsed = JSON.parse(savedTheme);
+              logColorChange('📖 PARSING-USER-THEME', { 
+                rawTheme: savedTheme,
+                parsedTheme: parsed 
+              });
+              
+              if (parsed.colorPalette && parsed.colorPalette.primary) {
+                const oldPrimary = themeColors.primary;
+                themeColors.primary = hexToHSL(parsed.colorPalette.primary);
+                colorSource = 'user-preferences';
+                
+                logColorChange('🔄 USER-COLOR-APPLIED', {
+                  hex: parsed.colorPalette.primary,
+                  hsl: themeColors.primary,
+                  oldPrimary: oldPrimary,
+                  source: colorSource
+                });
+              }
+            } catch (e) {
+              logColorChange('❌ USER-PARSE-ERROR', { 
+                error: e.message,
+                savedTheme: savedTheme 
+              });
+            }
+          } else {
+            // PRIORIDADE 2: Tema global ativo (será aplicado pelo ThemeContext quando carregar)
+            logColorChange('🌐 NO-USER-PREFS', { 
+              message: 'Sem preferências de usuário - ThemeContext aplicará tema global se existir'
+            });
+          }
+          
+          // Função de conversão HEX para HSL (movida para cima para reutilização)
+          function hexToHSL(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length === 4) {
+              r = parseInt(hex[1] + hex[1], 16);
+              g = parseInt(hex[2] + hex[2], 16);
+              b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+              r = parseInt(hex.substring(1, 3), 16);
+              g = parseInt(hex.substring(3, 5), 16);
+              b = parseInt(hex.substring(5, 7), 16);
+            }
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0;
+            const l = (max + min) / 2;
+            if (max !== min) {
+              const d = max - min;
+              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+              switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+              }
+              h /= 6;
+            }
+            return Math.round(h * 360) + ' ' + Math.round(s * 100) + '% ' + Math.round(l * 100) + '%';
+          }
+          
+          // Detect if dark mode should be applied based on system preference
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const savedThemeMode = localStorage.getItem('grc-theme');
+          let shouldApplyDark = false;
+          
+          if (savedThemeMode === 'dark') {
+            shouldApplyDark = true;
+          } else if (savedThemeMode === 'system' || !savedThemeMode) {
+            shouldApplyDark = prefersDark;
+          }
+          
+          // Apply dark class early if needed
+          if (shouldApplyDark) {
+            document.documentElement.classList.add('dark');
+            logColorChange('🌙 DARK-MODE-APPLIED', { 
+              reason: savedThemeMode || 'system',
+              prefersDark: prefersDark 
+            });
+          }
+          
+          // Inject CSS with correct colors - avoid overriding background/foreground for dark mode
+          const style = document.createElement('style');
+          style.id = 'dynamic-theme-override';
+          style.textContent = `
+            :root {
+              --primary: ${themeColors.primary} !important;
+              --primary-hover: 173 88% 54% !important;
+              --primary-glow: 173 95% 78% !important;
+            }
+            
+            /* Only override background/foreground in light mode */
+            html:not(.dark) {
+              --background: ${themeColors.background} !important;
+              --foreground: ${themeColors.foreground} !important;
+              --border: ${themeColors.border} !important;
+              --muted: ${themeColors.muted} !important;
+            }
+            
+            * {
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: hsl(var(--background));
+              color: hsl(var(--foreground));
+              margin: 0;
+              padding: 0;
+              -webkit-font-smoothing: antialiased;
+              -moz-osx-font-smoothing: grayscale;
+            }
+            
+            #root {
+              min-height: 100vh;
+            }
+            
+            .loading-spinner {
+              width: 48px;
+              height: 48px;
+              border: 3px solid hsl(var(--border)) !important;
+              border-top: 3px solid hsl(var(--primary)) !important;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+            
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            
+            #root:empty::before {
+              content: '';
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 48px;
+              height: 48px;
+              border: 3px solid hsl(var(--border)) !important;
+              border-top: 3px solid hsl(var(--primary)) !important;
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            }
+          `;
+          document.head.appendChild(style);
+          
+          logColorChange('✅ STYLE-APPLIED', {
+            finalColors: { ...themeColors },
+            cssTextLength: style.textContent.length,
+            elementAdded: true
+          });
+          
+          // Verificação imediata
+          setTimeout(() => {
+            checkColorChanges('⚡ IMMEDIATE-CHECK');
+          }, 10);
+          
+          // Verificação mais tardia
+          setTimeout(() => {
+            checkColorChanges('🔍 DELAYED-CHECK');
+          }, 100);
+          
+          // Reforçar aplicação das cores após carregamento do CSS
+          setTimeout(() => {
+            const currentPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+            if (currentPrimary !== themeColors.primary) {
+              logColorChange('🔄 CSS-OVERRIDE-DETECTED', {
+                expected: themeColors.primary,
+                current: currentPrimary,
+                action: 'reapplying with UI Nativa colors'
+              });
+              
+              // Reaplicar com força máxima usando cores UI Nativa
+              document.documentElement.style.setProperty('--primary', themeColors.primary, 'important');
+              document.documentElement.style.setProperty('--primary-hover', '173 88% 54%', 'important');
+              document.documentElement.style.setProperty('--primary-glow', '173 95% 78%', 'important');
+            }
+          }, 1000);
+          
+          // Verificação adicional para garantir que não há flash azul e dark mode funciona
+          setTimeout(() => {
+            const finalPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            const currentBg = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+            
+            logColorChange('🔍 FINAL-CHECK', {
+              primary: finalPrimary,
+              darkMode: isDarkMode,
+              background: currentBg
+            });
+            
+            if (finalPrimary.includes('233') || finalPrimary.includes('219')) {
+              logColorChange('⚠️ BLUE-FLASH-DETECTED', {
+                detected: finalPrimary,
+                action: 'forcing UI Nativa colors'
+              });
+              
+              // Forçar cores UI Nativa se detectar azul
+              document.documentElement.style.setProperty('--primary', '173 88% 58%', 'important');
+              document.documentElement.style.setProperty('--primary-hover', '173 88% 54%', 'important');
+              document.documentElement.style.setProperty('--primary-glow', '173 95% 78%', 'important');
+            }
+            
+            // Verificar se dark mode está funcionando corretamente
+            if (isDarkMode && (currentBg.includes('100%') || currentBg === '0 0% 100%')) {
+              logColorChange('🚨 DARK-MODE-BROKEN', {
+                background: currentBg,
+                action: 'dark mode colors not applied correctly'
+              });
+            }
+          }, 2000);
+        } catch (error) {
+          console.warn('Theme loader error:', error);
+        }
+      })();
+    </script>
   </head>
 
   <body>
+    <script>
+      logColorChange('🏗️ BODY-START', { message: 'Body começou a carregar' });
+      checkColorChanges('🏗️ BODY-START-CHECK');
+    </script>
+    
     <div id="root"></div>
+    
+    <script>
+      // Observer contínuo para mudanças no DOM
+      function startColorObserver() {
+        logColorChange('🎯 OBSERVER-START', { message: 'Iniciando observer contínuo' });
+        
+        // MutationObserver para mudanças no DOM
+        const observer = new MutationObserver(() => {
+          checkColorChanges('🔄 DOM-MUTATION');
+        });
+        
+        observer.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['style', 'class'],
+          subtree: true
+        });
+        
+        // Verificação periódica
+        const periodicInterval = setInterval(() => {
+          checkColorChanges('⏰ PERIODIC-CHECK');
+        }, 1000);
+        
+        // Eventos importantes
+        document.addEventListener('DOMContentLoaded', () => {
+          logColorChange('📄 DOM-READY', { readyState: document.readyState });
+          checkColorChanges('📄 DOM-READY-CHECK');
+        });
+        
+        window.addEventListener('load', () => {
+          logColorChange('🏁 WINDOW-LOAD', { readyState: document.readyState });
+          checkColorChanges('🏁 WINDOW-LOAD-CHECK');
+          
+          // Parar verificação periódica após 10 segundos do load
+          setTimeout(() => {
+            clearInterval(periodicInterval);
+            logColorChange('⏹️ OBSERVER-STOP', { 
+              message: 'Observer periódico parado',
+              totalLogs: window.colorDebugLog.length 
+            });
+          }, 10000);
+        });
+        
+        // Remover interceptação de console.log para evitar recursão
+        // Logs do ThemeContext serão capturados via MutationObserver
+        
+        // Função global para exportar debug log
+        window.exportColorDebugLog = function() {
+          const blob = new Blob([JSON.stringify(window.colorDebugLog, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `grc-color-debug-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          logColorChange('💾 EXPORT', { totalLogs: window.colorDebugLog.length });
+        };
+        
+        // Função global para mostrar resumo
+        window.showColorDebugSummary = function() {
+          const summary = {
+            totalLogs: window.colorDebugLog.length,
+            duration: window.colorDebugLog[window.colorDebugLog.length - 1]?.timestamp || 0,
+            sources: [...new Set(window.colorDebugLog.map(log => log.source))],
+            colorChanges: window.colorDebugLog.filter(log => log.details.changes).length
+          };
+          console.table(summary);
+          console.log('Para exportar: window.exportColorDebugLog()');
+          return summary;
+        };
+      }
+      
+      // Iniciar observer
+      startColorObserver();
+      
+      logColorChange('🏗️ BODY-END', { message: 'Body setup completo' });
+      checkColorChanges('🏗️ BODY-END-CHECK');
+    </script>
+    
     <script type="module" src="/src/main.tsx"></script>
-    <script type="module" src="/src/utils/quickFixLogin.js"></script>
+    
+    <script>
+      logColorChange('⚛️ REACT-SCRIPT', { message: 'Script do React carregado' });
+      checkColorChanges('⚛️ REACT-SCRIPT-CHECK');
+    </script>
   </body>
 </html>

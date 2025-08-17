@@ -18,11 +18,11 @@
     --popover: 0 0% 100%;
     --popover-foreground: 225 71% 12%;
 
-    /* Primary - Blue (matching useCustomTheme default #0d26e3) */
-    --primary: 233 79% 47%;
+    /* Primary - Default to ui_nativa theme (green) to prevent blue flash */
+    --primary: 173 88% 58%;
     --primary-foreground: 210 40% 98%;
-    --primary-hover: 233 79% 43%;
-    --primary-glow: 233 79% 67%;
+    --primary-hover: 173 88% 54%;
+    --primary-glow: 173 95% 78%;
 
     /* Secondary - Purple (matching useCustomTheme default #7e22ce) */
     --secondary: 272 64% 47%;
@@ -106,11 +106,11 @@
     --popover: 225 39% 8%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary - Blue (dark mode, matching useCustomTheme default) */
-    --primary: 233 79% 67%;
+    /* Primary - Green/Teal (dark mode, matching UI Nativa theme to prevent blue flash) */
+    --primary: 173 88% 58%;
     --primary-foreground: 225 39% 5%;
-    --primary-hover: 233 79% 71%;
-    --primary-glow: 233 79% 67%;
+    --primary-hover: 173 88% 54%;
+    --primary-glow: 173 95% 78%;
 
     /* Secondary - Purple (dark mode) */
     --secondary: 272 64% 67%;
@@ -184,6 +184,9 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
+    /* Ensure dark mode colors are applied */
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   /* Improve rendering for all elements */

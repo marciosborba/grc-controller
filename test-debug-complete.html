@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Debug Completo - Análise de Cores GRC</title>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .section {
+            padding: 30px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .section:last-child {
+            border-bottom: none;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .success { border-left: 4px solid #28a745; background: #d4edda; }
+        .warning { border-left: 4px solid #ffc107; background: #fff3cd; }
+        .danger { border-left: 4px solid #dc3545; background: #f8d7da; }
+        .info { border-left: 4px solid #17a2b8; background: #d1ecf1; }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #0056b3; transform: translateY(-1px); }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .terminal {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Sistema de Debug Completo</h1>
+            <p>Análise detalhada de carregamento de cores - GRC Controller</p>
+        </div>
+
+        <div class="section">
+            <h2>📋 Instruções de Teste</h2>
+            <div class="grid">
+                <div class="card info">
+                    <h3>🚀 Passo 1: Configurar Tema</h3>
+                    <p>Escolha uma cor de teste e defina no localStorage:</p>
+                    <button class="btn btn-success" onclick="setTestColor('#22c55e', 'Verde')">🟢 Verde</button>
+                    <button class="btn" onclick="setTestColor('#8b5cf6', 'Roxo')">🟣 Roxo</button>
+                    <button class="btn btn-warning" onclick="setTestColor('#f59e0b', 'Amarelo')">🟡 Amarelo</button>
+                    <button class="btn btn-danger" onclick="setTestColor('#ef4444', 'Vermelho')">🔴 Vermelho</button>
+                </div>
+                <div class="card warning">
+                    <h3>🎯 Passo 2: Carregar Aplicação</h3>
+                    <p>Abra a aplicação com debug ativo:</p>
+                    <button class="btn" onclick="openDebugApp()">🚀 Abrir http://localhost:8080</button>
+                    <p><small>O debug será executado automaticamente</small></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 Comandos de Debug</h2>
+            <div class="card">
+                <h3>Console do Navegador</h3>
+                <p>Execute estes comandos no console da aplicação:</p>
+                
+                <div class="code">
+// Mostrar resumo do debug
+window.showColorDebugSummary()
+
+// Exportar log completo
+window.exportColorDebugLog()
+
+// Ver histórico de mudanças
+console.table(window.colorDebugLog)
+
+// Verificar cores atuais
+const currentColors = getComputedStyle(document.documentElement);
+console.log('--primary:', currentColors.getPropertyValue('--primary'));
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Monitor de Status</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>🎨 Status da Cor</h3>
+                    <div id="color-status">
+                        <span class="status-indicator status-offline"></span>
+                        <span>Aguardando teste...</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="color-progress"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>📈 Estatísticas</h3>
+                    <div id="stats">
+                        <div>Cor Configurada: <strong id="configured-color">Nenhuma</strong></div>
+                        <div>Timestamp: <strong id="timestamp">-</strong></div>
+                        <div>Logs Esperados: <strong>15-25</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔄 Log de Eventos Esperados</h2>
+            <div class="terminal" id="expected-logs">
+Logs esperados durante o carregamento:
+
+🎨 [0ms] 🚀 INIT: Debug iniciado na aplicação real
+🎨 [2ms] 📋 PRE-SCRIPT: Executando script de tema dinâmico  
+🎨 [3ms] 🔍 CHECKING-STORAGE: localStorage encontrado
+🎨 [4ms] 🎯 INITIAL-COLORS: Cores padrão carregadas
+🎨 [5ms] 📖 PARSING-THEME: Tema parseado do localStorage
+🎨 [6ms] 🎨 FOUND-COLOR-PALETTE: Paleta de cores encontrada
+🎨 [7ms] 🔄 COLOR-CONVERSION: HEX → HSL conversão
+🎨 [8ms] ✅ STYLE-APPLIED: CSS injetado com !important
+🎨 [15ms] ⚡ IMMEDIATE-CHECK: Verificação imediata
+🎨 [120ms] 🔍 DELAYED-CHECK: Verificação tardia
+🎨 [200ms] 🏗️ BODY-START: Body começou a carregar
+🎨 [500ms] 📄 DOM-READY: DOM pronto
+🎨 [800ms] ⚛️ REACT-SCRIPT: React carregado
+🎨 [1200ms] 🖥️ CONSOLE-INTERCEPT: ThemeContext executado
+🎨 [2000ms] 🏁 WINDOW-LOAD: Carregamento completo
+
+✅ SE TUDO ESTIVER CORRETO:
+   - Cores aplicadas desde o primeiro frame
+   - Sem mudanças de cor durante carregamento
+   - Logs mostram conversão HEX → HSL correta
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚨 Diagnósticos</h2>
+            <div class="grid">
+                <div class="card success">
+                    <h3>✅ Teste Bem-sucedido</h3>
+                    <ul>
+                        <li>Cor aparece imediatamente</li>
+                        <li>Sem flash azul → verde</li>
+                        <li>Debug logs mostram aplicação correta</li>
+                        <li>CSS variables com !important aplicados</li>
+                    </ul>
+                </div>
+                <div class="card danger">
+                    <h3>❌ Problemas Identificados</h3>
+                    <ul>
+                        <li>Se ainda aparece azul: CSS sendo sobrescrito</li>
+                        <li>Se há flash de cor: Ordem de carregamento</li>
+                        <li>Se logs estão vazios: Script não executando</li>
+                        <li>Se erro no console: Problema no localStorage</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ Ferramentas Avançadas</h2>
+            <div class="card">
+                <button class="btn" onclick="clearAllStorage()">🗑️ Limpar localStorage</button>
+                <button class="btn btn-warning" onclick="simulateError()">⚠️ Simular Erro</button>
+                <button class="btn btn-success" onclick="testAllColors()">🌈 Testar Todas as Cores</button>
+                <button class="btn" onclick="copyDebugCommands()">📋 Copiar Comandos</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            colorSet: false,
+            appOpened: false,
+            debugActive: false
+        };
+
+        function setTestColor(color, name) {
+            const preferences = {
+                theme: 'light',
+                language: 'pt-BR',
+                colorPalette: {
+                    primary: color,
+                    secondary: '#7e22ce',
+                    tertiary: '#be185d'
+                }
+            };
+            
+            localStorage.setItem('grc-theme-preferences', JSON.stringify(preferences));
+            
+            // Update UI
+            document.getElementById('configured-color').textContent = `${name} (${color})`;
+            document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+            document.getElementById('color-status').innerHTML = `
+                <span class="status-indicator status-online"></span>
+                <span>Cor ${name} configurada</span>
+            `;
+            document.getElementById('color-progress').style.width = '50%';
+            
+            testResults.colorSet = true;
+            updateProgress();
+            
+            alert(`✅ Cor ${name} (${color}) configurada!\nAgora abra a aplicação para testar.`);
+        }
+
+        function openDebugApp() {
+            if (!testResults.colorSet) {
+                alert('⚠️ Configure uma cor de teste primeiro!');
+                return;
+            }
+            
+            window.open('http://localhost:8080', '_blank');
+            testResults.appOpened = true;
+            updateProgress();
+            
+            setTimeout(() => {
+                alert(`🔍 Debug ativo!\n\nNo console da aplicação, execute:\nwindow.showColorDebugSummary()`);
+            }, 2000);
+        }
+
+        function updateProgress() {
+            const progress = (testResults.colorSet ? 50 : 0) + (testResults.appOpened ? 30 : 0) + (testResults.debugActive ? 20 : 0);
+            document.getElementById('color-progress').style.width = progress + '%';
+        }
+
+        function clearAllStorage() {
+            localStorage.clear();
+            document.getElementById('configured-color').textContent = 'Nenhuma';
+            document.getElementById('color-status').innerHTML = `
+                <span class="status-indicator status-offline"></span>
+                <span>localStorage limpo</span>
+            `;
+            testResults = { colorSet: false, appOpened: false, debugActive: false };
+            updateProgress();
+        }
+
+        function simulateError() {
+            const badJson = '{"theme":"light","colorPalette":{"primary":"INVALID_COLOR"}}';
+            localStorage.setItem('grc-theme-preferences', badJson);
+            alert('⚠️ JSON inválido configurado. Teste como o sistema lida com erros.');
+        }
+
+        function testAllColors() {
+            const colors = [
+                { color: '#22c55e', name: 'Verde' },
+                { color: '#8b5cf6', name: 'Roxo' },
+                { color: '#f59e0b', name: 'Amarelo' },
+                { color: '#ef4444', name: 'Vermelho' }
+            ];
+            
+            let index = 0;
+            const interval = setInterval(() => {
+                if (index >= colors.length) {
+                    clearInterval(interval);
+                    alert('✅ Teste de todas as cores concluído!');
+                    return;
+                }
+                
+                setTestColor(colors[index].color, colors[index].name);
+                setTimeout(() => {
+                    window.open('http://localhost:8080', '_blank');
+                }, 1000);
+                
+                index++;
+            }, 5000);
+        }
+
+        function copyDebugCommands() {
+            const commands = `// Comandos de debug para o console da aplicação:
+
+// 1. Mostrar resumo
+window.showColorDebugSummary()
+
+// 2. Exportar log completo  
+window.exportColorDebugLog()
+
+// 3. Ver todas as mudanças de cor
+window.colorDebugLog.filter(log => log.details.changes)
+
+// 4. Verificar cores atuais
+const style = getComputedStyle(document.documentElement);
+console.log('Cores atuais:', {
+  primary: style.getPropertyValue('--primary'),
+  background: style.getPropertyValue('--background'),
+  foreground: style.getPropertyValue('--foreground')
+});
+
+// 5. Forçar verificação manual
+checkColorChanges('MANUAL-CHECK');`;
+
+            navigator.clipboard.writeText(commands).then(() => {
+                alert('📋 Comandos copiados! Cole no console da aplicação.');
+            });
+        }
+
+        // Atualizar timestamp a cada segundo
+        setInterval(() => {
+            if (testResults.colorSet) {
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+            }
+        }, 1000);
+
+        // Log inicial
+        console.log('🔍 Sistema de debug carregado. Use os botões acima para configurar e testar.');
+    </script>
+</body>
+</html>

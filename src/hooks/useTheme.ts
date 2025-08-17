@@ -43,12 +43,13 @@ export const useCustomTheme = (palette: ColorPalette) => {
   useEffect(() => {
     // Check if colors are already the default ones to avoid unnecessary updates
     const isDefaultPalette = 
-      palette.primary === '#0d26e3' && 
+      palette.primary === '#0e2954' && 
       palette.secondary === '#7e22ce' && 
       palette.tertiary === '#be185d';
     
     // If using default colors, don't override CSS (they're already set in index.css)
     if (isDefaultPalette) {
+      console.log('🎨 useTheme: Usando paleta padrão - não sobrescrevendo CSS');
       return;
     }
 
@@ -56,41 +57,48 @@ export const useCustomTheme = (palette: ColorPalette) => {
     const secondaryHSL = hexToHSL(palette.secondary);
     const tertiaryHSL = hexToHSL(palette.tertiary);
 
+    console.log('🎨 useTheme: Aplicando paleta customizada', {
+      primary: palette.primary,
+      secondary: palette.secondary,
+      tertiary: palette.tertiary
+    });
+
     // Use CSS custom properties directly on document root for better performance
     const root = document.documentElement;
+    const isDarkMode = root.classList.contains('dark');
     
-    // Apply light mode colors
-    root.style.setProperty('--primary', `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2]}%`);
+    // Apply colors with proper dark mode consideration
+    if (isDarkMode) {
+      // For dark mode, adjust colors to be more suitable
+      const darkPrimaryL = primaryHSL[2] < 50 ? Math.min(primaryHSL[2] + 20, 70) : Math.max(primaryHSL[2] - 10, 30);
+      const darkSecondaryL = secondaryHSL[2] < 50 ? Math.min(secondaryHSL[2] + 20, 70) : Math.max(secondaryHSL[2] - 10, 30);
+      const darkTertiaryL = tertiaryHSL[2] < 50 ? Math.min(tertiaryHSL[2] + 20, 70) : Math.max(tertiaryHSL[2] - 10, 30);
+      
+      root.style.setProperty('--primary', `${primaryHSL[0]} ${primaryHSL[1]}% ${darkPrimaryL}%`);
+      root.style.setProperty('--secondary', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${darkSecondaryL}%`);
+      root.style.setProperty('--accent', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${darkTertiaryL}%`);
+      
+      console.log('🌙 useTheme: Cores ajustadas para dark mode');
+    } else {
+      // For light mode, use original colors
+      root.style.setProperty('--primary', `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2]}%`);
+      root.style.setProperty('--secondary', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2]}%`);
+      root.style.setProperty('--accent', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2]}%`);
+      
+      console.log('☀️ useTheme: Cores aplicadas para light mode');
+    }
+    
+    // Apply foreground colors
     root.style.setProperty('--primary-foreground', `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] > 50 ? 10 : 90}%`);
-    root.style.setProperty('--secondary', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2]}%`);
     root.style.setProperty('--secondary-foreground', `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] > 50 ? 10 : 90}%`);
-    root.style.setProperty('--accent', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2]}%`);
     root.style.setProperty('--accent-foreground', `${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] > 50 ? 10 : 90}%`);
 
-    // Create or update dark mode styles
-    let darkModeStyle = document.getElementById('custom-dark-theme');
-    if (!darkModeStyle) {
-      darkModeStyle = document.createElement('style');
-      darkModeStyle.id = 'custom-dark-theme';
-      document.head.appendChild(darkModeStyle);
-    }
-
-    darkModeStyle.innerHTML = `
-      .dark {
-        --primary: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] < 50 ? Math.min(100 - primaryHSL[2] + 10, 90) : primaryHSL[2]}%;
-        --primary-foreground: ${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2] < 50 ? 10 : 90}%;
-        --secondary: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] < 50 ? Math.min(100 - secondaryHSL[2] + 10, 90) : secondaryHSL[2]}%;
-        --secondary-foreground: ${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2] < 50 ? 10 : 90}%;
-        --accent: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] < 50 ? Math.min(100 - tertiaryHSL[2] + 10, 90) : tertiaryHSL[2]}%;
-        --accent-foreground: ${tertiaryHSL[0]} ${tertiaryHSL[1]}% ${tertiaryHSL[2] < 50 ? 10 : 90}%;
-      }
-    `;
-
+    // Remove the dynamic style element approach as it can conflict with ThemeContext
+    // The ThemeContext now handles all theme applications
+    
     return () => {
-      // Reset to default values when component unmounts
-      if (darkModeStyle) {
-        document.head.removeChild(darkModeStyle);
-      }
+      // Clean up function - remove any custom styles if needed
+      console.log('🧹 useTheme: Limpando estilos customizados');
     };
   }, [palette]);
 };
