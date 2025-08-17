@@ -382,12 +382,20 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   const updateNotification = useCallback(async (id: string, payload: UpdateNotificationPayload): Promise<void> => {
     try {
+      console.log('📝 Atualizando notificação:', id, payload);
       setNotifications(prev => prev.map(notification => 
         notification.id === id 
-          ? { ...notification, ...payload, updatedAt: new Date().toISOString() }
+          ? { 
+              ...notification, 
+              ...payload, 
+              metadata: payload.metadata ? { ...notification.metadata, ...payload.metadata } : notification.metadata,
+              updatedAt: new Date().toISOString() 
+            }
           : notification
       ));
+      console.log('✅ Notificação atualizada com sucesso');
     } catch (err) {
+      console.error('❌ Erro ao atualizar notificação:', err);
       setError('Erro ao atualizar notificação');
       throw err;
     }
@@ -404,9 +412,10 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Ações de estado
   const markAsRead = useCallback(async (id: string): Promise<void> => {
+    console.log('🔵 Marcando notificação como lida:', id);
     await updateNotification(id, { 
       status: 'read',
-      metadata: { readAt: new Date().toISOString() } 
+      readAt: new Date().toISOString() // Diretamente na notificação, não em metadata
     });
   }, [updateNotification]);
 

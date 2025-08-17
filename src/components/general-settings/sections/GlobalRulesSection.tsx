@@ -26,7 +26,6 @@ import {
   Tablet,
   Download,
   Upload,
-  RefreshCw,
   Check,
   AlertTriangle,
   Info,
@@ -217,6 +216,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { manualFixApplyTheme } from '@/utils/fixApplyTheme';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -518,6 +518,9 @@ const GlobalRulesSection: React.FC = () => {
   const loadThemes = async () => {
     try {
       setLoadingThemes(true);
+      console.log('🔄 Carregando temas...');
+      
+      // Carregar todos os temas
       const { data: themesData, error } = await supabase
         .from('global_ui_themes')
         .select('*')
@@ -527,31 +530,76 @@ const GlobalRulesSection: React.FC = () => {
       if (error) throw error;
 
       setThemes(themesData || []);
+      console.log('📊 Temas carregados:', themesData?.length || 0);
       
-      // Encontrar tema ativo
-      const active = themesData?.find(t => t.is_active);
-      if (active) {
-        setActiveTheme(active);
-        console.log('🎨 Tema encontrado:', active.name, '- Aplicando automaticamente');
+      // Buscar tema ativo usando múltiplas estratégias
+      let activeTheme = null;
+      
+      // 1. Verificar global_ui_settings primeiro (mais confiável)
+      try {
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('global_ui_settings')
+          .select('active_theme_id, global_ui_themes(*)')
+          .is('tenant_id', null)
+          .single();
+        
+        if (!settingsError && settingsData?.global_ui_themes) {
+          activeTheme = settingsData.global_ui_themes;
+          console.log('🎨 Tema ativo encontrado via global_ui_settings:', activeTheme.display_name || activeTheme.name);
+        }
+      } catch (settingsError) {
+        console.log('🔍 Não foi possível carregar via global_ui_settings:', settingsError);
+      }
+      
+      // 2. Se não encontrou, verificar is_active = true
+      if (!activeTheme) {
+        activeTheme = themesData?.find(t => t.is_active);
+        if (activeTheme) {
+          console.log('🎨 Tema ativo encontrado via is_active:', activeTheme.display_name || activeTheme.name);
+        }
+      }
+      
+      // 3. Se ainda não encontrou, usar tema nativo
+      if (!activeTheme) {
+        activeTheme = themesData?.find(t => t.is_native_theme);
+        if (activeTheme) {
+          console.log('🎨 Usando tema nativo como fallback:', activeTheme.display_name || activeTheme.name);
+        }
+      }
+      
+      if (activeTheme) {
+        setActiveTheme(activeTheme);
         console.log('📊 Detalhes do tema ativo:', {
-          id: active.id,
-          name: active.name,
-          display_name: active.display_name,
-          is_active: active.is_active,
-          is_native_theme: active.is_native_theme,
-          primary_color: active.primary_color
+          id: activeTheme.id,
+          name: activeTheme.name,
+          display_name: activeTheme.display_name,
+          is_active: activeTheme.is_active,
+          is_native_theme: activeTheme.is_native_theme,
+          primary_color: activeTheme.primary_color
         });
         
-        // Aplicar tema com preservação do dark mode
-        setTimeout(() => {
-          applyThemeColors(active);
-        }, 100); // Pequeno delay para garantir que o DOM esteja pronto
+        // Verificar se deve aplicar automaticamente
+        const lastThemeChange = localStorage.getItem('lastThemeChangeTime');
+        const timeSinceLastChange = lastThemeChange ? Date.now() - parseInt(lastThemeChange) : Infinity;
+        
+        // Só aplicar automaticamente se:
+        // 1. Não houve mudança recente (> 5 segundos) OU
+        // 2. É o primeiro carregamento da página
+        if (timeSinceLastChange > 5000 || !lastThemeChange) {
+          console.log('🎨 Aplicando tema automaticamente...');
+          setTimeout(() => {
+            applyThemeColors(activeTheme);
+          }, 100);
+        } else {
+          console.log('⏱️ Aguardando para evitar conflito (mudança recente)');
+        }
       } else {
-        console.log('⚠️ Nenhum tema ativo encontrado nos dados carregados');
+        console.log('⚠️ Nenhum tema encontrado!');
         console.log('📊 Temas disponíveis:', themesData?.map(t => ({
           id: t.id,
           name: t.name,
-          is_active: t.is_active
+          is_active: t.is_active,
+          is_native_theme: t.is_native_theme
         })));
       }
     } catch (error) {
@@ -729,7 +777,11 @@ const GlobalRulesSection: React.FC = () => {
       applyColorWithImportant('--muted', theme.muted_color || theme.secondary_color);
       applyColorWithImportant('--muted-foreground', theme.muted_foreground || theme.secondary_foreground);
       
-      console.log('✅ Tema nativo aplicado - cores preservadas');
+      // IMPORTANTE: Aplicar configurações de layout também para temas nativos
+      root.style.setProperty('--radius', `${(theme.border_radius / 16)}rem`); // Converter px para rem
+      console.log('🔧 Aplicando border_radius para tema nativo:', theme.border_radius, 'px =', `${(theme.border_radius / 16)}rem`);
+      
+      console.log('✅ Tema nativo aplicado - cores e layout preservados');
       
       // Notify ThemeContext about the theme change
       window.dispatchEvent(new CustomEvent('globalThemeChanged', {
@@ -836,350 +888,7 @@ const GlobalRulesSection: React.FC = () => {
     }, 100);
   };
 
-  // Função para restaurar cores originais e resolver conflitos de tema
-  const handleRestoreOriginalColors = async () => {
-    try {
-      setIsLoading(true);
-      const root = document.documentElement;
-      
-      // Lista de todas as propriedades CSS que podem ter sido alteradas
-      const cssProperties = [
-        '--primary', '--primary-foreground', '--primary-hover', '--primary-glow',
-        '--secondary', '--secondary-foreground',
-        '--accent', '--accent-foreground',
-        '--background', '--foreground',
-        '--card', '--card-foreground',
-        '--border', '--input', '--ring',
-        '--muted', '--muted-foreground',
-        '--popover', '--popover-foreground',
-        '--success', '--success-foreground', '--success-light',
-        '--warning', '--warning-foreground', '--warning-light',
-        '--danger', '--danger-foreground', '--danger-light',
-        '--destructive', '--destructive-foreground',
-        '--sidebar-background', '--sidebar-foreground',
-        '--sidebar-primary', '--sidebar-primary-foreground',
-        '--sidebar-accent', '--sidebar-accent-foreground',
-        '--sidebar-border', '--sidebar-ring',
-        '--radius'
-      ];
 
-      console.log('=== RESTAURANDO CORES ORIGINAIS E ATIVANDO TEMA UI NATIVA ===');
-      let removedCount = 0;
-      
-      // Limpar estilos inline
-      cssProperties.forEach(prop => {
-        if (root.style.getPropertyValue(prop)) {
-          console.log(`Removendo: ${prop} = ${root.style.getPropertyValue(prop)}`);
-          root.style.removeProperty(prop);
-          removedCount++;
-        }
-      });
-
-      console.log(`${removedCount} propriedades inline removidas.`);
-      
-      // Verificar e corrigir dark mode
-      console.log('Verificando dark mode...');
-      const isDarkMode = root.classList.contains('dark');
-      console.log('Dark mode ativo:', isDarkMode);
-      
-      // Aguardar um momento para que as cores sejam restauradas
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Capturar cores tanto em light quanto dark mode para ter o tema completo
-      console.log('Capturando cores em ambos os modos...');
-      
-      // Garantir que estamos no modo correto para captura
-      if (isDarkMode) {
-        root.classList.remove('dark');
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      // Capturar cores no modo light
-      const lightStyles = getComputedStyle(root);
-      console.log('Cores capturadas em light mode');
-      
-      // Voltar ao dark mode se estava ativo
-      if (isDarkMode) {
-        root.classList.add('dark');
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      // Capturar cores atuais do CSS após a restauração
-      const computedStyles = getComputedStyle(root);
-      
-      // Função para capturar cor com fallback e conversão para formato compacto
-      const getColorWithFallback = (property: string, fallback: string) => {
-        const value = computedStyles.getPropertyValue(property).trim();
-        if (!value) return fallback;
-        
-        // Converter valores longos para formato HSL compacto
-        if (value.includes('.') && value.length > 20) {
-          try {
-            const parts = value.split(' ');
-            if (parts.length === 3) {
-              const h = Math.round(parseFloat(parts[0]));
-              const s = Math.round(parseFloat(parts[1].replace('%', '')));
-              const l = Math.round(parseFloat(parts[2].replace('%', '')));
-              return `${h} ${s}% ${l}%`;
-            }
-          } catch (e) {
-            console.warn('Erro ao converter cor:', value, e);
-            return fallback;
-          }
-        }
-        
-        return value.length <= 20 ? value : fallback;
-      };
-      
-      const currentColors = {
-        primary_color: getColorWithFallback('--primary', '219 78% 26%'),
-        primary_foreground: getColorWithFallback('--primary-foreground', '210 40% 98%'),
-        primary_hover: getColorWithFallback('--primary-hover', '219 78% 22%'),
-        primary_glow: getColorWithFallback('--primary-glow', '219 95% 68%'),
-        secondary_color: getColorWithFallback('--secondary', '210 20% 96%'),
-        secondary_foreground: getColorWithFallback('--secondary-foreground', '225 71% 12%'),
-        accent_color: getColorWithFallback('--accent', '142 76% 36%'),
-        accent_foreground: getColorWithFallback('--accent-foreground', '210 40% 98%'),
-        background_color: getColorWithFallback('--background', '0 0% 100%'),
-        foreground_color: getColorWithFallback('--foreground', '225 71% 12%'),
-        card_color: getColorWithFallback('--card', '0 0% 100%'),
-        card_foreground: getColorWithFallback('--card-foreground', '225 71% 12%'),
-        border_color: getColorWithFallback('--border', '214 32% 91%'),
-        input_color: getColorWithFallback('--input', '214 32% 91%'),
-        ring_color: getColorWithFallback('--ring', '219 78% 26%'),
-        muted_color: getColorWithFallback('--muted', '210 20% 96%'),
-        muted_foreground: getColorWithFallback('--muted-foreground', '215 16% 47%'),
-        popover_color: getColorWithFallback('--popover', '0 0% 100%'),
-        popover_foreground: getColorWithFallback('--popover-foreground', '225 71% 12%'),
-        success_color: getColorWithFallback('--success', '142 76% 36%'),
-        success_foreground: getColorWithFallback('--success-foreground', '210 40% 98%'),
-        success_light: getColorWithFallback('--success-light', '142 76% 94%'),
-        warning_color: getColorWithFallback('--warning', '38 92% 50%'),
-        warning_foreground: getColorWithFallback('--warning-foreground', '225 71% 12%'),
-        warning_light: getColorWithFallback('--warning-light', '38 92% 94%'),
-        danger_color: getColorWithFallback('--danger', '0 84% 60%'),
-        danger_foreground: getColorWithFallback('--danger-foreground', '210 40% 98%'),
-        danger_light: getColorWithFallback('--danger-light', '0 84% 94%'),
-        destructive_color: getColorWithFallback('--destructive', '0 84% 60%'),
-        destructive_foreground: getColorWithFallback('--destructive-foreground', '210 40% 98%'),
-        risk_critical: getColorWithFallback('--risk-critical', '0 84% 60%'),
-        risk_high: getColorWithFallback('--risk-high', '24 95% 53%'),
-        risk_medium: getColorWithFallback('--risk-medium', '38 92% 50%'),
-        risk_low: getColorWithFallback('--risk-low', '142 76% 36%'),
-        sidebar_background: getColorWithFallback('--sidebar-background', '0 0% 98%'),
-        sidebar_foreground: getColorWithFallback('--sidebar-foreground', '240 5.3% 26.1%'),
-        sidebar_primary: getColorWithFallback('--sidebar-primary', '240 5.9% 10%'),
-        sidebar_primary_foreground: getColorWithFallback('--sidebar-primary-foreground', '0 0% 98%'),
-        sidebar_accent: getColorWithFallback('--sidebar-accent', '240 4.8% 95.9%'),
-        sidebar_accent_foreground: getColorWithFallback('--sidebar-accent-foreground', '240 5.9% 10%'),
-        sidebar_border: getColorWithFallback('--sidebar-border', '220 13% 91%'),
-        sidebar_ring: getColorWithFallback('--sidebar-ring', '217.2 91.2% 59.8%'),
-      };
-      
-      console.log('Cores capturadas após restauração:', currentColors);
-      
-      // Verificar se todas as cores estão dentro do limite de 20 caracteres
-      const problematicColors = Object.entries(currentColors).filter(([key, value]) => 
-        typeof value === 'string' && value.length > 20
-      );
-      
-      if (problematicColors.length > 0) {
-        console.warn('Cores que excedem 20 caracteres:', problematicColors);
-      } else {
-        console.log('✅ Todas as cores estão dentro do limite de 20 caracteres');
-      }
-      
-      // Primeiro, desativar todos os temas
-      const { error: deactivateError } = await supabase
-        .from('global_ui_themes')
-        .update({ is_active: false })
-        .gt('created_at', '1900-01-01'); // Desativar todos os registros
-        
-      if (deactivateError) {
-        console.error('Erro ao desativar temas:', deactivateError);
-        throw new Error('Falha ao desativar temas existentes: ' + deactivateError.message);
-      }
-      
-      // Atualizar/criar tema UI Nativa no banco
-      console.log('Buscando tema UI Nativa existente...');
-      const { data: existingNative, error: selectError } = await supabase
-        .from('global_ui_themes')
-        .select('id')
-        .eq('is_native_theme', true)
-        .single();
-      
-      if (selectError && selectError.code !== 'PGRST116') {
-        console.error('Erro ao buscar tema nativo:', selectError);
-        throw new Error('Falha ao buscar tema UI Nativa: ' + selectError.message);
-      }
-      
-      if (existingNative) {
-        console.log('Atualizando tema UI Nativa existente...');
-        
-        const updateData = {
-          ...currentColors,
-          is_active: true,
-          is_dark_mode: isDarkMode,
-          description: `Tema nativo restaurado em ${new Date().toLocaleString('pt-BR')} (${isDarkMode ? 'Dark' : 'Light'} Mode)`,
-          updated_at: new Date().toISOString()
-        };
-        
-        console.log('Dados para atualização:', updateData);
-        console.log('ID do tema existente:', existingNative.id);
-        
-        // Atualizar tema UI Nativa existente
-        const { error: updateError } = await supabase
-          .from('global_ui_themes')
-          .update(updateData)
-          .eq('is_native_theme', true);
-        
-        if (updateError) {
-          console.error('Erro ao atualizar tema nativo:', updateError);
-          console.error('Detalhes do erro:', JSON.stringify(updateError, null, 2));
-          throw new Error('Falha ao atualizar tema UI Nativa: ' + updateError.message);
-        }
-        console.log('Tema UI Nativa atualizado com sucesso');
-      } else {
-        console.log('Criando novo tema UI Nativa...');
-        // Criar tema UI Nativa se não existir
-        const { error: insertError } = await supabase
-          .from('global_ui_themes')
-          .insert({
-            name: 'ui_nativa',
-            display_name: 'UI Nativa',
-            description: `Tema nativo restaurado em ${new Date().toLocaleString('pt-BR')} (${isDarkMode ? 'Dark' : 'Light'} Mode)`,
-            is_native_theme: true,
-            is_system_theme: true,
-            is_active: true,
-            is_dark_mode: isDarkMode,
-            ...currentColors,
-            font_family: 'Inter',
-            font_size_base: 14,
-            border_radius: 8,
-            shadow_intensity: 0.1
-          });
-        
-        if (insertError) {
-          console.error('Erro ao criar tema nativo:', insertError);
-          throw new Error('Falha ao criar tema UI Nativa: ' + insertError.message);
-        }
-        console.log('Tema UI Nativa criado com sucesso');
-      }
-      
-      // Recarregar temas para atualizar o Card UI Nativa
-      console.log('Recarregando temas...');
-      try {
-        await loadThemes();
-        console.log('Temas recarregados com sucesso');
-      } catch (loadError) {
-        console.error('Erro ao recarregar temas:', loadError);
-        throw new Error('Falha ao recarregar temas: ' + loadError.message);
-      }
-      
-      toast.success(`Cores originais restauradas! Tema UI Nativa ${isDarkMode ? '(Dark Mode)' : '(Light Mode)'} ativado.`);
-      
-      // Verificar se o tema está aplicado corretamente
-      setTimeout(() => {
-        console.log('✅ Restauração concluída - Tema UI Nativa ativo');
-        console.log(`Estado final: Dark mode ${isDarkMode ? 'ATIVO' : 'INATIVO'}`);
-        
-        // Verificar se dark mode funciona
-        const testDark = () => {
-          const currentBg = getComputedStyle(root).getPropertyValue('--background').trim();
-          root.classList.toggle('dark');
-          setTimeout(() => {
-            const newBg = getComputedStyle(root).getPropertyValue('--background').trim();
-            const darkWorks = currentBg !== newBg;
-            console.log('Teste dark mode - mudança de cor:', darkWorks);
-            root.classList.toggle('dark'); // Restaurar estado
-            
-            if (darkWorks) {
-              console.log('✅ Dark mode funcionando corretamente');
-            } else {
-              console.log('⚠️ Dark mode pode ter problemas');
-            }
-          }, 100);
-        };
-        
-        testDark();
-      }, 200);
-      
-    } catch (error) {
-      console.error('Erro detalhado ao restaurar cores originais:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro ao restaurar cores originais: ${errorMessage}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRecaptureNativeTheme = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Capturar cores atuais do CSS
-      const root = document.documentElement;
-      const computedStyles = getComputedStyle(root);
-      
-      const currentColors = {
-        primary_color: computedStyles.getPropertyValue('--primary').trim(),
-        primary_foreground: computedStyles.getPropertyValue('--primary-foreground').trim(),
-        primary_hover: computedStyles.getPropertyValue('--primary-hover').trim(),
-        primary_glow: computedStyles.getPropertyValue('--primary-glow').trim(),
-        secondary_color: computedStyles.getPropertyValue('--secondary').trim(),
-        secondary_foreground: computedStyles.getPropertyValue('--secondary-foreground').trim(),
-        accent_color: computedStyles.getPropertyValue('--accent').trim(),
-        accent_foreground: computedStyles.getPropertyValue('--accent-foreground').trim(),
-        background_color: computedStyles.getPropertyValue('--background').trim(),
-        foreground_color: computedStyles.getPropertyValue('--foreground').trim(),
-        card_color: computedStyles.getPropertyValue('--card').trim(),
-        card_foreground: computedStyles.getPropertyValue('--card-foreground').trim(),
-        border_color: computedStyles.getPropertyValue('--border').trim(),
-        input_color: computedStyles.getPropertyValue('--input').trim(),
-        ring_color: computedStyles.getPropertyValue('--ring').trim(),
-        muted_color: computedStyles.getPropertyValue('--muted').trim(),
-        muted_foreground: computedStyles.getPropertyValue('--muted-foreground').trim(),
-        success_color: computedStyles.getPropertyValue('--success').trim(),
-        success_foreground: computedStyles.getPropertyValue('--success-foreground').trim(),
-        warning_color: computedStyles.getPropertyValue('--warning').trim(),
-        warning_foreground: computedStyles.getPropertyValue('--warning-foreground').trim(),
-        danger_color: computedStyles.getPropertyValue('--danger').trim(),
-        danger_foreground: computedStyles.getPropertyValue('--danger-foreground').trim(),
-        sidebar_background: computedStyles.getPropertyValue('--sidebar-background').trim(),
-        sidebar_foreground: computedStyles.getPropertyValue('--sidebar-foreground').trim(),
-        sidebar_primary: computedStyles.getPropertyValue('--sidebar-primary').trim(),
-        sidebar_primary_foreground: computedStyles.getPropertyValue('--sidebar-primary-foreground').trim(),
-        sidebar_accent: computedStyles.getPropertyValue('--sidebar-accent').trim(),
-        sidebar_accent_foreground: computedStyles.getPropertyValue('--sidebar-accent-foreground').trim(),
-        sidebar_border: computedStyles.getPropertyValue('--sidebar-border').trim(),
-        sidebar_ring: computedStyles.getPropertyValue('--sidebar-ring').trim(),
-      };
-      
-      console.log('Cores capturadas do CSS atual:', currentColors);
-      
-      // Atualizar tema UI Nativa no banco
-      const { error } = await supabase
-        .from('global_ui_themes')
-        .update({
-          ...currentColors,
-          description: 'Tema nativo recapturado em ' + new Date().toLocaleString('pt-BR'),
-          updated_at: new Date().toISOString()
-        })
-        .eq('is_native_theme', true);
-
-      if (error) throw error;
-      
-      // Recarregar temas
-      await loadThemes();
-      
-      toast.success('UI Nativa recapturada com sucesso! Todas as cores atuais foram sincronizadas.');
-    } catch (error) {
-      console.error('Erro ao recapturar UI Nativa:', error);
-      toast.error('Erro ao recapturar UI Nativa');
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   const handleCreateTheme = () => {
     setEditingTheme(null);
@@ -1498,12 +1207,23 @@ const GlobalRulesSection: React.FC = () => {
         console.log('🏠 Aplicando tema nativo - preservando cores originais');
         
         // Aplicar tema no banco de dados
-        const { error } = await supabase.rpc('apply_theme', {
+        console.log('💾 Aplicando tema nativo no banco de dados:', {
+          theme_uuid: theme.id,
+          theme_name: theme.display_name || theme.name,
+          tenant_uuid: null
+        });
+        
+        const { data: applyResult, error } = await supabase.rpc('apply_theme', {
           theme_uuid: theme.id,
           tenant_uuid: null
         });
         
-        if (error) throw error;
+        console.log('📊 Resultado da aplicação do tema nativo:', { data: applyResult, error });
+        
+        if (error) {
+          console.error('❌ Erro ao aplicar tema nativo no banco:', error);
+          throw error;
+        }
         
         // Marcar timestamp da aplicação do tema
         window.localStorage.setItem('lastThemeChangeTime', Date.now().toString());
@@ -1512,7 +1232,7 @@ const GlobalRulesSection: React.FC = () => {
         // Para tema nativo, aplicar cores mas respeitar modo dark/light atual do sistema
         applyThemeColors(theme);
         
-        toast.success('Cores originais restauradas com sucesso!');
+        toast.success('Tema UI Nativa aplicado com sucesso!');
       } else {
         console.log('🎭 Aplicando tema customizado');
         
@@ -1672,8 +1392,15 @@ const GlobalRulesSection: React.FC = () => {
       }
 
       // Atualizar estado local
+      console.log('🔄 Atualizando estado local...');
       setActiveTheme(theme);
       setThemes(prev => prev.map(t => ({ ...t, is_active: t.id === theme.id })));
+      
+      // Forçar recarregamento dos temas para garantir sincronização
+      setTimeout(async () => {
+        console.log('🔄 Recarregando temas para confirmar aplicação...');
+        await loadThemes();
+      }, 1000);
       
     } catch (error) {
       console.error('Erro ao aplicar tema:', error);
@@ -1864,24 +1591,6 @@ const GlobalRulesSection: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRestoreOriginalColors}
-                className="text-green-600 hover:text-green-700"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Restaurar Cores Originais
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRecaptureNativeTheme}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Recapturar UI Nativa
-              </Button>
               <Button variant="outline" size="sm">
                 <Upload className="h-4 w-4 mr-2" />
                 Importar Tema

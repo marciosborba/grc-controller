@@ -92,7 +92,7 @@ interface PromptTemplate {
   version: string;
   changelog: string;
   is_active: boolean;
-  is_public: boolean;
+  is_global: boolean;
   requires_approval: boolean;
 }
 
@@ -138,7 +138,7 @@ export const AIPromptsSection: React.FC = () => {
     version: '1.0',
     changelog: '',
     is_active: true,
-    is_public: true,
+    is_global: true,
     requires_approval: false
   });
 
@@ -242,6 +242,7 @@ export const AIPromptsSection: React.FC = () => {
       if (changes) {
         // Remove campos de metadados antes de aplicar
         const { timestamp, reason, ...actualChanges } = changes;
+        console.log(`🔄 Aplicando mudanças do localStorage para template ${template.id}:`, actualChanges);
         return { ...template, ...actualChanges };
       }
       return template;
@@ -295,12 +296,12 @@ export const AIPromptsSection: React.FC = () => {
 
         // Não aplicar filtros para platform admin - eles veem tudo
       } else {
-        // Usuários normais só veem templates públicos e seus próprios
-        query = query.or(`is_public.eq.true,created_by.eq.${user?.id}`);
+        // Usuários normais só veem templates globais e seus próprios
+        query = query.or(`is_global.eq.true,created_by.eq.${user?.id}`);
       }
       
       const { data, error } = await query
-        .order('is_public', { ascending: false }) // Públicos primeiro
+        .order('is_global', { ascending: false }) // Globais primeiro
         .order('usage_count', { ascending: false });
 
       if (error) {
@@ -471,9 +472,9 @@ export const AIPromptsSection: React.FC = () => {
         id: undefined, // Remove o ID para criar um novo
         name: `${template.name}-personalizado`,
         title: `${template.title} (Personalizado)`,
-        is_public: false, // Torna privado
+        is_global: false, // Torna privado
         created_by: user?.id,
-        changelog: `Criado a partir do template público: ${template.name}`
+        changelog: `Criado a partir do template global: ${template.name}`
       };
       
 
@@ -484,7 +485,7 @@ export const AIPromptsSection: React.FC = () => {
       
       toast({
         title: 'Template Personalizado',
-        description: 'Criando uma cópia personalizada do template público para edição',
+        description: 'Criando uma cópia personalizada do template global para edição',
         variant: 'default'
       });
       return;
@@ -555,7 +556,7 @@ export const AIPromptsSection: React.FC = () => {
         version: templateForm.version || '1.0',
         changelog: templateForm.changelog || '',
         is_active: Boolean(templateForm.is_active ?? true),
-        is_public: Boolean(templateForm.is_public ?? (!editingTemplate)), // Se não está editando, é privado por padrão
+        is_global: Boolean(templateForm.is_global ?? (!editingTemplate)), // Se não está editando, é privado por padrão
         requires_approval: Boolean(templateForm.requires_approval ?? false),
         created_by: user?.id,
         updated_at: new Date().toISOString()
@@ -596,7 +597,7 @@ export const AIPromptsSection: React.FC = () => {
         const bankSavedCorrectly = (
           verifyData && 
           verifyData.is_active === templateData.is_active &&
-          verifyData.is_public === templateData.is_public
+          verifyData.is_global === templateData.is_global
         );
         
         console.log('📊 Banco salvou corretamente:', bankSavedCorrectly);
@@ -606,7 +607,7 @@ export const AIPromptsSection: React.FC = () => {
           'name', 'title', 'description', 'use_case', 'category', 'version',
           'template_content', 'min_context_window', 'recommended_temperature', 
           'max_output_tokens', 'expected_output_format', 'quality_score',
-          'is_active', 'is_public', 'requires_approval'
+          'is_active', 'is_global', 'requires_approval'
         ];
         
         const unsavedFields = {};
@@ -711,8 +712,8 @@ export const AIPromptsSection: React.FC = () => {
       } else {
         // Verificar se template deve ir para aba personalizado
         const shouldMoveToCustom = (
-          (editingTemplate?.is_public === true && templateData.is_active === false) ||
-          (editingTemplate?.is_public === true && templateData.is_public === false)
+          (editingTemplate?.is_global === true && templateData.is_active === false) ||
+          (editingTemplate?.is_global === true && templateData.is_global === false)
         );
         
         if (shouldMoveToCustom) {
@@ -764,18 +765,18 @@ export const AIPromptsSection: React.FC = () => {
 
       // Verificar permissões
       const isOwner = template.created_by === user?.id;
-      const isPublicTemplate = template.is_public;
+      const isGlobalTemplate = template.is_global;
       
-      if (isPublicTemplate && !user?.isPlatformAdmin) {
+      if (isGlobalTemplate && !user?.isPlatformAdmin) {
         toast({
           title: 'Acesso Negado',
-          description: 'Apenas administradores da plataforma podem deletar templates públicos',
+          description: 'Apenas administradores da plataforma podem deletar templates globais',
           variant: 'destructive'
         });
         return;
       }
 
-      if (!isPublicTemplate && !isOwner) {
+      if (!isGlobalTemplate && !isOwner) {
         toast({
           title: 'Acesso Negado',
           description: 'Você só pode deletar seus próprios templates',
@@ -785,8 +786,8 @@ export const AIPromptsSection: React.FC = () => {
       }
 
       // Confirmação baseada no tipo de template
-      const confirmMessage = isPublicTemplate 
-        ? 'ATENÇÃO: Você está prestes a deletar um template PÚBLICO do sistema. Esta ação afetará todos os usuários. Tem certeza que deseja continuar?'
+      const confirmMessage = isGlobalTemplate 
+        ? 'ATENÇÃO: Você está prestes a deletar um template GLOBAL do sistema. Esta ação afetará todos os usuários. Tem certeza que deseja continuar?'
         : 'Tem certeza que deseja deletar este template personalizado? Esta ação não pode ser desfeita.';
       
       const confirmDelete = window.confirm(confirmMessage);
@@ -802,7 +803,7 @@ export const AIPromptsSection: React.FC = () => {
       await loadTemplates();
       toast({
         title: 'Sucesso',
-        description: isPublicTemplate ? 'Template público removido!' : 'Template personalizado removido!'
+        description: isGlobalTemplate ? 'Template global removido!' : 'Template personalizado removido!'
       });
     } catch (error) {
       console.error('Erro ao deletar template:', error);
@@ -837,7 +838,7 @@ export const AIPromptsSection: React.FC = () => {
       version: '1.0',
       changelog: '',
       is_active: true,
-      is_public: true,
+      is_global: true,
       requires_approval: false
     });
   };
@@ -909,33 +910,39 @@ export const AIPromptsSection: React.FC = () => {
     return matchesSearch && matchesModule && matchesType;
   });
 
-  // Separar templates públicos e personalizados
-  // Templates públicos: is_public=true E is_active=true
-  const publicTemplates = templates.filter(template => 
-    template.is_public === true && template.is_active === true
-  );
+  // Separar templates globais e personalizados
+  // Templates globais: is_global=true E is_active=true
+  const publicTemplates = templates.filter(template => {
+    const isGlobalAndActive = template.is_global === true && template.is_active === true;
+    console.log(`🔍 Template ${template.name}: is_global=${template.is_global}, is_active=${template.is_active}, incluir em globais=${isGlobalAndActive}`);
+    return isGlobalAndActive;
+  });
   
-  // Templates personalizados: is_public=false OU (is_public=true E is_active=false)
+  // Templates personalizados: is_global=false OU (is_global=true E is_active=false)
   const personalizedTemplates = templates.filter(template => {
-    // Se for admin, pode ver todos os templates não públicos ativos
+    // Se for admin, pode ver todos os templates não globais ativos
     if (user?.isPlatformAdmin) {
-      return (
+      const shouldInclude = (
         // Templates privados do usuário
-        (template.is_public === false && template.created_by === user?.id) ||
-        // Templates públicos desativados
-        (template.is_public === true && template.is_active === false) ||
+        (template.is_global === false && template.created_by === user?.id) ||
+        // Templates globais desativados
+        (template.is_global === true && template.is_active === false) ||
         // Templates que foram tornados privados por admin
-        (template.is_public === false && template.created_by !== user?.id)
+        (template.is_global === false && template.created_by !== user?.id)
       );
+      console.log(`🔍 Template ${template.name} (Admin): is_global=${template.is_global}, is_active=${template.is_active}, created_by=${template.created_by}, incluir em personalizados=${shouldInclude}`);
+      return shouldInclude;
     }
     
     // Para usuários normais: apenas templates próprios ou desativados
-    return (
+    const shouldInclude = (
       // Templates criados pelo usuário (privados)
-      (template.is_public === false && template.created_by === user?.id) ||
-      // Templates públicos que foram desativados
-      (template.is_public === true && template.is_active === false)
+      (template.is_global === false && template.created_by === user?.id) ||
+      // Templates globais que foram desativados
+      (template.is_global === true && template.is_active === false)
     );
+    console.log(`🔍 Template ${template.name} (User): is_global=${template.is_global}, is_active=${template.is_active}, created_by=${template.created_by}, incluir em personalizados=${shouldInclude}`);
+    return shouldInclude;
   });
   
 
@@ -1545,16 +1552,16 @@ export const AIPromptsSection: React.FC = () => {
                   />
                 </div>
 
-                {/* Só mostrar switch Público para Platform Admin */}
+                {/* Só mostrar switch Global para Platform Admin */}
                 {user?.isPlatformAdmin && (
                   <div className="flex items-center space-x-3">
-                    <Label>Público</Label>
+                    <Label>Global</Label>
                     <Switch
-                      checked={templateForm.is_public ?? true}
+                      checked={templateForm.is_global ?? true}
                       onCheckedChange={(checked) => {
-                        console.log('🔄 Switch Público alterado:', checked);
-                        setTemplateForm({ ...templateForm, is_public: checked });
-                        console.log('📋 templateForm atualizado:', { ...templateForm, is_public: checked });
+                        console.log('🔄 Switch Global alterado:', checked);
+                        setTemplateForm({ ...templateForm, is_global: checked });
+                        console.log('📋 templateForm atualizado:', { ...templateForm, is_global: checked });
                       }}
                     />
                   </div>
@@ -1663,7 +1670,7 @@ export const AIPromptsSection: React.FC = () => {
             Personalizados ({prompts.length + personalizedTemplates.length})
           </TabsTrigger>
           <TabsTrigger value="templates">
-            Templates Públicos ({publicTemplates.length})
+            Template Globais ({publicTemplates.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1756,7 +1763,7 @@ export const AIPromptsSection: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {/* Basic Info */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Informações Básicas
                           </h4>
                           <div className="space-y-3">
@@ -1779,7 +1786,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Performance Stats */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Performance
                           </h4>
                           <div className="space-y-3">
@@ -1808,7 +1815,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Metadata */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Metadados
                           </h4>
                           <div className="space-y-3">
@@ -1858,7 +1865,7 @@ export const AIPromptsSection: React.FC = () => {
                       {/* GRC Context */}
                       {prompt.grc_context && Object.keys(prompt.grc_context).length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Contexto GRC
                           </h4>
                           <div className="bg-muted/30 p-4 rounded-lg">
@@ -1872,7 +1879,7 @@ export const AIPromptsSection: React.FC = () => {
                       {/* Required Data Sources */}
                       {prompt.required_data_sources && prompt.required_data_sources.length > 0 && (
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Fontes de Dados Necessárias
                           </h4>
                           <div className="flex flex-wrap gap-2">
@@ -1887,7 +1894,7 @@ export const AIPromptsSection: React.FC = () => {
 
                       {/* Prompt Content */}
                       <div className="space-y-3">
-                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                        <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                           Conteúdo do Prompt
                         </h4>
                         <div className="bg-muted/30 p-4 rounded-lg border">
@@ -2052,7 +2059,7 @@ export const AIPromptsSection: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {/* Basic Info */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Informações Básicas
                           </h4>
                           <div className="space-y-3">
@@ -2083,7 +2090,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Technical Configuration */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Configuração Técnica
                           </h4>
                           <div className="space-y-3">
@@ -2120,7 +2127,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Status & Metadata */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Status & Metadados
                           </h4>
                           <div className="space-y-3">
@@ -2188,7 +2195,7 @@ export const AIPromptsSection: React.FC = () => {
                       {/* Description & Use Case */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-3">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Descrição
                           </h4>
                           <div className="bg-muted/30 p-4 rounded-lg">
@@ -2564,7 +2571,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Technical Configuration */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Configuração Técnica
                           </h4>
                           <div className="space-y-3">
@@ -2601,7 +2608,7 @@ export const AIPromptsSection: React.FC = () => {
 
                         {/* Status & Metadata */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider mt-4">
                             Status & Metadados
                           </h4>
                           <div className="space-y-3">

@@ -73,6 +73,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NotificationPreferences } from './NotificationPreferences';
+import ExpandableNotificationCard from './ExpandableNotificationCard';
 
 // Componente principal da página
 export const NotificationsPage: React.FC = () => {
@@ -108,10 +109,8 @@ export const NotificationsPage: React.FC = () => {
 
   // Estados locais
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'list' | 'cards' | 'compact'>('list');
   const [activeTab, setActiveTab] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Filtros
@@ -239,12 +238,7 @@ export const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    setSelectedNotification(notification);
-    if (notification.status === 'unread') {
-      markAsRead(notification.id);
-    }
-  };
+
 
   const handleActionClick = async (notification: Notification, actionId: string) => {
     try {
@@ -346,20 +340,7 @@ export const NotificationsPage: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Visualização</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setViewMode('list')}>
-                <Eye className="h-4 w-4 mr-2" />
-                Lista
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode('cards')}>
-                <Bell className="h-4 w-4 mr-2" />
-                Cards
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode('compact')}>
-                <CheckCheck className="h-4 w-4 mr-2" />
-                Compacto
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem onClick={markAllAsRead}>
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -560,9 +541,9 @@ export const NotificationsPage: React.FC = () => {
       )}
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex gap-6">
+      <div className="flex-1">
         {/* Lista de notificações */}
-        <div className="flex-1">
+        <div className="w-full">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full justify-start">
               <TabsTrigger value="all" className="flex items-center gap-2">
@@ -622,64 +603,49 @@ export const NotificationsPage: React.FC = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <NotificationsList
+                <ExpandableNotificationsList
                   notifications={filteredNotifications}
-                  viewMode={viewMode}
                   selectedNotifications={selectedNotifications}
                   onSelectNotification={handleSelectNotification}
                   onSelectAll={handleSelectAll}
-                  onNotificationClick={handleNotificationClick}
+                  onMarkAsRead={markAsRead}
+                  onMarkAsUnread={markAsUnread}
+                  onArchive={archiveNotification}
+                  onDelete={dismissNotification}
                   onActionClick={handleActionClick}
-                  priorityConfig={priorityConfig}
-                  statusConfig={statusConfig}
-                  moduleConfig={moduleConfig}
                 />
               )}
             </TabsContent>
           </Tabs>
         </div>
-
-        {/* Painel de detalhes */}
-        {selectedNotification && (
-          <NotificationDetailPanel
-            notification={selectedNotification}
-            onClose={() => setSelectedNotification(null)}
-            onActionClick={handleActionClick}
-            priorityConfig={priorityConfig}
-            statusConfig={statusConfig}
-            moduleConfig={moduleConfig}
-          />
-        )}
       </div>
     </div>
   );
 };
 
-// Componente de lista de notificações
-interface NotificationsListProps {
+// Componente de lista de notificações expansivas
+interface ExpandableNotificationsListProps {
   notifications: Notification[];
-  viewMode: 'list' | 'cards' | 'compact';
   selectedNotifications: string[];
   onSelectNotification: (id: string, selected: boolean) => void;
   onSelectAll: () => void;
-  onNotificationClick: (notification: Notification) => void;
+  onMarkAsRead: (id: string) => void;
+  onMarkAsUnread: (id: string) => void;
+  onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
   onActionClick: (notification: Notification, actionId: string) => void;
-  priorityConfig: any;
-  statusConfig: any;
-  moduleConfig: any;
 }
 
-const NotificationsList: React.FC<NotificationsListProps> = ({
+const ExpandableNotificationsList: React.FC<ExpandableNotificationsListProps> = ({
   notifications,
-  viewMode,
   selectedNotifications,
   onSelectNotification,
   onSelectAll,
-  onNotificationClick,
-  onActionClick,
-  priorityConfig,
-  statusConfig,
-  moduleConfig
+  onMarkAsRead,
+  onMarkAsUnread,
+  onArchive,
+  onDelete,
+  onActionClick
 }) => {
   const allSelected = notifications.length > 0 && selectedNotifications.length === notifications.length;
   const someSelected = selectedNotifications.length > 0 && selectedNotifications.length < notifications.length;
@@ -707,372 +673,26 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
 
       {/* Lista */}
       <div className="space-y-3">
-        {notifications.map((notification, index) => (
-          <div key={notification.id} className="w-full">
-            <NotificationItem
-              notification={notification}
-              viewMode={viewMode}
-              isSelected={selectedNotifications.includes(notification.id)}
-              onSelect={(selected) => onSelectNotification(notification.id, selected)}
-              onClick={() => onNotificationClick(notification)}
-              onActionClick={onActionClick}
-              priorityConfig={priorityConfig}
-              statusConfig={statusConfig}
-              moduleConfig={moduleConfig}
-            />
-          </div>
+        {notifications.map((notification) => (
+          <ExpandableNotificationCard
+            key={notification.id}
+            notification={notification}
+            isSelected={selectedNotifications.includes(notification.id)}
+            onSelect={(selected) => onSelectNotification(notification.id, selected)}
+            onMarkAsRead={onMarkAsRead}
+            onMarkAsUnread={onMarkAsUnread}
+            onArchive={onArchive}
+            onDelete={onDelete}
+            onActionClick={onActionClick}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-// Componente de item de notificação
-interface NotificationItemProps {
-  notification: Notification;
-  viewMode: 'list' | 'cards' | 'compact';
-  isSelected: boolean;
-  onSelect: (selected: boolean) => void;
-  onClick: () => void;
-  onActionClick: (notification: Notification, actionId: string) => void;
-  priorityConfig: any;
-  statusConfig: any;
-  moduleConfig: any;
-}
 
-const NotificationItem: React.FC<NotificationItemProps> = ({
-  notification,
-  viewMode,
-  isSelected,
-  onSelect,
-  onClick,
-  onActionClick,
-  priorityConfig,
-  statusConfig,
-  moduleConfig
-}) => {
-  const PriorityIcon = priorityConfig[notification.priority].icon;
-  const StatusIcon = statusConfig[notification.status].icon;
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
-  };
 
-  return (
-    <Card 
-      className={cn(
-        "cursor-pointer transition-all hover:shadow-md border rounded-lg",
-        notification.status === 'unread' && "border-l-4 border-l-blue-500",
-        isSelected && "ring-2 ring-primary",
-        notification.isSticky && "border-orange-200 bg-orange-50/50"
-      )}
-      onClick={onClick}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Checkbox */}
-          <div className="flex-shrink-0">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={onSelect}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-
-          {/* Ícone de prioridade */}
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-            priorityConfig[notification.priority].color
-          )}>
-            <PriorityIcon className="h-4 w-4" />
-          </div>
-
-          {/* Conteúdo */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between mb-2 gap-2">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <h3 className={cn(
-                  "font-medium truncate",
-                  notification.status === 'unread' && "font-semibold"
-                )}>
-                  {notification.title}
-                </h3>
-                {notification.isSticky && (
-                  <Badge variant="outline" className="text-xs flex-shrink-0">
-                    Fixado
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Badge 
-                  variant="outline" 
-                  className={cn("text-xs", moduleConfig[notification.module].color)}
-                >
-                  {moduleConfig[notification.module].label}
-                </Badge>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDate(notification.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <p className={cn(
-                "text-sm line-clamp-2",
-                notification.status === 'unread' ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {notification.message}
-              </p>
-            </div>
-
-            {/* Metadados */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge 
-                  variant="outline" 
-                  className={cn("text-xs", statusConfig[notification.status].color)}
-                >
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {notification.status === 'unread' ? 'Não lida' : 
-                   notification.status === 'read' ? 'Lida' :
-                   notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
-                </Badge>
-                
-                {notification.metadata.dueDate && (
-                  <Badge variant="outline" className="text-xs">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    Vence {formatDate(notification.metadata.dueDate)}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Ações */}
-              {notification.actions && notification.actions.length > 0 && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {notification.actions.slice(0, 2).map((action) => (
-                    <Button
-                      key={action.id}
-                      size="sm"
-                      variant={action.type === 'primary' ? 'default' : 'outline'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onActionClick(notification, action.id);
-                      }}
-                      className="text-xs h-7"
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                  {notification.actions.length > 2 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className="h-7 w-7 p-0">
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {notification.actions.slice(2).map((action) => (
-                          <DropdownMenuItem
-                            key={action.id}
-                            onClick={() => onActionClick(notification, action.id)}
-                          >
-                            {action.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Componente de painel de detalhes
-interface NotificationDetailPanelProps {
-  notification: Notification;
-  onClose: () => void;
-  onActionClick: (notification: Notification, actionId: string) => void;
-  priorityConfig: any;
-  statusConfig: any;
-  moduleConfig: any;
-}
-
-const NotificationDetailPanel: React.FC<NotificationDetailPanelProps> = ({
-  notification,
-  onClose,
-  onActionClick,
-  priorityConfig,
-  statusConfig,
-  moduleConfig
-}) => {
-  const PriorityIcon = priorityConfig[notification.priority].icon;
-  const StatusIcon = statusConfig[notification.status].icon;
-
-  return (
-    <Card className="w-80 flex-shrink-0">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Detalhes</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-          >
-            <XCircle className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Título e módulo */}
-        <div>
-          <h3 className="font-semibold mb-2">{notification.title}</h3>
-          <Badge 
-            variant="outline" 
-            className={moduleConfig[notification.module].color}
-          >
-            {moduleConfig[notification.module].label}
-          </Badge>
-        </div>
-
-        {/* Mensagem */}
-        <div>
-          <Label className="text-sm font-medium">Mensagem</Label>
-          <p className="text-sm text-muted-foreground mt-1">
-            {notification.message}
-          </p>
-        </div>
-
-        {/* Status e Prioridade */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="text-sm font-medium">Status</Label>
-            <div className={cn(
-              "flex items-center gap-2 mt-1 p-2 rounded",
-              statusConfig[notification.status].color
-            )}>
-              <StatusIcon className="h-4 w-4" />
-              <span className="text-sm">
-                {notification.status === 'unread' ? 'Não lida' : 
-                 notification.status === 'read' ? 'Lida' :
-                 notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-sm font-medium">Prioridade</Label>
-            <div className={cn(
-              "flex items-center gap-2 mt-1 p-2 rounded",
-              priorityConfig[notification.priority].color
-            )}>
-              <PriorityIcon className="h-4 w-4" />
-              <span className="text-sm capitalize">{notification.priority}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Datas */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Criada em:</span>
-            <span>{format(new Date(notification.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-          </div>
-          
-          {notification.readAt && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Lida em:</span>
-              <span>{format(new Date(notification.readAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</span>
-            </div>
-          )}
-
-          {notification.metadata.dueDate && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Vencimento:</span>
-              <span className={cn(
-                new Date(notification.metadata.dueDate) < new Date() && "text-red-600"
-              )}>
-                {format(new Date(notification.metadata.dueDate), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Metadados específicos */}
-        {Object.keys(notification.metadata).length > 0 && (
-          <div>
-            <Label className="text-sm font-medium">Metadados</Label>
-            <div className="mt-1 space-y-1">
-              {notification.metadata.assessmentId && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Assessment:</span>
-                  <span className="font-mono text-xs">{notification.metadata.assessmentId}</span>
-                </div>
-              )}
-              {notification.metadata.riskId && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Risco:</span>
-                  <span className="font-mono text-xs">{notification.metadata.riskId}</span>
-                </div>
-              )}
-              {notification.metadata.workflowStage && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Etapa:</span>
-                  <span>{notification.metadata.workflowStage}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Configurações de e-mail */}
-        {notification.emailSettings && (
-          <div>
-            <Label className="text-sm font-medium">Configurações de E-mail</Label>
-            <div className="mt-1 space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4" />
-                <span>{notification.emailSettings.enabled ? 'Habilitado' : 'Desabilitado'}</span>
-              </div>
-              {notification.emailSettings.template && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Template:</span>
-                  <span className="font-mono text-xs">{notification.emailSettings.template}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Ações */}
-        {notification.actions && notification.actions.length > 0 && (
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Ações Disponíveis</Label>
-            <div className="space-y-2">
-              {notification.actions.map((action) => (
-                <Button
-                  key={action.id}
-                  variant={action.type === 'primary' ? 'default' : 
-                           action.type === 'danger' ? 'destructive' : 'outline'}
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => onActionClick(notification, action.id)}
-                >
-                  {action.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
 
 export default NotificationsPage;
