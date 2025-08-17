@@ -128,6 +128,12 @@ const navigationItems = [{
     icon: Building2,
     permissions: ['platform_admin'],
     description: 'Gestão de organizações e limites'
+  }, {
+    title: 'Gestão de IA',
+    url: '/admin/ai-management',
+    icon: Brain,
+    permissions: ['platform_admin'],
+    description: 'Configuração e gestão de assistentes de IA'
   }]
 }];
 export function AppSidebar() {

@@ -71,7 +71,6 @@ const MOCK_NOTIFICATIONS: Notification[] = [
     userId: 'current-user',
     createdAt: new Date(Date.now() - 1800000).toISOString(),
     updatedAt: new Date(Date.now() - 1800000).toISOString(),
-    isSticky: true,
     metadata: {
       riskId: 'risk_456',
       severity: 'critical',

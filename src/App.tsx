@@ -46,6 +46,7 @@ import { ProcessingActivitiesPage } from "@/components/privacy/ProcessingActivit
 import { RATReport } from "@/components/privacy/RATReport";
 import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
 import { NotificationsPage } from "@/components/notifications/NotificationsPage";
+import { AIManagementPage } from "@/components/ai/AIManagementPage";
 
 // Configure React Query with secure defaults
 const queryClient = new QueryClient({
@@ -183,6 +184,11 @@ const App = () => (
                   <Route path="settings" element={<UserManagementPage />} />
                   <Route path="settings/activity-logs" element={<ActivityLogsPage />} />
                   <Route path="settings/general" element={<GeneralSettingsPage />} />
+                  <Route path="admin/ai-management" element={
+                    <PlatformAdminRoute>
+                      <AIManagementPage />
+                    </PlatformAdminRoute>
+                  } />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="help" element={<HelpPage />} />
                 </Route>

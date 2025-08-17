@@ -706,20 +706,21 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
       </div>
 
       {/* Lista */}
-      <div className="space-y-2">
-        {notifications.map((notification) => (
-          <NotificationItem
-            key={notification.id}
-            notification={notification}
-            viewMode={viewMode}
-            isSelected={selectedNotifications.includes(notification.id)}
-            onSelect={(selected) => onSelectNotification(notification.id, selected)}
-            onClick={() => onNotificationClick(notification)}
-            onActionClick={onActionClick}
-            priorityConfig={priorityConfig}
-            statusConfig={statusConfig}
-            moduleConfig={moduleConfig}
-          />
+      <div className="space-y-3">
+        {notifications.map((notification, index) => (
+          <div key={notification.id} className="w-full">
+            <NotificationItem
+              notification={notification}
+              viewMode={viewMode}
+              isSelected={selectedNotifications.includes(notification.id)}
+              onSelect={(selected) => onSelectNotification(notification.id, selected)}
+              onClick={() => onNotificationClick(notification)}
+              onActionClick={onActionClick}
+              priorityConfig={priorityConfig}
+              statusConfig={statusConfig}
+              moduleConfig={moduleConfig}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -761,7 +762,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md",
+        "cursor-pointer transition-all hover:shadow-md border rounded-lg",
         notification.status === 'unread' && "border-l-4 border-l-blue-500",
         isSelected && "ring-2 ring-primary",
         notification.isSticky && "border-orange-200 bg-orange-50/50"
@@ -769,17 +770,19 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       onClick={onClick}
     >
       <CardContent className="p-4">
-        <div className="flex items-start space-x-3">
+        <div className="flex items-start gap-3">
           {/* Checkbox */}
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={onSelect}
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex-shrink-0">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={onSelect}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
 
           {/* Ícone de prioridade */}
           <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center",
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
             priorityConfig[notification.priority].color
           )}>
             <PriorityIcon className="h-4 w-4" />
@@ -787,8 +790,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
           {/* Conteúdo */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
+            <div className="flex items-start justify-between mb-2 gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <h3 className={cn(
                   "font-medium truncate",
                   notification.status === 'unread' && "font-semibold"
@@ -796,34 +799,36 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
                   {notification.title}
                 </h3>
                 {notification.isSticky && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs flex-shrink-0">
                     Fixado
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Badge 
                   variant="outline" 
                   className={cn("text-xs", moduleConfig[notification.module].color)}
                 >
                   {moduleConfig[notification.module].label}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {formatDate(notification.createdAt)}
                 </span>
               </div>
             </div>
 
-            <p className={cn(
-              "text-sm text-muted-foreground line-clamp-2 mb-3",
-              notification.status === 'unread' && "text-foreground"
-            )}>
-              {notification.message}
-            </p>
+            <div className="mb-3">
+              <p className={cn(
+                "text-sm line-clamp-2",
+                notification.status === 'unread' ? "text-foreground" : "text-muted-foreground"
+              )}>
+                {notification.message}
+              </p>
+            </div>
 
             {/* Metadados */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge 
                   variant="outline" 
                   className={cn("text-xs", statusConfig[notification.status].color)}
@@ -844,7 +849,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 
               {/* Ações */}
               {notification.actions && notification.actions.length > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {notification.actions.slice(0, 2).map((action) => (
                     <Button
                       key={action.id}
