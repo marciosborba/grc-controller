@@ -502,15 +502,16 @@ const GlobalRulesSection: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Efeito para aplicar tema na inicialização - DESABILITADO para preservar dark mode nativo
-  // O sistema agora só aplica temas quando explicitamente solicitado pelo usuário
+  // Efeito para aplicar tema na inicialização - REATIVADO com preservação do dark mode
   useEffect(() => {
     if (activeTheme && !activeTheme.is_native_theme) {
       console.log('Tema customizado detectado:', activeTheme.name);
-      console.log('⚠️  Para preservar o dark mode nativo, aplicação automática desabilitada.');
-      console.log('💡 Use o botão "Aplicar" no tema para ativá-lo manualmente.');
+      console.log('🎨 Aplicando tema automaticamente com preservação do dark mode');
+      applyThemeColors(activeTheme);
     } else if (activeTheme?.is_native_theme) {
       console.log('✅ Tema UI Nativa ativo - preservando cores CSS originais e dark mode nativo');
+      // Para tema nativo, aplicar cores mas preservar dark mode
+      applyThemeColors(activeTheme);
     }
   }, [activeTheme]);
 
@@ -531,11 +532,27 @@ const GlobalRulesSection: React.FC = () => {
       const active = themesData?.find(t => t.is_active);
       if (active) {
         setActiveTheme(active);
-        // APLICAÇÃO AUTOMÁTICA COMPLETAMENTE DESABILITADA
-        // Para evitar flash de cores, temas só são aplicados quando solicitado manualmente
-        console.log('🎨 Tema encontrado:', active.name, '- Aplicação automática desabilitada');
-        console.log('💡 Use o botão "Aplicar" no tema para ativá-lo quando necessário');
-        // await applyThemeColors(active); // SEMPRE desabilitado
+        console.log('🎨 Tema encontrado:', active.name, '- Aplicando automaticamente');
+        console.log('📊 Detalhes do tema ativo:', {
+          id: active.id,
+          name: active.name,
+          display_name: active.display_name,
+          is_active: active.is_active,
+          is_native_theme: active.is_native_theme,
+          primary_color: active.primary_color
+        });
+        
+        // Aplicar tema com preservação do dark mode
+        setTimeout(() => {
+          applyThemeColors(active);
+        }, 100); // Pequeno delay para garantir que o DOM esteja pronto
+      } else {
+        console.log('⚠️ Nenhum tema ativo encontrado nos dados carregados');
+        console.log('📊 Temas disponíveis:', themesData?.map(t => ({
+          id: t.id,
+          name: t.name,
+          is_active: t.is_active
+        })));
       }
     } catch (error) {
       console.error('Erro ao carregar temas:', error);
@@ -683,37 +700,42 @@ const GlobalRulesSection: React.FC = () => {
     console.log('🎭 É tema nativo:', theme.is_native_theme);
     console.log('🌙 Tema tem suporte dark mode:', theme.is_dark_mode);
     
+    // Aplicar cores com !important para garantir que sejam aplicadas
+    const applyColorWithImportant = (property: string, value: string) => {
+      root.style.setProperty(property, value, 'important');
+    };
+    
     // Para tema nativo, sempre aplicar respeitando o modo atual
     if (theme.is_native_theme) {
       console.log('🏠 Aplicando tema nativo - respeitando modo atual');
       
       // Aplicar cores base sem modificar dark/light mode
-      root.style.setProperty('--primary', theme.primary_color);
-      root.style.setProperty('--primary-foreground', theme.primary_foreground);
-      root.style.setProperty('--primary-hover', theme.primary_hover || theme.primary_color);
-      root.style.setProperty('--primary-glow', theme.primary_glow || theme.primary_color);
+      applyColorWithImportant('--primary', theme.primary_color);
+      applyColorWithImportant('--primary-foreground', theme.primary_foreground);
+      applyColorWithImportant('--primary-hover', theme.primary_hover || theme.primary_color);
+      applyColorWithImportant('--primary-glow', theme.primary_glow || theme.primary_color);
       
-      root.style.setProperty('--secondary', theme.secondary_color);
-      root.style.setProperty('--secondary-foreground', theme.secondary_foreground);
+      applyColorWithImportant('--secondary', theme.secondary_color);
+      applyColorWithImportant('--secondary-foreground', theme.secondary_foreground);
       
-      root.style.setProperty('--accent', theme.accent_color);
-      root.style.setProperty('--accent-foreground', theme.accent_foreground);
+      applyColorWithImportant('--accent', theme.accent_color);
+      applyColorWithImportant('--accent-foreground', theme.accent_foreground);
       
-      // Para tema nativo, aplicar cores mas permitir que CSS dark: adapte automaticamente
-      root.style.setProperty('--background', theme.background_color);
-      root.style.setProperty('--foreground', theme.foreground_color);
-      root.style.setProperty('--card', theme.card_color);
-      root.style.setProperty('--card-foreground', theme.card_foreground);
-      
-      root.style.setProperty('--border', theme.border_color);
-      root.style.setProperty('--input', theme.input_color || theme.border_color);
-      root.style.setProperty('--ring', theme.ring_color || theme.primary_color);
-      root.style.setProperty('--muted', theme.muted_color || theme.secondary_color);
-      root.style.setProperty('--muted-foreground', theme.muted_foreground || theme.secondary_foreground);
-      root.style.setProperty('--popover', theme.popover_color || theme.card_color);
-      root.style.setProperty('--popover-foreground', theme.popover_foreground || theme.card_foreground);
+      // Para tema nativo, NÃO aplicar background/foreground para preservar dark mode
+      // Apenas aplicar cores que não interferem com o dark mode
+      applyColorWithImportant('--border', theme.border_color);
+      applyColorWithImportant('--input', theme.input_color || theme.border_color);
+      applyColorWithImportant('--ring', theme.ring_color || theme.primary_color);
+      applyColorWithImportant('--muted', theme.muted_color || theme.secondary_color);
+      applyColorWithImportant('--muted-foreground', theme.muted_foreground || theme.secondary_foreground);
       
       console.log('✅ Tema nativo aplicado - cores preservadas');
+      
+      // Notify ThemeContext about the theme change
+      window.dispatchEvent(new CustomEvent('globalThemeChanged', {
+        detail: { theme: theme.name, isNative: true }
+      }));
+      
       return;
     }
     
@@ -728,18 +750,18 @@ const GlobalRulesSection: React.FC = () => {
     });
     
     // Cores principais
-    root.style.setProperty('--primary', theme.primary_color);
-    root.style.setProperty('--primary-foreground', theme.primary_foreground);
-    root.style.setProperty('--primary-hover', theme.primary_hover || theme.primary_color);
-    root.style.setProperty('--primary-glow', theme.primary_glow || theme.primary_color);
+    applyColorWithImportant('--primary', theme.primary_color);
+    applyColorWithImportant('--primary-foreground', theme.primary_foreground);
+    applyColorWithImportant('--primary-hover', theme.primary_hover || theme.primary_color);
+    applyColorWithImportant('--primary-glow', theme.primary_glow || theme.primary_color);
     
     // Cores secundárias
-    root.style.setProperty('--secondary', theme.secondary_color);
-    root.style.setProperty('--secondary-foreground', theme.secondary_foreground);
+    applyColorWithImportant('--secondary', theme.secondary_color);
+    applyColorWithImportant('--secondary-foreground', theme.secondary_foreground);
     
     // Cores de destaque
-    root.style.setProperty('--accent', theme.accent_color);
-    root.style.setProperty('--accent-foreground', theme.accent_foreground);
+    applyColorWithImportant('--accent', theme.accent_color);
+    applyColorWithImportant('--accent-foreground', theme.accent_foreground);
     
     // Cores de fundo (importantes para temas customizados)
     root.style.setProperty('--background', theme.background_color);
@@ -806,6 +828,11 @@ const GlobalRulesSection: React.FC = () => {
       }
       
       console.log('✅ Tema aplicado com preservação do dark mode:', theme.display_name || theme.name);
+      
+      // Notify ThemeContext about the theme change
+      window.dispatchEvent(new CustomEvent('globalThemeChanged', {
+        detail: { theme: theme.name, isNative: theme.is_native_theme }
+      }));
     }, 100);
   };
 
@@ -1478,6 +1505,10 @@ const GlobalRulesSection: React.FC = () => {
         
         if (error) throw error;
         
+        // Marcar timestamp da aplicação do tema
+        window.localStorage.setItem('lastThemeChangeTime', Date.now().toString());
+        console.log('🕰️ Marcando timestamp da aplicação do tema nativo:', Date.now());
+        
         // Para tema nativo, aplicar cores mas respeitar modo dark/light atual do sistema
         applyThemeColors(theme);
         
@@ -1551,6 +1582,49 @@ const GlobalRulesSection: React.FC = () => {
           
           console.log('📊 Resultado da aplicação no banco:', { data: applyResult, error });
           
+          // Verificar se o tema foi realmente marcado como ativo
+          setTimeout(async () => {
+            console.log('🔍 Verificando se tema foi marcado como ativo...');
+            const { data: checkTheme, error: checkError } = await supabase
+              .from('global_ui_themes')
+              .select('id, name, display_name, is_active')
+              .eq('id', theme.id)
+              .single();
+            
+            console.log('📊 Tema após aplicação:', { data: checkTheme, error: checkError });
+            
+            // Verificar todos os temas ativos
+            const { data: allActiveThemes, error: allError } = await supabase
+              .from('global_ui_themes')
+              .select('id, name, display_name, is_active')
+              .eq('is_active', true);
+            
+            console.log('📊 Todos os temas ativos:', { data: allActiveThemes, error: allError });
+            
+            // Se o tema não foi marcado como ativo, forçar a atualização
+            if (checkTheme && !checkTheme.is_active) {
+              console.log('⚠️ Tema não foi marcado como ativo, forçando atualização...');
+              
+              // Desativar todos os temas primeiro
+              await supabase
+                .from('global_ui_themes')
+                .update({ is_active: false })
+                .neq('id', '00000000-0000-0000-0000-000000000000');
+              
+              // Ativar o tema desejado
+              const { error: forceError } = await supabase
+                .from('global_ui_themes')
+                .update({ is_active: true })
+                .eq('id', theme.id);
+              
+              if (forceError) {
+                console.error('❌ Erro ao forçar ativação do tema:', forceError);
+              } else {
+                console.log('✅ Tema forçado como ativo com sucesso');
+              }
+            }
+          }, 500);
+          
           if (error) {
             console.error('❌ Erro na função apply_theme:', error);
             throw error;
@@ -1562,6 +1636,10 @@ const GlobalRulesSection: React.FC = () => {
           } else {
             document.documentElement.classList.remove('dark');
           }
+          
+          // Marcar timestamp da aplicação do tema
+          window.localStorage.setItem('lastThemeChangeTime', Date.now().toString());
+          console.log('🕰️ Marcando timestamp da aplicação do tema:', Date.now());
           
           // Aplicar cores do tema
           applyThemeColors(theme);

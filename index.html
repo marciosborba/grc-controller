@@ -282,21 +282,20 @@
             checkColorChanges('🔍 DELAYED-CHECK');
           }, 100);
           
-          // Reforçar aplicação das cores após carregamento do CSS
+          // Reforçar aplicação das cores após carregamento do CSS - DESABILITADO
+          // Para permitir que temas globais sejam aplicados corretamente
           setTimeout(() => {
             const currentPrimary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
-            if (currentPrimary !== themeColors.primary) {
-              logColorChange('🔄 CSS-OVERRIDE-DETECTED', {
-                expected: themeColors.primary,
-                current: currentPrimary,
-                action: 'reapplying with UI Nativa colors'
-              });
-              
-              // Reaplicar com força máxima usando cores UI Nativa
-              document.documentElement.style.setProperty('--primary', themeColors.primary, 'important');
-              document.documentElement.style.setProperty('--primary-hover', '173 88% 54%', 'important');
-              document.documentElement.style.setProperty('--primary-glow', '173 95% 78%', 'important');
-            }
+            logColorChange('🔍 THEME-CHECK', {
+              current: currentPrimary,
+              expected: themeColors.primary,
+              action: 'checking if global theme was applied'
+            });
+            
+            // NÃO reaplicar cores automaticamente para permitir temas globais
+            // if (currentPrimary !== themeColors.primary) {
+            //   document.documentElement.style.setProperty('--primary', themeColors.primary, 'important');
+            // }
           }, 1000);
           
           // Verificação adicional para garantir que não há flash azul e dark mode funciona

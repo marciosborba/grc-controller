@@ -83,6 +83,7 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
             const parsed = JSON.parse(savedTheme);
             if (parsed.colorPalette) {
               // PRIORIDADE 1: Apply colors from user preferences
+              console.log('👤 ThemeContext: Aplicando preferências do usuário');
               applyCustomColors(parsed.colorPalette);
             }
           } catch (e) {
@@ -95,11 +96,31 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
           console.log('🎨 ThemeContext: Nenhuma preferência encontrada - aplicando tema global');
           loadAndApplyGlobalTheme();
         }
-      }, 100); // Small delay to ensure next-themes is ready
+      }, 1000); // Further increased delay to allow GlobalRulesSection to apply themes first
       
       return () => clearTimeout(timer);
     }
   }, [mounted, user]); // Remove preferences.colorPalette dependency to avoid infinite loop
+  
+  // Listen for theme changes from GlobalRulesSection
+  useEffect(() => {
+    const handleGlobalThemeChange = (event: CustomEvent) => {
+      console.log('🌍 ThemeContext: Recebido evento de mudança de tema global:', event.detail);
+      console.log('⚠️ ThemeContext: DESABILITANDO reaplicacao automatica para evitar sobrescrever tema aplicado');
+      console.log('💡 ThemeContext: GlobalRulesSection ja aplicou as cores corretamente');
+      
+      // NAO recarregar tema automaticamente pois GlobalRulesSection ja aplicou
+      // setTimeout(() => {
+      //   loadAndApplyGlobalTheme();
+      // }, 100);
+    };
+    
+    window.addEventListener('globalThemeChanged', handleGlobalThemeChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('globalThemeChanged', handleGlobalThemeChange as EventListener);
+    };
+  }, []);
   
   // Helper function to apply custom colors considering dark mode
   const applyCustomColors = (colorPalette: ColorPalette) => {
@@ -141,13 +162,29 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const loadAndApplyGlobalTheme = async () => {
     try {
+      // Verificar se cores foram aplicadas recentemente pelo GlobalRulesSection
+      const lastThemeChange = window.localStorage.getItem('lastThemeChangeTime');
+      const now = Date.now();
+      
+      if (lastThemeChange && (now - parseInt(lastThemeChange)) < 5000) {
+        console.log('⚠️ ThemeContext: Tema foi aplicado recentemente, evitando sobrescrever');
+        console.log('🕰️ ThemeContext: Ultimo tema aplicado há', now - parseInt(lastThemeChange), 'ms');
+        return;
+      }
+      
+      // Aguardar um pouco mais para garantir que o banco foi atualizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       console.log('🌐 ThemeContext: Buscando tema global ativo...');
+      console.log('🔍 ThemeContext: Query: SELECT * FROM global_ui_themes WHERE is_active = true');
       
       const { data: activeTheme, error } = await supabase
         .from('global_ui_themes')
         .select('*')
         .eq('is_active', true)
         .single();
+        
+      console.log('📊 ThemeContext: Resultado da query:', { data: activeTheme, error });
 
       if (error) {
         console.log('🎨 ThemeContext: Nenhum tema global ativo encontrado - mantendo UI Nativa');
@@ -155,46 +192,51 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
       }
 
       if (activeTheme && activeTheme.primary_color) {
-        console.log('🎨 ThemeContext: Aplicando tema global (sem flash):', activeTheme.name);
+        console.log('🎨 ThemeContext: Tema global encontrado:', activeTheme.name);
+        console.log('🎨 ThemeContext: Cores do tema:', {
+          primary: activeTheme.primary_color,
+          secondary: activeTheme.secondary_color,
+          accent: activeTheme.accent_color,
+          background: activeTheme.background_color
+        });
         
         const root = document.documentElement;
         
-        // Convert HEX to HSL if needed
-        const primaryHSL = activeTheme.primary_color.startsWith('#') 
-          ? hexToHSL(activeTheme.primary_color)
-          : activeTheme.primary_color;
+        // Apply all theme colors with !important to ensure they override any existing styles
+        root.style.setProperty('--primary', activeTheme.primary_color, 'important');
+        root.style.setProperty('--primary-foreground', activeTheme.primary_foreground, 'important');
+        root.style.setProperty('--primary-hover', activeTheme.primary_hover || activeTheme.primary_color, 'important');
+        root.style.setProperty('--primary-glow', activeTheme.primary_glow || activeTheme.primary_color, 'important');
         
-        const secondaryHSL = activeTheme.secondary_color?.startsWith('#')
-          ? hexToHSL(activeTheme.secondary_color)
-          : activeTheme.secondary_color;
-
-        // Format HSL properly for CSS variables
-        const primaryFormatted = Array.isArray(primaryHSL) 
-          ? `${primaryHSL[0]} ${primaryHSL[1]}% ${primaryHSL[2]}%`
-          : primaryHSL;
+        root.style.setProperty('--secondary', activeTheme.secondary_color, 'important');
+        root.style.setProperty('--secondary-foreground', activeTheme.secondary_foreground, 'important');
         
-        const secondaryFormatted = Array.isArray(secondaryHSL)
-          ? `${secondaryHSL[0]} ${secondaryHSL[1]}% ${secondaryHSL[2]}%`
-          : secondaryHSL;
-
-        // Apply colors with !important to prevent flash
-        root.style.setProperty('--primary', primaryFormatted, 'important');
-        root.style.setProperty('--primary-hover', primaryFormatted.replace(/\d+%\)$/, (match) => {
-          const lightness = parseInt(match.replace('%)', ''));
-          return `${Math.max(lightness - 4, 0)}%)`;
-        }), 'important');
-        root.style.setProperty('--primary-glow', primaryFormatted.replace(/(\d+)% (\d+)%/, (match, s, l) => {
-          return `${Math.min(parseInt(s) + 17, 100)}% ${Math.min(parseInt(l) + 20, 100)}%`;
-        }), 'important');
+        root.style.setProperty('--accent', activeTheme.accent_color, 'important');
+        root.style.setProperty('--accent-foreground', activeTheme.accent_foreground, 'important');
         
-        if (secondaryFormatted) {
-          root.style.setProperty('--secondary', secondaryFormatted, 'important');
+        // For non-native themes, apply background colors too
+        if (!activeTheme.is_native_theme) {
+          root.style.setProperty('--background', activeTheme.background_color, 'important');
+          root.style.setProperty('--foreground', activeTheme.foreground_color, 'important');
+          root.style.setProperty('--card', activeTheme.card_color, 'important');
+          root.style.setProperty('--card-foreground', activeTheme.card_foreground, 'important');
         }
         
-        console.log('🎨 ThemeContext: Tema global aplicado com sucesso (sem flash)', {
+        root.style.setProperty('--border', activeTheme.border_color, 'important');
+        root.style.setProperty('--input', activeTheme.input_color || activeTheme.border_color, 'important');
+        root.style.setProperty('--ring', activeTheme.ring_color || activeTheme.primary_color, 'important');
+        root.style.setProperty('--muted', activeTheme.muted_color || activeTheme.secondary_color, 'important');
+        root.style.setProperty('--muted-foreground', activeTheme.muted_foreground || activeTheme.secondary_foreground, 'important');
+        
+        console.log('✅ ThemeContext: Tema global aplicado com todas as cores:', {
           theme: activeTheme.name,
-          primary: primaryFormatted,
-          secondary: secondaryFormatted
+          isNative: activeTheme.is_native_theme,
+          appliedColors: {
+            primary: activeTheme.primary_color,
+            secondary: activeTheme.secondary_color,
+            accent: activeTheme.accent_color,
+            background: activeTheme.background_color
+          }
         });
       } else {
         console.log('🎨 ThemeContext: Tema global sem cores definidas - mantendo UI Nativa');
