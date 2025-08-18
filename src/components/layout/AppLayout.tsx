@@ -7,11 +7,11 @@ import { AppHeader } from './AppHeader';
 const AppLayout = () => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background gap-2 lg:gap-4">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader />
-          <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-3 sm:py-4 md:py-6 lg:py-8 overflow-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 pr-6 lg:pr-8 overflow-auto bg-background">
             <Outlet />
           </main>
         </div>

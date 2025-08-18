@@ -42,9 +42,49 @@ import {
   Paintbrush,
   Image,
   FileText,
-  BarChart3
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { manualFixApplyTheme } from '@/utils/fixApplyTheme';
 
 // Utilitários para conversão de cores
 const hslToHex = (hsl: string): string => {
@@ -178,45 +218,6 @@ const ColorPicker: React.FC<{
     </div>
   );
 };
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
-import { manualFixApplyTheme } from '@/utils/fixApplyTheme';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -454,27 +455,62 @@ const GlobalRulesSection: React.FC = () => {
     display_name: '',
     description: '',
     is_dark_mode: false,
-    primary_color: '219 78% 26%',
+    // Cores principais
+    primary_color: '173 88% 58%',
     primary_foreground: '210 40% 98%',
-    secondary_color: '210 20% 96%',
-    secondary_foreground: '225 71% 12%',
-    accent_color: '142 76% 36%',
+    primary_hover: '173 88% 54%',
+    primary_glow: '173 95% 78%',
+    secondary_color: '272 64% 47%',
+    secondary_foreground: '210 40% 98%',
+    accent_color: '335 56% 42%',
     accent_foreground: '210 40% 98%',
+    // Backgrounds e superfícies
     background_color: '0 0% 100%',
     foreground_color: '225 71% 12%',
     card_color: '0 0% 100%',
     card_foreground: '225 71% 12%',
     border_color: '214 32% 91%',
+    border_color_dark: '215 10% 22%',
+    input_color: '214 32% 91%',
+    input_color_dark: '215 10% 22%',
+    ring_color: '219 78% 26%',
+    muted_color: '210 20% 96%',
+    muted_foreground: '215 16% 47%',
+    popover_color: '0 0% 100%',
+    popover_foreground: '225 71% 12%',
+    // Cores de estado
     success_color: '142 76% 36%',
     success_foreground: '210 40% 98%',
+    success_light: '142 76% 94%',
     warning_color: '38 92% 50%',
     warning_foreground: '225 71% 12%',
+    warning_light: '38 92% 94%',
     danger_color: '0 84% 60%',
     danger_foreground: '210 40% 98%',
+    danger_light: '0 84% 94%',
+    destructive_color: '0 84% 60%',
+    destructive_foreground: '210 40% 98%',
+    // Cores de risco GRC
+    risk_critical: '0 84% 60%',
+    risk_high: '24 95% 53%',
+    risk_medium: '38 92% 50%',
+    risk_low: '142 76% 36%',
+    // Cores do sidebar
+    sidebar_background: '0 0% 98%',
+    sidebar_foreground: '240 5.3% 26.1%',
+    sidebar_primary: '240 5.9% 10%',
+    sidebar_primary_foreground: '0 0% 98%',
+    sidebar_accent: '240 4.8% 95.9%',
+    sidebar_accent_foreground: '240 5.9% 10%',
+    sidebar_border: '220 13% 91%',
+    sidebar_ring: '217.2 91.2% 59.8%',
+    // Tipografia e layout
     font_family: 'Inter',
     font_size_base: 14,
     border_radius: 8,
-    shadow_intensity: 0.1
+    shadow_intensity: 0.1,
+    // Metadados
+    version: '1.0'
   });
   
   // Estados para Fontes
@@ -514,6 +550,75 @@ const GlobalRulesSection: React.FC = () => {
       applyThemeColors(activeTheme);
     }
   }, [activeTheme]);
+
+  // Popular formulário quando um tema é selecionado para edição
+  useEffect(() => {
+    if (editingTheme) {
+      console.log('🎨 Populando formulário com dados do tema:', editingTheme.name);
+      setThemeForm({
+        name: editingTheme.name || '',
+        display_name: editingTheme.display_name || '',
+        description: editingTheme.description || '',
+        is_dark_mode: editingTheme.is_dark_mode || false,
+        // Cores principais
+        primary_color: editingTheme.primary_color || '173 88% 58%',
+        primary_foreground: editingTheme.primary_foreground || '210 40% 98%',
+        primary_hover: editingTheme.primary_hover || '173 88% 54%',
+        primary_glow: editingTheme.primary_glow || '173 95% 78%',
+        secondary_color: editingTheme.secondary_color || '272 64% 47%',
+        secondary_foreground: editingTheme.secondary_foreground || '210 40% 98%',
+        accent_color: editingTheme.accent_color || '335 56% 42%',
+        accent_foreground: editingTheme.accent_foreground || '210 40% 98%',
+        // Backgrounds e superfícies
+        background_color: editingTheme.background_color || '0 0% 100%',
+        foreground_color: editingTheme.foreground_color || '225 71% 12%',
+        card_color: editingTheme.card_color || '0 0% 100%',
+        card_foreground: editingTheme.card_foreground || '225 71% 12%',
+        border_color: editingTheme.border_color || '214 32% 91%',
+        border_color_dark: editingTheme.border_color_dark || '215 10% 22%',
+        input_color: editingTheme.input_color || '214 32% 91%',
+        input_color_dark: editingTheme.input_color_dark || '215 10% 22%',
+        ring_color: editingTheme.ring_color || '219 78% 26%',
+        muted_color: editingTheme.muted_color || '210 20% 96%',
+        muted_foreground: editingTheme.muted_foreground || '215 16% 47%',
+        popover_color: editingTheme.popover_color || '0 0% 100%',
+        popover_foreground: editingTheme.popover_foreground || '225 71% 12%',
+        // Cores de estado
+        success_color: editingTheme.success_color || '142 76% 36%',
+        success_foreground: editingTheme.success_foreground || '210 40% 98%',
+        success_light: editingTheme.success_light || '142 76% 94%',
+        warning_color: editingTheme.warning_color || '38 92% 50%',
+        warning_foreground: editingTheme.warning_foreground || '225 71% 12%',
+        warning_light: editingTheme.warning_light || '38 92% 94%',
+        danger_color: editingTheme.danger_color || '0 84% 60%',
+        danger_foreground: editingTheme.danger_foreground || '210 40% 98%',
+        danger_light: editingTheme.danger_light || '0 84% 94%',
+        destructive_color: editingTheme.destructive_color || '0 84% 60%',
+        destructive_foreground: editingTheme.destructive_foreground || '210 40% 98%',
+        // Cores de risco GRC
+        risk_critical: editingTheme.risk_critical || '0 84% 60%',
+        risk_high: editingTheme.risk_high || '24 95% 53%',
+        risk_medium: editingTheme.risk_medium || '38 92% 50%',
+        risk_low: editingTheme.risk_low || '142 76% 36%',
+        // Cores do sidebar
+        sidebar_background: editingTheme.sidebar_background || '0 0% 98%',
+        sidebar_foreground: editingTheme.sidebar_foreground || '240 5.3% 26.1%',
+        sidebar_primary: editingTheme.sidebar_primary || '240 5.9% 10%',
+        sidebar_primary_foreground: editingTheme.sidebar_primary_foreground || '0 0% 98%',
+        sidebar_accent: editingTheme.sidebar_accent || '240 4.8% 95.9%',
+        sidebar_accent_foreground: editingTheme.sidebar_accent_foreground || '240 5.9% 10%',
+        sidebar_border: editingTheme.sidebar_border || '220 13% 91%',
+        sidebar_ring: editingTheme.sidebar_ring || '217.2 91.2% 59.8%',
+        // Tipografia e layout
+        font_family: editingTheme.font_family || 'Inter',
+        font_size_base: editingTheme.font_size_base || 14,
+        border_radius: editingTheme.border_radius || 8,
+        shadow_intensity: editingTheme.shadow_intensity || 0.1,
+        // Metadados
+        version: editingTheme.version || '1.0'
+      });
+    }
+  }, [editingTheme]);
 
   const loadThemes = async () => {
     try {
@@ -958,38 +1063,101 @@ const GlobalRulesSection: React.FC = () => {
     try {
       setIsLoading(true);
       
+      // Validações básicas
+      if (!themeForm.name.trim()) {
+        toast.error('Nome do tema é obrigatório');
+        return;
+      }
+      
+      if (!themeForm.display_name.trim()) {
+        toast.error('Nome de exibição é obrigatório');
+        return;
+      }
+      
+      // Validar formato HSL das cores
+      const hslRegex = /^\d+\.?\d*\s+\d+\.?\d*%\s+\d+\.?\d*%$/;
+      const coreColors = [
+        { field: 'primary_color', label: 'Cor Primária' },
+        { field: 'background_color', label: 'Background' },
+        { field: 'foreground_color', label: 'Texto Principal' }
+      ];
+      
+      for (const color of coreColors) {
+        if (!hslRegex.test(themeForm[color.field] as string)) {
+          toast.error(`Formato inválido para ${color.label}. Use: H S% L% (ex: 219 78% 26%)`);
+          return;
+        }
+      }
+      
+      const themeData = {
+        name: themeForm.name.trim(),
+        display_name: themeForm.display_name.trim(),
+        description: themeForm.description.trim(),
+        is_dark_mode: themeForm.is_dark_mode,
+        // Cores principais
+        primary_color: themeForm.primary_color,
+        primary_foreground: themeForm.primary_foreground,
+        primary_hover: themeForm.primary_hover,
+        primary_glow: themeForm.primary_glow,
+        secondary_color: themeForm.secondary_color,
+        secondary_foreground: themeForm.secondary_foreground,
+        accent_color: themeForm.accent_color,
+        accent_foreground: themeForm.accent_foreground,
+        // Backgrounds e superfícies
+        background_color: themeForm.background_color,
+        foreground_color: themeForm.foreground_color,
+        card_color: themeForm.card_color,
+        card_foreground: themeForm.card_foreground,
+        border_color: themeForm.border_color,
+        border_color_dark: themeForm.border_color_dark,
+        input_color: themeForm.input_color,
+        input_color_dark: themeForm.input_color_dark,
+        ring_color: themeForm.ring_color,
+        muted_color: themeForm.muted_color,
+        muted_foreground: themeForm.muted_foreground,
+        popover_color: themeForm.popover_color,
+        popover_foreground: themeForm.popover_foreground,
+        // Cores de estado
+        success_color: themeForm.success_color,
+        success_foreground: themeForm.success_foreground,
+        success_light: themeForm.success_light,
+        warning_color: themeForm.warning_color,
+        warning_foreground: themeForm.warning_foreground,
+        warning_light: themeForm.warning_light,
+        danger_color: themeForm.danger_color,
+        danger_foreground: themeForm.danger_foreground,
+        danger_light: themeForm.danger_light,
+        destructive_color: themeForm.destructive_color,
+        destructive_foreground: themeForm.destructive_foreground,
+        // Cores de risco GRC
+        risk_critical: themeForm.risk_critical,
+        risk_high: themeForm.risk_high,
+        risk_medium: themeForm.risk_medium,
+        risk_low: themeForm.risk_low,
+        // Cores do sidebar
+        sidebar_background: themeForm.sidebar_background,
+        sidebar_foreground: themeForm.sidebar_foreground,
+        sidebar_primary: themeForm.sidebar_primary,
+        sidebar_primary_foreground: themeForm.sidebar_primary_foreground,
+        sidebar_accent: themeForm.sidebar_accent,
+        sidebar_accent_foreground: themeForm.sidebar_accent_foreground,
+        sidebar_border: themeForm.sidebar_border,
+        sidebar_ring: themeForm.sidebar_ring,
+        // Tipografia e layout
+        font_family: themeForm.font_family,
+        font_size_base: Math.max(12, Math.min(20, themeForm.font_size_base)),
+        border_radius: Math.max(0, Math.min(20, themeForm.border_radius)),
+        shadow_intensity: Math.max(0, Math.min(1, themeForm.shadow_intensity)),
+        // Metadados
+        version: themeForm.version,
+        updated_at: new Date().toISOString()
+      };
+      
       if (editingTheme) {
         // Atualizar tema existente
         const { error } = await supabase
           .from('global_ui_themes')
-          .update({
-            name: themeForm.name,
-            display_name: themeForm.display_name,
-            description: themeForm.description,
-            is_dark_mode: themeForm.is_dark_mode,
-            primary_color: themeForm.primary_color,
-            primary_foreground: themeForm.primary_foreground,
-            secondary_color: themeForm.secondary_color,
-            secondary_foreground: themeForm.secondary_foreground,
-            accent_color: themeForm.accent_color,
-            accent_foreground: themeForm.accent_foreground,
-            background_color: themeForm.background_color,
-            foreground_color: themeForm.foreground_color,
-            card_color: themeForm.card_color,
-            card_foreground: themeForm.card_foreground,
-            border_color: themeForm.border_color,
-            success_color: themeForm.success_color,
-            success_foreground: themeForm.success_foreground,
-            warning_color: themeForm.warning_color,
-            warning_foreground: themeForm.warning_foreground,
-            danger_color: themeForm.danger_color,
-            danger_foreground: themeForm.danger_foreground,
-            font_family: themeForm.font_family,
-            font_size_base: themeForm.font_size_base,
-            border_radius: themeForm.border_radius,
-            shadow_intensity: themeForm.shadow_intensity,
-            updated_at: new Date().toISOString()
-          })
+          .update(themeData)
           .eq('id', editingTheme.id);
 
         if (error) throw error;
@@ -1000,46 +1168,10 @@ const GlobalRulesSection: React.FC = () => {
         const { error } = await supabase
           .from('global_ui_themes')
           .insert({
-            name: themeForm.name,
-            display_name: themeForm.display_name,
-            description: themeForm.description,
+            ...themeData,
             is_native_theme: false,
             is_system_theme: false,
             is_active: false,
-            is_dark_mode: themeForm.is_dark_mode,
-            primary_color: themeForm.primary_color,
-            primary_foreground: themeForm.primary_foreground,
-            secondary_color: themeForm.secondary_color,
-            secondary_foreground: themeForm.secondary_foreground,
-            accent_color: themeForm.accent_color,
-            accent_foreground: themeForm.accent_foreground,
-            background_color: themeForm.background_color,
-            foreground_color: themeForm.foreground_color,
-            card_color: themeForm.card_color,
-            card_foreground: themeForm.card_foreground,
-            border_color: themeForm.border_color,
-            success_color: themeForm.success_color,
-            success_foreground: themeForm.success_foreground,
-            warning_color: themeForm.warning_color,
-            warning_foreground: themeForm.warning_foreground,
-            danger_color: themeForm.danger_color,
-            danger_foreground: themeForm.danger_foreground,
-            risk_critical: themeForm.danger_color,
-            risk_high: '24 95% 53%',
-            risk_medium: themeForm.warning_color,
-            risk_low: themeForm.success_color,
-            sidebar_background: themeForm.background_color,
-            sidebar_foreground: themeForm.foreground_color,
-            sidebar_primary: themeForm.primary_color,
-            sidebar_primary_foreground: themeForm.primary_foreground,
-            sidebar_accent: themeForm.secondary_color,
-            sidebar_accent_foreground: themeForm.secondary_foreground,
-            sidebar_border: themeForm.border_color,
-            sidebar_ring: themeForm.primary_color,
-            font_family: themeForm.font_family,
-            font_size_base: themeForm.font_size_base,
-            border_radius: themeForm.border_radius,
-            shadow_intensity: themeForm.shadow_intensity,
             created_by: user?.id
           });
 
@@ -1051,6 +1183,7 @@ const GlobalRulesSection: React.FC = () => {
       // Recarregar temas
       await loadThemes();
       setShowThemeDialog(false);
+      setEditingTheme(null);
     } catch (error) {
       console.error('Erro ao salvar tema:', error);
       toast.error('Erro ao salvar tema');
@@ -1620,66 +1753,369 @@ const GlobalRulesSection: React.FC = () => {
                   {activeTheme.description || 'Este é o tema atualmente aplicado em toda a plataforma'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Primária</Label>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: `hsl(${activeTheme.primary_color})` }}
-                      />
-                      <span className="text-xs font-mono">{activeTheme.primary_color}</span>
-                    </div>
+              <CardContent className="space-y-6">
+                {/* Seção: Cores Principais */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-primary" />
+                    <h4 className="font-semibold">Paleta de Cores Principal</h4>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Secundária</Label>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: `hsl(${activeTheme.secondary_color})` }}
-                      />
-                      <span className="text-xs font-mono">{activeTheme.secondary_color}</span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Primária</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.primary_color})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.primary_color}</span>
+                          <span className="text-[10px] text-muted-foreground">HSL</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Destaque</Label>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: `hsl(${activeTheme.accent_color})` }}
-                      />
-                      <span className="text-xs font-mono">{activeTheme.accent_color}</span>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Secundária</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.secondary_color})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.secondary_color}</span>
+                          <span className="text-[10px] text-muted-foreground">HSL</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Fundo</Label>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 rounded border"
-                        style={{ backgroundColor: `hsl(${activeTheme.background_color})` }}
-                      />
-                      <span className="text-xs font-mono">{activeTheme.background_color}</span>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Destaque</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.accent_color})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.accent_color}</span>
+                          <span className="text-[10px] text-muted-foreground">HSL</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Sucesso</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.success_color || '142 76% 36%'})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.success_color || '142 76% 36%'}</span>
+                          <span className="text-[10px] text-muted-foreground">HSL</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-4">
+
+                {/* Seção: Cores de Status */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-500" />
+                    <h4 className="font-semibold">Cores de Status & Risco</h4>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Crítico</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ backgroundColor: `hsl(${activeTheme.risk_critical || '0 84% 60%'})` }}
+                        />
+                        <span className="text-xs font-mono">{activeTheme.risk_critical || '0 84% 60%'}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Alto</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ backgroundColor: `hsl(${activeTheme.risk_high || '24 95% 53%'})` }}
+                        />
+                        <span className="text-xs font-mono">{activeTheme.risk_high || '24 95% 53%'}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Médio</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ backgroundColor: `hsl(${activeTheme.risk_medium || '38 92% 50%'})` }}
+                        />
+                        <span className="text-xs font-mono">{activeTheme.risk_medium || '38 92% 50%'}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Baixo</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ backgroundColor: `hsl(${activeTheme.risk_low || '142 76% 36%'})` }}
+                        />
+                        <span className="text-xs font-mono">{activeTheme.risk_low || '142 76% 36%'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Backgrounds e Superfícies */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-blue-500" />
+                    <h4 className="font-semibold">Backgrounds & Superfícies</h4>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Background Principal</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.background_color})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.background_color}</span>
+                          <span className="text-[10px] text-muted-foreground">Body</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Cards</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.card_color})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.card_color}</span>
+                          <span className="text-[10px] text-muted-foreground">Cards</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Sidebar</Label>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                          style={{ backgroundColor: `hsl(${activeTheme.sidebar_background || '0 0% 98%'})` }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-xs font-mono block">{activeTheme.sidebar_background || '0 0% 98%'}</span>
+                          <span className="text-[10px] text-muted-foreground">Navigation</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Bordas e Contornos */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 rounded border-current"></div>
+                    <h4 className="font-semibold">Bordas e Contornos</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Light Mode */}
+                    <div className="space-y-3">
+                      <h5 className="font-medium text-sm flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600"></div>
+                        Light Mode
+                      </h5>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Bordas Gerais</Label>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-8 h-8 rounded border-2"
+                              style={{ 
+                                backgroundColor: `hsl(${activeTheme.background_color})`,
+                                borderColor: `hsl(${activeTheme.border_color})` 
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs font-mono block">{activeTheme.border_color}</span>
+                              <span className="text-[10px] text-muted-foreground">Elements</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Inputs</Label>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-8 h-8 rounded border"
+                              style={{ 
+                                backgroundColor: `hsl(${activeTheme.background_color})`,
+                                borderColor: `hsl(${activeTheme.input_color || activeTheme.border_color})` 
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs font-mono block">{activeTheme.input_color || activeTheme.border_color}</span>
+                              <span className="text-[10px] text-muted-foreground">Forms</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dark Mode */}
+                    <div className="space-y-3">
+                      <h5 className="font-medium text-sm flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-gray-700 border border-gray-500"></div>
+                        Dark Mode
+                      </h5>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Bordas Gerais</Label>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-8 h-8 rounded border-2"
+                              style={{ 
+                                backgroundColor: 'hsl(215 8% 12%)',
+                                borderColor: `hsl(${activeTheme.border_color_dark || '215 10% 22%'})` 
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs font-mono block">{activeTheme.border_color_dark || '215 10% 22%'}</span>
+                              <span className="text-[10px] text-muted-foreground">Elements</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Inputs</Label>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-8 h-8 rounded border"
+                              style={{ 
+                                backgroundColor: 'hsl(215 12% 16%)',
+                                borderColor: `hsl(${activeTheme.input_color_dark || '215 10% 22%'})` 
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-xs font-mono block">{activeTheme.input_color_dark || '215 10% 22%'}</span>
+                              <span className="text-[10px] text-muted-foreground">Forms</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Tipografia e Layout */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Type className="h-4 w-4 text-purple-500" />
+                    <h4 className="font-semibold">Tipografia & Layout</h4>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Família da Fonte</Label>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-medium" style={{ fontFamily: activeTheme.font_family || 'Inter' }}>
+                          {activeTheme.font_family || 'Inter'}
+                        </span>
+                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: activeTheme.font_family || 'Inter' }}>
+                          Exemplo de texto da aplicação
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Border Radius</Label>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-8 h-8 bg-primary/20 border-2 border-primary/50"
+                            style={{ borderRadius: `${activeTheme.border_radius || 8}px` }}
+                          />
+                          <span className="text-sm font-mono">{activeTheme.border_radius || 8}px</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Tamanho Base</Label>
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm font-mono">{activeTheme.font_size_base || 14}px</span>
+                        <p className="text-xs text-muted-foreground mt-1">Texto padrão</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seção: Modo Dark */}
+                {activeTheme.is_native_theme && (
+                  <div className="space-y-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4 text-indigo-500" />
+                      <h4 className="font-semibold">Modo Escuro Automático</h4>
+                      <Badge variant="outline" className="text-xs">
+                        Suporte Nativo
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Background (Dark)</Label>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                            style={{ backgroundColor: 'hsl(222 14% 7%)' }}
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-mono block">222 14% 7%</span>
+                            <span className="text-[10px] text-muted-foreground">Dark Body</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Cards (Dark)</Label>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-10 h-10 rounded-lg border-2 shadow-sm"
+                            style={{ backgroundColor: 'hsl(215 8% 12%)' }}
+                          />
+                          <div className="flex-1">
+                            <span className="text-xs font-mono block">215 8% 12%</span>
+                            <span className="text-[10px] text-muted-foreground">Dark Cards</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Seção: Ações */}
+                <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => handleExportTheme(activeTheme)}
+                    className="flex items-center gap-2"
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                    <Download className="h-4 w-4" />
+                    Exportar Tema
                   </Button>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">Modo Escuro:</Label>
-                    <Switch checked={activeTheme.is_dark_mode} />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">Fonte:</Label>
-                    <span className="text-sm font-medium">{activeTheme.font_family}</span>
+                  {activeTheme.is_native_theme && (
+                    <Button 
+                      variant="secondary" 
+                      size="sm"
+                      onClick={() => setEditingTheme(activeTheme)}
+                      className="flex items-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Customizar
+                    </Button>
+                  )}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <Label className="text-sm">Versão:</Label>
+                    <Badge variant="secondary" className="text-xs">
+                      v{activeTheme.version || '1.0'}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>
@@ -2350,12 +2786,105 @@ const GlobalRulesSection: React.FC = () => {
                   onChange={(value) => setThemeForm(prev => ({ ...prev, card_foreground: value }))}
                   placeholder="225 71% 12%"
                 />
-                <ColorPicker
-                  label="Bordas"
-                  value={themeForm.border_color}
-                  onChange={(value) => setThemeForm(prev => ({ ...prev, border_color: value }))}
-                  placeholder="214 32% 91%"
-                />
+              </div>
+            </div>
+
+            {/* Bordas e Contornos */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 rounded border-current"></div>
+                <Label className="text-base font-semibold">Bordas e Contornos</Label>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Light Mode */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-600"></div>
+                    Light Mode
+                  </h4>
+                  <div className="space-y-4">
+                    <ColorPicker
+                      label="Bordas Gerais"
+                      value={themeForm.border_color}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, border_color: value }))}
+                      placeholder="214 32% 91%"
+                    />
+                    <ColorPicker
+                      label="Inputs e Formulários"
+                      value={themeForm.input_color}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, input_color: value }))}
+                      placeholder="214 32% 91%"
+                    />
+                    <div className="p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ 
+                            backgroundColor: 'white',
+                            borderColor: `hsl(${themeForm.border_color})` 
+                          }}
+                        ></div>
+                        <span className="text-sm">Preview</span>
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="Exemplo de input" 
+                        className="w-full p-2 rounded text-sm"
+                        style={{ 
+                          borderColor: `hsl(${themeForm.input_color})`,
+                          borderWidth: '1px',
+                          borderStyle: 'solid'
+                        }}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dark Mode */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-600"></div>
+                    Dark Mode
+                  </h4>
+                  <div className="space-y-4">
+                    <ColorPicker
+                      label="Bordas Gerais (Dark)"
+                      value={themeForm.border_color_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, border_color_dark: value }))}
+                      placeholder="215 10% 22%"
+                    />
+                    <ColorPicker
+                      label="Inputs e Formulários (Dark)"
+                      value={themeForm.input_color_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, input_color_dark: value }))}
+                      placeholder="215 10% 22%"
+                    />
+                    <div className="p-3 bg-gray-900 rounded-lg border border-gray-700">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2"
+                          style={{ 
+                            backgroundColor: 'hsl(215 8% 12%)',
+                            borderColor: `hsl(${themeForm.border_color_dark})` 
+                          }}
+                        ></div>
+                        <span className="text-sm text-white">Preview</span>
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="Exemplo de input" 
+                        className="w-full p-2 rounded text-sm bg-gray-800 text-white"
+                        style={{ 
+                          borderColor: `hsl(${themeForm.input_color_dark})`,
+                          borderWidth: '1px',
+                          borderStyle: 'solid'
+                        }}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -2402,9 +2931,165 @@ const GlobalRulesSection: React.FC = () => {
               </div>
             </div>
 
+            {/* Cores de Risco - GRC Específico */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                <Label className="text-base font-semibold">Cores de Risco GRC</Label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <ColorPicker
+                  label="Risco Crítico"
+                  value={themeForm.risk_critical || '0 84% 60%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, risk_critical: value }))}
+                  placeholder="0 84% 60%"
+                />
+                <ColorPicker
+                  label="Risco Alto"
+                  value={themeForm.risk_high || '24 95% 53%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, risk_high: value }))}
+                  placeholder="24 95% 53%"
+                />
+                <ColorPicker
+                  label="Risco Médio"
+                  value={themeForm.risk_medium || '38 92% 50%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, risk_medium: value }))}
+                  placeholder="38 92% 50%"
+                />
+                <ColorPicker
+                  label="Risco Baixo"
+                  value={themeForm.risk_low || '142 76% 36%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, risk_low: value }))}
+                  placeholder="142 76% 36%"
+                />
+              </div>
+            </div>
+
+            {/* Cores do Sidebar */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-blue-500" />
+                <Label className="text-base font-semibold">Cores do Sidebar</Label>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ColorPicker
+                  label="Fundo do Sidebar"
+                  value={themeForm.sidebar_background || '0 0% 98%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, sidebar_background: value }))}
+                  placeholder="0 0% 98%"
+                />
+                <ColorPicker
+                  label="Texto do Sidebar"
+                  value={themeForm.sidebar_foreground || '240 5.3% 26.1%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, sidebar_foreground: value }))}
+                  placeholder="240 5.3% 26.1%"
+                />
+                <ColorPicker
+                  label="Item Ativo Sidebar"
+                  value={themeForm.sidebar_primary || '240 5.9% 10%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, sidebar_primary: value }))}
+                  placeholder="240 5.9% 10%"
+                />
+                <ColorPicker
+                  label="Bordas do Sidebar"
+                  value={themeForm.sidebar_border || '220 13% 91%'}
+                  onChange={(value) => setThemeForm(prev => ({ ...prev, sidebar_border: value }))}
+                  placeholder="220 13% 91%"
+                />
+              </div>
+            </div>
+
+            {/* Preview e Comparação Dark/Light Mode */}
+            {editingTheme?.is_native_theme && (
+              <div className="space-y-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-lg border">
+                <div className="flex items-center gap-2">
+                  <Monitor className="h-4 w-4 text-indigo-500" />
+                  <Label className="text-base font-semibold">Preview Dark/Light Mode</Label>
+                  <Badge variant="outline" className="text-xs">
+                    UI Nativa
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Light Mode Preview */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-sm flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-600"></div>
+                      Light Mode
+                    </h5>
+                    <div className="p-4 rounded-lg border-2" style={{ backgroundColor: `hsl(${themeForm.background_color || '0 0% 100%'})` }}>
+                      <div className="space-y-2">
+                        <div 
+                          className="p-3 rounded-md border shadow-sm"
+                          style={{ 
+                            backgroundColor: `hsl(${themeForm.card_color || '0 0% 100%'})`,
+                            borderColor: `hsl(${themeForm.border_color || '214 32% 91%'})`
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-3 h-3 rounded"
+                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '173 88% 58%'})` }}
+                            ></div>
+                            <span 
+                              className="text-sm font-medium"
+                              style={{ color: `hsl(${themeForm.foreground_color || '225 71% 12%'})` }}
+                            >
+                              Exemplo de Card
+                            </span>
+                          </div>
+                          <p 
+                            className="text-xs"
+                            style={{ color: `hsl(${themeForm.foreground_color || '225 71% 12%'})` }}
+                          >
+                            Este é um preview do tema light mode.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dark Mode Preview */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-sm flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-600"></div>
+                      Dark Mode
+                    </h5>
+                    <div className="p-4 rounded-lg border-2" style={{ backgroundColor: 'hsl(222 14% 7%)' }}>
+                      <div className="space-y-2">
+                        <div 
+                          className="p-3 rounded-md border shadow-sm"
+                          style={{ 
+                            backgroundColor: 'hsl(215 8% 12%)',
+                            borderColor: 'hsl(215 10% 22%)'
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-3 h-3 rounded"
+                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '173 88% 58%'})` }}
+                            ></div>
+                            <span className="text-sm font-medium text-white">
+                              Exemplo de Card
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-300">
+                            Este é um preview do tema dark mode.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Configurações de Tipografia e Layout */}
             <div className="space-y-4">
-              <Label className="text-base font-semibold">Tipografia e Layout</Label>
+              <div className="flex items-center gap-2">
+                <Type className="h-4 w-4 text-purple-500" />
+                <Label className="text-base font-semibold">Tipografia e Layout</Label>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Família da Fonte</Label>

@@ -180,7 +180,7 @@ export function AppSidebar() {
     // Para outras rotas, mantém a lógica original
     return currentPath === path || currentPath.startsWith(path + '/');
   };
-  const getNavCls = (isActiveItem: boolean) => isActiveItem ? "bg-primary/10 text-primary font-medium border border-primary/20" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+  const getNavCls = (isActiveItem: boolean) => isActiveItem ? "text-primary font-medium" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
   const handleProfileClick = () => {
     navigate('/profile');
@@ -218,7 +218,7 @@ export function AppSidebar() {
           
           return (
             <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
-              {!collapsed && (
+              {!collapsed && group.label !== 'Módulos' && (
                 <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${
                   group.label === 'Administração da Plataforma' 
                     ? 'text-orange-600 dark:text-orange-400 border-b border-orange-200 dark:border-orange-800 pb-1 sm:pb-2' 
