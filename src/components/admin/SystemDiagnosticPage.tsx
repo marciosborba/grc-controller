@@ -33,10 +33,10 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import UserDebugInfo from '@/components/admin/UserDebugInfo';
 import { SystemUsersSection } from './SystemUsersSection';
-import { SystemLogsSection } from './SystemLogsSection';
+import SystemLogsSection from './SystemLogsSection';
 import { SystemSecuritySection } from './SystemSecuritySection';
 import { SystemStorageSection } from './SystemStorageSection';
-import { SystemDiagnosticSection } from './SystemDiagnosticSection';
+import SystemDiagnosticSection from './SystemDiagnosticSection';
 
 interface SystemHealth {
   overall: 'healthy' | 'warning' | 'critical';
@@ -265,7 +265,7 @@ const SystemDiagnosticPage = () => {
         .select('id')
         .in('risk_level', ['high', 'critical'])
         .eq('status', 'open')
-        .then(r => r).catch(() => ({ data: [] }));
+        .then(r => r.data ? r : { data: [] });
         
       // 2. Assessments pendentes (não concluídos)
       const { data: pendingAssessmentsData } = await supabase
@@ -302,7 +302,7 @@ const SystemDiagnosticPage = () => {
         .select('id, next_review_date')
         .lt('next_review_date', now.toISOString())
         .eq('status', 'active')
-        .then(r => r).catch(() => ({ data: [] }));
+        .then(r => r.data ? r : { data: [] });
         
       // 7. Tentativas de violação de dados (logs de erro críticos)
       const { data: dataBreachAttemptsData } = await supabase
