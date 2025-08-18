@@ -728,10 +728,10 @@ export const RiskProcessGuide: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-primary/10 text-primary border-primary/20';
+      case 'in_progress': return 'bg-primary/10 text-primary border-primary/20';
+      case 'blocked': return 'bg-destructive/10 text-destructive border-destructive/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -892,13 +892,13 @@ export const RiskProcessGuide: React.FC = () => {
                       
                       <div className={`p-4 border rounded-lg ${
                         status === 'in_progress' ? 'border-primary bg-primary/5' :
-                        status === 'completed' ? 'border-green-500 bg-green-50' :
+                        status === 'completed' ? 'border-primary bg-primary/5' :
                         'border-border'
                       }`}>
                         <div className="flex items-start space-x-4">
                           {/* Step Icon */}
                           <div className={`p-2 rounded-lg ${
-                            status === 'completed' ? 'bg-green-100 text-green-600' :
+                            status === 'completed' ? 'bg-primary/10 text-primary' :
                             status === 'in_progress' ? 'bg-primary/10 text-primary' :
                             'bg-muted text-muted-foreground'
                           }`}>

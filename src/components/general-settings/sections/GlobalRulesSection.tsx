@@ -85,6 +85,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { manualFixApplyTheme } from '@/utils/fixApplyTheme';
+import PDFColorSettings from '../PDFColorSettings';
 
 // Utilitários para conversão de cores
 const hslToHex = (hsl: string): string => {
@@ -1062,19 +1063,27 @@ const GlobalRulesSection: React.FC = () => {
   const handleSaveTheme = async () => {
     try {
       setIsLoading(true);
+      console.log('🎨 Iniciando salvamento de tema...');
+      console.log('📋 Dados do formulário:', {
+        name: themeForm.name,
+        display_name: themeForm.display_name,
+        editingTheme: editingTheme?.id
+      });
       
       // Validações básicas
       if (!themeForm.name.trim()) {
+        console.error('❌ Validação falhou: Nome do tema é obrigatório');
         toast.error('Nome do tema é obrigatório');
         return;
       }
       
       if (!themeForm.display_name.trim()) {
+        console.error('❌ Validação falhou: Nome de exibição é obrigatório');
         toast.error('Nome de exibição é obrigatório');
         return;
       }
       
-      // Validar formato HSL das cores
+      // Validar formato HSL das cores principais
       const hslRegex = /^\d+\.?\d*\s+\d+\.?\d*%\s+\d+\.?\d*%$/;
       const coreColors = [
         { field: 'primary_color', label: 'Cor Primária' },
@@ -1083,17 +1092,23 @@ const GlobalRulesSection: React.FC = () => {
       ];
       
       for (const color of coreColors) {
-        if (!hslRegex.test(themeForm[color.field] as string)) {
+        const colorValue = themeForm[color.field] as string;
+        if (!colorValue || !hslRegex.test(colorValue)) {
+          console.error(`❌ Validação falhou: Formato inválido para ${color.label}:`, colorValue);
           toast.error(`Formato inválido para ${color.label}. Use: H S% L% (ex: 219 78% 26%)`);
           return;
         }
       }
       
+      console.log('✅ Validações passaram');
+      
+      // Preparar dados para salvamento (sem campos inexistentes)
       const themeData = {
         name: themeForm.name.trim(),
         display_name: themeForm.display_name.trim(),
         description: themeForm.description.trim(),
         is_dark_mode: themeForm.is_dark_mode,
+        
         // Cores principais
         primary_color: themeForm.primary_color,
         primary_foreground: themeForm.primary_foreground,
@@ -1103,20 +1118,20 @@ const GlobalRulesSection: React.FC = () => {
         secondary_foreground: themeForm.secondary_foreground,
         accent_color: themeForm.accent_color,
         accent_foreground: themeForm.accent_foreground,
+        
         // Backgrounds e superfícies
         background_color: themeForm.background_color,
         foreground_color: themeForm.foreground_color,
         card_color: themeForm.card_color,
         card_foreground: themeForm.card_foreground,
         border_color: themeForm.border_color,
-        border_color_dark: themeForm.border_color_dark,
         input_color: themeForm.input_color,
-        input_color_dark: themeForm.input_color_dark,
         ring_color: themeForm.ring_color,
         muted_color: themeForm.muted_color,
         muted_foreground: themeForm.muted_foreground,
         popover_color: themeForm.popover_color,
         popover_foreground: themeForm.popover_foreground,
+        
         // Cores de estado
         success_color: themeForm.success_color,
         success_foreground: themeForm.success_foreground,
@@ -1129,11 +1144,13 @@ const GlobalRulesSection: React.FC = () => {
         danger_light: themeForm.danger_light,
         destructive_color: themeForm.destructive_color,
         destructive_foreground: themeForm.destructive_foreground,
+        
         // Cores de risco GRC
         risk_critical: themeForm.risk_critical,
         risk_high: themeForm.risk_high,
         risk_medium: themeForm.risk_medium,
         risk_low: themeForm.risk_low,
+        
         // Cores do sidebar
         sidebar_background: themeForm.sidebar_background,
         sidebar_foreground: themeForm.sidebar_foreground,
@@ -1143,52 +1160,123 @@ const GlobalRulesSection: React.FC = () => {
         sidebar_accent_foreground: themeForm.sidebar_accent_foreground,
         sidebar_border: themeForm.sidebar_border,
         sidebar_ring: themeForm.sidebar_ring,
+        
         // Tipografia e layout
         font_family: themeForm.font_family,
         font_size_base: Math.max(12, Math.min(20, themeForm.font_size_base)),
         border_radius: Math.max(0, Math.min(20, themeForm.border_radius)),
         shadow_intensity: Math.max(0, Math.min(1, themeForm.shadow_intensity)),
+        
         // Metadados
-        version: themeForm.version,
+        version: themeForm.version || '1.0',
         updated_at: new Date().toISOString()
       };
       
+      console.log('📝 Dados preparados para salvamento');
+      console.log('🔍 Verificando autenticação...');
+      
+      // Verificar se o usuário está autenticado
+      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('❌ Erro de autenticação:', authError);
+        toast.error('Erro de autenticação. Faça login novamente.');
+        return;
+      }
+      
+      if (!currentUser) {
+        console.error('❌ Usuário não autenticado');
+        toast.error('Você precisa estar logado para salvar temas.');
+        return;
+      }
+      
+      console.log('✅ Usuário autenticado:', currentUser.email);
+      
       if (editingTheme) {
+        console.log('🔄 Atualizando tema existente:', editingTheme.id);
+        
         // Atualizar tema existente
-        const { error } = await supabase
+        const { data: updateResult, error: updateError } = await supabase
           .from('global_ui_themes')
           .update(themeData)
-          .eq('id', editingTheme.id);
+          .eq('id', editingTheme.id)
+          .select();
 
-        if (error) throw error;
+        if (updateError) {
+          console.error('❌ Erro na atualização:', updateError);
+          console.error('📋 Detalhes do erro:', JSON.stringify(updateError, null, 2));
+          
+          // Tratamento específico de erros
+          if (updateError.code === 'PGRST301') {
+            toast.error('Você não tem permissão para editar este tema.');
+          } else if (updateError.code === '23505') {
+            toast.error('Já existe um tema com este nome.');
+          } else {
+            toast.error(`Erro ao atualizar tema: ${updateError.message}`);
+          }
+          return;
+        }
         
+        console.log('✅ Tema atualizado com sucesso:', updateResult);
         toast.success(`Tema "${themeForm.display_name}" atualizado com sucesso!`);
       } else {
+        console.log('➕ Criando novo tema');
+        
         // Criar novo tema
-        const { error } = await supabase
+        const { data: createResult, error: createError } = await supabase
           .from('global_ui_themes')
           .insert({
             ...themeData,
             is_native_theme: false,
             is_system_theme: false,
             is_active: false,
-            created_by: user?.id
-          });
+            created_by: currentUser.id
+          })
+          .select();
 
-        if (error) throw error;
+        if (createError) {
+          console.error('❌ Erro na criação:', createError);
+          console.error('📋 Detalhes do erro:', JSON.stringify(createError, null, 2));
+          
+          // Tratamento específico de erros
+          if (createError.code === 'PGRST301') {
+            toast.error('Você não tem permissão para criar temas.');
+          } else if (createError.code === '23505') {
+            toast.error('Já existe um tema com este nome.');
+          } else {
+            toast.error(`Erro ao criar tema: ${createError.message}`);
+          }
+          return;
+        }
         
+        console.log('✅ Tema criado com sucesso:', createResult);
         toast.success(`Tema "${themeForm.display_name}" criado com sucesso!`);
       }
       
       // Recarregar temas
+      console.log('🔄 Recarregando lista de temas...');
       await loadThemes();
+      
+      // Fechar dialog
       setShowThemeDialog(false);
       setEditingTheme(null);
+      
+      console.log('🎉 Processo de salvamento concluído com sucesso!');
+      
     } catch (error) {
-      console.error('Erro ao salvar tema:', error);
-      toast.error('Erro ao salvar tema');
+      console.error('❌ Erro geral no salvamento:', error);
+      console.error('📋 Stack trace:', error.stack);
+      
+      // Tratamento de erros gerais
+      if (error.message.includes('network')) {
+        toast.error('Erro de conexão. Verifique sua internet.');
+      } else if (error.message.includes('permission')) {
+        toast.error('Você não tem permissão para esta operação.');
+      } else {
+        toast.error('Erro inesperado ao salvar tema. Tente novamente.');
+      }
     } finally {
       setIsLoading(false);
+      console.log('🏁 Finalizando processo de salvamento');
     }
   };
 
@@ -2120,6 +2208,11 @@ const GlobalRulesSection: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Configuração de PDF para Tema UI Nativa */}
+          {activeTheme?.is_native_theme && (
+            <PDFColorSettings isNativeTheme={true} />
           )}
 
           {loadingThemes && (

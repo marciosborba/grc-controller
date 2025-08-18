@@ -25,6 +25,7 @@ interface NotificationsRealtimeContextType {
   connect: () => void;
   disconnect: () => void;
   reconnect: () => void;
+  enableRealtimeNotifications: (enabled: boolean) => void;
   
   // Estatísticas
   messagesReceived: number;
@@ -216,6 +217,14 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
       return;
     }
 
+    // Verificar se o sistema de notificações em tempo real está habilitado
+    const realtimeEnabled = localStorage.getItem('notifications-realtime-enabled') === 'true';
+    if (!realtimeEnabled) {
+      console.log('🔌 Sistema de notificações em tempo real desabilitado');
+      setConnectionStatus('disconnected');
+      return;
+    }
+
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
@@ -268,19 +277,21 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
         setConnectionStatus('error');
         setLastError('Erro na conexão com o servidor');
         
-        // Tentar reconectar automaticamente
-        if (autoReconnect && reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-          reconnectAttemptsRef.current += 1;
-          
-          console.log(`🔄 Tentativa de reconexão ${reconnectAttemptsRef.current}/${maxReconnectAttempts} em ${delay}ms`);
-          
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, delay);
-        } else {
-          toast.error('Conexão de notificações perdida', {
-            description: 'Clique para tentar reconectar'
+        // Desabilitar automaticamente o sistema de notificações se houver erro
+        localStorage.setItem('notifications-realtime-enabled', 'false');
+        
+        // Não tentar reconectar automaticamente para evitar spam de mensagens
+        console.log('🚫 Sistema de notificações em tempo real desabilitado devido a erro de conexão');
+        
+        // Mostrar toast apenas uma vez
+        const lastErrorToast = localStorage.getItem('last-notification-error-toast');
+        const now = Date.now();
+        const oneHour = 60 * 60 * 1000; // 1 hora em ms
+        
+        if (!lastErrorToast || (now - parseInt(lastErrorToast)) > oneHour) {
+          localStorage.setItem('last-notification-error-toast', now.toString());
+          toast.info('Sistema de notificações desabilitado', {
+            description: 'As notificações em tempo real foram desabilitadas. Você ainda receberá notificações ao recarregar a página.'
           });
         }
       };
@@ -347,14 +358,39 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
     }
   }, []);
 
-  // Conectar automaticamente quando o usuário estiver logado
+  // Função para habilitar/desabilitar sistema de notificações em tempo real
+  const enableRealtimeNotifications = useCallback((enabled: boolean) => {
+    localStorage.setItem('notifications-realtime-enabled', enabled.toString());
+    
+    if (enabled && user?.id) {
+      console.log('✅ Habilitando sistema de notificações em tempo real');
+      connect();
+    } else {
+      console.log('🚫 Desabilitando sistema de notificações em tempo real');
+      disconnect();
+    }
+  }, [user?.id, connect, disconnect]);
+
+  // Conectar automaticamente quando o usuário estiver logado (apenas se habilitado)
   useEffect(() => {
     if (user?.id) {
-      const timer = setTimeout(() => {
-        connect();
-      }, 1000); // Delay para evitar corrida de condições
+      // Verificar se o sistema de notificações está habilitado
+      const realtimeEnabled = localStorage.getItem('notifications-realtime-enabled');
+      
+      // Se nunca foi configurado, manter desabilitado por padrão
+      if (realtimeEnabled === null) {
+        localStorage.setItem('notifications-realtime-enabled', 'false');
+        console.log('🔌 Sistema de notificações em tempo real desabilitado por padrão');
+        return;
+      }
+      
+      if (realtimeEnabled === 'true') {
+        const timer = setTimeout(() => {
+          connect();
+        }, 1000); // Delay para evitar corrida de condições
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     } else {
       disconnect();
     }
@@ -390,6 +426,7 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
     connect,
     disconnect,
     reconnect,
+    enableRealtimeNotifications,
     messagesReceived,
     connectionTime,
     enableDesktopNotifications,

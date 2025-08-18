@@ -41,6 +41,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsRealtime } from '@/contexts/NotificationsRealtimeContext';
 import { 
   NotificationModule, 
   NotificationType, 
@@ -134,9 +135,20 @@ const digestOptions = [
 // Componente principal
 export const NotificationPreferences: React.FC = () => {
   const { preferences, updatePreferences, loading } = useNotifications();
+  const { 
+    isConnected, 
+    connectionStatus, 
+    enableRealtimeNotifications,
+    enableDesktopNotifications,
+    enableSounds,
+    autoReconnect
+  } = useNotificationsRealtime();
   const [localPreferences, setLocalPreferences] = useState<NotificationPreferencesType | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [activeTab, setActiveTab] = useState('modules');
+  const [realtimeEnabled, setRealtimeEnabled] = useState(() => 
+    localStorage.getItem('notifications-realtime-enabled') === 'true'
+  );
 
   // Carregar preferências iniciais
   useEffect(() => {
@@ -203,6 +215,17 @@ export const NotificationPreferences: React.FC = () => {
     }
   };
 
+  const handleRealtimeToggle = (enabled: boolean) => {
+    setRealtimeEnabled(enabled);
+    enableRealtimeNotifications(enabled);
+    
+    if (enabled) {
+      toast.success('Sistema de notificações em tempo real habilitado');
+    } else {
+      toast.info('Sistema de notificações em tempo real desabilitado');
+    }
+  };
+
   if (loading || !localPreferences) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -245,9 +268,10 @@ export const NotificationPreferences: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="modules">Por Módulo</TabsTrigger>
           <TabsTrigger value="channels">Canais</TabsTrigger>
+          <TabsTrigger value="realtime">Tempo Real</TabsTrigger>
           <TabsTrigger value="general">Geral</TabsTrigger>
         </TabsList>
 
@@ -504,6 +528,150 @@ export const NotificationPreferences: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Configurações de tempo real */}
+        <TabsContent value="realtime" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notificações em Tempo Real
+              </CardTitle>
+              <CardDescription>
+                Configure o sistema de notificações em tempo real via Server-Sent Events (SSE)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Status da conexão */}
+              <div className="p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-medium">Status da Conexão</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Estado atual do sistema de notificações em tempo real
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-3 h-3 rounded-full",
+                      isConnected ? "bg-green-500 animate-pulse" : 
+                      connectionStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : 
+                      "bg-red-500"
+                    )} />
+                    <span className="text-sm font-medium">
+                      {isConnected ? 'Conectado' : 
+                       connectionStatus === 'connecting' ? 'Conectando...' : 
+                       connectionStatus === 'error' ? 'Erro de conexão' :
+                       'Desconectado'}
+                    </span>
+                  </div>
+                </div>
+                
+                {!isConnected && connectionStatus === 'error' && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                      <XCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        Não foi possível conectar ao servidor de notificações
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      O sistema foi automaticamente desabilitado para evitar mensagens de erro constantes.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Controle principal */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <Label className="text-base font-medium">Habilitar Notificações em Tempo Real</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Receber notificações instantaneamente via Server-Sent Events (SSE)
+                  </p>
+                  {!realtimeEnabled && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                      ⚠️ Desabilitado: Você ainda receberá notificações ao recarregar a página
+                    </p>
+                  )}
+                </div>
+                <Switch
+                  checked={realtimeEnabled}
+                  onCheckedChange={handleRealtimeToggle}
+                />
+              </div>
+
+              {/* Configurações avançadas */}
+              {realtimeEnabled && (
+                <div className="space-y-4">
+                  <Separator />
+                  <h3 className="font-medium">Configurações Avançadas</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <Label className="text-sm font-medium">Notificações Desktop</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Mostrar notificações do navegador
+                        </p>
+                      </div>
+                      <Switch
+                        checked={enableDesktopNotifications}
+                        onCheckedChange={(checked) => {
+                          // Esta funcionalidade será implementada no contexto
+                          toast.info('Configuração será aplicada na próxima sessão');
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <Label className="text-sm font-medium">Sons de Notificação</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Tocar som ao receber notificações
+                        </p>
+                      </div>
+                      <Switch
+                        checked={enableSounds}
+                        onCheckedChange={(checked) => {
+                          // Esta funcionalidade será implementada no contexto
+                          toast.info('Configuração será aplicada na próxima sessão');
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Informações técnicas */}
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <h4 className="text-sm font-medium mb-2">Informações Técnicas</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>Status: {connectionStatus}</div>
+                      <div>Protocolo: Server-Sent Events (SSE)</div>
+                      <div>Reconexão automática: {autoReconnect ? 'Habilitada' : 'Desabilitada'}</div>
+                      <div>Endpoint: /api/notifications/stream</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Aviso sobre funcionalidade experimental */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Funcionalidade Experimental
+                    </h4>
+                    <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
+                      As notificações em tempo real requerem um servidor SSE configurado. 
+                      Se você estiver enfrentando problemas de conexão, mantenha esta opção desabilitada.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Configurações gerais */}

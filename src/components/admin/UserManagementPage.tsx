@@ -235,18 +235,15 @@ export const UserManagementPage: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
               >
-                <Filter className="w-4 h-4 mr-2" />
+                <Filter className="w-4 h-4" />
                 Filtros
               </Button>
-              {selectedUsers.length > 0 && hasPermission('users.update') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowBulkDialog(true)}
-                >
-                  Ações em Lote ({selectedUsers.length})
-                </Button>
+              {selectedUsers.length > 0 && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary px-3 py-1">
+                  {selectedUsers.length} selecionados
+                </Badge>
               )}
             </div>
           </div>
@@ -294,18 +291,54 @@ export const UserManagementPage: React.FC = () => {
           ) : (
             <>
               {/* Seleção em massa */}
-              <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-                <Checkbox
-                  checked={selectedUsers.length === orderedUsers.length && orderedUsers.length > 0}
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm text-gray-600">
-                  {selectedUsers.length > 0 
-                    ? `${selectedUsers.length} usuário(s) selecionado(s)`
-                    : `Selecionar todos os ${orderedUsers.length} usuários`
-                  }
-                </span>
-              </div>
+              <Card className="mb-6 border-2 border-dashed border-border">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedUsers.length === orderedUsers.length && orderedUsers.length > 0}
+                        onCheckedChange={handleSelectAll}
+                        className="h-5 w-5"
+                      />
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">
+                            {selectedUsers.length > 0 
+                              ? `${selectedUsers.length} usuário(s) selecionado(s)`
+                              : `Selecionar todos os ${orderedUsers.length} usuários`
+                            }
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedUsers.length > 0
+                            ? 'Use as ações em lote para gerenciar múltiplos usuários'
+                            : 'Marque para selecionar todos os usuários visíveis'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    {selectedUsers.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-primary/10 text-primary">
+                          {selectedUsers.length} selecionados
+                        </Badge>
+                        {hasPermission('users.update') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowBulkDialog(true)}
+                            className="flex items-center gap-2"
+                          >
+                            <Users className="h-4 w-4" />
+                            Ações em Lote
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Grid de Cards with Drag & Drop */}
               <DndContext

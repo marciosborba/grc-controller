@@ -41,6 +41,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useRiskLetterPrint } from '@/hooks/useRiskLetterPrint';
 
 interface RiskAcceptanceLetter {
   id?: string;
@@ -141,6 +142,7 @@ export const RiskAcceptanceLetter: React.FC = () => {
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { printRiskLetter, isGenerating } = useRiskLetterPrint();
 
   useEffect(() => {
     fetchRisks();
@@ -461,9 +463,63 @@ export const RiskAcceptanceLetter: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar Carta
+          <Button 
+            variant="outline"
+            onClick={() => {
+              if (currentLetter) {
+                console.log('Tentando imprimir carta:', currentLetter);
+                printRiskLetter(currentLetter);
+              } else {
+                // Criar carta de teste se não houver nenhuma selecionada
+                const testLetter = {
+                  id: 'test-001',
+                  risk_id: 'risk-test-001',
+                  letter_number: 'RA-2025-001',
+                  title: 'Carta de Teste - Risco de Demonstração',
+                  risk_description: 'Este é um risco de demonstração para testar a funcionalidade de impressão de cartas de aceitação de risco.',
+                  business_justification: 'A justificativa de negócio para aceitar este risco é demonstrar a funcionalidade completa do sistema de geração de PDFs profissionais.',
+                  acceptance_rationale: 'O racional técnico para aceitação inclui a validação de todas as funcionalidades implementadas no gerador de PDF.',
+                  residual_risk_level: 'Médio',
+                  residual_risk_score: 5,
+                  financial_exposure: 50000,
+                  acceptance_period_start: new Date(),
+                  acceptance_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                  monitoring_requirements: ['Monitoramento mensal', 'Relatórios trimestrais', 'Revisão anual'],
+                  escalation_triggers: ['Aumento de 20% no score', 'Incidentes críticos', 'Mudanças regulatórias'],
+                  review_frequency: 'quarterly',
+                  next_review_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+                  conditions_and_limitations: ['Limitado ao escopo atual', 'Sujeito a revisões'],
+                  compensating_controls: ['Controle de acesso', 'Monitoramento contínuo', 'Backup diário'],
+                  stakeholder_notifications: ['Gerência', 'Auditoria', 'Compliance'],
+                  status: 'approved',
+                  manager_approval_status: 'approved',
+                  manager_approved_by: 'João Silva',
+                  manager_approved_at: new Date().toISOString(),
+                  manager_comments: 'Aprovado conforme análise técnica',
+                  director_approval_status: 'approved',
+                  director_approved_by: 'Maria Santos',
+                  director_approved_at: new Date().toISOString(),
+                  director_comments: 'Aprovado pela diretoria',
+                  created_at: new Date().toISOString(),
+                  created_by: user?.id || 'test-user'
+                };
+                console.log('Usando carta de teste:', testLetter);
+                printRiskLetter(testLetter);
+              }
+            }}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Gerando PDF...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Imprimir Carta
+              </>
+            )}
           </Button>
           
           <Button variant="outline">
@@ -825,6 +881,19 @@ export const RiskAcceptanceLetter: React.FC = () => {
                         </Badge>
                         <Button size="sm" variant="outline" onClick={() => setCurrentLetter(letter)}>
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => printRiskLetter(letter)}
+                          disabled={isGenerating}
+                          title="Imprimir Carta"
+                        >
+                          {isGenerating ? (
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
                         </Button>
                         {letter.status === 'draft' && (
                           <Button size="sm" onClick={() => submitForApproval(letter.id!)}>
