@@ -15,10 +15,19 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy imports for feature modules
-const NewRiskManagementPage = lazy(() => import("@/components/risks/NewRiskManagementPage"));
+const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
+const RiskManagementPageLegacy = lazy(() => import("@/components/risks/NewRiskManagementPage"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 const CompliancePage = lazy(() => import("@/components/compliance/CompliancePage"));
-const AuditReportsPage = lazy(() => import("@/components/audit/AuditReportsPage"));
+// Audit IA Module - Comprehensive audit management with AI
+const AuditIADashboard = lazy(() => import("@/components/audit/AuditIADashboard"));
+const AuditPlanningWizard = lazy(() => import("@/components/audit/AuditPlanningWizard"));
+const AuditScopingMatrix = lazy(() => import("@/components/audit/AuditScopingMatrix"));
+const AuditExecutionWorkspace = lazy(() => import("@/components/audit/AuditExecutionWorkspace"));
+const AIWorkingPapers = lazy(() => import("@/components/audit/AIWorkingPapers"));
+const AuditReportGenerator = lazy(() => import("@/components/audit/AuditReportGenerator"));
+const AuditEvidenceManager = lazy(() => import("@/components/audit/AuditEvidenceManager"));
+const AlexAuditAI = lazy(() => import("@/components/audit/AlexAuditAI"));
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
@@ -170,7 +179,12 @@ const App = () => (
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="risks" element={
                     <Suspense fallback={<PageLoader />}>
-                      <NewRiskManagementPage />
+                      <RiskManagementHub />
+                    </Suspense>
+                  } />
+                  <Route path="risks-legacy" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskManagementPageLegacy />
                     </Suspense>
                   } />
                   <Route path="compliance" element={
@@ -183,9 +197,45 @@ const App = () => (
                       <IncidentManagementPage />
                     </Suspense>
                   } />
+                  {/* Audit IA Module - Comprehensive audit management */}
                   <Route path="audit" element={
                     <Suspense fallback={<PageLoader />}>
-                      <AuditReportsPage />
+                      <AuditIADashboard />
+                    </Suspense>
+                  } />
+                  <Route path="audit/planning" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditPlanningWizard />
+                    </Suspense>
+                  } />
+                  <Route path="audit/scoping" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditScopingMatrix />
+                    </Suspense>
+                  } />
+                  <Route path="audit/execution" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditExecutionWorkspace />
+                    </Suspense>
+                  } />
+                  <Route path="audit/working-papers" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AIWorkingPapers />
+                    </Suspense>
+                  } />
+                  <Route path="audit/reports" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditReportGenerator />
+                    </Suspense>
+                  } />
+                  <Route path="audit/evidence" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditEvidenceManager />
+                    </Suspense>
+                  } />
+                  <Route path="audit/alex-ai" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AlexAuditAI />
                     </Suspense>
                   } />
                   <Route path="assessments" element={

@@ -238,20 +238,7 @@ const NewRiskManagementPage: React.FC = () => {
     }
   };
   
-  const handleRefreshMetrics = async () => {
-    console.log('🔄 Forçando atualização das métricas...');
-    
-    // Recarregar métricas simples
-    await loadSimpleMetrics();
-    
-    // Recarregar hook também
-    await queryClient.invalidateQueries({ queryKey: ['risks'] });
-    await queryClient.invalidateQueries({ queryKey: ['risk-metrics'] });
-    await queryClient.refetchQueries({ queryKey: ['risks'] });
-    await queryClient.refetchQueries({ queryKey: ['risk-metrics'] });
-    
-    toast.success('Métricas atualizadas!');
-  };
+
   
   const loadSimpleMetrics = async () => {
     console.log('🔢 Carregando métricas simples...');
@@ -390,76 +377,9 @@ const NewRiskManagementPage: React.FC = () => {
     console.error('❌ Nenhuma tabela de riscos encontrada!');
   };
   
-  const handleTestDirectQuery = async () => {
-    console.log('🧪 Teste: Query direta ao banco...');
-    
-    try {
-      const { data, error } = await supabase
-        .from('risk_assessments')
-        .select('id, title, risk_level, risk_score, impact_score, likelihood_score')
-        .limit(10);
-      
-      if (error) {
-        console.error('❌ Erro na query direta:', error);
-        toast.error('Erro na query: ' + error.message);
-        return;
-      }
-      
-      console.log('📊 Query direta - Resultados:', data);
-      
-      const muitoAlto = data?.filter(r => r.risk_level === 'Muito Alto').length || 0;
-      const alto = data?.filter(r => r.risk_level === 'Alto').length || 0;
-      console.log('🔴 Query direta - Muito Alto encontrados:', muitoAlto);
-      console.log('🟠 Query direta - Alto encontrados:', alto);
-      
-      toast.success(`Query direta: ${data?.length || 0} riscos, ${muitoAlto} Muito Alto, ${alto} Alto`);
-      
-      // Atualizar métricas simples também
-      await loadSimpleMetrics();
-    } catch (error) {
-      console.error('❌ Erro no teste:', error);
-      toast.error('Erro no teste');
-    }
-  };
+
   
-  const handleCreateTestRisk = async () => {
-    console.log('🧪 Criando risco de teste "Alto"...');
-    
-    try {
-      const { data, error } = await supabase
-        .from('risk_assessments')
-        .insert({
-          title: 'Risco Teste Alto',
-          description: 'Risco criado para testar nível Alto',
-          risk_category: 'Operacional',
-          probability: 3,
-          impact_score: 5,
-          likelihood_score: 3,
-          // risk_score será calculado automaticamente: 3 * 5 = 15 (Alto)
-          status: 'Identificado',
-          assigned_to: 'Teste',
-          tenant_id: '46b1c048-85a1-423b-96fc-776007c8de1f'
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('❌ Erro ao criar risco de teste:', error);
-        toast.error('Erro ao criar risco: ' + error.message);
-        return;
-      }
-      
-      console.log('✅ Risco de teste criado:', data);
-      toast.success('Risco de teste "Alto" criado!');
-      
-      // Recarregar métricas
-      await loadSimpleMetrics();
-      
-    } catch (error) {
-      console.error('❌ Erro ao criar risco de teste:', error);
-      toast.error('Erro ao criar risco de teste');
-    }
-  };
+
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
@@ -505,18 +425,6 @@ const NewRiskManagementPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefreshMetrics}>
-            <Activity className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
-          <Button variant="outline" onClick={handleTestDirectQuery}>
-            <Settings className="h-4 w-4 mr-2" />
-            Teste DB
-          </Button>
-          <Button variant="outline" onClick={handleCreateTestRisk}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar Teste Alto
-          </Button>
           <Button variant="outline">
             <Brain className="h-4 w-4 mr-2" />
             IA Assistente

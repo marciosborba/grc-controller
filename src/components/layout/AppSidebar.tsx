@@ -16,11 +16,11 @@ const navigationItems = [{
       description: 'Questionários e avaliações'
     },
     {
-      title: 'Auditoria',
+      title: 'Auditoria IA',
       url: '/audit',
       icon: Eye,
       permissions: ['audit.read', 'all'],
-      description: 'Planejamento e execução de auditorias'
+      description: 'Auditoria completa com IA - Alex Audit'
     },
     {
       title: 'Canal de Ética',
@@ -65,11 +65,18 @@ const navigationItems = [{
       description: 'Central de notificações e alertas'
     },
     {
-      title: 'Gestão de Riscos',
+      title: 'Risco Corporativo',
       url: '/risks',
       icon: AlertTriangle,
       permissions: ['risk.read', 'all'],
-      description: 'Identificação e mitigação de riscos'
+      description: 'Gestão completa de riscos corporativos com ALEX RISK'
+    },
+    {
+      title: 'Gestão de Riscos (Legado)',
+      url: '/risks-legacy',
+      icon: AlertTriangle,
+      permissions: ['risk.read', 'all'],
+      description: 'Módulo original de gestão de riscos'
     },
     {
       title: 'Incidentes',
