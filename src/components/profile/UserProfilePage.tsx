@@ -1,1 +1,1128 @@
-import React, { useState, useEffect, useCallback } from 'react';\nimport { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';\nimport { Button } from '@/components/ui/button';\nimport { Input } from '@/components/ui/input';\nimport { Label } from '@/components/ui/label';\nimport { Badge } from '@/components/ui/badge';\nimport { ScrollArea } from '@/components/ui/scroll-area';\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';\nimport { Switch } from '@/components/ui/switch';\nimport { Textarea } from '@/components/ui/textarea';\nimport { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';\nimport { Separator } from '@/components/ui/separator';\nimport {\n  Select,\n  SelectContent,\n  SelectItem,\n  SelectTrigger,\n  SelectValue,\n} from '@/components/ui/select';\nimport {\n  Table,\n  TableBody,\n  TableCell,\n  TableHead,\n  TableHeader,\n  TableRow,\n} from '@/components/ui/table';\nimport {\n  User,\n  Mail,\n  Phone,\n  Building,\n  MapPin,\n  Calendar,\n  Clock,\n  Settings,\n  Activity,\n  Bell,\n  Eye,\n  EyeOff,\n  Save,\n  RefreshCw,\n  Shield,\n  Palette,\n  Globe,\n  Moon,\n  Sun,\n  Crown,\n  CheckCircle,\n  AlertTriangle,\n  Info,\n  Sparkles,\n  Zap,\n  Lock,\n  Unlock,\n  Star,\n  Edit,\n  X\n} from 'lucide-react';\nimport { supabase } from '@/integrations/supabase/client';\nimport { useAuth } from '@/contexts/AuthContext';\nimport { useToast } from '@/hooks/use-toast';\nimport { logActivity } from '@/utils/securityLogger';\nimport { ColorSelector } from './ColorSelector';\nimport { useThemeContext } from '@/contexts/ThemeContext';\nimport { cn } from '@/lib/utils';\n\ninterface UserProfile {\n  user_id: string;\n  full_name: string;\n  email: string;\n  phone?: string;\n  department?: string;\n  job_title?: string;\n  avatar_url?: string;\n  language?: string;\n  notification_preferences?: Record<string, unknown>;\n  created_at: string;\n  last_login_at?: string;\n}\n\ninterface UserActivity {\n  id: string;\n  action: string;\n  resource_type: string;\n  resource_id?: string;\n  details: Record<string, unknown>;\n  created_at: string;\n  ip_address?: string;\n}\n\nexport const UserProfilePage: React.FC = () => {\n  const { user } = useAuth();\n  const { toast } = useToast();\n  const { preferences, setPreferences, savePreferences, saving: themeSaving, theme, setTheme } = useThemeContext();\n  \n  const [profile, setProfile] = useState<UserProfile | null>(null);\n  const [activities, setActivities] = useState<UserActivity[]>([]);\n  \n  const [loading, setLoading] = useState(false);\n  const [saving, setSaving] = useState(false);\n  const [editingProfile, setEditingProfile] = useState(false);\n  \n  // Form states\n  const [formData, setFormData] = useState({\n    full_name: '',\n    email: '',\n    phone: '',\n    department: '',\n    job_title: '',\n  });\n\n  const fetchProfile = useCallback(async () => {\n    if (!user?.id) return;\n    \n    setLoading(true);\n    try {\n      const { data: profileData, error } = await supabase\n        .from('profiles')\n        .select('*')\n        .eq('user_id', user.id)\n        .single();\n\n      if (error) throw error;\n\n      console.log('Profile data from database:', profileData);\n\n      setProfile(profileData);\n      setFormData({\n        full_name: profileData.full_name || '',\n        email: profileData.email || '',\n        phone: profileData.phone || '',\n        department: profileData.department || '',\n        job_title: profileData.job_title || '',\n      });\n\n      // Load preferences from profile\n      if (profileData.notification_preferences) {\n        const prefs = profileData.notification_preferences as any;\n        setPreferences(prev => ({\n          ...prev,\n          ...prefs,\n          notifications: {\n            ...prev.notifications,\n            ...prefs.notifications,\n          },\n          privacy: {\n            ...prev.privacy,\n            ...prefs.privacy,\n          },\n        }));\n      }\n\n    } catch (error) {\n      console.error('Error fetching profile:', error);\n      toast({\n        title: 'Erro',\n        description: 'Erro ao carregar perfil do usuário',\n        variant: 'destructive'\n      });\n    } finally {\n      setLoading(false);\n    }\n  }, [user?.id, setPreferences]);\n\n  const fetchUserActivities = useCallback(async () => {\n    if (!user?.id) return;\n    \n    try {\n      const { data: activitiesData, error } = await supabase\n        .from('activity_logs')\n        .select('*')\n        .eq('user_id', user.id)\n        .order('created_at', { ascending: false })\n        .limit(50);\n\n      if (error) throw error;\n\n      setActivities(activitiesData || []);\n    } catch (error) {\n      console.error('Error fetching user activities:', error);\n      toast({\n        title: 'Erro',\n        description: 'Erro ao carregar atividades do usuário',\n        variant: 'destructive'\n      });\n    }\n  }, [user?.id]);\n\n  const handleProfileUpdate = async () => {\n    if (!user?.id || !profile) return;\n    \n    // Basic validation\n    if (!formData.full_name.trim()) {\n      toast({\n        title: 'Erro',\n        description: 'Nome completo é obrigatório',\n        variant: 'destructive'\n      });\n      return;\n    }\n\n    if (!formData.email.trim()) {\n      toast({\n        title: 'Erro',\n        description: 'Email é obrigatório',\n        variant: 'destructive'\n      });\n      return;\n    }\n    \n    setSaving(true);\n    try {\n      // Get the current profile to preserve tenant_id and other fields\n      const { data: currentProfile, error: fetchError } = await supabase\n        .from('profiles')\n        .select('tenant_id')\n        .eq('user_id', user.id)\n        .single();\n\n      if (fetchError) {\n        console.error('Error fetching current profile:', fetchError);\n        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);\n      }\n\n      const updateData = {\n        full_name: formData.full_name.trim(),\n        email: formData.email.trim(),\n        phone: formData.phone?.trim() || null,\n        department: formData.department?.trim() || null,\n        job_title: formData.job_title?.trim() || null,\n        tenant_id: currentProfile.tenant_id,\n      };\n\n      console.log('Updating profile with data:', updateData);\n\n      const { error } = await supabase\n        .from('profiles')\n        .update(updateData)\n        .eq('user_id', user.id);\n\n      if (error) throw error;\n\n      // Log the profile update activity with details of what changed\n      const changes: Record<string, { from: string; to: string }> = {};\n      \n      if (formData.full_name !== profile.full_name) {\n        changes.full_name = { from: profile.full_name || '', to: formData.full_name };\n      }\n      if (formData.email !== profile.email) {\n        changes.email = { from: profile.email || '', to: formData.email };\n      }\n      if (formData.phone !== (profile.phone || '')) {\n        changes.phone = { from: profile.phone || '', to: formData.phone || '' };\n      }\n      if (formData.department !== (profile.department || '')) {\n        changes.department = { from: profile.department || '', to: formData.department || '' };\n      }\n      if (formData.job_title !== (profile.job_title || '')) {\n        changes.job_title = { from: profile.job_title || '', to: formData.job_title || '' };\n      }\n\n      // Log the activity with detailed changes\n      await logActivity(\n        'profile_updated',\n        'user',\n        user.id,\n        {\n          user_id: user.id,\n          changes: changes,\n          timestamp: new Date().toISOString()\n        }\n      );\n\n      // Update auth.users email if changed\n      if (formData.email !== profile.email) {\n        const { error: authError } = await supabase.auth.updateUser({\n          email: formData.email\n        });\n        \n        if (authError) {\n          toast({\n            title: 'Atenção',\n            description: 'Perfil atualizado, mas verifique seu novo email para confirmar a alteração',\n            variant: 'default'\n          });\n        }\n      }\n\n      toast({\n        title: 'Sucesso',\n        description: 'Perfil atualizado com sucesso',\n      });\n\n      // Refresh all data to reflect changes\n      await Promise.all([\n        fetchProfile(),\n        fetchUserActivities()\n      ]);\n      \n      console.log('Profile update completed');\n      setEditingProfile(false);\n\n    } catch (error) {\n      console.error('Error updating profile:', error);\n      toast({\n        title: 'Erro',\n        description: error instanceof Error ? error.message : 'Erro ao atualizar perfil',\n        variant: 'destructive'\n      });\n    } finally {\n      setSaving(false);\n    }\n  };\n\n  const handlePreferencesUpdate = async () => {\n    if (!user?.id) return;\n    \n    setSaving(true);\n    try {\n      // Get the current profile to preserve tenant_id and other fields\n      const { data: currentProfile, error: fetchError } = await supabase\n        .from('profiles')\n        .select('tenant_id')\n        .eq('user_id', user.id)\n        .single();\n\n      if (fetchError) {\n        console.error('Error fetching current profile:', fetchError);\n        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);\n      }\n\n      const { error } = await supabase\n        .from('profiles')\n        .update({\n          notification_preferences: preferences,\n          language: preferences.language,\n          tenant_id: currentProfile.tenant_id,\n        })\n        .eq('user_id', user.id);\n\n      if (error) throw error;\n\n      // Log preferences update activity\n      await logActivity(\n        'preferences_updated',\n        'user',\n        user.id,\n        {\n          user_id: user.id,\n          preferences: preferences,\n          timestamp: new Date().toISOString()\n        }\n      );\n\n      await fetchUserActivities(); // Refresh activities to show the new log\n      \n      toast({\n        title: 'Sucesso',\n        description: 'Preferências atualizadas com sucesso',\n      });\n\n    } catch (error) {\n      console.error('Error updating preferences:', error);\n      toast({\n        title: 'Erro',\n        description: error instanceof Error ? error.message : 'Erro ao atualizar preferências',\n        variant: 'destructive'\n      });\n    } finally {\n      setSaving(false);\n    }\n  };\n\n  const getActionBadgeColor = (action: string) => {\n    const colors = {\n      'login_success': 'bg-green-100 text-green-800 border-green-200',\n      'logout': 'bg-blue-100 text-blue-800 border-blue-200',\n      'profile_updated': 'bg-yellow-100 text-yellow-800 border-yellow-200',\n      'preferences_updated': 'bg-purple-100 text-purple-800 border-purple-200',\n      'password_changed': 'bg-orange-100 text-orange-800 border-orange-200',\n      'email_updated': 'bg-indigo-100 text-indigo-800 border-indigo-200',\n      'login': 'bg-green-100 text-green-800 border-green-200',\n      'update': 'bg-yellow-100 text-yellow-800 border-yellow-200',\n      'create': 'bg-purple-100 text-purple-800 border-purple-200',\n      'delete': 'bg-red-100 text-red-800 border-red-200',\n      'view': 'bg-gray-100 text-gray-800 border-gray-200',\n    };\n    \n    // Check exact match first\n    if (colors[action]) {\n      return colors[action];\n    }\n    \n    // Then check partial matches\n    for (const [key, color] of Object.entries(colors)) {\n      if (action.toLowerCase().includes(key)) {\n        return color;\n      }\n    }\n    return 'bg-gray-100 text-gray-800 border-gray-200';\n  };\n\n  const formatDateTime = (dateString: string) => {\n    const date = new Date(dateString);\n    return date.toLocaleString('pt-BR', {\n      day: '2-digit',\n      month: '2-digit',\n      year: 'numeric',\n      hour: '2-digit',\n      minute: '2-digit',\n      second: '2-digit'\n    });\n  };\n\n  useEffect(() => {\n    fetchProfile();\n    fetchUserActivities();\n  }, [fetchProfile, fetchUserActivities]);\n\n  if (loading || !profile) {\n    return (\n      <div className=\"container mx-auto py-6 space-y-6\">\n        <div className=\"flex items-center justify-center h-64\">\n          <div className=\"flex items-center gap-3\">\n            <RefreshCw className=\"h-8 w-8 animate-spin text-primary\" />\n            <span className=\"text-lg text-muted-foreground\">Carregando perfil...</span>\n          </div>\n        </div>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"container mx-auto py-6 space-y-6\">\n      {/* Header melhorado seguindo padrão da aplicação */}\n      <div className=\"flex items-center justify-between\">\n        <div className=\"space-y-1\">\n          <h1 className=\"text-3xl font-bold text-foreground flex items-center gap-3\">\n            <div className=\"h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center\">\n              <User className=\"h-6 w-6 text-primary\" />\n            </div>\n            <span>Meu Perfil</span>\n          </h1>\n          <p className=\"text-muted-foreground\">\n            Gerencie suas informações pessoais, preferências de sistema e monitore suas atividades\n          </p>\n        </div>\n        <div className=\"flex items-center gap-2\">\n          <Badge variant=\"outline\" className=\"bg-primary/5 text-primary border-primary/20\">\n            <Crown className=\"h-3 w-3 mr-1\" />\n            {user?.role || 'Usuário'}\n          </Badge>\n          {profile.last_login_at && (\n            <Badge variant=\"secondary\">\n              <Clock className=\"h-3 w-3 mr-1\" />\n              Último acesso: {new Date(profile.last_login_at).toLocaleDateString('pt-BR')}\n            </Badge>\n          )}\n        </div>\n      </div>\n\n      {/* Alert informativo */}\n      <Alert className=\"border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100\">\n        <Info className=\"h-4 w-4 text-blue-600 dark:text-blue-400\" />\n        <AlertTitle className=\"text-blue-900 dark:text-blue-100\">Centro de Configurações Pessoais</AlertTitle>\n        <AlertDescription className=\"text-blue-800 dark:text-blue-200\">\n          Personalize sua experiência na plataforma. Todas as alterações são salvas automaticamente e aplicadas imediatamente.\n        </AlertDescription>\n      </Alert>\n\n      {/* Profile Summary Card melhorado */}\n      <Card className=\"border-2 border-primary/10\">\n        <CardHeader>\n          <CardTitle className=\"flex items-center gap-3\">\n            <Sparkles className=\"h-5 w-5 text-primary\" />\n            Resumo do Perfil\n          </CardTitle>\n          <CardDescription>\n            Informações principais do seu perfil na plataforma\n          </CardDescription>\n        </CardHeader>\n        <CardContent>\n          <div className=\"flex items-center space-x-6\">\n            <div className=\"h-20 w-20 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/20\">\n              <span className=\"text-2xl font-bold text-primary\">\n                {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}\n              </span>\n            </div>\n            <div className=\"flex-1 space-y-2\">\n              <div>\n                <h2 className=\"text-2xl font-semibold text-foreground\">{profile.full_name}</h2>\n                <p className=\"text-muted-foreground flex items-center gap-2\">\n                  <Mail className=\"h-4 w-4\" />\n                  {profile.email}\n                </p>\n              </div>\n              <div className=\"flex items-center gap-4 text-sm\">\n                {profile.job_title && (\n                  <div className=\"flex items-center gap-1 text-muted-foreground\">\n                    <Building className=\"h-4 w-4\" />\n                    <span>{profile.job_title}</span>\n                  </div>\n                )}\n                {profile.department && (\n                  <div className=\"flex items-center gap-1 text-muted-foreground\">\n                    <MapPin className=\"h-4 w-4\" />\n                    <span>{profile.department}</span>\n                  </div>\n                )}\n                <div className=\"flex items-center gap-1 text-muted-foreground\">\n                  <Calendar className=\"h-4 w-4\" />\n                  <span>Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>\n                </div>\n              </div>\n            </div>\n            <div className=\"text-right space-y-2\">\n              <Badge variant=\"outline\" className=\"bg-green-50 text-green-700 border-green-200\">\n                <CheckCircle className=\"h-3 w-3 mr-1\" />\n                Ativo\n              </Badge>\n              {profile.last_login_at && (\n                <p className=\"text-sm text-muted-foreground\">\n                  <span className=\"font-medium\">Último acesso:</span><br />\n                  {formatDateTime(profile.last_login_at)}\n                </p>\n              )}\n            </div>\n          </div>\n        </CardContent>\n      </Card>\n\n      <Tabs defaultValue=\"profile\" className=\"w-full\">\n        <TabsList className=\"grid w-full grid-cols-3 h-12\">\n          <TabsTrigger value=\"profile\" className=\"flex items-center gap-2 h-10\">\n            <User className=\"h-4 w-4\" />\n            <span>Informações Pessoais</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"preferences\" className=\"flex items-center gap-2 h-10\">\n            <Settings className=\"h-4 w-4\" />\n            <span>Preferências</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"activity\" className=\"flex items-center gap-2 h-10\">\n            <Activity className=\"h-4 w-4\" />\n            <span>Atividades</span>\n          </TabsTrigger>\n        </TabsList>\n\n        <TabsContent value=\"profile\" className=\"space-y-6\">\n          <Card>\n            <CardHeader>\n              <div className=\"flex items-center justify-between\">\n                <div>\n                  <CardTitle className=\"flex items-center gap-2\">\n                    <User className=\"h-5 w-5 text-primary\" />\n                    Informações Pessoais\n                  </CardTitle>\n                  <CardDescription>\n                    Gerencie suas informações básicas de perfil\n                  </CardDescription>\n                </div>\n                <Button\n                  variant={editingProfile ? \"outline\" : \"default\"}\n                  onClick={() => setEditingProfile(!editingProfile)}\n                  className=\"flex items-center gap-2\"\n                >\n                  {editingProfile ? (\n                    <>\n                      <X className=\"h-4 w-4\" />\n                      Cancelar\n                    </>\n                  ) : (\n                    <>\n                      <Edit className=\"h-4 w-4\" />\n                      Editar\n                    </>\n                  )}\n                </Button>\n              </div>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                <div className=\"space-y-3\">\n                  <Label htmlFor=\"full_name\" className=\"text-sm font-medium flex items-center gap-2\">\n                    <User className=\"h-4 w-4\" />\n                    Nome Completo *\n                  </Label>\n                  {editingProfile ? (\n                    <Input\n                      id=\"full_name\"\n                      value={formData.full_name}\n                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}\n                      className=\"h-11\"\n                      placeholder=\"Digite seu nome completo\"\n                    />\n                  ) : (\n                    <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                      <User className=\"h-4 w-4 text-muted-foreground\" />\n                      <span className=\"font-medium\">{profile.full_name}</span>\n                    </div>\n                  )}\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label htmlFor=\"email\" className=\"text-sm font-medium flex items-center gap-2\">\n                    <Mail className=\"h-4 w-4\" />\n                    Email *\n                  </Label>\n                  {editingProfile ? (\n                    <Input\n                      id=\"email\"\n                      type=\"email\"\n                      value={formData.email}\n                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}\n                      className=\"h-11\"\n                      placeholder=\"Digite seu email\"\n                    />\n                  ) : (\n                    <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                      <Mail className=\"h-4 w-4 text-muted-foreground\" />\n                      <span className=\"font-medium\">{profile.email}</span>\n                    </div>\n                  )}\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label htmlFor=\"phone\" className=\"text-sm font-medium flex items-center gap-2\">\n                    <Phone className=\"h-4 w-4\" />\n                    Telefone\n                  </Label>\n                  {editingProfile ? (\n                    <Input\n                      id=\"phone\"\n                      value={formData.phone}\n                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}\n                      className=\"h-11\"\n                      placeholder=\"Digite seu telefone\"\n                    />\n                  ) : (\n                    <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                      <Phone className=\"h-4 w-4 text-muted-foreground\" />\n                      <span className=\"font-medium\">{profile.phone || 'Não informado'}</span>\n                    </div>\n                  )}\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label htmlFor=\"job_title\" className=\"text-sm font-medium flex items-center gap-2\">\n                    <Building className=\"h-4 w-4\" />\n                    Cargo\n                  </Label>\n                  {editingProfile ? (\n                    <Input\n                      id=\"job_title\"\n                      value={formData.job_title}\n                      onChange={(e) => setFormData(prev => ({ ...prev, job_title: e.target.value }))}\n                      className=\"h-11\"\n                      placeholder=\"Digite seu cargo\"\n                    />\n                  ) : (\n                    <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                      <Building className=\"h-4 w-4 text-muted-foreground\" />\n                      <span className=\"font-medium\">{profile.job_title || 'Não informado'}</span>\n                    </div>\n                  )}\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label htmlFor=\"department\" className=\"text-sm font-medium flex items-center gap-2\">\n                    <MapPin className=\"h-4 w-4\" />\n                    Departamento\n                  </Label>\n                  {editingProfile ? (\n                    <Input\n                      id=\"department\"\n                      value={formData.department}\n                      onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}\n                      className=\"h-11\"\n                      placeholder=\"Digite seu departamento\"\n                    />\n                  ) : (\n                    <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                      <MapPin className=\"h-4 w-4 text-muted-foreground\" />\n                      <span className=\"font-medium\">{profile.department || 'Não informado'}</span>\n                    </div>\n                  )}\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label className=\"text-sm font-medium flex items-center gap-2\">\n                    <Calendar className=\"h-4 w-4\" />\n                    Membro desde\n                  </Label>\n                  <div className=\"flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border\">\n                    <Calendar className=\"h-4 w-4 text-muted-foreground\" />\n                    <span className=\"font-medium\">{new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>\n                  </div>\n                </div>\n              </div>\n\n              {editingProfile && (\n                <>\n                  <Separator />\n                  <div className=\"flex justify-end space-x-3\">\n                    <Button\n                      variant=\"outline\"\n                      onClick={() => setEditingProfile(false)}\n                      className=\"flex items-center gap-2\"\n                    >\n                      <X className=\"h-4 w-4\" />\n                      Cancelar\n                    </Button>\n                    <Button\n                      onClick={handleProfileUpdate}\n                      disabled={saving}\n                      className=\"flex items-center gap-2\"\n                    >\n                      {saving ? (\n                        <>\n                          <RefreshCw className=\"h-4 w-4 animate-spin\" />\n                          Salvando...\n                        </>\n                      ) : (\n                        <>\n                          <Save className=\"h-4 w-4\" />\n                          Salvar Alterações\n                        </>\n                      )}\n                    </Button>\n                  </div>\n                </>\n              )}\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        <TabsContent value=\"preferences\" className=\"space-y-6\">\n          {/* Theme Settings */}\n          <Card>\n            <CardHeader>\n              <CardTitle className=\"flex items-center gap-2\">\n                <Palette className=\"h-5 w-5 text-primary\" />\n                Aparência & Tema\n              </CardTitle>\n              <CardDescription>\n                Personalize a aparência da interface de acordo com suas preferências\n              </CardDescription>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-6\">\n                <div className=\"space-y-3\">\n                  <Label className=\"text-sm font-medium flex items-center gap-2\">\n                    <Sun className=\"h-4 w-4\" />\n                    Tema da Interface\n                  </Label>\n                  <Select\n                    value={theme || 'system'}\n                    onValueChange={(value: 'light' | 'dark' | 'system') => {\n                      setTheme(value);\n                      setPreferences(prev => ({ ...prev, theme: value }));\n                    }}\n                  >\n                    <SelectTrigger className=\"h-11\">\n                      <SelectValue />\n                    </SelectTrigger>\n                    <SelectContent>\n                      <SelectItem value=\"light\">\n                        <div className=\"flex items-center gap-2\">\n                          <Sun className=\"h-4 w-4\" />\n                          <span>Claro</span>\n                        </div>\n                      </SelectItem>\n                      <SelectItem value=\"dark\">\n                        <div className=\"flex items-center gap-2\">\n                          <Moon className=\"h-4 w-4\" />\n                          <span>Escuro</span>\n                        </div>\n                      </SelectItem>\n                      <SelectItem value=\"system\">\n                        <div className=\"flex items-center gap-2\">\n                          <Settings className=\"h-4 w-4\" />\n                          <span>Automático (Sistema)</span>\n                        </div>\n                      </SelectItem>\n                    </SelectContent>\n                  </Select>\n                </div>\n\n                <div className=\"space-y-3\">\n                  <Label className=\"text-sm font-medium flex items-center gap-2\">\n                    <Globe className=\"h-4 w-4\" />\n                    Idioma da Interface\n                  </Label>\n                  <Select\n                    value={preferences.language}\n                    onValueChange={(value) =>\n                      setPreferences(prev => ({ ...prev, language: value }))\n                    }\n                  >\n                    <SelectTrigger className=\"h-11\">\n                      <SelectValue />\n                    </SelectTrigger>\n                    <SelectContent>\n                      <SelectItem value=\"pt-BR\">\n                        <div className=\"flex items-center gap-2\">\n                          <Globe className=\"h-4 w-4\" />\n                          <span>Português (Brasil)</span>\n                        </div>\n                      </SelectItem>\n                      <SelectItem value=\"en-US\">\n                        <div className=\"flex items-center gap-2\">\n                          <Globe className=\"h-4 w-4\" />\n                          <span>English (US)</span>\n                        </div>\n                      </SelectItem>\n                    </SelectContent>\n                  </Select>\n                </div>\n              </div>\n            </CardContent>\n          </Card>\n\n          {/* Color Palette */}\n          <ColorSelector\n            palette={preferences.colorPalette}\n            onPaletteChange={(newPalette) =>\n              setPreferences((prev) => ({ ...prev, colorPalette: newPalette }))\n            }\n            onGeneratePalette={() => {\n              const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');\n              setPreferences((prev) => ({\n                ...prev,\n                colorPalette: {\n                  primary: randomColor(),\n                  secondary: randomColor(),\n                  tertiary: randomColor(),\n                },\n              }));\n            }}\n            onSave={savePreferences}\n            saving={themeSaving}\n          />\n\n          {/* Notification Settings */}\n          <Card>\n            <CardHeader>\n              <CardTitle className=\"flex items-center gap-2\">\n                <Bell className=\"h-5 w-5 text-primary\" />\n                Notificações\n              </CardTitle>\n              <CardDescription>\n                Configure como e quando você deseja receber notificações\n              </CardDescription>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n              <div className=\"space-y-4\">\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Mail className=\"h-4 w-4\" />\n                      Notificações por Email\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Receber notificações importantes por email</p>\n                  </div>\n                  <Switch\n                    checked={preferences.notifications?.email}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        notifications: { ...prev.notifications, email: checked }\n                      }))\n                    }\n                  />\n                </div>\n\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Bell className=\"h-4 w-4\" />\n                      Notificações Push\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Receber notificações no navegador</p>\n                  </div>\n                  <Switch\n                    checked={preferences.notifications?.push}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        notifications: { ...prev.notifications, push: checked }\n                      }))\n                    }\n                  />\n                </div>\n\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Shield className=\"h-4 w-4\" />\n                      Alertas de Segurança\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Notificações sobre eventos de segurança</p>\n                  </div>\n                  <Switch\n                    checked={preferences.notifications?.security}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        notifications: { ...prev.notifications, security: checked }\n                      }))\n                    }\n                  />\n                </div>\n\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Zap className=\"h-4 w-4\" />\n                      Atualizações do Sistema\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Novidades e atualizações da plataforma</p>\n                  </div>\n                  <Switch\n                    checked={preferences.notifications?.updates}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        notifications: { ...prev.notifications, updates: checked }\n                      }))\n                    }\n                  />\n                </div>\n              </div>\n            </CardContent>\n          </Card>\n\n          {/* Privacy Settings */}\n          <Card>\n            <CardHeader>\n              <CardTitle className=\"flex items-center gap-2\">\n                <Shield className=\"h-5 w-5 text-primary\" />\n                Privacidade & Segurança\n              </CardTitle>\n              <CardDescription>\n                Controle a visibilidade das suas informações e atividades\n              </CardDescription>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n              <div className=\"space-y-4\">\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Eye className=\"h-4 w-4\" />\n                      Mostrar Email no Perfil\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Permitir que outros usuários vejam seu email</p>\n                  </div>\n                  <Switch\n                    checked={preferences.privacy?.showEmail}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        privacy: { ...prev.privacy, showEmail: checked }\n                      }))\n                    }\n                  />\n                </div>\n\n                <div className=\"flex items-center justify-between p-4 border rounded-lg\">\n                  <div className=\"space-y-1\">\n                    <Label className=\"text-sm font-medium flex items-center gap-2\">\n                      <Activity className=\"h-4 w-4\" />\n                      Atividade Pública\n                    </Label>\n                    <p className=\"text-sm text-muted-foreground\">Permitir que outros vejam suas atividades recentes</p>\n                  </div>\n                  <Switch\n                    checked={preferences.privacy?.showActivity}\n                    onCheckedChange={(checked) =>\n                      setPreferences(prev => ({\n                        ...prev,\n                        privacy: { ...prev.privacy, showActivity: checked }\n                      }))\n                    }\n                  />\n                </div>\n              </div>\n            </CardContent>\n          </Card>\n\n          <div className=\"flex justify-end\">\n            <Button \n              onClick={handlePreferencesUpdate} \n              disabled={saving}\n              className=\"flex items-center gap-2\"\n            >\n              {saving ? (\n                <>\n                  <RefreshCw className=\"h-4 w-4 animate-spin\" />\n                  Salvando...\n                </>\n              ) : (\n                <>\n                  <Save className=\"h-4 w-4\" />\n                  Salvar Preferências\n                </>\n              )}\n            </Button>\n          </div>\n        </TabsContent>\n\n        <TabsContent value=\"activity\" className=\"space-y-6\">\n          <Card>\n            <CardHeader>\n              <CardTitle className=\"flex items-center gap-2\">\n                <Activity className=\"h-5 w-5 text-primary\" />\n                Histórico de Atividades\n              </CardTitle>\n              <CardDescription>\n                Acompanhe suas ações e atividades recentes na plataforma\n              </CardDescription>\n            </CardHeader>\n            <CardContent>\n              <ScrollArea className=\"h-[600px]\">\n                {activities.length > 0 ? (\n                  <Table>\n                    <TableHeader>\n                      <TableRow>\n                        <TableHead className=\"w-[140px]\">Data/Hora</TableHead>\n                        <TableHead className=\"w-[120px]\">Ação</TableHead>\n                        <TableHead className=\"w-[100px]\">Recurso</TableHead>\n                        <TableHead className=\"w-[100px]\">IP Address</TableHead>\n                        <TableHead>Detalhes</TableHead>\n                      </TableRow>\n                    </TableHeader>\n                    <TableBody>\n                      {activities.map((activity) => (\n                        <TableRow key={activity.id} className=\"hover:bg-muted/50\">\n                          <TableCell className=\"text-xs\">\n                            <div className=\"flex items-center gap-2\">\n                              <Clock className=\"h-3 w-3 text-muted-foreground\" />\n                              <span className=\"whitespace-nowrap font-mono\">\n                                {new Date(activity.created_at).toLocaleDateString('pt-BR', {\n                                  day: '2-digit',\n                                  month: '2-digit',\n                                  hour: '2-digit',\n                                  minute: '2-digit'\n                                })}\n                              </span>\n                            </div>\n                          </TableCell>\n                          <TableCell>\n                            <Badge \n                              variant=\"outline\" \n                              className={cn(\"text-xs px-2 py-1 border\", getActionBadgeColor(activity.action))}\n                            >\n                              {activity.action}\n                            </Badge>\n                          </TableCell>\n                          <TableCell>\n                            <Badge variant=\"secondary\" className=\"text-xs px-2 py-1\">\n                              {activity.resource_type}\n                            </Badge>\n                          </TableCell>\n                          <TableCell className=\"text-xs font-mono text-muted-foreground\">\n                            {activity.ip_address || 'N/A'}\n                          </TableCell>\n                          <TableCell className=\"text-xs\">\n                            <div className=\"max-w-[300px]\" title={activity.details ? JSON.stringify(activity.details, null, 2) : 'N/A'}>\n                              {activity.details ? (\n                                <div className=\"space-y-1\">\n                                  {activity.action === 'profile_updated' && activity.details.changes ? (\n                                    <div className=\"space-y-1\">\n                                      <span className=\"font-medium text-foreground\">Alterações realizadas:</span>\n                                      {Object.entries(activity.details.changes as Record<string, {from: string, to: string}>).map(([field, change]) => (\n                                        <div key={field} className=\"text-xs pl-2 border-l-2 border-muted\">\n                                          <span className=\"capitalize font-medium\">{field.replace('_', ' ')}: </span>\n                                          <span className=\"line-through text-red-600 dark:text-red-400\">{change.from || '(vazio)'}</span>\n                                          <span className=\"mx-1\">→</span>\n                                          <span className=\"text-green-600 dark:text-green-400\">{change.to || '(vazio)'}</span>\n                                        </div>\n                                      ))}\n                                    </div>\n                                  ) : activity.action === 'preferences_updated' && activity.details.preferences ? (\n                                    <div className=\"flex items-center gap-1\">\n                                      <Settings className=\"h-3 w-3\" />\n                                      <span className=\"font-medium\">Preferências atualizadas</span>\n                                    </div>\n                                  ) : activity.action.includes('login') ? (\n                                    <div className=\"flex items-center gap-1\">\n                                      {activity.action === 'login_success' ? (\n                                        <CheckCircle className=\"h-3 w-3 text-green-600\" />\n                                      ) : (\n                                        <RefreshCw className=\"h-3 w-3 text-blue-600\" />\n                                      )}\n                                      <span className=\"font-medium\">\n                                        {activity.action === 'login_success' ? 'Login realizado' : 'Logout realizado'}\n                                      </span>\n                                    </div>\n                                  ) : (\n                                    <div className=\"truncate text-muted-foreground\">\n                                      {JSON.stringify(activity.details).substring(0, 80)}...\n                                    </div>\n                                  )}\n                                </div>\n                              ) : (\n                                <span className=\"text-muted-foreground\">Sem detalhes</span>\n                              )}\n                            </div>\n                          </TableCell>\n                        </TableRow>\n                      ))}\n                    </TableBody>\n                  </Table>\n                ) : (\n                  <div className=\"text-center py-12\">\n                    <Activity className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground/50\" />\n                    <h3 className=\"text-lg font-medium text-muted-foreground mb-2\">Nenhuma atividade encontrada</h3>\n                    <p className=\"text-sm text-muted-foreground\">Suas atividades aparecerão aqui conforme você usar a plataforma</p>\n                  </div>\n                )}\n              </ScrollArea>\n            </CardContent>\n          </Card>\n        </TabsContent>\n      </Tabs>\n    </div>\n  );\n};"
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  User,
+  Mail,
+  Phone,
+  Building,
+  MapPin,
+  Calendar,
+  Clock,
+  Settings,
+  Activity,
+  Bell,
+  Eye,
+  EyeOff,
+  Save,
+  RefreshCw,
+  Shield,
+  Palette,
+  Globe,
+  Moon,
+  Sun,
+  Crown,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  Sparkles,
+  Zap,
+  Lock,
+  Unlock,
+  Star,
+  Edit,
+  X
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { logActivity } from '@/utils/securityLogger';
+import { ColorSelector } from './ColorSelector';
+import { useThemeContext } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
+
+interface UserProfile {
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  job_title?: string;
+  avatar_url?: string;
+  language?: string;
+  notification_preferences?: Record<string, unknown>;
+  created_at: string;
+  last_login_at?: string;
+}
+
+interface UserActivity {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
+  details: Record<string, unknown>;
+  created_at: string;
+  ip_address?: string;
+}
+
+export const UserProfilePage: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { preferences, setPreferences, savePreferences, saving: themeSaving, theme, setTheme } = useThemeContext();
+  
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [activities, setActivities] = useState<UserActivity[]>([]);
+  
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  
+  // Form states
+  const [formData, setFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    department: '',
+    job_title: '',
+  });
+
+  const fetchProfile = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      console.log('Profile data from database:', profileData);
+
+      setProfile(profileData);
+      setFormData({
+        full_name: profileData.full_name || '',
+        email: profileData.email || '',
+        phone: profileData.phone || '',
+        department: profileData.department || '',
+        job_title: profileData.job_title || '',
+      });
+
+      // Load preferences from profile
+      if (profileData.notification_preferences) {
+        const prefs = profileData.notification_preferences as any;
+        setPreferences(prev => ({
+          ...prev,
+          ...prefs,
+          notifications: {
+            ...prev.notifications,
+            ...prefs.notifications,
+          },
+          privacy: {
+            ...prev.privacy,
+            ...prefs.privacy,
+          },
+        }));
+      }
+
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar perfil do usuário',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, setPreferences, toast]);
+
+  const fetchUserActivities = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data: activitiesData, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      setActivities(activitiesData || []);
+    } catch (error) {
+      console.error('Error fetching user activities:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar atividades do usuário',
+        variant: 'destructive'
+      });
+    }
+  }, [user?.id, toast]);
+
+  const handleProfileUpdate = async () => {
+    if (!user?.id || !profile) return;
+    
+    // Basic validation
+    if (!formData.full_name.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Nome completo é obrigatório',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Email é obrigatório',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      // Get the current profile to preserve tenant_id and other fields
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current profile:', fetchError);
+        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);
+      }
+
+      const updateData = {
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone?.trim() || null,
+        department: formData.department?.trim() || null,
+        job_title: formData.job_title?.trim() || null,
+        tenant_id: currentProfile.tenant_id,
+      };
+
+      console.log('Updating profile with data:', updateData);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(updateData)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Log the profile update activity with details of what changed
+      const changes: Record<string, { from: string; to: string }> = {};
+      
+      if (formData.full_name !== profile.full_name) {
+        changes.full_name = { from: profile.full_name || '', to: formData.full_name };
+      }
+      if (formData.email !== profile.email) {
+        changes.email = { from: profile.email || '', to: formData.email };
+      }
+      if (formData.phone !== (profile.phone || '')) {
+        changes.phone = { from: profile.phone || '', to: formData.phone || '' };
+      }
+      if (formData.department !== (profile.department || '')) {
+        changes.department = { from: profile.department || '', to: formData.department || '' };
+      }
+      if (formData.job_title !== (profile.job_title || '')) {
+        changes.job_title = { from: profile.job_title || '', to: formData.job_title || '' };
+      }
+
+      // Log the activity with detailed changes
+      await logActivity(
+        'profile_updated',
+        'user',
+        user.id,
+        {
+          user_id: user.id,
+          changes: changes,
+          timestamp: new Date().toISOString()
+        }
+      );
+
+      // Update auth.users email if changed
+      if (formData.email !== profile.email) {
+        const { error: authError } = await supabase.auth.updateUser({
+          email: formData.email
+        });
+        
+        if (authError) {
+          toast({
+            title: 'Atenção',
+            description: 'Perfil atualizado, mas verifique seu novo email para confirmar a alteração',
+            variant: 'default'
+          });
+        }
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Perfil atualizado com sucesso',
+      });
+
+      // Refresh all data to reflect changes
+      await Promise.all([
+        fetchProfile(),
+        fetchUserActivities()
+      ]);
+      
+      console.log('Profile update completed');
+      setEditingProfile(false);
+
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao atualizar perfil',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePreferencesUpdate = async () => {
+    if (!user?.id) return;
+    
+    setSaving(true);
+    try {
+      // Get the current profile to preserve tenant_id and other fields
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current profile:', fetchError);
+        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          notification_preferences: preferences,
+          language: preferences.language,
+          tenant_id: currentProfile.tenant_id,
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Log preferences update activity
+      await logActivity(
+        'preferences_updated',
+        'user',
+        user.id,
+        {
+          user_id: user.id,
+          preferences: preferences,
+          timestamp: new Date().toISOString()
+        }
+      );
+
+      await fetchUserActivities(); // Refresh activities to show the new log
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Preferências atualizadas com sucesso',
+      });
+
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Erro ao atualizar preferências',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getActionBadgeColor = (action: string) => {
+    const colors = {
+      'login_success': 'bg-green-100 text-green-800 border-green-200',
+      'logout': 'bg-blue-100 text-blue-800 border-blue-200',
+      'profile_updated': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'preferences_updated': 'bg-purple-100 text-purple-800 border-purple-200',
+      'password_changed': 'bg-orange-100 text-orange-800 border-orange-200',
+      'email_updated': 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      'login': 'bg-green-100 text-green-800 border-green-200',
+      'update': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'create': 'bg-purple-100 text-purple-800 border-purple-200',
+      'delete': 'bg-red-100 text-red-800 border-red-200',
+      'view': 'bg-gray-100 text-gray-800 border-gray-200',
+    };
+    
+    // Check exact match first
+    if (colors[action]) {
+      return colors[action];
+    }
+    
+    // Then check partial matches
+    for (const [key, color] of Object.entries(colors)) {
+      if (action.toLowerCase().includes(key)) {
+        return color;
+      }
+    }
+    return 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  useEffect(() => {
+    fetchProfile();
+    fetchUserActivities();
+  }, [fetchProfile, fetchUserActivities]);
+
+  if (loading || !profile) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-lg text-muted-foreground">Carregando perfil...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header melhorado seguindo padrão da aplicação */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <User className="h-6 w-6 text-primary" />
+            </div>
+            <span>Meu Perfil</span>
+          </h1>
+          <p className="text-muted-foreground">
+            Gerencie suas informações pessoais, preferências de sistema e monitore suas atividades
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+            <Crown className="h-3 w-3 mr-1" />
+            {user?.role || 'Usuário'}
+          </Badge>
+          {profile.last_login_at && (
+            <Badge variant="secondary">
+              <Clock className="h-3 w-3 mr-1" />
+              Último acesso: {new Date(profile.last_login_at).toLocaleDateString('pt-BR')}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Alert informativo */}
+      <Alert className="border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100">
+        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <AlertTitle className="text-blue-900 dark:text-blue-100">Centro de Configurações Pessoais</AlertTitle>
+        <AlertDescription className="text-blue-800 dark:text-blue-200">
+          Personalize sua experiência na plataforma. Todas as alterações são salvas automaticamente e aplicadas imediatamente.
+        </AlertDescription>
+      </Alert>
+
+      {/* Profile Summary Card melhorado */}
+      <Card className="border-2 border-primary/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Resumo do Perfil
+          </CardTitle>
+          <CardDescription>
+            Informações principais do seu perfil na plataforma
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-6">
+            <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/20">
+              <span className="text-2xl font-bold text-primary">
+                {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
+              </span>
+            </div>
+            <div className="flex-1 space-y-2">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground">{profile.full_name}</h2>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  {profile.email}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                {profile.job_title && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Building className="h-4 w-4" />
+                    <span>{profile.job_title}</span>
+                  </div>
+                )}
+                {profile.department && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{profile.department}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right space-y-2">
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Ativo
+              </Badge>
+              {profile.last_login_at && (
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Último acesso:</span><br />
+                  {formatDateTime(profile.last_login_at)}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 h-12">
+          <TabsTrigger value="profile" className="flex items-center gap-2 h-10">
+            <User className="h-4 w-4" />
+            <span>Informações Pessoais</span>
+          </TabsTrigger>
+          <TabsTrigger value="preferences" className="flex items-center gap-2 h-10">
+            <Settings className="h-4 w-4" />
+            <span>Preferências</span>
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-2 h-10">
+            <Activity className="h-4 w-4" />
+            <span>Atividades</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5 text-primary" />
+                    Informações Pessoais
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie suas informações básicas de perfil
+                  </CardDescription>
+                </div>
+                <Button
+                  variant={editingProfile ? "outline" : "default"}
+                  onClick={() => setEditingProfile(!editingProfile)}
+                  className="flex items-center gap-2"
+                >
+                  {editingProfile ? (
+                    <>
+                      <X className="h-4 w-4" />
+                      Cancelar
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="full_name" className="text-sm font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Nome Completo *
+                  </Label>
+                  {editingProfile ? (
+                    <Input
+                      id="full_name"
+                      value={formData.full_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                      className="h-11"
+                      placeholder="Digite seu nome completo"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.full_name}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email *
+                  </Label>
+                  {editingProfile ? (
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      className="h-11"
+                      placeholder="Digite seu email"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.email}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Telefone
+                  </Label>
+                  {editingProfile ? (
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="h-11"
+                      placeholder="Digite seu telefone"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.phone || 'Não informado'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="job_title" className="text-sm font-medium flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Cargo
+                  </Label>
+                  {editingProfile ? (
+                    <Input
+                      id="job_title"
+                      value={formData.job_title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, job_title: e.target.value }))}
+                      className="h-11"
+                      placeholder="Digite seu cargo"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.job_title || 'Não informado'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="department" className="text-sm font-medium flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Departamento
+                  </Label>
+                  {editingProfile ? (
+                    <Input
+                      id="department"
+                      value={formData.department}
+                      onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                      className="h-11"
+                      placeholder="Digite seu departamento"
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{profile.department || 'Não informado'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Membro desde
+                  </Label>
+                  <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {editingProfile && (
+                <>
+                  <Separator />
+                  <div className="flex justify-end space-x-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingProfile(false)}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleProfileUpdate}
+                      disabled={saving}
+                      className="flex items-center gap-2"
+                    >
+                      {saving ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Salvar Alterações
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences" className="space-y-6">
+          {/* Theme Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Aparência & Tema
+              </CardTitle>
+              <CardDescription>
+                Personalize a aparência da interface de acordo com suas preferências
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    Tema da Interface
+                  </Label>
+                  <Select
+                    value={theme || 'system'}
+                    onValueChange={(value: 'light' | 'dark' | 'system') => {
+                      setTheme(value);
+                      setPreferences(prev => ({ ...prev, theme: value }));
+                    }}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">
+                        <div className="flex items-center gap-2">
+                          <Sun className="h-4 w-4" />
+                          <span>Claro</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="dark">
+                        <div className="flex items-center gap-2">
+                          <Moon className="h-4 w-4" />
+                          <span>Escuro</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="system">
+                        <div className="flex items-center gap-2">
+                          <Settings className="h-4 w-4" />
+                          <span>Automático (Sistema)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Idioma da Interface
+                  </Label>
+                  <Select
+                    value={preferences.language}
+                    onValueChange={(value) =>
+                      setPreferences(prev => ({ ...prev, language: value }))
+                    }
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt-BR">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          <span>Português (Brasil)</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="en-US">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          <span>English (US)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Color Palette */}
+          <ColorSelector
+            palette={preferences.colorPalette}
+            onPaletteChange={(newPalette) =>
+              setPreferences((prev) => ({ ...prev, colorPalette: newPalette }))
+            }
+            onGeneratePalette={() => {
+              const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+              setPreferences((prev) => ({
+                ...prev,
+                colorPalette: {
+                  primary: randomColor(),
+                  secondary: randomColor(),
+                  tertiary: randomColor(),
+                },
+              }));
+            }}
+            onSave={savePreferences}
+            saving={themeSaving}
+          />
+
+          {/* Notification Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5 text-primary" />
+                Notificações
+              </CardTitle>
+              <CardDescription>
+                Configure como e quando você deseja receber notificações
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Notificações por Email
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Receber notificações importantes por email</p>
+                  </div>
+                  <Switch
+                    checked={preferences.notifications?.email}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        notifications: { ...prev.notifications, email: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Bell className="h-4 w-4" />
+                      Notificações Push
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Receber notificações no navegador</p>
+                  </div>
+                  <Switch
+                    checked={preferences.notifications?.push}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        notifications: { ...prev.notifications, push: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Alertas de Segurança
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Notificações sobre eventos de segurança</p>
+                  </div>
+                  <Switch
+                    checked={preferences.notifications?.security}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        notifications: { ...prev.notifications, security: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Atualizações do Sistema
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Novidades e atualizações da plataforma</p>
+                  </div>
+                  <Switch
+                    checked={preferences.notifications?.updates}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        notifications: { ...prev.notifications, updates: checked }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Privacy Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Privacidade & Segurança
+              </CardTitle>
+              <CardDescription>
+                Controle a visibilidade das suas informações e atividades
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Mostrar Email no Perfil
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Permitir que outros usuários vejam seu email</p>
+                  </div>
+                  <Switch
+                    checked={preferences.privacy?.showEmail}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        privacy: { ...prev.privacy, showEmail: checked }
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Activity className="h-4 w-4" />
+                      Atividade Pública
+                    </Label>
+                    <p className="text-sm text-muted-foreground">Permitir que outros vejam suas atividades recentes</p>
+                  </div>
+                  <Switch
+                    checked={preferences.privacy?.showActivity}
+                    onCheckedChange={(checked) =>
+                      setPreferences(prev => ({
+                        ...prev,
+                        privacy: { ...prev.privacy, showActivity: checked }
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={handlePreferencesUpdate} 
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Salvar Preferências
+                </>
+              )}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                Histórico de Atividades
+              </CardTitle>
+              <CardDescription>
+                Acompanhe suas ações e atividades recentes na plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                {activities.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[140px]">Data/Hora</TableHead>
+                        <TableHead className="w-[120px]">Ação</TableHead>
+                        <TableHead className="w-[100px]">Recurso</TableHead>
+                        <TableHead className="w-[100px]">IP Address</TableHead>
+                        <TableHead>Detalhes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activities.map((activity) => (
+                        <TableRow key={activity.id} className="hover:bg-muted/50">
+                          <TableCell className="text-xs">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className="whitespace-nowrap font-mono">
+                                {new Date(activity.created_at).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-xs px-2 py-1 border", getActionBadgeColor(activity.action))}
+                            >
+                              {activity.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs px-2 py-1">
+                              {activity.resource_type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs font-mono text-muted-foreground">
+                            {activity.ip_address || 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <div className="max-w-[300px]" title={activity.details ? JSON.stringify(activity.details, null, 2) : 'N/A'}>
+                              {activity.details ? (
+                                <div className="space-y-1">
+                                  {activity.action === 'profile_updated' && activity.details.changes ? (
+                                    <div className="space-y-1">
+                                      <span className="font-medium text-foreground">Alterações realizadas:</span>
+                                      {Object.entries(activity.details.changes as Record<string, {from: string, to: string}>).map(([field, change]) => (
+                                        <div key={field} className="text-xs pl-2 border-l-2 border-muted">
+                                          <span className="capitalize font-medium">{field.replace('_', ' ')}: </span>
+                                          <span className="line-through text-red-600 dark:text-red-400">{change.from || '(vazio)'}</span>
+                                          <span className="mx-1">→</span>
+                                          <span className="text-green-600 dark:text-green-400">{change.to || '(vazio)'}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : activity.action === 'preferences_updated' && activity.details.preferences ? (
+                                    <div className="flex items-center gap-1">
+                                      <Settings className="h-3 w-3" />
+                                      <span className="font-medium">Preferências atualizadas</span>
+                                    </div>
+                                  ) : activity.action.includes('login') ? (
+                                    <div className="flex items-center gap-1">
+                                      {activity.action === 'login_success' ? (
+                                        <CheckCircle className="h-3 w-3 text-green-600" />
+                                      ) : (
+                                        <RefreshCw className="h-3 w-3 text-blue-600" />
+                                      )}
+                                      <span className="font-medium">
+                                        {activity.action === 'login_success' ? 'Login realizado' : 'Logout realizado'}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="truncate text-muted-foreground">
+                                      {JSON.stringify(activity.details).substring(0, 80)}...
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">Sem detalhes</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-12">
+                    <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <h3 className="text-lg font-medium text-muted-foreground mb-2">Nenhuma atividade encontrada</h3>
+                    <p className="text-sm text-muted-foreground">Suas atividades aparecerão aqui conforme você usar a plataforma</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};

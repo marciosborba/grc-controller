@@ -185,9 +185,9 @@ export function AppSidebar() {
   const handleProfileClick = () => {
     navigate('/profile');
   };
-  return <Sidebar className={`${collapsed ? "w-16" : "w-72"} transition-all duration-300 border-r border-border`} collapsible="icon">
+  return <Sidebar className="border-r border-border" collapsible="icon">
       {/* Header - Responsivo */}
-      <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-border">
+      <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
         {!collapsed && <div className="flex items-center space-x-2 min-w-0 flex-1">
             <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
             <div className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export function AppSidebar() {
       </div>
 
       {/* AI Assistant Banner - Responsivo */}
-      {!collapsed && <div className="m-3 sm:m-4 p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+      {!collapsed && <div className="mx-3 sm:mx-4 mt-3 sm:mt-4 mb-2 sm:mb-3 p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
           <div className="flex items-center space-x-2 mb-1 sm:mb-2">
             <Brain className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
             <span className="text-xs sm:text-sm font-medium text-primary">Assistente IA</span>
@@ -209,7 +209,7 @@ export function AppSidebar() {
           </p>
         </div>}
 
-      <SidebarContent className="px-1 sm:px-2 py-3 sm:py-4">
+      <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
         {navigationItems.map((group, groupIndex) => {
           const filteredItems = group.items.filter(item => hasPermission(item.permissions));
           
@@ -262,7 +262,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Info - Responsivo */}
-      {!collapsed && user && <div className="mt-auto p-3 sm:p-4 border-t border-border">
+      {!collapsed && user && <div className="mt-auto px-3 sm:px-4 py-3 sm:py-4 border-t border-border">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 sm:p-2 transition-colors"
             onClick={handleProfileClick}

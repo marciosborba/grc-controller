@@ -55,7 +55,7 @@ const getRiskLevelColor = (level: string): string => {
   const colors = {
     'Muito Baixo': 'bg-green-100 text-green-800',
     'Baixo': 'bg-green-100 text-green-800',
-    'Médio': 'bg-yellow-100 text-yellow-800',
+    'Médio': 'bg-amber-100 text-amber-900 border border-amber-300',
     'Alto': 'bg-orange-100 text-orange-800',
     'Muito Alto': 'bg-red-100 text-red-800',
     'Crítico': 'bg-red-100 text-red-800'

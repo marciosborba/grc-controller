@@ -875,8 +875,13 @@ const GlobalRulesSection: React.FC = () => {
       applyColorWithImportant('--accent', theme.accent_color);
       applyColorWithImportant('--accent-foreground', theme.accent_foreground);
       
-      // Para tema nativo, NÃO aplicar background/foreground para preservar dark mode
-      // Apenas aplicar cores que não interferem com o dark mode
+      // Para tema nativo, aplicar background/foreground também
+      applyColorWithImportant('--background', theme.background_color);
+      applyColorWithImportant('--foreground', theme.foreground_color);
+      applyColorWithImportant('--card', theme.card_color);
+      applyColorWithImportant('--card-foreground', theme.card_foreground);
+      
+      // Aplicar outras cores de interface
       applyColorWithImportant('--border', theme.border_color);
       applyColorWithImportant('--input', theme.input_color || theme.border_color);
       applyColorWithImportant('--ring', theme.ring_color || theme.primary_color);

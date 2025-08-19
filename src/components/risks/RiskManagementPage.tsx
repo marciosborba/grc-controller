@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AIChat } from '@/components/ai/AIChat';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,9 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { AIChatAssistant } from '@/components/ai/AIChatAssistant';
+
 import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
-import { AIChatDialog } from '@/components/ai/AIChatDialog';
+import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 import { cn } from '@/lib/utils';
 
 interface RiskAssessment {
@@ -442,7 +442,7 @@ const RiskManagementPage = () => {
     switch (level) {
       case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200';
       case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300';
       case 'Baixo': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -512,14 +512,18 @@ const RiskManagementPage = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <AIChatDialog 
-            type="risk" 
+          <ImprovedAIChatDialog 
+            type="risk"
             context={{ risks: filteredRisks }}
-            title="Assistente de Gestão de Riscos"
             trigger={
-              <Button variant="outline" className="flex items-center space-x-2">
-                <Brain className="h-4 w-4" />
-                <span>Chat com IA</span>
+              <Button variant="outline" className="flex items-center space-x-2 hover:bg-red-50 transition-colors">
+                <div className="p-1 rounded-full bg-red-500">
+                  <Brain className="h-3 w-3 text-white" />
+                </div>
+                <span>Chat com ALEX RISK</span>
+                <Badge variant="secondary" className="text-xs">
+                  IA
+                </Badge>
               </Button>
             }
           />
@@ -1117,7 +1121,7 @@ const RiskManagementPage = () => {
         </CardContent>
       </Card>
       
-      <AIChat type="risk" mode="widget" />
+
     </div>
   );
 };

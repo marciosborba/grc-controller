@@ -310,7 +310,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
     switch (level) {
       case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200';
       case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200';
-      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-200';
       case 'Baixo': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200';
     }

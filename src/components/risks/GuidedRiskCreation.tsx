@@ -31,6 +31,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AIRiskRegistrationWizard } from '../ai/AIRiskRegistrationWizard';
 
 interface RiskFormData {
   // Step 1: Identification
@@ -97,6 +98,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showAIWizard, setShowAIWizard] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -322,6 +324,29 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
   const currentStepData = steps[currentStep];
   const StepIcon = currentStepData.icon;
 
+  // Show AI Wizard if requested
+  if (showAIWizard) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Button variant="outline" onClick={() => setShowAIWizard(false)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao Formulário Manual
+          </Button>
+        </div>
+        <AIRiskRegistrationWizard 
+          onComplete={(riskData, riskId) => {
+            if (onComplete && riskId) {
+              onComplete(riskId);
+            }
+            setShowAIWizard(false);
+          }}
+          onClose={() => setShowAIWizard(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -337,6 +362,15 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
         </div>
         
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAIWizard(true)}
+            className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100"
+          >
+            <Brain className="h-4 w-4 mr-2 text-purple-600" />
+            ALEX RISK
+          </Button>
+          
           <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
             <FileText className="h-4 w-4 mr-2" />
             Templates
@@ -668,7 +702,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   <Badge className={
                     formData.risk_level === 'Muito Alto' ? 'bg-red-100 text-red-800' :
                     formData.risk_level === 'Alto' ? 'bg-orange-100 text-orange-800' :
-                    formData.risk_level === 'Médio' ? 'bg-yellow-100 text-yellow-800' :
+                    formData.risk_level === 'Médio' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
                     formData.risk_level === 'Baixo' ? 'bg-green-100 text-green-800' :
                     'bg-gray-100 text-gray-800'
                   }>

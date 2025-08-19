@@ -34,7 +34,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { AIChatDialog } from '@/components/ai/AIChatDialog';
+import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 
 interface RiskAnalysis {
   id: string;
@@ -391,14 +391,18 @@ export const RiskIntelligentAnalysis: React.FC = () => {
             Atualizar
           </Button>
           
-          <AIChatDialog 
-            type="risk_analysis" 
-            context={{ analyses, currentAnalysis }}
-            title="ALEX RISK - Consultor de Análise"
+          <ImprovedAIChatDialog 
+            type="risk"
+            context={{ analyses: analyses }}
             trigger={
-              <Button variant="outline" className="flex items-center space-x-2">
-                <Brain className="h-4 w-4" />
-                <span>Consultar ALEX</span>
+              <Button variant="outline" className="flex items-center space-x-2 hover:bg-red-50 transition-colors">
+                <div className="p-1 rounded-full bg-red-500">
+                  <Brain className="h-3 w-3 text-white" />
+                </div>
+                <span>Consultar ALEX RISK</span>
+                <Badge variant="secondary" className="text-xs">
+                  IA
+                </Badge>
               </Button>
             }
           />

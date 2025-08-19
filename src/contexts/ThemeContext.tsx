@@ -92,9 +92,9 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
             loadAndApplyGlobalTheme();
           }
         } else {
-          // PRIORIDADE 2: Apply global active theme if no user preferences
-          console.log('🎨 ThemeContext: Nenhuma preferência encontrada - aplicando tema global');
-          loadAndApplyGlobalTheme();
+          // PRIORIDADE 2: NÃO aplicar tema global automaticamente para evitar conflito
+          console.log('🎨 ThemeContext: Nenhuma preferência encontrada - deixando GlobalRulesSection gerenciar');
+          // loadAndApplyGlobalTheme(); // DESABILITADO para evitar conflito com GlobalRulesSection
         }
       }, 1000); // Further increased delay to allow GlobalRulesSection to apply themes first
       
@@ -106,13 +106,10 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
   useEffect(() => {
     const handleGlobalThemeChange = (event: CustomEvent) => {
       console.log('🌍 ThemeContext: Recebido evento de mudança de tema global:', event.detail);
-      console.log('⚠️ ThemeContext: DESABILITANDO reaplicacao automatica para evitar sobrescrever tema aplicado');
-      console.log('💡 ThemeContext: GlobalRulesSection ja aplicou as cores corretamente');
+      console.log('⚠️ ThemeContext: Deixando GlobalRulesSection gerenciar aplicação de tema');
+      console.log('💡 ThemeContext: Evitando conflito de aplicação dupla');
       
-      // NAO recarregar tema automaticamente pois GlobalRulesSection ja aplicou
-      // setTimeout(() => {
-      //   loadAndApplyGlobalTheme();
-      // }, 100);
+      // NÃO aplicar tema automaticamente - GlobalRulesSection já gerencia isso
     };
     
     window.addEventListener('globalThemeChanged', handleGlobalThemeChange as EventListener);
@@ -214,11 +211,17 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
         root.style.setProperty('--accent', activeTheme.accent_color, 'important');
         root.style.setProperty('--accent-foreground', activeTheme.accent_foreground, 'important');
         
-        // For non-native themes, apply background colors too
-        if (!activeTheme.is_native_theme) {
+        // Apply background colors when defined (regardless of native theme status)
+        if (activeTheme.background_color) {
           root.style.setProperty('--background', activeTheme.background_color, 'important');
+        }
+        if (activeTheme.foreground_color) {
           root.style.setProperty('--foreground', activeTheme.foreground_color, 'important');
+        }
+        if (activeTheme.card_color) {
           root.style.setProperty('--card', activeTheme.card_color, 'important');
+        }
+        if (activeTheme.card_foreground) {
           root.style.setProperty('--card-foreground', activeTheme.card_foreground, 'important');
         }
         

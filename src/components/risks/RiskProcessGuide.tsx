@@ -63,7 +63,11 @@ interface Risk {
   updated_at: string;
 }
 
-export const RiskProcessGuide: React.FC = () => {
+interface RiskProcessGuideProps {
+  onRiskCreated?: (riskId: string) => void;
+}
+
+export const RiskProcessGuide: React.FC<RiskProcessGuideProps> = ({ onRiskCreated }) => {
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null);
   const [risks, setRisks] = useState<Risk[]>([]);
   const [currentStep, setCurrentStep] = useState<string>('identify');
@@ -334,10 +338,27 @@ export const RiskProcessGuide: React.FC = () => {
 
   const fetchRisks = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 Debug fetchRisks - User:', user);
+      console.log('🔍 Debug fetchRisks - Tenant ID:', user?.tenant?.id);
+      
+      // Buscar riscos do tenant do usuário
+      let query = supabase
         .from('risk_assessments')
         .select('*')
         .order('updated_at', { ascending: false });
+      
+      // Temporariamente removendo filtro de tenant para debug
+      // if (user?.tenant?.id) {
+      //   query = query.eq('tenant_id', user.tenant.id);
+      //   console.log('🔍 Aplicando filtro de tenant:', user.tenant.id);
+      // } else {
+        console.log('⚠️ Debug: Buscando todos os riscos (filtro de tenant desabilitado)');
+      // }
+      
+      const { data, error } = await query;
+      
+      console.log('📊 Riscos encontrados:', data?.length || 0);
+      console.log('📊 Dados dos riscos:', data);
 
       if (error) throw error;
 
@@ -345,15 +366,19 @@ export const RiskProcessGuide: React.FC = () => {
         ...risk,
         current_step: risk.status === 'open' ? 'identify' : 
                      risk.status === 'in_analysis' ? 'analyze' :
+                     risk.status === 'evaluated' ? 'evaluate' :
+                     risk.status === 'classified' ? 'classify' :
                      risk.status === 'in_treatment' ? 'treat' :
                      risk.status === 'monitoring' ? 'monitor' :
+                     risk.status === 'under_review' ? 'review' :
                      risk.status === 'closed' ? 'close' : 'identify',
         progress_percentage: calculateProgress(risk.status)
       })) || [];
 
       setRisks(risksWithProgress);
+      console.log('✅ Riscos processados e definidos:', risksWithProgress?.length || 0);
     } catch (error: any) {
-      console.error('Erro ao carregar riscos:', error);
+      console.error('❌ Erro ao carregar riscos:', error);
     }
   };
 
@@ -379,10 +404,71 @@ export const RiskProcessGuide: React.FC = () => {
   const handleRiskCreated = (riskId: string) => {
     setShowGuidedCreation(false);
     fetchRisks();
+    
+    // Atualizar o processo para mostrar as etapas como concluídas
+    updateProcessForCreatedRisk(riskId);
+    
     toast({
       title: 'Risco Criado',
       description: 'Risco criado com sucesso! Agora você pode prosseguir com a análise.',
     });
+    
+    if (onRiskCreated) {
+      onRiskCreated(riskId);
+    }
+  };
+  
+  const updateProcessForCreatedRisk = async (riskId: string) => {
+    try {
+      // Buscar o risco criado
+      const { data: riskData, error } = await supabase
+        .from('risk_assessments')
+        .select('*')
+        .eq('id', riskId)
+        .single();
+        
+      if (error) throw error;
+      
+      // Se o risco foi criado pelo ALEX RISK (tem analysis_data com ai_generated)
+      if (riskData?.analysis_data?.ai_generated) {
+        // Atualizar status para mostrar que várias etapas foram concluídas
+        const { error: updateError } = await supabase
+          .from('risk_assessments')
+          .update({
+            status: 'classified', // Pular para classificado pois ALEX RISK já fez análise
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', riskId);
+          
+        if (updateError) throw updateError;
+        
+        // Atualizar a lista de riscos
+        await fetchRisks();
+        
+        // Selecionar automaticamente o risco criado
+        const updatedRisk = {
+          ...riskData,
+          status: 'classified',
+          current_step: 'classify',
+          progress_percentage: 50
+        };
+        setSelectedRisk(updatedRisk);
+        
+        toast({
+          title: '🎯 ALEX RISK Concluído',
+          description: 'Processo avançado automaticamente até a etapa de Classificação!',
+        });
+      } else {
+        // Para riscos criados manualmente, apenas selecionar
+        setSelectedRisk({
+          ...riskData,
+          current_step: 'identify',
+          progress_percentage: 12.5
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar processo:', error);
+    }
   };
 
   const useTemplate = () => {
@@ -720,6 +806,16 @@ export const RiskProcessGuide: React.FC = () => {
     const stepOrder = ['identify', 'analyze', 'evaluate', 'classify', 'treat', 'monitor', 'review', 'close'];
     const currentStepIndex = stepOrder.indexOf(selectedRisk.current_step);
     const stepIndex = stepOrder.indexOf(stepId);
+    
+    // Se o risco foi criado pelo ALEX RISK, marcar as primeiras etapas como concluídas
+    const isAIGenerated = selectedRisk.analysis_data?.ai_generated;
+    
+    if (isAIGenerated) {
+      // ALEX RISK completa automaticamente: Identificar, Analisar, Avaliar
+      if (['identify', 'analyze', 'evaluate'].includes(stepId) && stepIndex <= currentStepIndex) {
+        return 'completed';
+      }
+    }
     
     if (stepIndex < currentStepIndex) return 'completed';
     if (stepIndex === currentStepIndex) return 'in_progress';

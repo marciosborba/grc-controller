@@ -52,12 +52,16 @@ export const useAIChat = (config: AIChatConfig) => {
 
   const getWelcomeMessage = useCallback(() => {
     const welcomeMessages = {
-      general: 'Olá! Sou seu assistente de GRC. Como posso ajudá-lo hoje com questões de governança, riscos ou compliance?',
-      assessment: 'Olá! Sou especializado em assessments e avaliações. Posso ajudar a criar questionários, definir critérios de avaliação e estruturar frameworks de compliance.',
-      risk: 'Olá! Sou seu especialista em gestão de riscos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos corporativos.',
-      audit: 'Olá! Sou especializado em auditoria interna. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
-      policy: 'Olá! Sou especializado em políticas corporativas. Posso ajudar a criar políticas estruturadas, procedimentos e documentação de governança.',
-      compliance: 'Olá! Sou especializado em compliance. Posso ajudar com questões regulatórias, frameworks de conformidade e controles internos.'
+      general: 'Olá! Sou ALEX RISK - seu assistente especializado em gestão de riscos. Como posso ajudá-lo hoje com questões de riscos corporativos?',
+      assessment: 'Olá! Sou ALEX ASSESSMENT - especialista em assessments e avaliações de maturidade. Posso ajudar com metodologias de avaliação, frameworks de maturidade e boas práticas.',
+      risk: 'Olá! Sou ALEX RISK - especialista em gestão de riscos corporativos. Posso ajudar com identificação, análise, avaliação e mitigação de riscos.',
+      audit: 'Olá! Sou ALEX AUDIT - especialista em auditoria Big Four e IA. Posso ajudar com planejamento de auditorias, procedimentos de teste e elaboração de relatórios.',
+      policy: 'Olá! Sou ALEX POLICY - especialista em políticas e procedimentos corporativos. Posso ajudar a criar políticas estruturadas e documentação de governança.',
+      compliance: 'Olá! Sou ALEX COMPLIANCE - especialista em conformidade regulatória. Posso ajudar com frameworks regulatórios e controles de compliance.',
+      privacy: 'Olá! Sou ALEX PRIVACY - especialista em privacidade de dados e LGPD. Posso ajudar com questões de proteção de dados e conformidade.',
+      incident: 'Olá! Sou ALEX INCIDENT - especialista em gestão de incidentes. Posso ajudar com resposta a incidentes e planos de continuidade.',
+      vendor: 'Olá! Sou ALEX VENDOR - especialista em riscos de fornecedores e IA. Posso ajudar com avaliação e gestão de terceiros.',
+      ethics: 'Olá! Sou ALEX ETHICS - especialista em ética e ouvidoria corporativa. Posso ajudar com questões éticas e compliance comportamental.'
     };
     return welcomeMessages[config.type] || welcomeMessages.general;
   }, [config.type]);
@@ -95,7 +99,7 @@ export const useAIChat = (config: AIChatConfig) => {
     const startTime = Date.now();
 
     try {
-      const { data, error } = await supabase.functions.invoke('ai-assistant', {
+      const { data, error } = await supabase.functions.invoke('ai-chat-glm', {
         body: {
           prompt: content,
           type: config.type,
@@ -131,7 +135,7 @@ export const useAIChat = (config: AIChatConfig) => {
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         type: 'assistant',
-        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se a chave da API Hugging Face está configurada corretamente.',
+        content: 'Desculpe, estou com problemas técnicos no momento. Verifique se o provedor de IA está configurado corretamente.',
         timestamp: new Date()
       };
 

@@ -29,7 +29,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { AIChatDialog } from '@/components/ai/AIChatDialog';
+import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 import { RiskLibrary } from './RiskLibrary';
 import { RiskIntelligentAnalysis } from './RiskIntelligentAnalysis';
 import { RiskReports } from './RiskReports';
@@ -295,14 +295,23 @@ export const RiskManagementHub: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <AIChatDialog 
-            type="risk_management" 
-            context={{ metrics, user }}
-            title="ALEX RISK - Especialista em Gestão de Riscos"
+          <ImprovedAIChatDialog 
+            type="risk"
+            context={{ 
+              totalRisks: metrics?.total_risks || 0,
+              highRisks: metrics?.high_priority_risks || 0,
+              overdueActions: metrics?.overdue_actions || 0,
+              complianceScore: metrics?.compliance_score || 0
+            }}
             trigger={
-              <Button variant="outline" className="flex items-center space-x-2">
-                <Brain className="h-4 w-4" />
+              <Button variant="outline" className="flex items-center space-x-2 hover:bg-red-50 transition-colors">
+                <div className="p-1 rounded-full bg-red-500">
+                  <Brain className="h-3 w-3 text-white" />
+                </div>
                 <span>Consultar ALEX RISK</span>
+                <Badge variant="secondary" className="text-xs">
+                  IA
+                </Badge>
               </Button>
             }
           />
@@ -560,7 +569,14 @@ export const RiskManagementHub: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="process">
-          <RiskProcessGuide />
+          <RiskProcessGuide onRiskCreated={(riskId) => {
+            // Atualizar dashboard quando um risco é criado
+            fetchDashboardData();
+            toast({
+              title: '🎯 Processo Atualizado',
+              description: 'Risco integrado ao processo de gestão!',
+            });
+          }} />
         </TabsContent>
 
         <TabsContent value="management">

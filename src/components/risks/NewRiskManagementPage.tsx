@@ -385,7 +385,7 @@ const NewRiskManagementPage: React.FC = () => {
     switch (level) {
       case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200';
       case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300';
       case 'Baixo': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }

@@ -262,7 +262,7 @@ export const IntegratedRiskManagement: React.FC = () => {
     switch (status) {
       case 'Muito Alto': return 'bg-red-100 text-red-800';
       case 'Alto': return 'bg-orange-100 text-orange-800';
-      case 'Medio': return 'bg-yellow-100 text-yellow-800';
+      case 'Medio': return 'bg-amber-100 text-amber-900 border border-amber-300';
       case 'Baixo': return 'bg-green-100 text-green-800';
       case 'Muito Baixo': return 'bg-gray-100 text-gray-800';
       case 'Em Andamento': return 'bg-blue-100 text-blue-800';
