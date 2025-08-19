@@ -68,10 +68,15 @@ import {
   UserX,
   Shield,
   Search,
-  RefreshCw
+  RefreshCw,
+  Palette,
+  Moon,
+  Sun,
+  Copy
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { ColorSelector } from '@/components/profile/ColorSelector';
 
 interface Tenant {
   id: string;
@@ -113,6 +118,19 @@ interface TenantUser {
   is_active: boolean;
   created_at: string;
   last_login_at?: string;
+}
+
+interface ColorPalette {
+  primary: string;
+  secondary: string;
+  tertiary: string;
+}
+
+interface TenantThemeConfig {
+  palette: ColorPalette;
+  dark_mode_palette?: ColorPalette;
+  inherit_global: boolean;
+  custom_theme_id?: string;
 }
 
 interface RiskMatrixConfig {
@@ -219,6 +237,20 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
+
+  // Estados para configuração de UI/Tema
+  const [tenantTheme, setTenantTheme] = useState<TenantThemeConfig>({
+    palette: { primary: '#3b82f6', secondary: '#1e40af', tertiary: '#60a5fa' },
+    dark_mode_palette: { primary: '#60a5fa', secondary: '#3b82f6', tertiary: '#93c5fd' },
+    inherit_global: true
+  });
+  const [globalTheme, setGlobalTheme] = useState<ColorPalette>({
+    primary: '#3b82f6', secondary: '#1e40af', tertiary: '#60a5fa'
+  });
+  const [isEditingTheme, setIsEditingTheme] = useState(false);
+  const [isDarkModePreview, setIsDarkModePreview] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [loadingTheme, setLoadingTheme] = useState(false);
 
   const getStatusBadge = () => {
     if (!tenant.is_active) {
@@ -626,6 +658,214 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
+  // Função para extrair cores reais do CSS
+  const getActualColors = () => {
+    const root = document.documentElement;
+    const computedStyle = getComputedStyle(root);
+    
+    // Tentar extrair cores das CSS custom properties mais comuns
+    const primaryVars = ['--primary', '--color-primary', '--primary-color'];
+    const secondaryVars = ['--secondary', '--color-secondary', '--secondary-color'];
+    const accentVars = ['--accent', '--color-accent', '--accent-color', '--tertiary'];
+    
+    const getPrimaryColor = () => {
+      for (const varName of primaryVars) {
+        const value = computedStyle.getPropertyValue(varName).trim();
+        if (value) return value;
+      }
+      // Fallback: tentar buscar cor de um botão primário real
+      const button = document.querySelector('.bg-primary, [class*="bg-primary"], .btn-primary, .button-primary');
+      if (button) {
+        const buttonStyle = getComputedStyle(button);
+        const bgColor = buttonStyle.backgroundColor;
+        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') {
+          return bgColor;
+        }
+      }
+      return '#3b82f6'; // fallback padrão
+    };
+    
+    const getSecondaryColor = () => {
+      for (const varName of secondaryVars) {
+        const value = computedStyle.getPropertyValue(varName).trim();
+        if (value) return value;
+      }
+      return '#6b7280'; // fallback padrão
+    };
+    
+    const getAccentColor = () => {
+      for (const varName of accentVars) {
+        const value = computedStyle.getPropertyValue(varName).trim();
+        if (value) return value;
+      }
+      return '#10b981'; // fallback padrão
+    };
+    
+    // Converter RGB/HSL para HEX se necessário
+    const convertToHex = (colorValue: string) => {
+      if (!colorValue || colorValue.startsWith('#')) return colorValue || '#3b82f6';
+      
+      // Se for RGB
+      if (colorValue.startsWith('rgb')) {
+        const rgbMatch = colorValue.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (rgbMatch) {
+          const r = parseInt(rgbMatch[1]);
+          const g = parseInt(rgbMatch[2]);
+          const b = parseInt(rgbMatch[3]);
+          return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+      }
+      
+      // Se for HSL
+      if (colorValue.includes('%')) {
+        const hslMatch = colorValue.match(/(\d+\.?\d*)\s+(\d+\.?\d*)%\s+(\d+\.?\d*)%/);
+        if (hslMatch) {
+          const h = parseFloat(hslMatch[1]) / 360;
+          const s = parseFloat(hslMatch[2]) / 100;
+          const l = parseFloat(hslMatch[3]) / 100;
+          
+          const hue2rgb = (p: number, q: number, t: number) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+          };
+          
+          let r, g, b;
+          if (s === 0) {
+            r = g = b = l;
+          } else {
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+          }
+          
+          const toHex = (c: number) => {
+            const hex = Math.round(c * 255).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+          };
+          
+          return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        }
+      }
+      
+      return colorValue || '#3b82f6';
+    };
+    
+    const primary = getPrimaryColor();
+    const secondary = getSecondaryColor();
+    const tertiary = getAccentColor();
+    
+    console.log('🎨 Cores detectadas:', { primary, secondary, tertiary });
+    
+    return {
+      primary: convertToHex(primary),
+      secondary: convertToHex(secondary),
+      tertiary: convertToHex(tertiary)
+    };
+  };
+
+  // Funções para gerenciamento de tema da tenant
+  const loadTenantTheme = async () => {
+    try {
+      setLoadingTheme(true);
+      
+      // Carregar dados da tenant
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenant.id)
+        .single();
+
+      if (tenantError) throw tenantError;
+
+      // Obter cores reais que estão sendo aplicadas no CSS
+      const actualColors = getActualColors();
+      setGlobalTheme(actualColors);
+
+      // Carregar tema global ativo para referência
+      const { data: globalThemeData, error: globalError } = await supabase
+        .from('global_ui_themes')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      // Processar configuração da tenant
+      const themeConfig = tenantData?.settings?.theme_config;
+      if (themeConfig) {
+        setTenantTheme({
+          palette: themeConfig.palette || actualColors,
+          dark_mode_palette: themeConfig.dark_mode_palette || {
+            primary: globalThemeData?.primary_color_dark || actualColors.primary,
+            secondary: globalThemeData?.secondary_color_dark || actualColors.secondary,
+            tertiary: globalThemeData?.accent_color_dark || actualColors.tertiary
+          },
+          inherit_global: themeConfig.inherit_global ?? true,
+          custom_theme_id: themeConfig.custom_theme_id
+        });
+      } else {
+        // Se não há configuração específica, usar as cores reais aplicadas
+        setTenantTheme({
+          palette: actualColors,
+          dark_mode_palette: {
+            primary: globalThemeData?.primary_color_dark || actualColors.primary,
+            secondary: globalThemeData?.secondary_color_dark || actualColors.secondary,
+            tertiary: globalThemeData?.accent_color_dark || actualColors.tertiary
+          },
+          inherit_global: true
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tema da tenant:', error);
+      toast.error('Erro ao carregar configurações de tema');
+    } finally {
+      setLoadingTheme(false);
+    }
+  };
+
+  const saveTenantTheme = async () => {
+    try {
+      setSavingTheme(true);
+      const updatedSettings = {
+        ...tenant.settings,
+        theme_config: tenantTheme
+      };
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({ 
+          settings: updatedSettings,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tenant.id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      toast.success('Configurações de tema salvas com sucesso!');
+      setIsEditingTheme(false);
+    } catch (error) {
+      console.error('Erro ao salvar tema da tenant:', error);
+      toast.error('Erro ao salvar configurações de tema');
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
+  const generateRandomPalette = (): ColorPalette => {
+    const colors = [
+      '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'
+    ];
+    const primary = colors[Math.floor(Math.random() * colors.length)];
+    const secondary = colors[Math.floor(Math.random() * colors.length)];
+    const tertiary = colors[Math.floor(Math.random() * colors.length)];
+    return { primary, secondary, tertiary };
+  };
+
   // Filtrar usuários baseado na pesquisa
   const filteredUsers = tenantUsers.filter(user =>
     user.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -652,6 +892,26 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       loadTenantUsers();
     }
   }, [selectedTab, isExpanded]);
+
+  // Carregar tema da tenant quando necessário
+  useEffect(() => {
+    if (selectedTab === 'theme' && isExpanded) {
+      // Detectar se está em dark mode atualmente
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkModePreview(isDark);
+      
+      loadTenantTheme();
+    }
+  }, [selectedTab, isExpanded]);
+
+  // Atualizar cores quando o modo escuro mudar
+  useEffect(() => {
+    if (selectedTab === 'theme' && isExpanded) {
+      // Recarregar cores quando o preview mode mudar
+      const actualColors = getActualColors();
+      setGlobalTheme(actualColors);
+    }
+  }, [isDarkModePreview, selectedTab, isExpanded]);
 
   return (
     <Card className={cn(
@@ -691,7 +951,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
         <CollapsibleContent>
           <CardContent className="pt-0">
             <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid grid-cols-4 w-full mb-6">
+              <TabsList className="grid grid-cols-5 w-full mb-6">
                 <TabsTrigger value="info">
                   <Activity className="h-4 w-4 mr-2" />
                   Informações
@@ -703,6 +963,10 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 <TabsTrigger value="users">
                   <Users className="h-4 w-4 mr-2" />
                   Usuários ({tenantUsers.length})
+                </TabsTrigger>
+                <TabsTrigger value="theme">
+                  <Palette className="h-4 w-4 mr-2" />
+                  UI/Tema
                 </TabsTrigger>
                 <TabsTrigger value="config">
                   <Settings className="h-4 w-4 mr-2" />
@@ -965,6 +1229,276 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Guia UI/Tema */}
+              <TabsContent value="theme" className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Palette className="h-4 w-4" />
+                    CONFIGURAÇÃO DE UI E TEMA
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDarkModePreview(!isDarkModePreview)}
+                    className="flex items-center gap-2"
+                  >
+                    {isDarkModePreview ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {isDarkModePreview ? 'Modo Claro' : 'Modo Escuro'}
+                  </Button>
+                </div>
+
+                {tenantTheme.inherit_global ? (
+                  <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 text-foreground">
+                          <Settings className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">Herança Global Ativa</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Esta tenant está usando as configurações globais de tema.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => setTenantTheme(prev => ({ ...prev, inherit_global: false }))}
+                        size="sm"
+                        variant="default"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Personalizar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Color Pickers Diretos */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Palette className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-medium">
+                            Cores Principais ({isDarkModePreview ? 'Modo Escuro' : 'Modo Claro'})
+                          </Label>
+                        </div>
+                        {tenantTheme.inherit_global && (
+                          <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded border">
+                            ⚙️ Cores do tema global ativo
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {Object.entries(
+                          tenantTheme.inherit_global 
+                            ? globalTheme 
+                            : (isDarkModePreview ? tenantTheme.dark_mode_palette || tenantTheme.palette : tenantTheme.palette)
+                        ).map(([colorName, colorValue]) => (
+                          <div key={colorName} className="space-y-3">
+                            <Label className="text-sm font-medium capitalize">
+                              {colorName === 'primary' ? 'Primária' : 
+                               colorName === 'secondary' ? 'Secundária' : 'Terciária'}
+                            </Label>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="relative">
+                                  <Input
+                                    type="color"
+                                    value={colorValue}
+                                    onChange={(e) => {
+                                      if (!tenantTheme.inherit_global) {
+                                        const currentPalette = isDarkModePreview ? 
+                                          (tenantTheme.dark_mode_palette || tenantTheme.palette) : 
+                                          tenantTheme.palette;
+                                        const newPalette = { ...currentPalette, [colorName]: e.target.value };
+                                        
+                                        if (isDarkModePreview) {
+                                          setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
+                                        } else {
+                                          setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                                        }
+                                      }
+                                    }}
+                                    disabled={tenantTheme.inherit_global}
+                                    className={`p-1 h-12 w-16 border-2 border-border rounded-lg ${tenantTheme.inherit_global ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                                  />
+                                </div>
+                                <div className="flex-1">
+                                  <Input
+                                    value={colorValue}
+                                    onChange={(e) => {
+                                      if (!tenantTheme.inherit_global) {
+                                        const currentPalette = isDarkModePreview ? 
+                                          (tenantTheme.dark_mode_palette || tenantTheme.palette) : 
+                                          tenantTheme.palette;
+                                        const newPalette = { ...currentPalette, [colorName]: e.target.value };
+                                        
+                                        if (isDarkModePreview) {
+                                          setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
+                                        } else {
+                                          setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                                        }
+                                      }
+                                    }}
+                                    disabled={tenantTheme.inherit_global}
+                                    className={`h-12 font-mono text-sm ${tenantTheme.inherit_global ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    placeholder="#000000"
+                                  />
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    try {
+                                      await navigator.clipboard.writeText(colorValue);
+                                      toast.success(`Cor ${colorName} copiada: ${colorValue}`);
+                                    } catch (error) {
+                                      toast.error('Não foi possível copiar a cor');
+                                    }
+                                  }}
+                                  className="h-12 px-3"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Ações Rápidas */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {Object.values(
+                            tenantTheme.inherit_global 
+                              ? globalTheme 
+                              : (isDarkModePreview ? tenantTheme.dark_mode_palette || tenantTheme.palette : tenantTheme.palette)
+                          ).map((color, index) => (
+                            <div
+                              key={index}
+                              className="w-8 h-8 rounded-full border-2 border-border shadow-sm"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Paleta atual
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setTenantTheme(prev => ({ ...prev, inherit_global: true }));
+                            toast.success('Voltando para herança global');
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Settings className="h-4 w-4" />
+                          Usar Global
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            const newPalette = generateRandomPalette();
+                            if (isDarkModePreview) {
+                              setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
+                            } else {
+                              setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                            }
+                            toast.success('Nova paleta gerada!');
+                          }}
+                          disabled={tenantTheme.inherit_global}
+                          className={`flex items-center gap-2 ${tenantTheme.inherit_global ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Gerar Aleatória
+                        </Button>
+                        <Button 
+                          onClick={saveTenantTheme} 
+                          disabled={savingTheme}
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          {savingTheme ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4" />
+                              Salvar
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Separator />
+                    
+                    {/* Preview */}
+                    <div className="p-4 rounded-lg" style={{ 
+                      backgroundColor: (
+                        tenantTheme.inherit_global 
+                          ? globalTheme.primary 
+                          : (isDarkModePreview ? tenantTheme.dark_mode_palette?.primary || tenantTheme.palette.primary : tenantTheme.palette.primary)
+                      ) + '10' 
+                    }}>
+                      <h5 className="font-medium mb-2" style={{ 
+                        color: tenantTheme.inherit_global 
+                          ? globalTheme.primary 
+                          : (isDarkModePreview ? tenantTheme.dark_mode_palette?.primary || tenantTheme.palette.primary : tenantTheme.palette.primary)
+                      }}>
+                        Preview do Tema {tenantTheme.inherit_global ? 'Global' : 'Personalizado'}
+                      </h5>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Este é um exemplo de como o tema aparecerá para os usuários desta tenant.
+                      </p>
+                      <div className="flex gap-2">
+                        <div 
+                          className="px-3 py-1 rounded text-white text-sm font-medium"
+                          style={{ 
+                            backgroundColor: tenantTheme.inherit_global 
+                              ? globalTheme.primary 
+                              : (isDarkModePreview ? tenantTheme.dark_mode_palette?.primary || tenantTheme.palette.primary : tenantTheme.palette.primary)
+                          }}
+                        >
+                          Botão Primário
+                        </div>
+                        <div 
+                          className="px-3 py-1 rounded text-white text-sm font-medium"
+                          style={{ 
+                            backgroundColor: tenantTheme.inherit_global 
+                              ? globalTheme.secondary 
+                              : (isDarkModePreview ? tenantTheme.dark_mode_palette?.secondary || tenantTheme.palette.secondary : tenantTheme.palette.secondary)
+                          }}
+                        >
+                          Secundário
+                        </div>
+                        <div 
+                          className="px-3 py-1 rounded text-white text-sm font-medium"
+                          style={{ 
+                            backgroundColor: tenantTheme.inherit_global 
+                              ? globalTheme.tertiary 
+                              : (isDarkModePreview ? tenantTheme.dark_mode_palette?.tertiary || tenantTheme.palette.tertiary : tenantTheme.palette.tertiary)
+                          }}
+                        >
+                          Terciário
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </TabsContent>
@@ -1548,6 +2082,136 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
             <Button type="button" onClick={saveRiskMatrix} disabled={isSaving}>
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Salvando...' : 'Salvar Configuração'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Configuração de Tema */}
+      <Dialog open={isEditingTheme} onOpenChange={setIsEditingTheme}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Configuração de UI e Tema - {tenant.name}
+            </DialogTitle>
+            <DialogDescription>
+              Configure as cores e temas específicos para esta tenant. Os usuários da organização verão essas personalizações.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Opção de Herança Global */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Usar Configurações Globais</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Se ativado, esta tenant usará as configurações globais do sistema
+                  </p>
+                </div>
+                <Button
+                  variant={tenantTheme.inherit_global ? "default" : "outline"}
+                  onClick={() => setTenantTheme(prev => ({ 
+                    ...prev, 
+                    inherit_global: !prev.inherit_global 
+                  }))}
+                  size="sm"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  {tenantTheme.inherit_global ? 'Global Ativo' : 'Personalizado'}
+                </Button>
+              </div>
+
+              {!tenantTheme.inherit_global && (
+                <div className="space-y-4">
+                  {/* Modo de Preview */}
+                  <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/30">
+                    <div>
+                      <Label className="text-sm font-medium">Modo de Preview</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Visualize as cores no modo claro ou escuro
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={!isDarkModePreview ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setIsDarkModePreview(false)}
+                      >
+                        <Sun className="h-4 w-4 mr-2" />
+                        Claro
+                      </Button>
+                      <Button
+                        variant={isDarkModePreview ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setIsDarkModePreview(true)}
+                      >
+                        <Moon className="h-4 w-4 mr-2" />
+                        Escuro
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* ColorSelector for Light Mode */}
+                  {!isDarkModePreview && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium">Paleta - Modo Claro</h4>
+                      <ColorSelector
+                        palette={tenantTheme.palette}
+                        onPaletteChange={(newPalette) => setTenantTheme(prev => ({ 
+                          ...prev, 
+                          palette: newPalette 
+                        }))}
+                        onGeneratePalette={() => setTenantTheme(prev => ({ 
+                          ...prev, 
+                          palette: generateRandomPalette() 
+                        }))}
+                      />
+                    </div>
+                  )}
+
+                  {/* ColorSelector for Dark Mode */}
+                  {isDarkModePreview && (
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium">Paleta - Modo Escuro</h4>
+                      <ColorSelector
+                        palette={tenantTheme.dark_mode_palette || tenantTheme.palette}
+                        onPaletteChange={(newPalette) => setTenantTheme(prev => ({ 
+                          ...prev, 
+                          dark_mode_palette: newPalette 
+                        }))}
+                        onGeneratePalette={() => setTenantTheme(prev => ({ 
+                          ...prev, 
+                          dark_mode_palette: generateRandomPalette() 
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setIsEditingTheme(false);
+                loadTenantTheme(); // Recarregar dados originais
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              type="button"
+              onClick={saveTenantTheme} 
+              disabled={savingTheme}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {savingTheme ? 'Salvando...' : 'Salvar Configurações'}
             </Button>
           </DialogFooter>
         </DialogContent>

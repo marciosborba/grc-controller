@@ -41,7 +41,6 @@ import {
   Save,
   RefreshCw,
   Shield,
-  Palette,
   Globe,
   Moon,
   Sun,
@@ -61,7 +60,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/utils/securityLogger';
-import { ColorSelector } from './ColorSelector';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
@@ -820,26 +818,63 @@ export const UserProfilePage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Color Palette */}
-          <ColorSelector
-            palette={preferences.colorPalette}
-            onPaletteChange={(newPalette) =>
-              setPreferences((prev) => ({ ...prev, colorPalette: newPalette }))
-            }
-            onGeneratePalette={() => {
-              const randomColor = () => '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-              setPreferences((prev) => ({
-                ...prev,
-                colorPalette: {
-                  primary: randomColor(),
-                  secondary: randomColor(),
-                  tertiary: randomColor(),
-                },
-              }));
-            }}
-            onSave={savePreferences}
-            saving={themeSaving}
-          />
+          {/* Theme Mode Toggle - Only dark/light mode allowed for users */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Moon className="h-5 w-5 text-primary" />
+                Modo do Tema
+              </CardTitle>
+              <CardDescription>
+                Escolha entre modo claro ou escuro. As cores são definidas pelo administrador da plataforma.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                    <span className="font-medium">
+                      {theme === 'dark' ? 'Modo Escuro' : theme === 'light' ? 'Modo Claro' : 'Modo Sistema'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {theme === 'dark' 
+                      ? 'Interface com fundo escuro para reduzir fadiga ocular'
+                      : theme === 'light' 
+                      ? 'Interface com fundo claro padrão'
+                      : 'Segue as configurações do seu dispositivo'
+                    }
+                  </p>
+                </div>
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-4 w-4" />
+                        Claro
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-4 w-4" />
+                        Escuro
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="system">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Sistema
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Notification Settings */}
           <Card>

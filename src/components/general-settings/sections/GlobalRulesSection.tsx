@@ -43,7 +43,8 @@ import {
   Image,
   FileText,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  Building
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -465,6 +466,11 @@ const GlobalRulesSection: React.FC = () => {
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
   const [loadingThemes, setLoadingThemes] = useState(true);
+  
+  // Estados para gestão de tenants
+  const [selectedTenant, setSelectedTenant] = useState<string>('global');
+  const [availableTenants, setAvailableTenants] = useState<{ id: string; name: string }[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
   const [themeForm, setThemeForm] = useState({
     name: '',
     display_name: '',
@@ -559,6 +565,7 @@ const GlobalRulesSection: React.FC = () => {
     const timer = setTimeout(() => {
       loadThemes();
       loadFonts();
+      loadTenants(); // Carregar tenants para configuração por tenant
     }, 1000); // 1 segundo de delay para não interferir com carregamento inicial
 
     return () => clearTimeout(timer);
@@ -645,6 +652,32 @@ const GlobalRulesSection: React.FC = () => {
       });
     }
   }, [editingTheme]);
+
+  const loadTenants = async () => {
+    try {
+      setLoadingTenants(true);
+      console.log('🏢 Carregando tenants disponíveis...');
+      
+      const { data: tenantsData, error } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      
+      setAvailableTenants(tenantsData || []);
+      console.log(`✅ ${tenantsData?.length || 0} tenants carregados`);
+    } catch (error) {
+      console.error('Erro ao carregar tenants:', error);
+      toast({
+        title: 'Erro ao carregar tenants',
+        description: 'Não foi possível carregar a lista de tenants.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingTenants(false);
+    }
+  };
 
   const loadThemes = async () => {
     try {
@@ -1874,9 +1907,9 @@ const GlobalRulesSection: React.FC = () => {
         <TabsContent value="themes" className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Configuração de Temas</h3>
+              <h3 className="text-lg font-semibold">Configuração de Temas da Plataforma</h3>
               <p className="text-sm text-muted-foreground">
-                Personalize a aparência visual da plataforma. Crie novos temas, edite existentes ou duplique temas para criar variações.
+                Configure temas globais e específicos por tenant. Como admin da plataforma, você controla todas as cores e aparência.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1890,6 +1923,69 @@ const GlobalRulesSection: React.FC = () => {
               </Button>
             </div>
           </div>
+
+          {/* Tenant Selection for Theme Configuration */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                Configuração por Tenant
+              </CardTitle>
+              <CardDescription className="text-blue-700 dark:text-blue-300">
+                Como admin da plataforma, você pode configurar temas específicos para cada tenant ou usar o tema global.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Selecionar Tenant</Label>
+                  <Select value={selectedTenant} onValueChange={setSelectedTenant}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um tenant ou use global" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          Tema Global (Todos os Tenants)
+                        </div>
+                      </SelectItem>
+                      {availableTenants.map(tenant => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4" />
+                            {tenant.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Status da Configuração</Label>
+                  <div className="flex items-center gap-2">
+                    {selectedTenant === 'global' ? (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">
+                        <Globe className="h-3 w-3 mr-1" />
+                        Configuração Global
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Building className="h-3 w-3 mr-1" />
+                        Tenant Específico
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedTenant === 'global' 
+                      ? 'Mudanças afetarão todos os tenants sem tema específico'
+                      : 'Mudanças afetarão apenas este tenant'
+                    }
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Preview do Tema Ativo */}
           {activeTheme && (
