@@ -70,20 +70,35 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
     setMounted(true);
   }, []);
 
-  // Apply custom theme colors with priority: user preferences > global theme > default
+  // Apply custom theme colors with priority: tenant theme > user preferences > global theme > default
   useEffect(() => {
     if (mounted && user) {
       // Wait a bit for next-themes to establish the theme
       const timer = setTimeout(() => {
-        // Check if user has saved preferences in localStorage
+        // PRIORIDADE 1: Verificar se há tema do tenant aplicado
+        const tenantThemeApplied = localStorage.getItem('tenant-theme-applied');
+        
+        if (tenantThemeApplied) {
+          try {
+            const parsed = JSON.parse(tenantThemeApplied);
+            if (parsed.tenantId === user.tenantId && (Date.now() - parsed.appliedAt) < 60000) {
+              console.log('🏢 ThemeContext: Tema do tenant já aplicado, não sobrescrever');
+              return;
+            }
+          } catch (e) {
+            console.warn('ThemeContext: Erro ao parsear tenant theme', e);
+          }
+        }
+        
+        // PRIORIDADE 2: Check if user has saved preferences in localStorage
         const savedTheme = localStorage.getItem('grc-theme-preferences');
         
         if (savedTheme) {
           try {
             const parsed = JSON.parse(savedTheme);
             if (parsed.colorPalette) {
-              // PRIORIDADE 1: Apply colors from user preferences
-              console.log('👤 ThemeContext: Aplicando preferências do usuário');
+              // Apply colors from user preferences only if no tenant theme
+              console.log('👤 ThemeContext: Aplicando preferências do usuário (sem tema do tenant)');
               applyCustomColors(parsed.colorPalette);
             }
           } catch (e) {
@@ -92,11 +107,11 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
             loadAndApplyGlobalTheme();
           }
         } else {
-          // PRIORIDADE 2: NÃO aplicar tema global automaticamente para evitar conflito
-          console.log('🎨 ThemeContext: Nenhuma preferência encontrada - deixando GlobalRulesSection gerenciar');
-          // loadAndApplyGlobalTheme(); // DESABILITADO para evitar conflito com GlobalRulesSection
+          // PRIORIDADE 3: NÃO aplicar tema global automaticamente para evitar conflito
+          console.log('🎨 ThemeContext: Nenhuma preferência encontrada - deixando TenantThemeLoader e GlobalRulesSection gerenciar');
+          // loadAndApplyGlobalTheme(); // DESABILITADO para evitar conflito
         }
-      }, 1000); // Further increased delay to allow GlobalRulesSection to apply themes first
+      }, 1500); // Increased delay to allow TenantThemeLoader to apply themes first
       
       return () => clearTimeout(timer);
     }
@@ -112,10 +127,21 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
       // NÃO aplicar tema automaticamente - GlobalRulesSection já gerencia isso
     };
     
+    const handleApplyGlobalTheme = (event: CustomEvent) => {
+      console.log('🎨 ThemeContext: Recebido pedido para aplicar tema global:', event.detail);
+      
+      // Aplicar tema global quando solicitado pelo tenant
+      setTimeout(() => {
+        loadAndApplyGlobalTheme();
+      }, 100);
+    };
+    
     window.addEventListener('globalThemeChanged', handleGlobalThemeChange as EventListener);
+    window.addEventListener('applyGlobalTheme', handleApplyGlobalTheme as EventListener);
     
     return () => {
       window.removeEventListener('globalThemeChanged', handleGlobalThemeChange as EventListener);
+      window.removeEventListener('applyGlobalTheme', handleApplyGlobalTheme as EventListener);
     };
   }, []);
   
@@ -163,7 +189,11 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
       const lastThemeChange = window.localStorage.getItem('lastThemeChangeTime');
       const now = Date.now();
       
-      if (lastThemeChange && (now - parseInt(lastThemeChange)) < 5000) {
+      // Permitir aplicação se for solicitada por tenant (bypass do timeout)
+      const tenantThemeApplied = window.localStorage.getItem('tenant-theme-applied');
+      const isTenantRequest = tenantThemeApplied && (now - JSON.parse(tenantThemeApplied).appliedAt) < 1000;
+      
+      if (!isTenantRequest && lastThemeChange && (now - parseInt(lastThemeChange)) < 5000) {
         console.log('⚠️ ThemeContext: Tema foi aplicado recentemente, evitando sobrescrever');
         console.log('🕰️ ThemeContext: Ultimo tema aplicado há', now - parseInt(lastThemeChange), 'ms');
         return;
@@ -272,11 +302,18 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
             background: activeTheme.background_color
           }
         });
+        
+        // Limpar cache de tema do tenant se aplicando global
+        localStorage.removeItem('tenant-theme-applied');
       } else {
         console.log('🎨 ThemeContext: Tema global sem cores definidas - mantendo UI Nativa');
+        // Limpar cache de tema do tenant se não há tema global
+        localStorage.removeItem('tenant-theme-applied');
       }
     } catch (error) {
       console.error('ThemeContext: Erro ao carregar tema global:', error);
+      // Limpar cache de tema do tenant em caso de erro
+      localStorage.removeItem('tenant-theme-applied');
     }
   };
 

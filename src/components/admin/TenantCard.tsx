@@ -827,9 +827,256 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
+  // Função para buscar cores do tema UI Nativa
+  const getNativeThemeColors = async (): Promise<ColorPalette> => {
+    try {
+      console.log('🏠 Buscando cores do tema UI Nativa...');
+      
+      // Buscar o tema UI Nativa no banco de dados
+      const { data: nativeTheme, error } = await supabase
+        .from('global_ui_themes')
+        .select('*')
+        .or('name.eq.ui_nativa,display_name.ilike.%UI Nativa%')
+        .eq('is_native_theme', true)
+        .single();
+      
+      if (error || !nativeTheme) {
+        console.warn('⚠️ Tema UI Nativa não encontrado no banco, usando cores padrão');
+        // Cores padrão do sistema se não encontrar o tema UI Nativa
+        return {
+          primary: '#3b82f6',
+          secondary: '#6b7280', 
+          tertiary: '#10b981'
+        };
+      }
+      
+      console.log('✅ Tema UI Nativa encontrado:', nativeTheme.display_name);
+      
+      // Converter cores HSL para HEX se necessário
+      const hslToHex = (hsl: string): string => {
+        if (!hsl || hsl.startsWith('#')) return hsl || '#3b82f6';
+        
+        try {
+          const match = hsl.match(/(\d+\.?\d*)\s+(\d+\.?\d*)%\s+(\d+\.?\d*)%/);
+          if (!match) return '#3b82f6';
+          
+          const h = parseFloat(match[1]) / 360;
+          const s = parseFloat(match[2]) / 100;
+          const l = parseFloat(match[3]) / 100;
+          
+          const hue2rgb = (p: number, q: number, t: number) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1/6) return p + (q - p) * 6 * t;
+            if (t < 1/2) return q;
+            if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+            return p;
+          };
+          
+          let r, g, b;
+          if (s === 0) {
+            r = g = b = l;
+          } else {
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+          }
+          
+          const toHex = (c: number) => {
+            const hex = Math.round(c * 255).toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+          };
+          
+          return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        } catch {
+          return '#3b82f6';
+        }
+      };
+      
+      return {
+        primary: hslToHex(nativeTheme.primary_color),
+        secondary: hslToHex(nativeTheme.secondary_color),
+        tertiary: hslToHex(nativeTheme.accent_color)
+      };
+    } catch (error) {
+      console.error('❌ Erro ao buscar tema UI Nativa:', error);
+      // Fallback para cores padrão
+      return {
+        primary: '#3b82f6',
+        secondary: '#6b7280',
+        tertiary: '#10b981'
+      };
+    }
+  };
+
+  // Função para aplicar cores do tenant na interface
+  const applyTenantColors = async (themeConfig: TenantThemeConfig) => {
+    const root = document.documentElement;
+    
+    console.log('🎨 Aplicando cores do tenant:', {
+      inherit_global: themeConfig.inherit_global,
+      palette: themeConfig.palette,
+      dark_mode_palette: themeConfig.dark_mode_palette
+    });
+    
+    if (themeConfig.inherit_global) {
+      // Se herda global, buscar e aplicar cores do tema UI Nativa
+      console.log('🌍 Aplicando cores globais (herança ativa)');
+      
+      try {
+        const nativeColors = await getNativeThemeColors();
+        console.log('🏠 Cores do tema UI Nativa obtidas:', nativeColors);
+        
+        // Aplicar cores do tema UI Nativa
+        const hexToHsl = (hex: string): string => {
+          if (!hex || !hex.startsWith('#')) return hex;
+          
+          try {
+            const r = parseInt(hex.slice(1, 3), 16) / 255;
+            const g = parseInt(hex.slice(3, 5), 16) / 255;
+            const b = parseInt(hex.slice(5, 7), 16) / 255;
+            
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            
+            if (max === min) {
+              h = s = 0;
+            } else {
+              const d = max - min;
+              s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+              switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+                default: h = 0;
+              }
+              h /= 6;
+            }
+            
+            return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+          } catch {
+            return hex;
+          }
+        };
+        
+        // Aplicar cores com !important
+        const applyColorWithImportant = (property: string, value: string) => {
+          const hslValue = value.startsWith('#') ? hexToHsl(value) : value;
+          root.style.setProperty(property, hslValue, 'important');
+        };
+        
+        applyColorWithImportant('--primary', nativeColors.primary);
+        applyColorWithImportant('--secondary', nativeColors.secondary);
+        applyColorWithImportant('--accent', nativeColors.tertiary);
+        
+        // Aplicar variações da cor primária
+        const primaryHsl = hexToHsl(nativeColors.primary);
+        const [h, s, l] = primaryHsl.split(' ').map(v => parseFloat(v.replace('%', '')));
+        
+        applyColorWithImportant('--primary-hover', `${h} ${s}% ${Math.max(l - 4, 0)}%`);
+        applyColorWithImportant('--primary-glow', `${h} ${Math.min(s + 17, 100)}% ${Math.min(l + 20, 100)}%`);
+        applyColorWithImportant('--ring', primaryHsl);
+        
+        console.log('✅ Cores do tema UI Nativa aplicadas com sucesso!');
+        
+        // Atualizar o estado local para refletir as cores aplicadas
+        setGlobalTheme(nativeColors);
+        
+        return;
+      } catch (error) {
+        console.error('❌ Erro ao aplicar cores do tema UI Nativa:', error);
+        // Fallback: disparar evento para ThemeContext
+        window.dispatchEvent(new CustomEvent('applyGlobalTheme', {
+          detail: { source: 'tenant_inherit_fallback' }
+        }));
+        return;
+      }
+    }
+    
+    // Aplicar cores personalizadas do tenant
+    const isDarkMode = root.classList.contains('dark');
+    const currentPalette = isDarkMode && themeConfig.dark_mode_palette 
+      ? themeConfig.dark_mode_palette 
+      : themeConfig.palette;
+    
+    console.log('🎭 Aplicando cores personalizadas do tenant:', {
+      darkMode: isDarkMode,
+      palette: currentPalette
+    });
+    
+    // Converter HEX para HSL se necessário
+    const hexToHsl = (hex: string): string => {
+      if (!hex || !hex.startsWith('#')) return hex;
+      
+      try {
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
+        
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+        
+        if (max === min) {
+          h = s = 0;
+        } else {
+          const d = max - min;
+          s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+          switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+            default: h = 0;
+          }
+          h /= 6;
+        }
+        
+        return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+      } catch {
+        return hex;
+      }
+    };
+    
+    // Aplicar cores com !important para garantir que sobrescrevam
+    const applyColorWithImportant = (property: string, value: string) => {
+      const hslValue = value.startsWith('#') ? hexToHsl(value) : value;
+      root.style.setProperty(property, hslValue, 'important');
+    };
+    
+    // Aplicar cores principais
+    applyColorWithImportant('--primary', currentPalette.primary);
+    applyColorWithImportant('--secondary', currentPalette.secondary);
+    applyColorWithImportant('--accent', currentPalette.tertiary);
+    
+    // Aplicar variações da cor primária
+    const primaryHsl = hexToHsl(currentPalette.primary);
+    const [h, s, l] = primaryHsl.split(' ').map(v => parseFloat(v.replace('%', '')));
+    
+    applyColorWithImportant('--primary-hover', `${h} ${s}% ${Math.max(l - 4, 0)}%`);
+    applyColorWithImportant('--primary-glow', `${h} ${Math.min(s + 17, 100)}% ${Math.min(l + 20, 100)}%`);
+    applyColorWithImportant('--ring', primaryHsl);
+    
+    console.log('✅ Cores do tenant aplicadas com sucesso!');
+    
+    // Salvar no localStorage para persistir
+    localStorage.setItem('tenant-theme-applied', JSON.stringify({
+      tenantId: tenant.id,
+      themeConfig,
+      appliedAt: Date.now()
+    }));
+  };
+
   const saveTenantTheme = async () => {
     try {
       setSavingTheme(true);
+      console.log('💾 Salvando configurações de tema do tenant:', {
+        tenantId: tenant.id,
+        themeConfig: tenantTheme
+      });
+      
       const updatedSettings = {
         ...tenant.settings,
         theme_config: tenantTheme
@@ -845,9 +1092,20 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
       if (error) throw error;
 
+      // Aplicar as cores imediatamente após salvar
+      console.log('🎨 Aplicando cores após salvamento...');
+      await applyTenantColors(tenantTheme);
+
       await queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      toast.success('Configurações de tema salvas com sucesso!');
+      toast.success('Configurações de tema salvas e aplicadas com sucesso!');
       setIsEditingTheme(false);
+      
+      // Notificar outros componentes sobre a atualização do tema
+      window.dispatchEvent(new CustomEvent('tenantThemeUpdated', {
+        detail: { tenantId: tenant.id }
+      }));
+      
+      console.log('✅ Tema do tenant salvo e aplicado com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar tema da tenant:', error);
       toast.error('Erro ao salvar configurações de tema');
@@ -903,6 +1161,21 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       loadTenantTheme();
     }
   }, [selectedTab, isExpanded]);
+  
+  // Aplicar cores do tenant quando o tema for carregado
+  useEffect(() => {
+    const applyColorsAsync = async () => {
+      if (selectedTab === 'theme' && isExpanded && tenantTheme && !loadingTheme) {
+        // Verificar se este tenant é o tenant atual do usuário
+        if (user?.tenantId === tenant.id) {
+          console.log('🎨 Aplicando cores do tenant atual:', tenant.id);
+          await applyTenantColors(tenantTheme);
+        }
+      }
+    };
+    
+    applyColorsAsync();
+  }, [selectedTab, isExpanded, tenantTheme, loadingTheme, user?.tenantId, tenant.id]);
 
   // Atualizar cores quando o modo escuro mudar
   useEffect(() => {
@@ -910,8 +1183,14 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       // Recarregar cores quando o preview mode mudar
       const actualColors = getActualColors();
       setGlobalTheme(actualColors);
+      
+      // Reaplicar cores do tenant se for o tenant atual
+      if (user?.tenantId === tenant.id && tenantTheme && !loadingTheme) {
+        console.log('🌙 Reaplicando cores do tenant após mudança de modo:', isDarkModePreview ? 'dark' : 'light');
+        applyTenantColors(tenantTheme); // Não usar await aqui pois useEffect não pode ser async
+      }
     }
-  }, [isDarkModePreview, selectedTab, isExpanded]);
+  }, [isDarkModePreview, selectedTab, isExpanded, user?.tenantId, tenant.id, tenantTheme, loadingTheme]);
 
   return (
     <Card className={cn(
@@ -1315,10 +1594,15 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                                           tenantTheme.palette;
                                         const newPalette = { ...currentPalette, [colorName]: e.target.value };
                                         
-                                        if (isDarkModePreview) {
-                                          setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
-                                        } else {
-                                          setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                                        const updatedTheme = isDarkModePreview
+                                          ? { ...tenantTheme, dark_mode_palette: newPalette }
+                                          : { ...tenantTheme, palette: newPalette };
+                                        
+                                        setTenantTheme(updatedTheme);
+                                        
+                                        // Aplicar cores imediatamente se for o tenant atual
+                                        if (user?.tenantId === tenant.id) {
+                                          applyTenantColors(updatedTheme); // Não usar await em onChange
                                         }
                                       }
                                     }}
@@ -1336,10 +1620,15 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                                           tenantTheme.palette;
                                         const newPalette = { ...currentPalette, [colorName]: e.target.value };
                                         
-                                        if (isDarkModePreview) {
-                                          setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
-                                        } else {
-                                          setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                                        const updatedTheme = isDarkModePreview
+                                          ? { ...tenantTheme, dark_mode_palette: newPalette }
+                                          : { ...tenantTheme, palette: newPalette };
+                                        
+                                        setTenantTheme(updatedTheme);
+                                        
+                                        // Aplicar cores imediatamente se for o tenant atual
+                                        if (user?.tenantId === tenant.id) {
+                                          applyTenantColors(updatedTheme);
                                         }
                                       }
                                     }}
@@ -1398,26 +1687,85 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            setTenantTheme(prev => ({ ...prev, inherit_global: true }));
-                            toast.success('Voltando para herança global');
+                          onClick={async () => {
+                            console.log('🌍 Ativando herança global para tenant:', tenant.id);
+                            
+                            try {
+                              setSavingTheme(true);
+                              
+                              // Buscar cores do tema UI Nativa primeiro
+                              const nativeColors = await getNativeThemeColors();
+                              console.log('🏠 Cores do tema UI Nativa para herança:', nativeColors);
+                              
+                              // Atualizar estado local com as cores do tema UI Nativa
+                              const newThemeConfig = { 
+                                ...tenantTheme, 
+                                inherit_global: true,
+                                palette: nativeColors, // Atualizar com cores reais do UI Nativa
+                                dark_mode_palette: nativeColors // Usar as mesmas cores para dark mode por enquanto
+                              };
+                              setTenantTheme(newThemeConfig);
+                              
+                              // Aplicar cores globais imediatamente
+                              await applyTenantColors(newThemeConfig);
+                              
+                              // Salvar no banco de dados
+                              const updatedSettings = {
+                                ...tenant.settings,
+                                theme_config: newThemeConfig
+                              };
+
+                              const { error } = await supabase
+                                .from('tenants')
+                                .update({ 
+                                  settings: updatedSettings,
+                                  updated_at: new Date().toISOString()
+                                })
+                                .eq('id', tenant.id);
+
+                              if (error) throw error;
+
+                              await queryClient.invalidateQueries({ queryKey: ['tenants'] });
+                              toast.success('Herança global ativada e cores do tema UI Nativa aplicadas!');
+                              
+                              // Notificar outros componentes sobre a atualização do tema
+                              window.dispatchEvent(new CustomEvent('tenantThemeUpdated', {
+                                detail: { tenantId: tenant.id }
+                              }));
+                              
+                              console.log('✅ Herança global salva no banco de dados');
+                            } catch (error) {
+                              console.error('Erro ao salvar herança global:', error);
+                              toast.error('Erro ao salvar configuração de herança global');
+                              // Reverter estado em caso de erro
+                              setTenantTheme(prev => ({ ...prev, inherit_global: false }));
+                            } finally {
+                              setSavingTheme(false);
+                            }
                           }}
                           className="flex items-center gap-2"
+                          disabled={savingTheme}
                         >
                           <Settings className="h-4 w-4" />
-                          Usar Global
+                          {savingTheme ? 'Aplicando...' : 'Usar Global'}
                         </Button>
                         <Button 
                           variant="outline" 
                           size="sm"
                           onClick={() => {
                             const newPalette = generateRandomPalette();
-                            if (isDarkModePreview) {
-                              setTenantTheme(prev => ({ ...prev, dark_mode_palette: newPalette }));
-                            } else {
-                              setTenantTheme(prev => ({ ...prev, palette: newPalette }));
+                            const updatedTheme = isDarkModePreview
+                              ? { ...tenantTheme, dark_mode_palette: newPalette }
+                              : { ...tenantTheme, palette: newPalette };
+                            
+                            setTenantTheme(updatedTheme);
+                            
+                            // Aplicar cores imediatamente se for o tenant atual
+                            if (user?.tenantId === tenant.id) {
+                              applyTenantColors(updatedTheme); // Remover await pois onClick não é async
                             }
-                            toast.success('Nova paleta gerada!');
+                            
+                            toast.success('Nova paleta gerada e aplicada!');
                           }}
                           disabled={tenantTheme.inherit_global}
                           className={`flex items-center gap-2 ${tenantTheme.inherit_global ? 'opacity-50 cursor-not-allowed' : ''}`}
