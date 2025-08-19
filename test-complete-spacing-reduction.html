@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Complete Spacing Reduction</title>
+    <style>
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        /* Layout simulado */
+        .layout-container {
+            position: relative;
+            height: 100vh;
+            width: 100%;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
+            background: #1e293b;
+            color: white;
+            padding: 20px;
+            z-index: 10;
+        }
+        
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #94a3b8;
+        }
+        
+        .sidebar-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .sidebar-item:hover {
+            background: #475569;
+        }
+        
+        /* Área de conteúdo */
+        .content-area {
+            margin-left: 240px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        
+        .main-content {
+            flex: 1;
+            background: #f8fafc;
+            overflow-y: auto;
+        }
+        
+        /* ANTES: Espaçamentos originais */
+        .layout-original .main-content {
+            padding-left: 24px;     /* pl-6 = 24px */
+            padding-right: 16px;    /* pr-4 = 16px */
+            padding-top: 16px;      /* pt-4 = 16px */
+            padding-bottom: 16px;   /* pb-4 = 16px */
+        }
+        
+        /* DEPOIS: Espaçamentos reduzidos */
+        .layout-reduced .main-content {
+            padding-left: 14px;     /* 24px - 10px = 14px */
+            padding-right: 16px;    /* mantém pr-4 = 16px */
+            padding-top: 6px;       /* 16px - 10px = 6px */
+            padding-bottom: 16px;   /* mantém pb-4 = 16px */
+        }
+        
+        @media (min-width: 640px) {
+            .layout-original .main-content {
+                padding-left: 32px;  /* sm:pl-8 = 32px */
+                padding-top: 24px;   /* sm:pt-6 = 24px */
+            }
+            
+            .layout-reduced .main-content {
+                padding-left: 22px;  /* 32px - 10px = 22px */
+                padding-top: 14px;   /* 24px - 10px = 14px */
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .layout-original .main-content {
+                padding-left: 40px;  /* lg:pl-10 = 40px */
+                padding-top: 32px;   /* lg:pt-8 = 32px */
+            }
+            
+            .layout-reduced .main-content {
+                padding-left: 30px;  /* 40px - 10px = 30px */
+                padding-top: 22px;   /* 32px - 10px = 22px */
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 0.5625rem; /* 9px - reduzido de 24px */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .card.original-spacing {
+            margin-bottom: 1.5rem; /* 24px original */
+        }
+        
+        .comparison-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .comparison-half {
+            flex: 1;
+            position: relative;
+        }
+        
+        .comparison-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc2626;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 20;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .comparison-label.after {
+            background: #16a34a;
+        }
+        
+        /* Indicadores de medição */
+        .measurement-horizontal {
+            position: absolute;
+            top: 80px;
+            left: 240px;
+            height: 2px;
+            background: #f59e0b;
+            z-index: 15;
+        }
+        
+        .measurement-horizontal.left-original {
+            width: 24px;
+        }
+        
+        .measurement-horizontal.left-reduced {
+            width: 14px;
+        }
+        
+        @media (min-width: 640px) {
+            .measurement-horizontal.left-original {
+                width: 32px;
+            }
+            
+            .measurement-horizontal.left-reduced {
+                width: 22px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .measurement-horizontal.left-original {
+                width: 40px;
+            }
+            
+            .measurement-horizontal.left-reduced {
+                width: 30px;
+            }
+        }
+        
+        .measurement-vertical {
+            position: absolute;
+            left: 250px;
+            top: 60px;
+            width: 2px;
+            background: #ec4899;
+            z-index: 15;
+        }
+        
+        .measurement-vertical.top-original {
+            height: 16px;
+        }
+        
+        .measurement-vertical.top-reduced {
+            height: 6px;
+        }
+        
+        @media (min-width: 640px) {
+            .measurement-vertical.top-original {
+                height: 24px;
+            }
+            
+            .measurement-vertical.top-reduced {
+                height: 14px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .measurement-vertical.top-original {
+                height: 32px;
+            }
+            
+            .measurement-vertical.top-reduced {
+                height: 22px;
+            }
+        }
+        
+        .measurement-label {
+            position: absolute;
+            background: #374151;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .measurement-label.horizontal {
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .measurement-label.vertical {
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        /* Utilitários */
+        .font-bold { font-weight: bold; }
+        .text-lg { font-size: 1.125rem; }
+        .text-gray-600 { color: #6b7280; }
+        .text-blue-900 { color: #1e3a8a; }
+        .mb-4 { margin-bottom: 1rem; }
+        .bg-blue-50 { background-color: #eff6ff; }
+        .bg-green-50 { background-color: #f0fdf4; }
+        .border-blue-200 { border-color: #bfdbfe; }
+        .border-green-200 { border-color: #bbf7d0; }
+        .rounded { border-radius: 0.25rem; }
+        .p-4 { padding: 1rem; }
+    </style>
+</head>
+<body>
+    <!-- Comparação lado a lado -->
+    <div class="comparison-container">
+        <!-- ANTES: Layout Original -->
+        <div class="comparison-half">
+            <div class="comparison-label">❌ ANTES: Espaçamento Original</div>
+            <div class="layout-container layout-original">
+                <div class="sidebar">
+                    <h2>🏢 GRC Controller</h2>
+                    <div class="sidebar-item">📊 Dashboard</div>
+                    <div class="sidebar-item">📋 Assessments</div>
+                    <div class="sidebar-item">⚠️ Risks</div>
+                    <div class="sidebar-item">🔒 Privacy</div>
+                    <div class="sidebar-item">⚙️ Settings</div>
+                </div>
+                
+                <div class="content-area">
+                    <div class="header">
+                        <h1 class="font-bold text-lg">Dashboard Principal</h1>
+                    </div>
+                    
+                    <div class="main-content">
+                        <!-- Indicadores de medição -->
+                        <div class="measurement-horizontal left-original">
+                            <div class="measurement-label horizontal">Esquerda: 24px→32px→40px</div>
+                        </div>
+                        <div class="measurement-vertical top-original">
+                            <div class="measurement-label vertical">Superior: 16px→24px→32px</div>
+                        </div>
+                        
+                        <div class="card original-spacing">
+                            <h3 class="font-bold mb-4">📊 Métricas de Performance</h3>
+                            <div class="bg-blue-50 border-blue-200 p-4 rounded">
+                                <p class="text-blue-900">
+                                    <strong>Espaçamento Original:</strong><br>
+                                    • <strong>Lateral:</strong> Mobile: 24px | SM: 32px | LG: 40px<br>
+                                    • <strong>Superior:</strong> Mobile: 16px | SM: 24px | LG: 32px<br>
+                                    • <strong>Entre Cards:</strong> 24px
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="card original-spacing">
+                            <h3 class="font-bold mb-4">📈 Dashboard Analytics</h3>
+                            <p class="text-gray-600">Este card demonstra o espaçamento original entre o sidebar e o conteúdo, assim como a margem superior original abaixo do cabeçalho.</p>
+                        </div>
+                        
+                        <div class="card original-spacing">
+                            <h3 class="font-bold mb-4">🎯 Assessment Status</h3>
+                            <p class="text-gray-600">Cards com espaçamento original de 24px entre eles, que pode ser muito espaçoso em algumas telas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEPOIS: Layout Otimizado -->
+        <div class="comparison-half">
+            <div class="comparison-label after">✅ DEPOIS: Espaçamento Otimizado (-10px)</div>
+            <div class="layout-container layout-reduced">
+                <div class="sidebar">
+                    <h2>🏢 GRC Controller</h2>
+                    <div class="sidebar-item">📊 Dashboard</div>
+                    <div class="sidebar-item">📋 Assessments</div>
+                    <div class="sidebar-item">⚠️ Risks</div>
+                    <div class="sidebar-item">🔒 Privacy</div>
+                    <div class="sidebar-item">⚙️ Settings</div>
+                </div>
+                
+                <div class="content-area">
+                    <div class="header">
+                        <h1 class="font-bold text-lg">Dashboard Principal</h1>
+                    </div>
+                    
+                    <div class="main-content">
+                        <!-- Indicadores de medição -->
+                        <div class="measurement-horizontal left-reduced">
+                            <div class="measurement-label horizontal">Esquerda: 14px→22px→30px</div>
+                        </div>
+                        <div class="measurement-vertical top-reduced">
+                            <div class="measurement-label vertical">Superior: 6px→14px→22px</div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">📊 Métricas de Performance</h3>
+                            <div class="bg-green-50 border-green-200 p-4 rounded">
+                                <p class="text-blue-900">
+                                    <strong>Espaçamento Otimizado:</strong><br>
+                                    • <strong>Lateral:</strong> Mobile: 14px | SM: 22px | LG: 30px<br>
+                                    • <strong>Superior:</strong> Mobile: 6px | SM: 14px | LG: 22px<br>
+                                    • <strong>Entre Cards:</strong> 9px (redução de 15px)
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">📈 Dashboard Analytics</h3>
+                            <p class="text-gray-600">Este card mostra o espaçamento otimizado: 10px mais próximo da lateral e 10px mais próximo do cabeçalho, resultando em melhor aproveitamento do espaço.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">🎯 Assessment Status</h3>
+                            <p class="text-gray-600">Cards com espaçamento reduzido de 9px entre eles (15px a menos), criando uma interface mais compacta e eficiente.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">🚀 Risk Management</h3>
+                            <p class="text-gray-600">Mais cards visíveis na tela com o espaçamento otimizado, melhorando a experiência do usuário.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumo das alterações -->
+    <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white; padding: 20px; border-radius: 12px; max-width: 600px; font-size: 14px; z-index: 30; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <strong style="font-size: 16px;">🎯 Otimizações Aplicadas</strong>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+            <div style="background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                <strong>📐 Sidebar ↔ Conteúdo</strong><br>
+                <small>Reduzido em 10px</small><br>
+                <span style="font-size: 12px; color: #94a3b8;">40px → 30px (desktop)</span>
+            </div>
+            
+            <div style="background: rgba(236, 72, 153, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(236, 72, 153, 0.3);">
+                <strong>📏 Header ↕ Conteúdo</strong><br>
+                <small>Reduzido em 10px</small><br>
+                <span style="font-size: 12px; color: #94a3b8;">32px → 22px (desktop)</span>
+            </div>
+            
+            <div style="background: rgba(34, 197, 94, 0.1); padding: 10px; border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.3);">
+                <strong>🃏 Cards ↕ Cards</strong><br>
+                <small>Reduzido em 15px</small><br>
+                <span style="font-size: 12px; color: #94a3b8;">24px → 9px</span>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(148, 163, 184, 0.3);">
+            <strong>📁 Arquivos Modificados:</strong> 
+            <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">src/index.css</code>
+        </div>
+    </div>
+
+    <script>
+        console.log('🎯 Resumo Completo das Otimizações de Espaçamento');
+        console.log('=====================================================');
+        console.log('');
+        console.log('✅ 1. SIDEBAR ↔ CONTEÚDO (redução de 10px):');
+        console.log('   Mobile:  24px → 14px');  
+        console.log('   Tablet:  32px → 22px');
+        console.log('   Desktop: 40px → 30px');
+        console.log('');
+        console.log('✅ 2. HEADER ↕ CONTEÚDO (redução de 10px):');
+        console.log('   Mobile:  16px → 6px');
+        console.log('   Tablet:  24px → 14px'); 
+        console.log('   Desktop: 32px → 22px');
+        console.log('');
+        console.log('✅ 3. CARDS ↕ CARDS (redução de 15px):');
+        console.log('   space-y-6: 24px → 9px');
+        console.log('   gap-6:     24px → 9px'); 
+        console.log('   space-y-8: 32px → 17px');
+        console.log('   gap-8:     32px → 17px');
+        console.log('');
+        console.log('📁 Arquivo modificado: src/index.css');
+        console.log('🌐 Testar em: http://localhost:8081');
+    </script>
+</body>
+</html>

@@ -572,6 +572,67 @@
     background-color: transparent !important;
   }
 
+  /* Redução do espaçamento entre cards - diminui 15px */
+  
+  /* space-y-6: de 24px para 9px */
+  .space-y-6 > * + * {
+    margin-top: 0.5625rem !important; /* 9px ao invés de 24px (redução de 15px) */
+  }
+  
+  /* gap-6: de 24px para 9px */
+  .gap-6 {
+    gap: 0.5625rem !important; /* 9px ao invés de 24px (redução de 15px) */
+  }
+  
+  /* Para grids que usam gap-6 */
+  .grid.gap-6 {
+    gap: 0.5625rem !important;
+  }
+  
+  /* space-y-8: de 32px para 17px (redução de 15px) */
+  .space-y-8 > * + * {
+    margin-top: 1.0625rem !important; /* 17px ao invés de 32px */
+  }
+  
+  /* gap-8: de 32px para 17px (redução de 15px) */
+  .gap-8, .grid.gap-8 {
+    gap: 1.0625rem !important; /* 17px ao invés de 32px */
+  }
+
+  /* Redução do espaçamento entre sidebar e conteúdo - diminui 10px */
+  main.flex-1 {
+    padding-left: calc(1.5rem - 10px) !important; /* Mobile: 24px → 14px */
+  }
+  
+  @media (min-width: 640px) {
+    main.flex-1 {
+      padding-left: calc(2rem - 10px) !important; /* SM: 32px → 22px */
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    main.flex-1 {
+      padding-left: calc(2.5rem - 10px) !important; /* LG: 40px → 30px */
+    }
+  }
+
+  /* Redução da margem superior do conteúdo (abaixo do cabeçalho) - diminui 10px */
+  main.flex-1 {
+    padding-top: calc(1rem - 10px) !important; /* Mobile: 16px → 6px */
+  }
+  
+  @media (min-width: 640px) {
+    main.flex-1 {
+      padding-top: calc(1.5rem - 10px) !important; /* SM: 24px → 14px */
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    main.flex-1 {
+      padding-top: calc(2rem - 10px) !important; /* LG: 32px → 22px */
+    }
+  }
+
   /* Dialog inputs - modern elevated style */
   .dark [role="dialog"] input,
   .dark [role="dialog"] textarea,

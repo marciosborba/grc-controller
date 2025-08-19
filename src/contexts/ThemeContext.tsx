@@ -211,25 +211,56 @@ const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }
         root.style.setProperty('--accent', activeTheme.accent_color, 'important');
         root.style.setProperty('--accent-foreground', activeTheme.accent_foreground, 'important');
         
-        // Apply background colors when defined (regardless of native theme status)
-        if (activeTheme.background_color) {
-          root.style.setProperty('--background', activeTheme.background_color, 'important');
-        }
-        if (activeTheme.foreground_color) {
-          root.style.setProperty('--foreground', activeTheme.foreground_color, 'important');
-        }
-        if (activeTheme.card_color) {
-          root.style.setProperty('--card', activeTheme.card_color, 'important');
-        }
-        if (activeTheme.card_foreground) {
-          root.style.setProperty('--card-foreground', activeTheme.card_foreground, 'important');
+        // Apply background colors based on theme type and current mode
+        if (!activeTheme.is_native_theme) {
+          // For custom themes, apply all colors
+          if (activeTheme.background_color) root.style.setProperty('--background', activeTheme.background_color, 'important');
+          if (activeTheme.foreground_color) root.style.setProperty('--foreground', activeTheme.foreground_color, 'important');
+          if (activeTheme.card_color) root.style.setProperty('--card', activeTheme.card_color, 'important');
+          if (activeTheme.card_foreground) root.style.setProperty('--card-foreground', activeTheme.card_foreground, 'important');
+        } else {
+          // For native themes, apply colors based on current dark/light mode
+          const isDarkMode = root.classList.contains('dark');
+          if (isDarkMode) {
+            // Apply dark mode colors if available
+            if (activeTheme.background_color_dark) root.style.setProperty('--background', activeTheme.background_color_dark, 'important');
+            if (activeTheme.foreground_color_dark) root.style.setProperty('--foreground', activeTheme.foreground_color_dark, 'important');
+            if (activeTheme.card_color_dark) root.style.setProperty('--card', activeTheme.card_color_dark, 'important');
+            if (activeTheme.card_foreground_dark) root.style.setProperty('--card-foreground', activeTheme.card_foreground_dark, 'important');
+          } else {
+            // Apply light mode colors
+            if (activeTheme.background_color) root.style.setProperty('--background', activeTheme.background_color, 'important');
+            if (activeTheme.foreground_color) root.style.setProperty('--foreground', activeTheme.foreground_color, 'important');
+            if (activeTheme.card_color) root.style.setProperty('--card', activeTheme.card_color, 'important');
+            if (activeTheme.card_foreground) root.style.setProperty('--card-foreground', activeTheme.card_foreground, 'important');
+          }
         }
         
-        root.style.setProperty('--border', activeTheme.border_color, 'important');
-        root.style.setProperty('--input', activeTheme.input_color || activeTheme.border_color, 'important');
+        // Apply structural colors based on theme type and current mode
+        if (!activeTheme.is_native_theme) {
+          // For custom themes, apply all structural colors
+          root.style.setProperty('--border', activeTheme.border_color, 'important');
+          root.style.setProperty('--input', activeTheme.input_color || activeTheme.border_color, 'important');
+          root.style.setProperty('--muted', activeTheme.muted_color || activeTheme.secondary_color, 'important');
+          root.style.setProperty('--muted-foreground', activeTheme.muted_foreground || activeTheme.secondary_foreground, 'important');
+        } else {
+          // For native themes, apply structural colors based on current dark/light mode
+          const isDarkMode = root.classList.contains('dark');
+          if (isDarkMode) {
+            // Apply dark mode structural colors if available
+            if (activeTheme.border_color_dark) root.style.setProperty('--border', activeTheme.border_color_dark, 'important');
+            if (activeTheme.input_color_dark) root.style.setProperty('--input', activeTheme.input_color_dark, 'important');
+            if (activeTheme.muted_color_dark) root.style.setProperty('--muted', activeTheme.muted_color_dark, 'important');
+            if (activeTheme.muted_foreground_dark) root.style.setProperty('--muted-foreground', activeTheme.muted_foreground_dark, 'important');
+          } else {
+            // Apply light mode structural colors
+            if (activeTheme.border_color) root.style.setProperty('--border', activeTheme.border_color, 'important');
+            if (activeTheme.input_color) root.style.setProperty('--input', activeTheme.input_color, 'important');
+            if (activeTheme.muted_color) root.style.setProperty('--muted', activeTheme.muted_color, 'important');
+            if (activeTheme.muted_foreground) root.style.setProperty('--muted-foreground', activeTheme.muted_foreground, 'important');
+          }
+        }
         root.style.setProperty('--ring', activeTheme.ring_color || activeTheme.primary_color, 'important');
-        root.style.setProperty('--muted', activeTheme.muted_color || activeTheme.secondary_color, 'important');
-        root.style.setProperty('--muted-foreground', activeTheme.muted_foreground || activeTheme.secondary_foreground, 'important');
         
         console.log('✅ ThemeContext: Tema global aplicado com todas as cores:', {
           theme: activeTheme.name,

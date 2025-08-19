@@ -268,6 +268,12 @@ interface ThemeConfig {
   card_color: string;
   card_foreground: string;
   
+  // Cores de fundo para dark mode
+  background_color_dark?: string;
+  foreground_color_dark?: string;
+  card_color_dark?: string;
+  card_foreground_dark?: string;
+  
   // Cores de interface
   border_color: string;
   input_color?: string;
@@ -276,6 +282,14 @@ interface ThemeConfig {
   muted_foreground?: string;
   popover_color?: string;
   popover_foreground?: string;
+  
+  // Cores de interface para dark mode
+  border_color_dark?: string;
+  input_color_dark?: string;
+  muted_color_dark?: string;
+  muted_foreground_dark?: string;
+  popover_color_dark?: string;
+  popover_foreground_dark?: string;
   
   // Cores de estado
   success_color: string;
@@ -470,6 +484,11 @@ const GlobalRulesSection: React.FC = () => {
     foreground_color: '225 71% 12%',
     card_color: '0 0% 100%',
     card_foreground: '225 71% 12%',
+    // Backgrounds dark mode
+    background_color_dark: '222 18% 4%',
+    foreground_color_dark: '0 0% 100%',
+    card_color_dark: '215 8% 12%',
+    card_foreground_dark: '0 0% 100%',
     border_color: '214 32% 91%',
     border_color_dark: '215 10% 22%',
     input_color: '214 32% 91%',
@@ -477,8 +496,14 @@ const GlobalRulesSection: React.FC = () => {
     ring_color: '219 78% 26%',
     muted_color: '210 20% 96%',
     muted_foreground: '215 16% 47%',
+    // Cores muted dark mode
+    muted_color_dark: '215 12% 16%',
+    muted_foreground_dark: '215 20% 65%',
     popover_color: '0 0% 100%',
     popover_foreground: '225 71% 12%',
+    // Popover dark mode
+    popover_color_dark: '222 13% 11%',
+    popover_foreground_dark: '0 0% 100%',
     // Cores de estado
     success_color: '142 76% 36%',
     success_foreground: '210 40% 98%',
@@ -875,18 +900,35 @@ const GlobalRulesSection: React.FC = () => {
       applyColorWithImportant('--accent', theme.accent_color);
       applyColorWithImportant('--accent-foreground', theme.accent_foreground);
       
-      // Para tema nativo, aplicar background/foreground também
-      applyColorWithImportant('--background', theme.background_color);
-      applyColorWithImportant('--foreground', theme.foreground_color);
-      applyColorWithImportant('--card', theme.card_color);
-      applyColorWithImportant('--card-foreground', theme.card_foreground);
+      // Para tema nativo, aplicar cores baseadas no modo atual (dark/light)
+      if (isDarkMode) {
+        // Usar cores dark mode se disponíveis
+        if (theme.background_color_dark) applyColorWithImportant('--background', theme.background_color_dark);
+        if (theme.foreground_color_dark) applyColorWithImportant('--foreground', theme.foreground_color_dark);
+        if (theme.card_color_dark) applyColorWithImportant('--card', theme.card_color_dark);
+        if (theme.card_foreground_dark) applyColorWithImportant('--card-foreground', theme.card_foreground_dark);
+        if (theme.border_color_dark) applyColorWithImportant('--border', theme.border_color_dark);
+        if (theme.input_color_dark) applyColorWithImportant('--input', theme.input_color_dark);
+        if (theme.muted_color_dark) applyColorWithImportant('--muted', theme.muted_color_dark);
+        if (theme.muted_foreground_dark) applyColorWithImportant('--muted-foreground', theme.muted_foreground_dark);
+        if (theme.popover_color_dark) applyColorWithImportant('--popover', theme.popover_color_dark);
+        if (theme.popover_foreground_dark) applyColorWithImportant('--popover-foreground', theme.popover_foreground_dark);
+      } else {
+        // Usar cores light mode
+        applyColorWithImportant('--background', theme.background_color);
+        applyColorWithImportant('--foreground', theme.foreground_color);
+        applyColorWithImportant('--card', theme.card_color);
+        applyColorWithImportant('--card-foreground', theme.card_foreground);
+        applyColorWithImportant('--border', theme.border_color);
+        if (theme.input_color) applyColorWithImportant('--input', theme.input_color);
+        if (theme.muted_color) applyColorWithImportant('--muted', theme.muted_color);
+        if (theme.muted_foreground) applyColorWithImportant('--muted-foreground', theme.muted_foreground);
+        if (theme.popover_color) applyColorWithImportant('--popover', theme.popover_color);
+        if (theme.popover_foreground) applyColorWithImportant('--popover-foreground', theme.popover_foreground);
+      }
       
-      // Aplicar outras cores de interface
-      applyColorWithImportant('--border', theme.border_color);
-      applyColorWithImportant('--input', theme.input_color || theme.border_color);
+      // Aplicar ring para tema nativo
       applyColorWithImportant('--ring', theme.ring_color || theme.primary_color);
-      applyColorWithImportant('--muted', theme.muted_color || theme.secondary_color);
-      applyColorWithImportant('--muted-foreground', theme.muted_foreground || theme.secondary_foreground);
       
       // IMPORTANTE: Aplicar configurações de layout também para temas nativos
       root.style.setProperty('--radius', `${(theme.border_radius / 16)}rem`); // Converter px para rem
@@ -1018,6 +1060,11 @@ const GlobalRulesSection: React.FC = () => {
       foreground_color: '225 71% 12%',
       card_color: '0 0% 100%',
       card_foreground: '225 71% 12%',
+      // Dark mode backgrounds
+      background_color_dark: '222 18% 4%',
+      foreground_color_dark: '0 0% 100%',
+      card_color_dark: '215 8% 12%',
+      card_foreground_dark: '0 0% 100%',
       border_color: '214 32% 91%',
       success_color: '142 76% 36%',
       success_foreground: '210 40% 98%',
@@ -1050,6 +1097,11 @@ const GlobalRulesSection: React.FC = () => {
       foreground_color: theme.foreground_color,
       card_color: theme.card_color,
       card_foreground: theme.card_foreground,
+      // Dark mode colors
+      background_color_dark: theme.background_color_dark || '222 18% 4%',
+      foreground_color_dark: theme.foreground_color_dark || '0 0% 100%',
+      card_color_dark: theme.card_color_dark || '215 8% 12%',
+      card_foreground_dark: theme.card_foreground_dark || '0 0% 100%',
       border_color: theme.border_color,
       success_color: theme.success_color,
       success_foreground: theme.success_foreground,
@@ -1129,13 +1181,24 @@ const GlobalRulesSection: React.FC = () => {
         foreground_color: themeForm.foreground_color,
         card_color: themeForm.card_color,
         card_foreground: themeForm.card_foreground,
+        // Dark mode backgrounds
+        background_color_dark: themeForm.background_color_dark,
+        foreground_color_dark: themeForm.foreground_color_dark,
+        card_color_dark: themeForm.card_color_dark,
+        card_foreground_dark: themeForm.card_foreground_dark,
         border_color: themeForm.border_color,
         input_color: themeForm.input_color,
         ring_color: themeForm.ring_color,
         muted_color: themeForm.muted_color,
         muted_foreground: themeForm.muted_foreground,
+        // Dark mode muted colors
+        muted_color_dark: themeForm.muted_color_dark,
+        muted_foreground_dark: themeForm.muted_foreground_dark,
         popover_color: themeForm.popover_color,
         popover_foreground: themeForm.popover_foreground,
+        // Dark mode popover colors
+        popover_color_dark: themeForm.popover_color_dark,
+        popover_foreground_dark: themeForm.popover_foreground_dark,
         
         // Cores de estado
         success_color: themeForm.success_color,
@@ -2859,31 +2922,73 @@ const GlobalRulesSection: React.FC = () => {
             {/* Cores de Fundo */}
             <div className="space-y-4">
               <Label className="text-base font-semibold">Cores de Fundo e Superfície</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ColorPicker
-                  label="Fundo Principal"
-                  value={themeForm.background_color}
-                  onChange={(value) => setThemeForm(prev => ({ ...prev, background_color: value }))}
-                  placeholder="0 0% 100%"
-                />
-                <ColorPicker
-                  label="Texto Principal"
-                  value={themeForm.foreground_color}
-                  onChange={(value) => setThemeForm(prev => ({ ...prev, foreground_color: value }))}
-                  placeholder="225 71% 12%"
-                />
-                <ColorPicker
-                  label="Fundo dos Cards"
-                  value={themeForm.card_color}
-                  onChange={(value) => setThemeForm(prev => ({ ...prev, card_color: value }))}
-                  placeholder="0 0% 100%"
-                />
-                <ColorPicker
-                  label="Texto dos Cards"
-                  value={themeForm.card_foreground}
-                  onChange={(value) => setThemeForm(prev => ({ ...prev, card_foreground: value }))}
-                  placeholder="225 71% 12%"
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Light Mode */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-yellow-400 border-2 border-yellow-600"></div>
+                    Light Mode
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <ColorPicker
+                      label="Fundo Principal"
+                      value={themeForm.background_color}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, background_color: value }))}
+                      placeholder="0 0% 100%"
+                    />
+                    <ColorPicker
+                      label="Texto Principal"
+                      value={themeForm.foreground_color}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, foreground_color: value }))}
+                      placeholder="225 71% 12%"
+                    />
+                    <ColorPicker
+                      label="Fundo dos Cards"
+                      value={themeForm.card_color}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, card_color: value }))}
+                      placeholder="0 0% 100%"
+                    />
+                    <ColorPicker
+                      label="Texto dos Cards"
+                      value={themeForm.card_foreground}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, card_foreground: value }))}
+                      placeholder="225 71% 12%"
+                    />
+                  </div>
+                </div>
+                {/* Dark Mode */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-gray-800 border-2 border-gray-600"></div>
+                    Dark Mode
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <ColorPicker
+                      label="Fundo Principal (Dark)"
+                      value={themeForm.background_color_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, background_color_dark: value }))}
+                      placeholder="222 18% 4%"
+                    />
+                    <ColorPicker
+                      label="Texto Principal (Dark)"
+                      value={themeForm.foreground_color_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, foreground_color_dark: value }))}
+                      placeholder="0 0% 100%"
+                    />
+                    <ColorPicker
+                      label="Fundo dos Cards (Dark)"
+                      value={themeForm.card_color_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, card_color_dark: value }))}
+                      placeholder="215 8% 12%"
+                    />
+                    <ColorPicker
+                      label="Texto dos Cards (Dark)"
+                      value={themeForm.card_foreground_dark}
+                      onChange={(value) => setThemeForm(prev => ({ ...prev, card_foreground_dark: value }))}
+                      placeholder="0 0% 100%"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
