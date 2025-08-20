@@ -7,7 +7,6 @@ import {
   tenantAccessMiddleware,
   TENANT_SECURITY_CONFIG 
 } from '@/utils/tenantSecurity';
-import { useTenantSettings } from './useTenantSettings';
 import type { 
   Risk, 
   ActionPlan, 
@@ -39,7 +38,6 @@ export const useRiskManagement = () => {
     logActivity,
     isValidTenant 
   } = useTenantSecurity();
-  const { calculateRiskLevel, getMatrixLabels, getMatrixDimensions, isMatrix4x4 } = useTenantSettings();
 
   // Verificar se usuário tem tenant válido
   if (!isValidTenant) {
@@ -495,6 +493,16 @@ export const useRiskManagement = () => {
   // FUNÇÕES UTILITÁRIAS
   // ============================================================================
 
+  const calculateRiskLevel = (score: number): RiskLevel => {
+    console.log('📊 calculateRiskLevel: score =', score);
+    
+    // Usar a mesma lógica que está sendo usada na correção automática
+    if (score >= 20) return 'Muito Alto';
+    if (score >= 15) return 'Alto';
+    if (score >= 8) return 'Médio';
+    if (score >= 4) return 'Baixo';
+    return 'Muito Baixo';
+  };
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
     // Usar descrição diretamente

@@ -43,8 +43,7 @@ import {
   Filter,
   Brain,
   BarChart3,
-  Settings,
-  BookOpen
+  Settings
 } from 'lucide-react';
 import SortableRiskCard from './SortableRiskCard';
 import {
@@ -76,7 +75,6 @@ import type {
   RiskFilters
 } from '@/types/risk-management';
 import { RISK_CATEGORIES, TREATMENT_TYPES } from '@/types/risk-management';
-import { RiskDocumentation } from './RiskDocumentation';
 
 const NewRiskManagementPage: React.FC = () => {
   const { user } = useAuth();
@@ -118,7 +116,6 @@ const NewRiskManagementPage: React.FC = () => {
   const [selectedStatuses, setSelectedStatuses] = useState<RiskStatus[]>([]);
   const [showOverdue, setShowOverdue] = useState(false);
   const [orderedRisks, setOrderedRisks] = useState<Risk[]>([]);
-  const [showDocumentation, setShowDocumentation] = useState(false);
   
   // Estado simples para contadores
   const [simpleMetrics, setSimpleMetrics] = useState({
@@ -416,24 +413,6 @@ const NewRiskManagementPage: React.FC = () => {
     );
   }
 
-  // Se documentação está aberta, mostrar apenas ela
-  if (showDocumentation) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Documentação - Módulo de Risco</h1>
-          <Button 
-            variant="outline" 
-            onClick={() => setShowDocumentation(false)}
-          >
-            Voltar ao Dashboard
-          </Button>
-        </div>
-        <RiskDocumentation />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -446,14 +425,6 @@ const NewRiskManagementPage: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => setShowDocumentation(true)}
-            className="justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 rounded-md px-3 flex items-center space-x-1"
-          >
-            <BookOpen className="h-4 w-4" />
-            <span className="hidden sm:inline">Doc</span>
-          </Button>
           <Button variant="outline">
             <Brain className="h-4 w-4 mr-2" />
             IA Assistente
@@ -641,140 +612,131 @@ const NewRiskManagementPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Dashboard Layout with Filters on Left */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
-        <div className="lg:col-span-1">
+      {/* Metrics Cards */}
+      {metrics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtros
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Pesquisar riscos..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
+                  <p className="text-2xl font-bold">
+                    {(() => {
+                      console.log('📊 Card Muito Alto - Métricas simples:', simpleMetrics.muitoAlto);
+                      console.log('📊 Card Muito Alto - Hook metrics:', metrics?.risksByLevel?.['Muito Alto'] || 0);
+                      return simpleMetrics.muitoAlto;
+                    })()}
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <Button
-                    variant={showOverdue ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setShowOverdue(!showOverdue)}
-                    className="w-full justify-start"
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Vencidos ({metrics?.overdueActivities || 0})
-                  </Button>
-                  
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Categorias" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.keys(RISK_CATEGORIES).map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Nível" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Muito Alto">Muito Alto</SelectItem>
-                      <SelectItem value="Alto">Alto</SelectItem>
-                      <SelectItem value="Médio">Médio</SelectItem>
-                      <SelectItem value="Baixo">Baixo</SelectItem>
-                    </SelectContent>
-                  </Select>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <TrendingUp className="h-8 w-8 text-orange-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Alto</p>
+                  <p className="text-2xl font-bold">
+                    {(() => {
+                      console.log('🟠 Card Alto - Métricas simples:', simpleMetrics.alto);
+                      console.log('🟠 Card Alto - Hook metrics:', metrics?.risksByLevel?.['Alto'] || 0);
+                      return simpleMetrics.alto;
+                    })()}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Activity className="h-8 w-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Em Tratamento</p>
+                  <p className="text-2xl font-bold">
+                    {metrics.risksByStatus['Em Tratamento'] || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Shield className="h-8 w-8 text-gray-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold">{metrics.totalRisks}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
 
-        {/* Main Dashboard */}
-        <div className="lg:col-span-3">
-          {/* Metrics Cards */}
-          {metrics && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <AlertTriangle className="h-8 w-8 text-red-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
-                      <p className="text-2xl font-bold">
-                        {(() => {
-                          console.log('📊 Card Muito Alto - Métricas simples:', simpleMetrics.muitoAlto);
-                          console.log('📊 Card Muito Alto - Hook metrics:', metrics?.risksByLevel?.['Muito Alto'] || 0);
-                          return simpleMetrics.muitoAlto;
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <TrendingUp className="h-8 w-8 text-orange-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Alto</p>
-                      <p className="text-2xl font-bold">
-                        {(() => {
-                          console.log('🟠 Card Alto - Métricas simples:', simpleMetrics.alto);
-                          console.log('🟠 Card Alto - Hook metrics:', metrics?.risksByLevel?.['Alto'] || 0);
-                          return simpleMetrics.alto;
-                        })()}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Activity className="h-8 w-8 text-blue-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Em Tratamento</p>
-                      <p className="text-2xl font-bold">
-                        {metrics.risksByStatus['Em Tratamento'] || 0}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center">
-                    <Shield className="h-8 w-8 text-gray-500" />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-muted-foreground">Total</p>
-                      <p className="text-2xl font-bold">{metrics.totalRisks}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Pesquisar riscos por nome, descrição ou categoria..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          )}
-        </div>
-      </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={showOverdue ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowOverdue(!showOverdue)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" />
+                Vencidos ({metrics?.overdueActivities || 0})
+              </Button>
+              
+              <Select>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Categorias" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(RISK_CATEGORIES).map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Nível" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Muito Alto">Muito Alto</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
+                  <SelectItem value="Médio">Médio</SelectItem>
+                  <SelectItem value="Baixo">Baixo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Risk Cards with Drag & Drop */}
       <div className="space-y-4">

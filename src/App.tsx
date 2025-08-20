@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy imports for feature modules
+const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
 const RiskManagementPageLegacy = lazy(() => import("@/components/risks/NewRiskManagementPage"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
@@ -180,6 +181,11 @@ const App = () => (
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="risks" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskManagementCenter />
+                    </Suspense>
+                  } />
+                  <Route path="risks-hub" element={
                     <Suspense fallback={<PageLoader />}>
                       <RiskManagementHub />
                     </Suspense>
