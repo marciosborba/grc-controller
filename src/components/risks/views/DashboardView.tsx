@@ -91,12 +91,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Identificado': return 'bg-blue-100 text-blue-800';
-      case 'Avaliado': return 'bg-purple-100 text-purple-800';
-      case 'Em Tratamento': return 'bg-indigo-100 text-indigo-800';
-      case 'Monitorado': return 'bg-teal-100 text-teal-800';
-      case 'Fechado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Identificado': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400';
+      case 'Avaliado': return 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-400';
+      case 'Em Tratamento': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400';
+      case 'Monitorado': return 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-400';
+      case 'Fechado': return 'bg-gray-100 text-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
     }
   };
 
@@ -184,7 +184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
               <span>Top 5 Riscos</span>
             </CardTitle>
           </CardHeader>
@@ -198,9 +198,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <Badge 
                         variant="outline" 
                         className={`text-xs ${
-                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800' :
-                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800' :
-                          'border-yellow-200 bg-yellow-50 text-yellow-800'
+                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400' :
+                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400' :
+                          'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-400'
                         }`}
                       >
                         {risk.riskLevel}
@@ -317,16 +317,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div key={risk.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-4 flex-1 min-w-0">
                   <div className={`p-2 rounded-lg ${
-                    risk.riskLevel === 'Muito Alto' ? 'bg-red-100' :
-                    risk.riskLevel === 'Alto' ? 'bg-orange-100' :
-                    risk.riskLevel === 'Médio' ? 'bg-yellow-100' :
-                    'bg-green-100'
+                    risk.riskLevel === 'Muito Alto' ? 'bg-red-100 dark:bg-red-950/50' :
+                    risk.riskLevel === 'Alto' ? 'bg-orange-100 dark:bg-orange-950/50' :
+                    risk.riskLevel === 'Médio' ? 'bg-yellow-100 dark:bg-yellow-950/50' :
+                    'bg-green-100 dark:bg-green-950/50'
                   }`}>
                     <AlertTriangle className={`h-4 w-4 ${
-                      risk.riskLevel === 'Muito Alto' ? 'text-red-600' :
-                      risk.riskLevel === 'Alto' ? 'text-orange-600' :
-                      risk.riskLevel === 'Médio' ? 'text-yellow-600' :
-                      'text-green-600'
+                      risk.riskLevel === 'Muito Alto' ? 'text-red-600 dark:text-red-400' :
+                      risk.riskLevel === 'Alto' ? 'text-orange-600 dark:text-orange-400' :
+                      risk.riskLevel === 'Médio' ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-green-600 dark:text-green-400'
                     }`} />
                   </div>
                   
@@ -336,10 +336,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <Badge 
                         variant="outline" 
                         className={`text-xs ${
-                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800' :
-                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800' :
-                          risk.riskLevel === 'Médio' ? 'border-yellow-200 bg-yellow-50 text-yellow-800' :
-                          'border-green-200 bg-green-50 text-green-800'
+                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400' :
+                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400' :
+                          risk.riskLevel === 'Médio' ? 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-400' :
+                          'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400'
                         }`}
                       >
                         {risk.riskLevel}

@@ -97,23 +97,23 @@ export const RiskFilters: React.FC<RiskFiltersProps> = ({
 
   const getLevelColor = (level: RiskLevel) => {
     switch (level) {
-      case 'Muito Alto': return 'border-red-200 bg-red-50 text-red-800';
-      case 'Alto': return 'border-orange-200 bg-orange-50 text-orange-800';
-      case 'Médio': return 'border-yellow-200 bg-yellow-50 text-yellow-800';
-      case 'Baixo': return 'border-green-200 bg-green-50 text-green-800';
-      default: return 'border-gray-200 bg-gray-50 text-gray-800';
+      case 'Muito Alto': return 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400';
+      case 'Alto': return 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400';
+      case 'Médio': return 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-400';
+      case 'Baixo': return 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400';
+      default: return 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
     }
   };
 
   const getStatusColor = (status: RiskStatus) => {
     switch (status) {
-      case 'Identificado': return 'border-blue-200 bg-blue-50 text-blue-800';
-      case 'Avaliado': return 'border-purple-200 bg-purple-50 text-purple-800';
-      case 'Em Tratamento': return 'border-indigo-200 bg-indigo-50 text-indigo-800';
-      case 'Monitorado': return 'border-teal-200 bg-teal-50 text-teal-800';
-      case 'Fechado': return 'border-gray-200 bg-gray-50 text-gray-800';
-      case 'Reaberto': return 'border-orange-200 bg-orange-50 text-orange-800';
-      default: return 'border-gray-200 bg-gray-50 text-gray-800';
+      case 'Identificado': return 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-400';
+      case 'Avaliado': return 'border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-800 dark:bg-purple-950/50 dark:text-purple-400';
+      case 'Em Tratamento': return 'border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400';
+      case 'Monitorado': return 'border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-400';
+      case 'Fechado': return 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
+      case 'Reaberto': return 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400';
+      default: return 'border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
     }
   };
 
@@ -146,7 +146,7 @@ export const RiskFilters: React.FC<RiskFiltersProps> = ({
             <span>Buscar</span>
           </Label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
             <Input
               placeholder="Nome, descrição, categoria..."
               value={searchTerm}

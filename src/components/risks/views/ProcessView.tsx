@@ -91,7 +91,7 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
   onUpdate
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [isProcessActive, setIsProcessActive] = useState(false);
+  const [isProcessActive, setIsProcessActive] = useState(true); // Iniciar automaticamente
   const [formData, setFormData] = useState<GuidedFormData>({
     name: '',
     description: '',
@@ -114,6 +114,16 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
 
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Inicializar processo automaticamente (toast removido para modal)
+  // useEffect(() => {
+  //   if (isProcessActive) {
+  //     toast({
+  //       title: '🚀 Processo Alex Risk Iniciado',
+  //       description: 'Processo guiado de criação de riscos ativado com sucesso!',
+  //     });
+  //   }
+  // }, []);
 
   const processSteps: ProcessStep[] = [
     {
@@ -265,11 +275,12 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
     onCreate(riskData);
     
     toast({
-      title: '✅ Risco Criado',
-      description: 'Processo concluído com sucesso! Risco registrado no sistema.',
+      title: '✅ Risco Criado com Sucesso!',
+      description: 'Processo Alex Risk concluído! O risco foi registrado no sistema.',
     });
 
     resetProcess();
+    // O modal será fechado automaticamente pelo onCreate no componente pai
   };
 
   const calculateRiskLevel = (score: number) => {
@@ -374,15 +385,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               </div>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Sugerir Riscos
                   </Button>
@@ -451,15 +462,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               </div>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Análise Automática
                   </Button>
@@ -538,15 +549,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               </div>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Identificar Automaticamente
                   </Button>
@@ -578,15 +589,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               </Select>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Sugerir Estratégia
                   </Button>
@@ -624,15 +635,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               />
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Gerar Plano de Ação
                   </Button>
@@ -695,15 +706,15 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
               </div>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <Brain className="h-5 w-5 text-purple-600 mt-0.5" />
+                <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
                 <div>
-                  <h4 className="font-medium text-purple-900">Alex Risk Sugestão</h4>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <h4 className="font-medium text-purple-900 dark:text-purple-100">Alex Risk Sugestão</h4>
+                  <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
                     {step.alexSupport}
                   </p>
-                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 text-purple-700">
+                  <Button size="sm" variant="outline" className="mt-2 border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50">
                     <Zap className="h-3 w-3 mr-1" />
                     Configurar KRIs
                   </Button>

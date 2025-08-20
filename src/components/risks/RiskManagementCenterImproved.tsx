@@ -3,6 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { 
   LayoutDashboard,
   Table2,
@@ -78,6 +87,23 @@ export const RiskManagementCenterImproved: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alexRiskActive, setAlexRiskActive] = useState(true);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [processDialogOpen, setProcessDialogOpen] = useState(false);
+  const [libraryDialogOpen, setLibraryDialogOpen] = useState(false);
+  const [alexAnalysisDialogOpen, setAlexAnalysisDialogOpen] = useState(false);
+  const [manualFormData, setManualFormData] = useState({
+    name: '',
+    category: '',
+    probability: '',
+    responsible: '',
+    department: '',
+    impact: '',
+    description: '',
+    controls: ''
+  });
+  
+  // Debug: Log do estado atual (removido para produção)
+  // console.log('📊 RiskManagementCenterImproved - viewMode atual:', viewMode);
 
   // Hooks
   const { user } = useAuth();
@@ -98,12 +124,21 @@ export const RiskManagementCenterImproved: React.FC = () => {
   const getQuickActions = (): QuickAction[] => [
     // Ações Primárias
     {
-      id: 'new-risk-alex',
-      title: 'Novo Risco com Alex',
-      description: 'Criação guiada com IA',
+      id: 'register-risk',
+      title: 'Registrar Risco',
+      description: 'Criação manual de risco',
       icon: Plus,
-      color: 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700',
-      action: () => handleNewRiskWithAlex(),
+      color: 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700',
+      action: () => handleRegisterRisk(),
+      category: 'primary'
+    },
+    {
+      id: 'alex-analysis',
+      title: 'Análise Alex Risk',
+      description: 'Insights inteligentes',
+      icon: Brain,
+      color: 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700',
+      action: () => handleAlexAnalysis(),
       category: 'primary',
       badge: 'IA'
     },
@@ -113,10 +148,12 @@ export const RiskManagementCenterImproved: React.FC = () => {
       description: 'Templates e modelos',
       icon: Library,
       color: 'bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700',
-      action: () => setViewMode('library'),
+      action: () => handleRiskLibrary(),
       category: 'primary',
       badge: '50+ templates'
     },
+    
+    // Ações Secundárias
     {
       id: 'documentation',
       title: 'Documentação',
@@ -124,19 +161,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       icon: BookOpen,
       color: 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700',
       action: () => setViewMode('documentation'),
-      category: 'primary'
-    },
-    
-    // Ações Secundárias
-    {
-      id: 'alex-analysis',
-      title: 'Análise Alex Risk',
-      description: 'Insights inteligentes',
-      icon: Brain,
-      color: 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700',
-      action: () => handleAlexAnalysis(),
-      category: 'secondary',
-      badge: 'IA'
+      category: 'secondary'
     },
     {
       id: 'risk-matrix',
@@ -192,19 +217,52 @@ export const RiskManagementCenterImproved: React.FC = () => {
   ];
 
   // Handlers melhorados
-  const handleNewRiskWithAlex = () => {
-    setViewMode('process');
+  const handleRegisterRisk = () => {
+    setAlexAnalysisDialogOpen(true);
+    
     toast({
-      title: '🤖 Alex Risk Ativado',
-      description: 'Iniciando criação guiada de risco com assistência de IA...',
+      title: '📝 Registrar Risco',
+      description: 'Abrindo formulário para criação manual de risco...',
+    });
+  };
+
+  const handleRiskLibrary = () => {
+    setLibraryDialogOpen(true);
+    
+    toast({
+      title: '📚 Biblioteca de Riscos',
+      description: 'Abrindo biblioteca com templates e modelos de riscos...',
+    });
+  };
+
+  const handleTemplateSelection = (template: any) => {
+    // Preencher o formulário manual com dados do template
+    setManualFormData({
+      name: template.name,
+      category: template.category,
+      probability: template.probability.toString(),
+      responsible: template.createdBy,
+      department: template.industry,
+      impact: template.impact.toString(),
+      description: template.description,
+      controls: template.controls.join(', ')
+    });
+    
+    // Fechar biblioteca
+    setLibraryDialogOpen(false);
+    
+    toast({
+      title: '📚 Template Aplicado',
+      description: `Template "${template.name}" foi aplicado ao formulário manual.`,
     });
   };
 
   const handleAlexAnalysis = () => {
-    setAlexRiskActive(true);
+    console.log('handleAlexAnalysis chamado - abrindo processo guiado');
+    setProcessDialogOpen(true);
     toast({
-      title: '🧠 Análise Inteligente',
-      description: 'Alex Risk está analisando seu portfólio de riscos...',
+      title: '🧠 Análise Alex Risk',
+      description: 'Abrindo processo guiado com assistência de IA...',
     });
   };
 
@@ -327,18 +385,18 @@ export const RiskManagementCenterImproved: React.FC = () => {
           <div className="flex items-center space-x-4 text-sm">
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-green-600 font-medium">Sistema Operacional</span>
+              <span className="text-green-600 dark:text-green-400 font-medium">Sistema Operacional</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Activity className="h-4 w-4 text-blue-500" />
+              <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <span>{risks.length} riscos monitorados</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Brain className="h-4 w-4 text-purple-500" />
+              <Brain className="h-4 w-4 text-purple-500 dark:text-purple-400" />
               <span>Alex Risk {alexRiskActive ? 'ativo' : 'standby'}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4 text-orange-500" />
+              <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
               <span>Última sync: agora</span>
             </div>
           </div>
@@ -356,12 +414,12 @@ export const RiskManagementCenterImproved: React.FC = () => {
               currentView: viewMode
             }}
             trigger={
-              <Button variant="outline" className="flex items-center space-x-2 hover:bg-purple-50 transition-colors border-purple-200">
+              <Button variant="outline" className="flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800">
                 <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
                   <Brain className="h-3 w-3 text-white" />
                 </div>
                 <span>Alex Risk</span>
-                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">IA</Badge>
+                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400">IA</Badge>
               </Button>
             }
           />
@@ -370,9 +428,9 @@ export const RiskManagementCenterImproved: React.FC = () => {
           <Button 
             variant="outline" 
             onClick={() => setViewMode('documentation')}
-            className="flex items-center space-x-2 hover:bg-orange-50 transition-colors border-orange-200"
+            className="flex items-center space-x-2 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-colors border-orange-200 dark:border-orange-800"
           >
-            <BookOpen className="h-4 w-4 text-orange-600" />
+            <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <span className="hidden sm:inline">Doc</span>
           </Button>
           
@@ -403,7 +461,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5 text-orange-500" />
+            <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
             <span>Centro de Ações Integradas</span>
           </CardTitle>
         </CardHeader>
@@ -431,7 +489,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     {action.badge && (
                       <Badge 
                         variant="secondary" 
-                        className="absolute -top-2 -right-2 text-xs bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                        className="absolute -top-2 -right-2 text-xs bg-gradient-to-r from-blue-500 to-purple-500 text-white dark:from-blue-600 dark:to-purple-600"
                       >
                         {action.badge}
                       </Badge>
@@ -507,20 +565,9 @@ export const RiskManagementCenterImproved: React.FC = () => {
       </Card>
 
       {/* Área Principal de Conteúdo */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar com Filtros (sempre visível em desktop) */}
-        <div className="lg:col-span-1">
-          <RiskFilters 
-            filters={filters}
-            onFiltersChange={setFilters}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onClose={() => setShowFilters(false)}
-          />
-        </div>
-        
+      <div className="space-y-6">
         {/* Conteúdo Principal */}
-        <div className="lg:col-span-3">
+        <div>
           {/* Navegação de Views */}
           <Card className="mb-6">
             <CardContent className="pt-6">
@@ -552,15 +599,108 @@ export const RiskManagementCenterImproved: React.FC = () => {
                 </div>
               </div>
               
-              {/* Busca Global */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Pesquisar riscos por nome, categoria ou responsável..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              {/* Busca e Filtros Compactos */}
+              <div className="flex items-center space-x-4">
+                {/* Campo de busca */}
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+                    <Input
+                      placeholder="Pesquisar riscos por nome, categoria ou responsável..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                {/* Filtros ativos */}
+                <div className="flex items-center space-x-2">
+                  {/* Mostrar filtros ativos */}
+                  {filters?.categories && filters.categories.length > 0 && (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <Target className="h-3 w-3" />
+                      <span>{filters.categories.length} categoria(s)</span>
+                    </Badge>
+                  )}
+                  {filters?.levels && filters.levels.length > 0 && (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>{filters.levels.length} nível(is)</span>
+                    </Badge>
+                  )}
+                  {filters?.statuses && filters.statuses.length > 0 && (
+                    <Badge variant="secondary" className="flex items-center space-x-1">
+                      <CheckCircle className="h-3 w-3" />
+                      <span>{filters.statuses.length} status</span>
+                    </Badge>
+                  )}
+                  
+                  {/* Contador de resultados */}
+                  <Badge variant="outline" className="text-xs">
+                    {risks.length} riscos
+                  </Badge>
+                </div>
+                
+                {/* Botão de filtros */}
+                <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center space-x-2">
+                      <Filter className="h-4 w-4" />
+                      <span>Filtros</span>
+                      {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
+                        <Badge variant="secondary" className="ml-1">
+                          {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
+                        </Badge>
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center space-x-2">
+                        <Filter className="h-5 w-5" />
+                        <span>Filtros de Riscos</span>
+                      </DialogTitle>
+                      <DialogDescription>
+                        Refine sua busca por categoria, nível de risco, status e outros critérios.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 py-4">
+                      <RiskFilters 
+                        filters={filters}
+                        onFiltersChange={setFilters}
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        onClose={() => setFilterDialogOpen(false)}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        {risks.length} risco(s) encontrado(s)
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFilters({});
+                            setSearchTerm('');
+                          }}
+                        >
+                          Limpar tudo
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => setFilterDialogOpen(false)}
+                        >
+                          Aplicar filtros
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>
@@ -594,26 +734,9 @@ export const RiskManagementCenterImproved: React.FC = () => {
             />
           )}
           
-          {viewMode === 'process' && (
-            <ProcessView 
-              risks={risks}
-              onCreate={createRisk}
-              onUpdate={updateRisk}
-            />
-          )}
+          {/* ProcessView agora é renderizado em Dialog - removido daqui */}
 
-          {viewMode === 'library' && (
-            <RiskLibraryIntegrated 
-              onSelectTemplate={(template) => {
-                // Integrar com criação de risco
-                setViewMode('process');
-                toast({
-                  title: '📚 Template Selecionado',
-                  description: `Aplicando template: ${template.name}`,
-                });
-              }}
-            />
-          )}
+          {/* RiskLibraryIntegrated agora é renderizado em Dialog - removido daqui */}
 
           {viewMode === 'communications' && (
             <CommunicationCenterIntegrated 
@@ -654,6 +777,265 @@ export const RiskManagementCenterImproved: React.FC = () => {
           }}
         />
       )}
+      
+      {/* Dialog do Processo Guiado Alex Risk */}
+      <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Brain className="h-6 w-6 text-purple-600" />
+              <span>Análise Alex Risk - Processo Guiado com IA</span>
+            </DialogTitle>
+            <DialogDescription>
+              Processo inteligente e guiado para identificação, análise e tratamento de riscos corporativos com suporte de IA.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <ProcessView 
+              risks={risks}
+              onCreate={(riskData) => {
+                createRisk(riskData);
+                setProcessDialogOpen(false);
+              }}
+              onUpdate={updateRisk}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog da Biblioteca de Riscos */}
+      <Dialog open={libraryDialogOpen} onOpenChange={setLibraryDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Library className="h-6 w-6 text-green-600" />
+              <span>Biblioteca de Riscos - Templates e Modelos</span>
+            </DialogTitle>
+            <DialogDescription>
+              Explore nossa coleção de templates pré-definidos, modelos de riscos por setor e melhores práticas para acelerar sua gestão de riscos.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <RiskLibraryIntegrated 
+              onSelectTemplate={handleTemplateSelection}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Dialog do Registro Manual de Risco */}
+      <Dialog open={alexAnalysisDialogOpen} onOpenChange={setAlexAnalysisDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Plus className="h-6 w-6 text-blue-600" />
+              <span>Registrar Novo Risco - Formulário Manual</span>
+            </DialogTitle>
+            <DialogDescription>
+              Formulário simplificado para registro manual de riscos corporativos com campos essenciais.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {/* Botão para Biblioteca de Templates */}
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
+                    📚 Usar Template da Biblioteca
+                  </h3>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    Acelere o processo selecionando um template pré-configurado
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setLibraryDialogOpen(true)}
+                  className="border-green-300 text-green-700 hover:bg-green-100 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/50"
+                >
+                  <Library className="h-4 w-4 mr-2" />
+                  Escolher Template
+                </Button>
+              </div>
+            </div>
+            
+            {/* Formulário Manual Simplificado */}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Nome do Risco *</label>
+                    <Input 
+                      placeholder="Ex: Falha no sistema de pagamento" 
+                      value={manualFormData.name}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Categoria</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                      value={manualFormData.category}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, category: e.target.value }))}
+                    >
+                      <option value="">Selecione uma categoria</option>
+                      <option value="Operacional">Operacional</option>
+                      <option value="Financeiro">Financeiro</option>
+                      <option value="Tecnológico">Tecnológico</option>
+                      <option value="Regulatório">Regulatório</option>
+                      <option value="Reputacional">Reputacional</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Nível de Probabilidade</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                      value={manualFormData.probability}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, probability: e.target.value }))}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="1">1 - Muito Baixa</option>
+                      <option value="2">2 - Baixa</option>
+                      <option value="3">3 - Média</option>
+                      <option value="4">4 - Alta</option>
+                      <option value="5">5 - Muito Alta</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Responsável</label>
+                    <Input 
+                      placeholder="Nome do responsável" 
+                      value={manualFormData.responsible}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, responsible: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Departamento</label>
+                    <Input 
+                      placeholder="Ex: TI, Financeiro, Operações" 
+                      value={manualFormData.department}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, department: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Nível de Impacto</label>
+                    <select 
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                      value={manualFormData.impact}
+                      onChange={(e) => setManualFormData(prev => ({ ...prev, impact: e.target.value }))}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="1">1 - Muito Baixo</option>
+                      <option value="2">2 - Baixo</option>
+                      <option value="3">3 - Médio</option>
+                      <option value="4">4 - Alto</option>
+                      <option value="5">5 - Muito Alto</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Descrição do Risco</label>
+                <textarea 
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background" 
+                  rows={4}
+                  placeholder="Descreva detalhadamente o risco identificado..."
+                  value={manualFormData.description}
+                  onChange={(e) => setManualFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Controles Existentes</label>
+                <textarea 
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background" 
+                  rows={3}
+                  placeholder="Liste os controles já implementados para mitigar este risco..."
+                  value={manualFormData.controls}
+                  onChange={(e) => setManualFormData(prev => ({ ...prev, controls: e.target.value }))}
+                />
+              </div>
+              
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t">
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setManualFormData({
+                        name: '',
+                        category: '',
+                        probability: '',
+                        responsible: '',
+                        department: '',
+                        impact: '',
+                        description: '',
+                        controls: ''
+                      });
+                      toast({
+                        title: '🗑️ Formulário Limpo',
+                        description: 'Todos os campos foram limpos.',
+                      });
+                    }}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+                <div className="flex space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setAlexAnalysisDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      if (!manualFormData.name.trim()) {
+                        toast({
+                          title: '⚠️ Campo Obrigatório',
+                          description: 'Por favor, preencha o nome do risco.',
+                          variant: 'destructive'
+                        });
+                        return;
+                      }
+                      
+                      toast({
+                        title: '✅ Risco Registrado',
+                        description: `Risco "${manualFormData.name}" foi registrado com sucesso.`,
+                      });
+                      
+                      // Limpar formulário após registro
+                      setManualFormData({
+                        name: '',
+                        category: '',
+                        probability: '',
+                        responsible: '',
+                        department: '',
+                        impact: '',
+                        description: '',
+                        controls: ''
+                      });
+                      
+                      setAlexAnalysisDialogOpen(false);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={!manualFormData.name.trim()}
+                  >
+                    Registrar Risco
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

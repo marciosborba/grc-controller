@@ -16,7 +16,7 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy imports for feature modules
-const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
+const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved").then(module => ({ default: module.default || module.RiskManagementCenterImproved })));
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
 const RiskManagementPageLegacy = lazy(() => import("@/components/risks/NewRiskManagementPage"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));

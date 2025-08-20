@@ -205,15 +205,15 @@ export const AlexRiskIntegration: React.FC<AlexRiskIntegrationProps> = ({
 
   const getSuggestionColor = (type: string, priority: string) => {
     if (priority === 'high') {
-      return 'border-red-200 bg-red-50';
+      return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50';
     }
     
     switch (type) {
-      case 'analysis': return 'border-blue-200 bg-blue-50';
-      case 'action': return 'border-green-200 bg-green-50';
-      case 'insight': return 'border-purple-200 bg-purple-50';
-      case 'warning': return 'border-orange-200 bg-orange-50';
-      default: return 'border-gray-200 bg-gray-50';
+      case 'analysis': return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/50';
+      case 'action': return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50';
+      case 'insight': return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/50';
+      case 'warning': return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50';
+      default: return 'border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950/50';
     }
   };
 
@@ -231,7 +231,7 @@ export const AlexRiskIntegration: React.FC<AlexRiskIntegrationProps> = ({
   }
 
   return (
-    <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
+    <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 dark:border-purple-800 dark:from-purple-950/50 dark:to-blue-950/50">
       <CardContent className="pt-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
@@ -275,8 +275,8 @@ export const AlexRiskIntegration: React.FC<AlexRiskIntegrationProps> = ({
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <Icon className="h-4 w-4 text-purple-600" />
-                      <h4 className="font-medium text-sm">{suggestion.title}</h4>
+                      <Icon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <h4 className="font-medium text-sm text-foreground">{suggestion.title}</h4>
                     </div>
                     {getPriorityBadge(suggestion.priority)}
                   </div>
@@ -294,7 +294,7 @@ export const AlexRiskIntegration: React.FC<AlexRiskIntegrationProps> = ({
                       <Button 
                         size="sm" 
                         onClick={() => handleSuggestionAction(suggestion)}
-                        className="bg-purple-500 hover:bg-purple-600 text-white"
+                        className="bg-purple-500 hover:bg-purple-600 text-white dark:bg-purple-600 dark:hover:bg-purple-700"
                       >
                         <Zap className="h-3 w-3 mr-1" />
                         Aplicar
@@ -306,12 +306,12 @@ export const AlexRiskIntegration: React.FC<AlexRiskIntegrationProps> = ({
             })}
             
             {/* Botão para mais análises */}
-            <div className="pt-2 border-t border-purple-200">
+            <div className="pt-2 border-t border-purple-200 dark:border-purple-800">
               <Button 
                 variant="outline" 
                 onClick={generateContextualSuggestions}
                 disabled={isAnalyzing}
-                className="w-full flex items-center space-x-2 border-purple-200 hover:bg-purple-50"
+                className="w-full flex items-center space-x-2 border-purple-200 hover:bg-purple-50 dark:border-purple-800 dark:hover:bg-purple-950/50"
               >
                 <Brain className="h-4 w-4" />
                 <span>Gerar Novas Sugestões</span>

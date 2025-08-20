@@ -4,6 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import { 
   BookOpen, 
   FileText, 
@@ -1293,7 +1302,10 @@ export const RiskDocumentation: React.FC = () => {
   };
 
   const selectedSectionData = documentationSections.find(s => s.id === selectedSection);
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string[]>([]);
+  const [selectedTimeRange, setSelectedTimeRange] = useState<string[]>([]);
+  const [selectedPopularity, setSelectedPopularity] = useState<string[]>([]);
 
   return (
     <div className="space-y-6">
@@ -1321,169 +1333,219 @@ export const RiskDocumentation: React.FC = () => {
         </div>
       </div>
 
-      {/* Search and Filters - Compact */}
-      <Card>
-        <CardContent className="p-4">
-          {/* Linha principal sempre visível */}
-          <div className="flex items-center space-x-3">
-            {/* Campo de busca */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Pesquisar na documentação..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9"
-                />
-              </div>
-            </div>
+      {/* Search and Filters - Simple */}
+      <div className="flex items-center space-x-4">
+        {/* Campo de busca */}
+        <div className="flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Pesquisar na documentação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+        
+        {/* Filtros ativos */}
+        <div className="flex items-center space-x-2">
+          {selectedCategory !== 'all' && (() => {
+            const selectedCat = categories.find(c => c.id === selectedCategory);
+            const IconComponent = selectedCat?.icon;
+            return (
+              <Badge variant="secondary" className="flex items-center space-x-1">
+                {IconComponent && <IconComponent className="h-3 w-3" />}
+                <span>{selectedCat?.label}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0 ml-1"
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            );
+          })()}
+          
+          {/* Contador de resultados */}
+          <Badge variant="outline" className="text-xs">
+            {filteredSections.length} seções
+          </Badge>
+        </div>
+        
+        {/* Botão de filtros */}
+        <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="flex items-center space-x-2">
+              <Filter className="h-4 w-4" />
+              <span>Filtros</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-2">
+                <Filter className="h-5 w-5" />
+                <span>Filtros de Documentação</span>
+              </DialogTitle>
+              <DialogDescription>
+                Refine sua busca por categoria, dificuldade e outros critérios.
+              </DialogDescription>
+            </DialogHeader>
             
-            {/* Filtro rápido - categoria selecionada */}
-            {selectedCategory !== 'all' && (() => {
-              const selectedCat = categories.find(c => c.id === selectedCategory);
-              const IconComponent = selectedCat?.icon;
-              return (
-                <Badge variant="secondary" className="flex items-center space-x-1">
-                  {IconComponent && <IconComponent className="h-3 w-3" />}
-                  <span>{selectedCat?.label}</span>
+            <div className="space-y-6 py-4">
+              {/* Categorias */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">
+                  Categorias
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {categories.map((category) => {
+                    const Icon = category.icon;
+                    return (
+                      <Button
+                        key={category.id}
+                        variant={selectedCategory === category.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setSelectedCategory(category.id)}
+                        className="justify-start h-10"
+                      >
+                        <Icon className="h-4 w-4 mr-2" />
+                        {category.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              {/* Dificuldade */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">
+                  Nível de Dificuldade
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['beginner', 'intermediate', 'advanced'].map((difficulty) => {
+                    const labels = {
+                      beginner: 'Iniciante',
+                      intermediate: 'Intermediário', 
+                      advanced: 'Avançado'
+                    };
+                    const colors = {
+                      beginner: 'hover:bg-green-50',
+                      intermediate: 'hover:bg-yellow-50',
+                      advanced: 'hover:bg-red-50'
+                    };
+                    
+                    return (
+                      <Badge 
+                        key={difficulty}
+                        variant={selectedDifficulty.includes(difficulty) ? "default" : "outline"}
+                        className={`cursor-pointer ${colors[difficulty as keyof typeof colors]}`}
+                        onClick={() => {
+                          if (selectedDifficulty.includes(difficulty)) {
+                            setSelectedDifficulty(selectedDifficulty.filter(d => d !== difficulty));
+                          } else {
+                            setSelectedDifficulty([...selectedDifficulty, difficulty]);
+                          }
+                        }}
+                      >
+                        {labels[difficulty as keyof typeof labels]}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              {/* Tempo de Leitura */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">
+                  Tempo de Leitura
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['< 10 min', '10-20 min', '> 20 min'].map((timeRange) => (
+                    <Badge 
+                      key={timeRange}
+                      variant={selectedTimeRange.includes(timeRange) ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-blue-50"
+                      onClick={() => {
+                        if (selectedTimeRange.includes(timeRange)) {
+                          setSelectedTimeRange(selectedTimeRange.filter(t => t !== timeRange));
+                        } else {
+                          setSelectedTimeRange([...selectedTimeRange, timeRange]);
+                        }
+                      }}
+                    >
+                      {timeRange}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              {/* Popularidade */}
+              <div>
+                <label className="text-sm font-medium mb-3 block">
+                  Ordenação
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {['Mais populares', 'Recentes', 'Alfabética'].map((popularity) => (
+                    <Badge 
+                      key={popularity}
+                      variant={selectedPopularity.includes(popularity) ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-purple-50"
+                      onClick={() => {
+                        if (selectedPopularity.includes(popularity)) {
+                          setSelectedPopularity(selectedPopularity.filter(p => p !== popularity));
+                        } else {
+                          setSelectedPopularity([popularity]); // Apenas uma opção de ordenação
+                        }
+                      }}
+                    >
+                      {popularity}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              {/* Ações */}
+              <div className="flex items-center justify-between pt-2">
+                <div className="text-sm text-muted-foreground">
+                  {filteredSections.length} seção(ões) encontrada(s)
+                </div>
+                <div className="flex space-x-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-4 w-4 p-0 ml-1"
-                    onClick={() => setSelectedCategory('all')}
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('all');
+                      setSelectedDifficulty([]);
+                      setSelectedTimeRange([]);
+                      setSelectedPopularity([]);
+                    }}
                   >
-                    <X className="h-3 w-3" />
+                    Limpar tudo
                   </Button>
-                </Badge>
-              );
-            })()}
-            
-            {/* Botão para expandir filtros */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFiltersExpanded(!filtersExpanded)}
-              className="flex items-center space-x-1"
-            >
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtros</span>
-              {filtersExpanded ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          
-          {/* Filtros expandidos */}
-          {filtersExpanded && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Categorias
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {categories.map((category) => {
-                      const Icon = category.icon;
-                      return (
-                        <Button
-                          key={category.id}
-                          variant={selectedCategory === category.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setSelectedCategory(category.id)}
-                          className="h-8"
-                        >
-                          <Icon className="h-3 w-3 mr-1" />
-                          {category.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                {/* Filtros adicionais */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
-                      Dificuldade
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="cursor-pointer hover:bg-green-50">
-                        Iniciante
-                      </Badge>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-yellow-50">
-                        Intermediário
-                      </Badge>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-red-50">
-                        Avançado
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
-                      Tempo de Leitura
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="cursor-pointer hover:bg-blue-50">
-                        &lt; 10 min
-                      </Badge>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-blue-50">
-                        10-20 min
-                      </Badge>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-blue-50">
-                        &gt; 20 min
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">
-                      Popularidade
-                    </label>
-                    <div className="flex flex-wrap gap-1">
-                      <Badge variant="outline" className="cursor-pointer hover:bg-purple-50">
-                        Mais populares
-                      </Badge>
-                      <Badge variant="outline" className="cursor-pointer hover:bg-purple-50">
-                        Recentes
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Ações dos filtros */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-sm text-gray-500">
-                    {filteredSections.length} seção(ões) encontrada(s)
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setSelectedCategory('all');
-                      }}
-                    >
-                      Limpar filtros
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setFiltersExpanded(false)}
-                    >
-                      Fechar
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setFilterDialogOpen(false)}
+                  >
+                    Aplicar filtros
+                  </Button>
                 </div>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
