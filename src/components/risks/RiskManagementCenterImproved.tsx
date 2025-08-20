@@ -331,12 +331,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
   // Renderização condicional para documentação
   if (viewMode === 'documentation') {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 p-6" style={{marginTop: '-40px'}}>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold flex items-center space-x-2">
-            <BookOpen className="h-6 w-6 text-primary" />
-            <span>Documentação - Módulo de Risco Corporativo</span>
-          </h1>
           <Button 
             variant="outline" 
             onClick={() => setViewMode('dashboard')}

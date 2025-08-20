@@ -131,37 +131,37 @@ export const RiskDocumentation: React.FC = () => {
       lastUpdated: '2024-12-15',
       popularity: 95,
       content: (
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Target className="h-6 w-6 mr-2 text-blue-600" />
-              Módulo de Risco Corporativo - Visão Geral
+        <div className="space-y-4 max-w-full overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Target className="h-6 w-6 mr-2 text-blue-600 dark:text-blue-400" />
+              Visão Geral do Sistema
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               Este módulo representa uma solução completa e integrada para gestão de riscos corporativos, 
               desenvolvida com base nas melhores práticas de mercado e frameworks internacionais como 
               COSO ERM, ISO 31000 e NIST.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                <Brain className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-                <p className="font-medium">Alex Risk IA</p>
-                <p className="text-sm text-gray-600">Assistente Inteligente</p>
+              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                <Brain className="h-8 w-8 mx-auto text-purple-600 dark:text-purple-400 mb-2" />
+                <p className="font-medium text-gray-900 dark:text-gray-100">Alex Risk IA</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Assistente Inteligente</p>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                <BarChart3 className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                <p className="font-medium">Análises Avançadas</p>
-                <p className="text-sm text-gray-600">Monte Carlo, FMEA</p>
+              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                <BarChart3 className="h-8 w-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+                <p className="font-medium text-gray-900 dark:text-gray-100">Análises Avançadas</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Monte Carlo, FMEA</p>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                <Shield className="h-8 w-8 mx-auto text-red-600 mb-2" />
-                <p className="font-medium">Compliance</p>
-                <p className="text-sm text-gray-600">COSO, ISO 31000</p>
+              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                <Shield className="h-8 w-8 mx-auto text-red-600 dark:text-red-400 mb-2" />
+                <p className="font-medium text-gray-900 dark:text-gray-100">Compliance</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">COSO, ISO 31000</p>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
-                <TrendingUp className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                <p className="font-medium">Dashboard</p>
-                <p className="text-sm text-gray-600">Visão Unificada</p>
+              <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+                <TrendingUp className="h-8 w-8 mx-auto text-blue-600 dark:text-blue-400 mb-2" />
+                <p className="font-medium text-gray-900 dark:text-gray-100">Dashboard</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Visão Unificada</p>
               </div>
             </div>
           </div>
@@ -226,7 +226,7 @@ export const RiskDocumentation: React.FC = () => {
                     Compliance (COSO, ISO 31000, SOX)
                   </li>
                   <li className="flex items-center">
-                    <Settings className="h-4 w-4 text-gray-600 mr-2" />
+                    <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400 mr-2" />
                     Workflow Digital Completo
                   </li>
                 </ul>
@@ -248,12 +248,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 78,
       content: (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Layers className="h-6 w-6 mr-2 text-indigo-600" />
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 p-6 rounded-lg border border-indigo-200 dark:border-indigo-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Layers className="h-6 w-6 mr-2 text-indigo-600 dark:text-indigo-400" />
               Arquitetura do Sistema
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               O módulo de Risco Corporativo é construído com arquitetura modular e integrada, 
               permitindo máxima flexibilidade e escalabilidade.
             </p>
@@ -341,31 +341,31 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 92,
       content: (
         <div className="space-y-6">
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Lightbulb className="h-6 w-6 mr-2 text-blue-600" />
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Lightbulb className="h-6 w-6 mr-2 text-blue-600 dark:text-blue-400" />
               Como Começar
             </h3>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</div>
                 <div>
-                  <h4 className="font-medium">Acesso ao Módulo</h4>
-                  <p className="text-gray-700">Navegue para "Gestão de Riscos" no menu principal após fazer login</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Acesso ao Módulo</h4>
+                  <p className="text-gray-700 dark:text-gray-300">Navegue para "Gestão de Riscos" no menu principal após fazer login</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</div>
                 <div>
-                  <h4 className="font-medium">Dashboard Principal</h4>
-                  <p className="text-gray-700">Visualize o painel com métricas, riscos principais e Alex Risk</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Dashboard Principal</h4>
+                  <p className="text-gray-700 dark:text-gray-300">Visualize o painel com métricas, riscos principais e Alex Risk</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <div className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">3</div>
                 <div>
-                  <h4 className="font-medium">Primeiro Risco</h4>
-                  <p className="text-gray-700">Clique em "Novo Risco" e siga o wizard guiado com Alex Risk</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Primeiro Risco</h4>
+                  <p className="text-gray-700 dark:text-gray-300">Clique em "Novo Risco" e siga o wizard guiado com Alex Risk</p>
                 </div>
               </div>
             </div>
@@ -408,12 +408,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 89,
       content: (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Brain className="h-6 w-6 mr-2 text-purple-600" />
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 p-6 rounded-lg border border-purple-200 dark:border-purple-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Brain className="h-6 w-6 mr-2 text-purple-600 dark:text-purple-400" />
               Alex Risk - Seu Assistente Inteligente
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               Alex Risk é uma IA avançada que está integrada a todo o processo de gestão de riscos, 
               desde a identificação até o monitoramento contínuo.
             </p>
@@ -466,13 +466,13 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm"><strong>👤 Você:</strong> "Quais riscos cibernéticos são relevantes para fintech?"</p>
-                    <p className="text-sm mt-2"><strong>🤖 Alex:</strong> "Identifiquei 5 riscos críticos: 1) Ransomware (87% das fintechs afetadas)..."</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-900 dark:text-gray-100"><strong>👤 Você:</strong> "Quais riscos cibernéticos são relevantes para fintech?"</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2"><strong>🤖 Alex:</strong> "Identifiquei 5 riscos críticos: 1) Ransomware (87% das fintechs afetadas)..."</p>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-sm"><strong>👤 Você:</strong> "Como está meu portfólio vs mercado?"</p>
-                    <p className="text-sm mt-2"><strong>🤖 Alex:</strong> "23% acima da média em riscos operacionais, 15% abaixo em regulatórios..."</p>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-900 dark:text-gray-100"><strong>👤 Você:</strong> "Como está meu portfólio vs mercado?"</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mt-2"><strong>🤖 Alex:</strong> "23% acima da média em riscos operacionais, 15% abaixo em regulatórios..."</p>
                   </div>
                 </div>
               </CardContent>
@@ -485,25 +485,25 @@ export const RiskDocumentation: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <Target className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-                  <h4 className="font-medium">Identificação</h4>
-                  <p className="text-sm text-gray-600">Sugere riscos relevantes</p>
+                <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <Target className="h-8 w-8 mx-auto text-purple-600 dark:text-purple-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Identificação</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Sugere riscos relevantes</p>
                 </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <BarChart3 className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                  <h4 className="font-medium">Avaliação</h4>
-                  <p className="text-sm text-gray-600">Calcula automaticamente</p>
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <BarChart3 className="h-8 w-8 mx-auto text-blue-600 dark:text-blue-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Avaliação</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Calcula automaticamente</p>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <Shield className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                  <h4 className="font-medium">Tratamento</h4>
-                  <p className="text-sm text-gray-600">Recomenda estratégias</p>
+                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <Shield className="h-8 w-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Tratamento</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Recomenda estratégias</p>
                 </div>
-                <div className="text-center p-4 bg-orange-50 rounded-lg">
-                  <TrendingUp className="h-8 w-8 mx-auto text-orange-600 mb-2" />
-                  <h4 className="font-medium">Monitoramento</h4>
-                  <p className="text-sm text-gray-600">Define KRIs automáticos</p>
+                <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <TrendingUp className="h-8 w-8 mx-auto text-orange-600 dark:text-orange-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Monitoramento</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Define KRIs automáticos</p>
                 </div>
               </div>
             </CardContent>
@@ -523,12 +523,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 87,
       content: (
         <div className="space-y-6">
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <FileText className="h-6 w-6 mr-2 text-green-600" />
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <FileText className="h-6 w-6 mr-2 text-green-600 dark:text-green-400" />
               Wizard de Criação de Riscos
             </h3>
-            <p className="text-gray-700">
+            <p className="text-gray-700 dark:text-gray-300">
               O processo de criação de riscos é guiado por um wizard inteligente em 4 etapas, 
               com Alex Risk integrado em cada uma delas.
             </p>
@@ -563,9 +563,9 @@ export const RiskDocumentation: React.FC = () => {
                       Regulamentações aplicáveis
                     </li>
                   </ul>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <p className="text-sm font-medium text-blue-800">💡 Dica Alex Risk:</p>
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300">💡 Dica Alex Risk:</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       "Baseado no seu perfil de fintech, identifiquei 3 riscos cibernéticos emergentes 
                       que 67% das empresas similares estão enfrentando. Deseja revisar?"
                     </p>
@@ -585,17 +585,17 @@ export const RiskDocumentation: React.FC = () => {
                 <div className="space-y-4">
                   <p>Alex Risk calcula automaticamente probabilidade e impactos:</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-red-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-red-800">Impacto Financeiro</h4>
-                      <p className="text-sm text-red-700">Estimativas baseadas no setor</p>
+                    <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                      <h4 className="font-medium text-red-800 dark:text-red-300">Impacto Financeiro</h4>
+                      <p className="text-sm text-red-700 dark:text-red-300">Estimativas baseadas no setor</p>
                     </div>
-                    <div className="bg-orange-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-orange-800">Impacto Operacional</h4>
-                      <p className="text-sm text-orange-700">Análise de processos afetados</p>
+                    <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <h4 className="font-medium text-orange-800 dark:text-orange-300">Impacto Operacional</h4>
+                      <p className="text-sm text-orange-700 dark:text-orange-300">Análise de processos afetados</p>
                     </div>
-                    <div className="bg-purple-50 p-3 rounded-lg">
-                      <h4 className="font-medium text-purple-800">Impacto Reputacional</h4>
-                      <p className="text-sm text-purple-700">Avaliação de exposição midiática</p>
+                    <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <h4 className="font-medium text-purple-800 dark:text-purple-300">Impacto Reputacional</h4>
+                      <p className="text-sm text-purple-700 dark:text-purple-300">Avaliação de exposição midiática</p>
                     </div>
                   </div>
                 </div>
@@ -615,19 +615,19 @@ export const RiskDocumentation: React.FC = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="text-center p-3 bg-green-50 rounded-lg">
                       <Shield className="h-6 w-6 mx-auto text-green-600 mb-1" />
-                      <p className="text-sm font-medium">Mitigar</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Mitigar</p>
                     </div>
                     <div className="text-center p-3 bg-blue-50 rounded-lg">
                       <ExternalLink className="h-6 w-6 mx-auto text-blue-600 mb-1" />
-                      <p className="text-sm font-medium">Transferir</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Transferir</p>
                     </div>
                     <div className="text-center p-3 bg-red-50 rounded-lg">
                       <AlertTriangle className="h-6 w-6 mx-auto text-red-600 mb-1" />
-                      <p className="text-sm font-medium">Evitar</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Evitar</p>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <CheckCircle className="h-6 w-6 mx-auto text-gray-600 mb-1" />
-                      <p className="text-sm font-medium">Aceitar</p>
+                    <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <CheckCircle className="h-6 w-6 mx-auto text-gray-600 dark:text-gray-400 mb-1" />
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Aceitar</p>
                     </div>
                   </div>
                 </div>
@@ -681,12 +681,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 76,
       content: (
         <div className="space-y-6">
-          <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <BarChart3 className="h-6 w-6 mr-2 text-purple-600" />
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 rounded-lg border border-purple-200 dark:border-purple-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <BarChart3 className="h-6 w-6 mr-2 text-purple-600 dark:text-purple-400" />
               Metodologias e Frameworks Implementados
             </h3>
-            <p className="text-gray-700">
+            <p className="text-gray-700 dark:text-gray-300">
               O sistema implementa as principais metodologias e frameworks de gestão de risco 
               reconhecidos internacionalmente.
             </p>
@@ -702,7 +702,7 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Framework empresarial para gestão de riscos</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Framework empresarial para gestão de riscos</p>
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
@@ -730,7 +730,7 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Padrão internacional de gestão de risco</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Padrão internacional de gestão de risco</p>
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
@@ -752,13 +752,13 @@ export const RiskDocumentation: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2 text-gray-600" />
+                  <Settings className="h-5 w-5 mr-2 text-gray-600 dark:text-gray-400" />
                   NIST Framework
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Framework de cibersegurança</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Framework de cibersegurança</p>
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
@@ -786,7 +786,7 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-700">Métodos estatísticos avançados</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">Métodos estatísticos avançados</p>
                   <div className="space-y-2">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
@@ -816,20 +816,20 @@ export const RiskDocumentation: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <BarChart3 className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                  <h4 className="font-medium">FMEA</h4>
-                  <p className="text-sm text-gray-600">Failure Mode and Effects Analysis</p>
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <BarChart3 className="h-8 w-8 mx-auto text-blue-600 dark:text-blue-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">FMEA</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Failure Mode and Effects Analysis</p>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <Target className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                  <h4 className="font-medium">Bow-Tie</h4>
-                  <p className="text-sm text-gray-600">Análise de barreiras preventivas</p>
+                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <Target className="h-8 w-8 mx-auto text-green-600 dark:text-green-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Bow-Tie</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Análise de barreiras preventivas</p>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <TrendingUp className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-                  <h4 className="font-medium">Fault Tree</h4>
-                  <p className="text-sm text-gray-600">Análise de árvore de falhas</p>
+                <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <TrendingUp className="h-8 w-8 mx-auto text-purple-600 dark:text-purple-400 mb-2" />
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100">Fault Tree</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Análise de árvore de falhas</p>
                 </div>
               </div>
             </CardContent>
@@ -849,12 +849,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 82,
       content: (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Workflow className="h-6 w-6 mr-2 text-purple-600" />
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-6 rounded-lg border border-purple-200 dark:border-purple-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Workflow className="h-6 w-6 mr-2 text-purple-600 dark:text-purple-400" />
               Workflow Integrado de Gestão de Riscos
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               O sistema implementa um workflow completamente integrado que conecta todas as funcionalidades 
               em um processo fluido e automatizado.
             </p>
@@ -942,12 +942,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 84,
       content: (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Award className="h-6 w-6 mr-2 text-green-600" />
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Award className="h-6 w-6 mr-2 text-green-600 dark:text-green-400" />
               Melhores Práticas de Gestão de Riscos
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               Diretrizes e recomendações baseadas em anos de experiência e melhores práticas de mercado.
             </p>
           </div>
@@ -962,22 +962,22 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-blue-800 mb-2">Nomenclatura Padronizada</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                  <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Nomenclatura Padronizada</h4>
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
                       <li>• Use verbos no infinitivo</li>
                       <li>• Seja específico e contextual</li>
                       <li>• Máximo de 80 caracteres</li>
                       <li>• Evite termos genéricos</li>
                     </ul>
                   </div>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-2">Exemplo Bom</h4>
-                    <p className="text-sm text-green-700">"Falhar em detectar fraudes em transações PIX"</p>
+                  <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Exemplo Bom</h4>
+                    <p className="text-sm text-green-700 dark:text-green-300">"Falhar em detectar fraudes em transações PIX"</p>
                   </div>
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-red-800 mb-2">Exemplo Ruim</h4>
-                    <p className="text-sm text-red-700">"Risco de TI"</p>
+                  <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                    <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">Exemplo Ruim</h4>
+                    <p className="text-sm text-red-700 dark:text-red-300">"Risco de TI"</p>
                   </div>
                 </div>
               </CardContent>
@@ -992,18 +992,18 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="bg-yellow-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-yellow-800 mb-2">Probabilidade</h4>
-                    <ul className="text-sm text-yellow-700 space-y-1">
+                  <div className="bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <h4 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">Probabilidade</h4>
+                    <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
                       <li>• Use dados históricos</li>
                       <li>• Considere controles existentes</li>
                       <li>• Analise tendências</li>
                       <li>• Valide com especialistas</li>
                     </ul>
                   </div>
-                  <div className="bg-orange-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-orange-800 mb-2">Impacto</h4>
-                    <ul className="text-sm text-orange-700 space-y-1">
+                  <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h4 className="font-medium text-orange-800 dark:text-orange-300 mb-2">Impacto</h4>
+                    <ul className="text-sm text-orange-700 dark:text-orange-300 space-y-1">
                       <li>• Quantifique sempre que possível</li>
                       <li>• Múltiplas dimensões</li>
                       <li>• Inclua custos indiretos</li>
@@ -1029,12 +1029,12 @@ export const RiskDocumentation: React.FC = () => {
       popularity: 71,
       content: (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <Settings className="h-6 w-6 mr-2 text-red-600" />
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
+            <h3 className="text-xl font-bold mb-4 flex items-center text-gray-900 dark:text-gray-100">
+              <Settings className="h-6 w-6 mr-2 text-red-600 dark:text-red-400" />
               Solução de Problemas Comuns
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               Guia para resolver os problemas mais frequentes no uso do sistema.
             </p>
           </div>
@@ -1049,17 +1049,17 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-red-800 mb-2">Sintomas</h4>
-                    <ul className="text-sm text-red-700 space-y-1">
+                  <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                    <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">Sintomas</h4>
+                    <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                       <li>• Botão não abre o chat</li>
                       <li>• Respostas demoram muito</li>
                       <li>• Sugestões irrelevantes</li>
                     </ul>
                   </div>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-2">Soluções</h4>
-                    <ul className="text-sm text-green-700 space-y-1">
+                  <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Soluções</h4>
+                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                       <li>• Verifique conexão com internet</li>
                       <li>• Limpe cache (Ctrl+F5)</li>
                       <li>• Confirme permissões de IA</li>
@@ -1079,17 +1079,17 @@ export const RiskDocumentation: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-red-800 mb-2">Sintomas</h4>
-                    <ul className="text-sm text-red-700 space-y-1">
+                  <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+                    <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">Sintomas</h4>
+                    <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                       <li>• Poucos ou nenhum risco</li>
                       <li>• Filtros sem resultado</li>
                       <li>• Métricas zeradas</li>
                     </ul>
                   </div>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-2">Soluções</h4>
-                    <ul className="text-sm text-green-700 space-y-1">
+                  <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">Soluções</h4>
+                    <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
                       <li>• Limpe todos os filtros</li>
                       <li>• Verifique permissões</li>
                       <li>• Clique em "Sync" no header</li>
@@ -1100,147 +1100,6 @@ export const RiskDocumentation: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-        </div>
-      )
-    },
-    {
-      id: 'support',
-      title: 'Suporte e Contato',
-      icon: HelpCircle,
-      category: 'support',
-      difficulty: 'beginner',
-      estimatedTime: '5 min',
-      tags: ['suporte', 'contato', 'ajuda'],
-      lastUpdated: '2024-12-15',
-      popularity: 68,
-      content: (
-        <div className="space-y-6">
-          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-            <h3 className="text-xl font-bold mb-4 flex items-center">
-              <HelpCircle className="h-6 w-6 mr-2 text-green-600" />
-              Suporte e Assistência
-            </h3>
-            <p className="text-gray-700">
-              Nossa equipe está disponível para ajudá-lo a aproveitar ao máximo o sistema de gestão de riscos.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <MessageCircle className="h-5 w-5 mr-2 text-blue-600" />
-                  Canais de Suporte
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium">Email</p>
-                      <p className="text-sm text-gray-600">suporte@empresa.com</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium">Telefone</p>
-                      <p className="text-sm text-gray-600">+55 11 1234-5678</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <MessageCircle className="h-5 w-5 text-gray-600" />
-                    <div>
-                      <p className="font-medium">Chat Online</p>
-                      <p className="text-sm text-gray-600">Disponível 24/7 no sistema</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                    <div>
-                      <p className="font-medium">Emergência</p>
-                      <p className="text-sm text-gray-600">+55 11 9999-0000</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-purple-600" />
-                  Equipe de Produto
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <p className="font-medium">Product Manager</p>
-                    <p className="text-sm text-gray-600">João Silva</p>
-                    <p className="text-sm text-gray-600">joao.silva@empresa.com</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">Tech Lead</p>
-                    <p className="text-sm text-gray-600">Maria Santos</p>
-                    <p className="text-sm text-gray-600">maria.santos@empresa.com</p>
-                  </div>
-                  <div>
-                    <p className="font-medium">UX Designer</p>
-                    <p className="text-sm text-gray-600">Pedro Costa</p>
-                    <p className="text-sm text-gray-600">pedro.costa@empresa.com</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recursos de Treinamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button className="justify-start h-auto p-4" variant="outline">
-                  <div className="flex items-center space-x-3">
-                    <Video className="h-6 w-6 text-blue-600" />
-                    <div className="text-left">
-                      <p className="font-medium">Vídeos Tutoriais</p>
-                      <p className="text-sm text-gray-600">Demonstrações práticas</p>
-                    </div>
-                  </div>
-                </Button>
-                <Button className="justify-start h-auto p-4" variant="outline">
-                  <div className="flex items-center space-x-3">
-                    <BookOpen className="h-6 w-6 text-green-600" />
-                    <div className="text-left">
-                      <p className="font-medium">Guias de Usuário</p>
-                      <p className="text-sm text-gray-600">Passo a passo detalhado</p>
-                    </div>
-                  </div>
-                </Button>
-                <Button className="justify-start h-auto p-4" variant="outline">
-                  <div className="flex items-center space-x-3">
-                    <HelpCircle className="h-6 w-6 text-orange-600" />
-                    <div className="text-left">
-                      <p className="font-medium">FAQ</p>
-                      <p className="text-sm text-gray-600">Perguntas frequentes</p>
-                    </div>
-                  </div>
-                </Button>
-                <Button className="justify-start h-auto p-4" variant="outline">
-                  <div className="flex items-center space-x-3">
-                    <Star className="h-6 w-6 text-purple-600" />
-                    <div className="text-left">
-                      <p className="font-medium">Best Practices</p>
-                      <p className="text-sm text-gray-600">Melhores práticas</p>
-                    </div>
-                  </div>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )
     }
@@ -1288,16 +1147,15 @@ export const RiskDocumentation: React.FC = () => {
     { id: 'guide', label: 'Guias', icon: FileText },
     { id: 'tutorial', label: 'Tutoriais', icon: Video },
     { id: 'reference', label: 'Referência', icon: BarChart3 },
-    { id: 'advanced', label: 'Avançado', icon: Code },
-    { id: 'support', label: 'Suporte', icon: HelpCircle }
+    { id: 'advanced', label: 'Avançado', icon: Code }
   ];
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-800';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'advanced': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'beginner': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+      case 'intermediate': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300';
+      case 'advanced': return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -1308,79 +1166,79 @@ export const RiskDocumentation: React.FC = () => {
   const [selectedPopularity, setSelectedPopularity] = useState<string[]>([]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 -ml-6" style={{marginTop: '-60px'}}>
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+      <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
-            <BookOpen className="h-8 w-8 text-primary" />
+          <h1 className="text-lg sm:text-xl font-bold flex items-center space-x-1.5">
+            <BookOpen className="h-5 w-5 text-primary flex-shrink-0" />
             <span>Documentação - Módulo de Risco Corporativo</span>
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-muted-foreground text-sm mt-1">
             Guia completo para utilização do sistema de gestão de riscos corporativos
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Baixar PDF
+        <div className="flex items-center space-x-0.5 flex-shrink-0">
+          <Button variant="outline" size="sm" className="h-6 px-1.5">
+            <Download className="h-2.5 w-2.5 mr-0.5" />
+            <span className="text-xs hidden sm:inline">PDF</span>
           </Button>
-          <Button variant="outline">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Versão Online
+          <Button variant="outline" size="sm" className="h-6 px-1.5">
+            <ExternalLink className="h-2.5 w-2.5 mr-0.5" />
+            <span className="text-xs hidden sm:inline">Online</span>
           </Button>
         </div>
       </div>
 
       {/* Search and Filters - Simple */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-1.5">
         {/* Campo de busca */}
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-2.5 w-2.5" />
             <Input
               placeholder="Pesquisar na documentação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-7 h-7 text-xs"
             />
           </div>
         </div>
         
         {/* Filtros ativos */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-0.5 flex-shrink-0">
           {selectedCategory !== 'all' && (() => {
             const selectedCat = categories.find(c => c.id === selectedCategory);
             const IconComponent = selectedCat?.icon;
             return (
-              <Badge variant="secondary" className="flex items-center space-x-1">
-                {IconComponent && <IconComponent className="h-3 w-3" />}
-                <span>{selectedCat?.label}</span>
+              <Badge variant="secondary" className="flex items-center space-x-0.5 text-xs px-1 py-0 h-5">
+                {IconComponent && <IconComponent className="h-2.5 w-2.5" />}
+                <span className="truncate max-w-16">{selectedCat?.label}</span>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-4 w-4 p-0 ml-1"
+                  className="h-2.5 w-2.5 p-0 ml-0.5"
                   onClick={() => setSelectedCategory('all')}
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2 w-2" />
                 </Button>
               </Badge>
             );
           })()}
           
           {/* Contador de resultados */}
-          <Badge variant="outline" className="text-xs">
-            {filteredSections.length} seções
+          <Badge variant="outline" className="text-xs px-1 py-0 h-5">
+            {filteredSections.length}
           </Badge>
         </div>
         
         {/* Botão de filtros */}
         <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="flex items-center space-x-2">
-              <Filter className="h-4 w-4" />
-              <span>Filtros</span>
+            <Button variant="outline" size="sm" className="flex items-center space-x-0.5 h-7 px-1.5 flex-shrink-0">
+              <Filter className="h-2.5 w-2.5" />
+              <span className="text-xs hidden sm:inline">Filtros</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -1397,7 +1255,7 @@ export const RiskDocumentation: React.FC = () => {
             <div className="space-y-6 py-4">
               {/* Categorias */}
               <div>
-                <label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-gray-900 dark:text-gray-100">
                   Categorias
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1423,7 +1281,7 @@ export const RiskDocumentation: React.FC = () => {
               
               {/* Dificuldade */}
               <div>
-                <label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-gray-900 dark:text-gray-100">
                   Nível de Dificuldade
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1463,7 +1321,7 @@ export const RiskDocumentation: React.FC = () => {
               
               {/* Tempo de Leitura */}
               <div>
-                <label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-gray-900 dark:text-gray-100">
                   Tempo de Leitura
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1490,7 +1348,7 @@ export const RiskDocumentation: React.FC = () => {
               
               {/* Popularidade */}
               <div>
-                <label className="text-sm font-medium mb-3 block">
+                <label className="text-sm font-medium mb-3 block text-gray-900 dark:text-gray-100">
                   Ordenação
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1547,16 +1405,16 @@ export const RiskDocumentation: React.FC = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2.5">
         {/* Sidebar */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Seções</CardTitle>
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Seções</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3">
               <ScrollArea className="h-[600px]">
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {filteredSections.map((section) => {
                     const Icon = section.icon;
                     const isExpanded = expandedSections.has(section.id);
@@ -1564,95 +1422,29 @@ export const RiskDocumentation: React.FC = () => {
                     const viewCount = readingSessions[section.id] || 0;
                     
                     return (
-                      <div key={section.id} className="border rounded-lg mb-2">
+                      <div key={section.id} className="border rounded-lg">
                         <Button
                           variant={selectedSection === section.id ? "default" : "ghost"}
-                          className="w-full justify-start h-auto p-3"
+                          className="w-full justify-start h-auto p-1.5"
                           onClick={() => handleSectionView(section.id)}
                         >
-                          <div className="flex items-start space-x-3 w-full">
-                            <Icon className="h-5 w-5 mt-0.5" />
-                            <div className="text-left flex-1">
-                              <div className="flex items-center justify-between">
-                                <p className="font-medium text-sm">{section.title}</p>
-                                <div className="flex items-center space-x-1">
-                                  {isBookmarked && (
-                                    <Bookmark className="h-3 w-3 text-yellow-500 fill-current" />
-                                  )}
-                                  {viewCount > 0 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {viewCount}x
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center space-x-2 mt-1">
+                          <div className="flex items-start space-x-1.5 w-full">
+                            <Icon className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="font-medium text-xs truncate pr-1">{section.title}</p>
+                              <div className="flex items-center space-x-0.5 mt-0.5">
                                 <Badge 
                                   variant="secondary" 
-                                  className={`text-xs ${getDifficultyColor(section.difficulty)}`}
+                                  className={`text-xs px-1 py-0 h-4 ${getDifficultyColor(section.difficulty)}`}
                                 >
-                                  {section.difficulty}
+                                  {section.difficulty === 'beginner' ? 'Iniciante' : 
+                                   section.difficulty === 'intermediate' ? 'Intermediário' : 
+                                   section.difficulty === 'advanced' ? 'Avançado' : section.difficulty}
                                 </Badge>
-                                <div className="flex items-center text-xs text-gray-500">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {section.estimatedTime}
-                                </div>
-                                <div className="flex items-center text-xs text-gray-500">
-                                  <TrendingUp className="h-3 w-3 mr-1" />
-                                  {section.popularity}%
-                                </div>
-                              </div>
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {section.tags.slice(0, 3).map((tag, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {section.tags.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{section.tags.length - 3}
-                                  </Badge>
-                                )}
                               </div>
                             </div>
                           </div>
                         </Button>
-                        
-                        {/* Ações da seção */}
-                        <div className="px-3 pb-2 flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleBookmark(section.id)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Bookmark className={`h-3 w-3 ${
-                                isBookmarked ? 'text-yellow-500 fill-current' : 'text-gray-400'
-                              }`} />
-                            </Button>
-                            
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                            >
-                              <Share2 className="h-3 w-3 text-gray-400" />
-                            </Button>
-                            
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                            >
-                              <Printer className="h-3 w-3 text-gray-400" />
-                            </Button>
-                          </div>
-                          
-                          <div className="text-xs text-gray-500">
-                            Atualizado: {section.lastUpdated}
-                          </div>
-                        </div>
                       </div>
                     );
                   })}
@@ -1664,47 +1456,34 @@ export const RiskDocumentation: React.FC = () => {
 
         {/* Main Content */}
         <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
+          <Card className="h-full">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-1.5 flex-1 min-w-0">
                   {selectedSectionData && (
                     <>
-                      <selectedSectionData.icon className="h-6 w-6 text-primary" />
-                      <div>
-                        <CardTitle className="flex items-center space-x-2">
-                          <span>{selectedSectionData.title}</span>
+                      <selectedSectionData.icon className="h-4 w-4 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="flex items-center space-x-1 text-base">
+                          <span className="truncate">{selectedSectionData.title}</span>
                           {bookmarks.has(selectedSectionData.id) && (
-                            <Bookmark className="h-4 w-4 text-yellow-500 fill-current" />
+                            <Bookmark className="h-3 w-3 text-yellow-500 fill-current flex-shrink-0" />
                           )}
                         </CardTitle>
-                        <div className="flex items-center space-x-2 mt-1">
+                        <div className="flex items-center space-x-1 mt-0.5">
                           <Badge 
                             variant="secondary" 
-                            className={getDifficultyColor(selectedSectionData.difficulty)}
+                            className={`text-xs px-1 py-0 h-4 ${getDifficultyColor(selectedSectionData.difficulty)}`}
                           >
-                            {selectedSectionData.difficulty}
+                            {selectedSectionData.difficulty === 'beginner' ? 'Iniciante' : 
+                             selectedSectionData.difficulty === 'intermediate' ? 'Intermediário' : 
+                             selectedSectionData.difficulty === 'advanced' ? 'Avançado' : selectedSectionData.difficulty}
                           </Badge>
-                          <div className="flex items-center text-sm text-gray-500">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {selectedSectionData.estimatedTime}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-500">
-                            <TrendingUp className="h-4 w-4 mr-1" />
-                            {selectedSectionData.popularity}% popularidade
-                          </div>
-                          {readingSessions[selectedSectionData.id] && (
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Eye className="h-4 w-4 mr-1" />
-                              {readingSessions[selectedSectionData.id]}x visualizado
-                            </div>
-                          )}
                         </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {selectedSectionData.tags.map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              <Tag className="h-3 w-3 mr-1" />
-                              {tag}
+                        <div className="flex flex-wrap gap-0.5 mt-0.5">
+                          {selectedSectionData.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs px-0.5 py-0 h-4">
+                              {tag.length > 6 ? tag.slice(0, 6) + '...' : tag}
                             </Badge>
                           ))}
                         </div>
@@ -1712,38 +1491,39 @@ export const RiskDocumentation: React.FC = () => {
                     </>
                   )}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-0.5 flex-shrink-0">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={() => selectedSectionData && handleToggleBookmark(selectedSectionData.id)}
+                    className="h-6 px-1.5"
                   >
-                    <Bookmark className={`h-4 w-4 mr-2 ${
+                    <Bookmark className={`h-2.5 w-2.5 mr-0.5 ${
                       selectedSectionData && bookmarks.has(selectedSectionData.id) 
                         ? 'text-yellow-500 fill-current' 
                         : ''
                     }`} />
-                    {selectedSectionData && bookmarks.has(selectedSectionData.id) ? 'Remover' : 'Favoritar'}
+                    <span className="text-xs hidden sm:inline">{selectedSectionData && bookmarks.has(selectedSectionData.id) ? 'Remover' : 'Favoritar'}</span>
                   </Button>
                   
-                  <Button variant="outline" size="sm">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Compartilhar
+                  <Button variant="outline" size="sm" className="h-6 px-1.5">
+                    <Share2 className="h-2.5 w-2.5 mr-0.5" />
+                    <span className="text-xs hidden sm:inline">Compartilhar</span>
                   </Button>
                   
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar
+                  <Button variant="outline" size="sm" className="h-6 px-1.5">
+                    <Download className="h-2.5 w-2.5 mr-0.5" />
+                    <span className="text-xs hidden sm:inline">Exportar</span>
                   </Button>
                   
-                  <Button variant="outline" size="sm">
-                    <Printer className="h-4 w-4 mr-2" />
-                    Imprimir
+                  <Button variant="outline" size="sm" className="h-6 px-1.5">
+                    <Printer className="h-2.5 w-2.5 mr-0.5" />
+                    <span className="text-xs hidden sm:inline">Imprimir</span>
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3">
               <ScrollArea className="h-[600px]">
                 {selectedSectionData?.content}
               </ScrollArea>
