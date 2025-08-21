@@ -31,6 +31,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { AIRiskRegistrationWizard } from '../ai/AIRiskRegistrationWizard';
 
 interface RiskFormData {
@@ -73,6 +74,7 @@ interface FormStep {
 }
 
 export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => void }> = ({ onComplete }) => {
+  const { tenantSettings } = useTenantSettings();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<RiskFormData>({
     title: '',

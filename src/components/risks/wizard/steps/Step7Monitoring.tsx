@@ -24,6 +24,7 @@ import {
   Flag,
   ChevronRight
 } from 'lucide-react';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 
 interface Step7Props {
   data: any;
@@ -68,18 +69,35 @@ const CLOSURE_CRITERIA = [
   }
 ];
 
-const RESIDUAL_RISK_LEVELS = [
-  { value: 'very_low', label: 'Muito Baixo', color: 'bg-blue-500', score: '1-2' },
-  { value: 'low', label: 'Baixo', color: 'bg-green-500', score: '3-4' },
-  { value: 'medium', label: 'Médio', color: 'bg-yellow-500', score: '5-8' },
-  { value: 'high', label: 'Alto', color: 'bg-orange-500', score: '9-19' },
-  { value: 'critical', label: 'Crítico', color: 'bg-red-500', score: '20-25' }
-];
+// Função para obter níveis de risco residual baseados na configuração da tenant
+const getResidualRiskLevels = (tenantSettings: any) => {
+  const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
+  
+  if (isMatrix4x4) {
+    // Matriz 4x4 - 4 níveis
+    return [
+      { value: 'low', label: 'Baixo', color: 'bg-green-500', score: '1-2' },
+      { value: 'medium', label: 'Médio', color: 'bg-yellow-500', score: '3-6' },
+      { value: 'high', label: 'Alto', color: 'bg-orange-500', score: '7-12' },
+      { value: 'critical', label: 'Crítico', color: 'bg-red-500', score: '13-16' }
+    ];
+  } else {
+    // Matriz 5x5 - 5 níveis (padrão)
+    return [
+      { value: 'very_low', label: 'Muito Baixo', color: 'bg-blue-500', score: '1-2' },
+      { value: 'low', label: 'Baixo', color: 'bg-green-500', score: '3-4' },
+      { value: 'medium', label: 'Médio', color: 'bg-yellow-500', score: '5-8' },
+      { value: 'high', label: 'Alto', color: 'bg-orange-500', score: '9-19' },
+      { value: 'critical', label: 'Muito Alto', color: 'bg-red-500', score: '20-25' }
+    ];
+  }
+};
 
 export const Step7Monitoring: React.FC<Step7Props> = ({
   data,
   updateData
 }) => {
+  const { tenantSettings } = useTenantSettings();
   const [monitoringFrequency, setMonitoringFrequency] = useState(data.monitoring_frequency || '');
   const [monitoringResponsible, setMonitoringResponsible] = useState(data.monitoring_responsible || '');
   const [reviewDate, setReviewDate] = useState(data.review_date || '');
@@ -90,7 +108,11 @@ export const Step7Monitoring: React.FC<Step7Props> = ({
   const [monitoringNotes, setMonitoringNotes] = useState(data.monitoring_notes || '');
   const [kpiDefinition, setKpiDefinition] = useState(data.kpi_definition || '');
 
-  const selectedResidualLevel = RESIDUAL_RISK_LEVELS.find(level => level.value === residualRiskLevel);
+  // Obter níveis de risco residual baseados na configuração da tenant
+  const residualRiskLevels = getResidualRiskLevels(tenantSettings);
+  const maxScale = tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5;
+  
+  const selectedResidualLevel = residualRiskLevels.find(level => level.value === residualRiskLevel);
   const selectedClosureCriteria = CLOSURE_CRITERIA.find(criteria => criteria.value === closureCriteria);
 
   useEffect(() => {
@@ -160,11 +182,19 @@ export const Step7Monitoring: React.FC<Step7Props> = ({
                   <SelectValue placeholder="Selecione o impacto..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 - Insignificante</SelectItem>
-                  <SelectItem value="2">2 - Menor</SelectItem>
-                  <SelectItem value="3">3 - Moderado</SelectItem>
-                  <SelectItem value="4">4 - Maior</SelectItem>
-                  <SelectItem value="5">5 - Catastrófico</SelectItem>
+                  {Array.from({ length: maxScale }, (_, i) => {
+                    const value = i + 1;
+                    const label = tenantSettings?.risk_matrix?.impact_labels?.[i] || 
+                      (maxScale === 4 ? 
+                        ['Insignificante', 'Menor', 'Moderado', 'Maior'][i] :
+                        ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'][i]
+                      );
+                    return (
+                      <SelectItem key={value} value={value.toString()}>
+                        {value} - {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
@@ -182,11 +212,19 @@ export const Step7Monitoring: React.FC<Step7Props> = ({
                   <SelectValue placeholder="Selecione a probabilidade..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 - Muito Rara</SelectItem>
-                  <SelectItem value="2">2 - Rara</SelectItem>
-                  <SelectItem value="3">3 - Possível</SelectItem>
-                  <SelectItem value="4">4 - Provável</SelectItem>
-                  <SelectItem value="5">5 - Quase Certa</SelectItem>
+                  {Array.from({ length: maxScale }, (_, i) => {
+                    const value = i + 1;
+                    const label = tenantSettings?.risk_matrix?.likelihood_labels?.[i] || 
+                      (maxScale === 4 ? 
+                        ['Raro', 'Improvável', 'Possível', 'Provável'][i] :
+                        ['Muito Rara', 'Rara', 'Possível', 'Provável', 'Quase Certa'][i]
+                      );
+                    return (
+                      <SelectItem key={value} value={value.toString()}>
+                        {value} - {label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
@@ -223,8 +261,8 @@ export const Step7Monitoring: React.FC<Step7Props> = ({
               Classificação do Risco Residual
             </Label>
             <RadioGroup value={residualRiskLevel} onValueChange={setResidualRiskLevel} className="mt-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                {RESIDUAL_RISK_LEVELS.map((level) => (
+              <div className={`grid grid-cols-1 md:grid-cols-3 ${maxScale === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-5'} gap-3`}>
+                {residualRiskLevels.map((level) => (
                   <div key={level.value} className="flex items-center space-x-2">
                     <RadioGroupItem value={level.value} id={level.value} />
                     <Label 

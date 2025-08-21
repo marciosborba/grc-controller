@@ -137,21 +137,46 @@ const METHODOLOGY_CATEGORIES = {
   specialized: { label: 'Metodologias Especializadas', color: 'bg-orange-500' }
 };
 
-const QUALITATIVE_SCALES = {
-  impact: [
-    { value: 1, label: 'Insignificante', description: 'Impacto mínimo nas operações', color: 'bg-green-500' },
-    { value: 2, label: 'Menor', description: 'Impacto limitado, facilmente gerenciável', color: 'bg-yellow-500' },
-    { value: 3, label: 'Moderado', description: 'Impacto significativo mas controlável', color: 'bg-orange-400' },
-    { value: 4, label: 'Maior', description: 'Impacto severo nos objetivos', color: 'bg-orange-600' },
-    { value: 5, label: 'Catastrófico', description: 'Impacto crítico, ameaça à continuidade', color: 'bg-red-500' }
-  ],
-  likelihood: [
-    { value: 1, label: 'Raro', description: 'Pode ocorrer apenas em circunstâncias excepcionais (< 5%)', color: 'bg-green-500' },
-    { value: 2, label: 'Improvável', description: 'Não se espera que ocorra (5-25%)', color: 'bg-yellow-500' },
-    { value: 3, label: 'Possível', description: 'Pode ocorrer em algum momento (25-50%)', color: 'bg-orange-400' },
-    { value: 4, label: 'Provável', description: 'Provavelmente ocorrerá (50-75%)', color: 'bg-orange-600' },
-    { value: 5, label: 'Quase Certo', description: 'Espera-se que ocorra (> 75%)', color: 'bg-red-500' }
-  ]
+// Escalas qualitativas adaptáveis conforme configuração da tenant
+const getQualitativeScales = (tenantSettings: any) => {
+  const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
+  const matrixLabels = tenantSettings?.risk_matrix;
+  
+  if (isMatrix4x4) {
+    // Matriz 4x4 - 4 níveis
+    return {
+      impact: [
+        { value: 1, label: matrixLabels?.impact_labels?.[0] || 'Insignificante', description: 'Impacto mínimo nas operações', color: 'bg-green-500' },
+        { value: 2, label: matrixLabels?.impact_labels?.[1] || 'Menor', description: 'Impacto limitado, facilmente gerenciável', color: 'bg-yellow-500' },
+        { value: 3, label: matrixLabels?.impact_labels?.[2] || 'Moderado', description: 'Impacto significativo mas controlável', color: 'bg-orange-500' },
+        { value: 4, label: matrixLabels?.impact_labels?.[3] || 'Maior', description: 'Impacto severo nos objetivos', color: 'bg-red-500' }
+      ],
+      likelihood: [
+        { value: 1, label: matrixLabels?.likelihood_labels?.[0] || 'Raro', description: 'Pode ocorrer apenas em circunstâncias excepcionais (< 10%)', color: 'bg-green-500' },
+        { value: 2, label: matrixLabels?.likelihood_labels?.[1] || 'Improvável', description: 'Não se espera que ocorra (10-40%)', color: 'bg-yellow-500' },
+        { value: 3, label: matrixLabels?.likelihood_labels?.[2] || 'Possível', description: 'Pode ocorrer em algum momento (40-70%)', color: 'bg-orange-500' },
+        { value: 4, label: matrixLabels?.likelihood_labels?.[3] || 'Provável', description: 'Provavelmente ocorrerá (> 70%)', color: 'bg-red-500' }
+      ]
+    };
+  } else {
+    // Matriz 5x5 - 5 níveis (padrão)
+    return {
+      impact: [
+        { value: 1, label: matrixLabels?.impact_labels?.[0] || 'Insignificante', description: 'Impacto mínimo nas operações', color: 'bg-green-500' },
+        { value: 2, label: matrixLabels?.impact_labels?.[1] || 'Menor', description: 'Impacto limitado, facilmente gerenciável', color: 'bg-yellow-500' },
+        { value: 3, label: matrixLabels?.impact_labels?.[2] || 'Moderado', description: 'Impacto significativo mas controlável', color: 'bg-orange-400' },
+        { value: 4, label: matrixLabels?.impact_labels?.[3] || 'Maior', description: 'Impacto severo nos objetivos', color: 'bg-orange-600' },
+        { value: 5, label: matrixLabels?.impact_labels?.[4] || 'Catastrófico', description: 'Impacto crítico, ameaça à continuidade', color: 'bg-red-500' }
+      ],
+      likelihood: [
+        { value: 1, label: matrixLabels?.likelihood_labels?.[0] || 'Raro', description: 'Pode ocorrer apenas em circunstâncias excepcionais (< 5%)', color: 'bg-green-500' },
+        { value: 2, label: matrixLabels?.likelihood_labels?.[1] || 'Improvável', description: 'Não se espera que ocorra (5-25%)', color: 'bg-yellow-500' },
+        { value: 3, label: matrixLabels?.likelihood_labels?.[2] || 'Possível', description: 'Pode ocorrer em algum momento (25-50%)', color: 'bg-orange-400' },
+        { value: 4, label: matrixLabels?.likelihood_labels?.[3] || 'Provável', description: 'Provavelmente ocorrerá (50-75%)', color: 'bg-orange-600' },
+        { value: 5, label: matrixLabels?.likelihood_labels?.[4] || 'Quase Certo', description: 'Espera-se que ocorra (> 75%)', color: 'bg-red-500' }
+      ]
+    };
+  }
 };
 
 export const Step2Analysis: React.FC<Step2Props> = ({
@@ -165,28 +190,36 @@ export const Step2Analysis: React.FC<Step2Props> = ({
   const [riskScore, setRiskScore] = useState(0);
   const [riskLevel, setRiskLevel] = useState('');
 
-  // Calcular score e nível do risco
+  // Função de fallback para calcular nível de risco
+  const calculateRiskLevelFallback = (score: number, tenantSettings: any) => {
+    const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
+    
+    if (isMatrix4x4) {
+      // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-12), Crítico (13-16)
+      if (score >= 13) return 'Crítico';
+      else if (score >= 7) return 'Alto';
+      else if (score >= 3) return 'Médio';
+      else return 'Baixo';
+    } else {
+      // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Muito Alto (20-25)
+      if (score >= 20) return 'Muito Alto';
+      else if (score >= 9) return 'Alto';
+      else if (score >= 5) return 'Médio';
+      else if (score >= 3) return 'Baixo';
+      else return 'Muito Baixo';
+    }
+  };
+
+  // Calcular score e nível do risco baseado na configuração da tenant
   useEffect(() => {
     if (impactScore && likelihoodScore) {
       const score = impactScore * likelihoodScore;
       setRiskScore(score);
       
-      // Determinar nível baseado na configuração da tenant
-      const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5';
-      let level = '';
-      
-      if (isMatrix5x5) {
-        if (score >= 20) level = 'Crítico';
-        else if (score >= 9) level = 'Alto';
-        else if (score >= 5) level = 'Médio';
-        else if (score >= 3) level = 'Baixo';
-        else level = 'Muito Baixo';
-      } else {
-        if (score >= 16) level = 'Crítico';
-        else if (score >= 8) level = 'Alto';
-        else if (score >= 3) level = 'Médio';
-        else level = 'Baixo';
-      }
+      // Usar função do hook para calcular nível baseado na configuração da tenant
+      const level = tenantSettings?.calculateRiskLevel ? 
+        tenantSettings.calculateRiskLevel(likelihoodScore, impactScore) :
+        calculateRiskLevelFallback(score, tenantSettings);
       
       setRiskLevel(level);
       
@@ -212,11 +245,16 @@ export const Step2Analysis: React.FC<Step2Props> = ({
       case 'médio': return 'bg-yellow-500';
       case 'alto': return 'bg-orange-500';
       case 'crítico': return 'bg-red-500';
+      case 'muito alto': return 'bg-red-600';
       default: return 'bg-gray-500';
     }
   };
 
   const selectedMethodologyDetails = METHODOLOGIES.find(m => m.value === selectedMethodology);
+  
+  // Obter escalas adaptadas à configuração da tenant
+  const qualitativeScales = getQualitativeScales(tenantSettings);
+  const maxScale = tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5;
 
   return (
     <div className="space-y-6">
@@ -325,7 +363,7 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                   <Slider
                     value={[impactScore]}
                     onValueChange={(value) => setImpactScore(value[0])}
-                    max={5}
+                    max={maxScale}
                     min={1}
                     step={1}
                     className="mb-4"
@@ -333,14 +371,14 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                   
                   <div className="text-center mb-4">
                     <Badge 
-                      className={`${QUALITATIVE_SCALES.impact[impactScore - 1]?.color} text-white text-lg px-4 py-2`}
+                      className={`${qualitativeScales.impact[impactScore - 1]?.color} text-white text-lg px-4 py-2`}
                     >
-                      {impactScore} - {QUALITATIVE_SCALES.impact[impactScore - 1]?.label}
+                      {impactScore} - {qualitativeScales.impact[impactScore - 1]?.label}
                     </Badge>
                   </div>
 
                   <div className="space-y-2">
-                    {QUALITATIVE_SCALES.impact.map((scale, index) => (
+                    {qualitativeScales.impact.map((scale, index) => (
                       <div 
                         key={index}
                         className={`p-3 rounded-lg border cursor-pointer transition-all ${
@@ -379,7 +417,7 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                   <Slider
                     value={[likelihoodScore]}
                     onValueChange={(value) => setLikelihoodScore(value[0])}
-                    max={5}
+                    max={maxScale}
                     min={1}
                     step={1}
                     className="mb-4"
@@ -387,14 +425,14 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                   
                   <div className="text-center mb-4">
                     <Badge 
-                      className={`${QUALITATIVE_SCALES.likelihood[likelihoodScore - 1]?.color} text-white text-lg px-4 py-2`}
+                      className={`${qualitativeScales.likelihood[likelihoodScore - 1]?.color} text-white text-lg px-4 py-2`}
                     >
-                      {likelihoodScore} - {QUALITATIVE_SCALES.likelihood[likelihoodScore - 1]?.label}
+                      {likelihoodScore} - {qualitativeScales.likelihood[likelihoodScore - 1]?.label}
                     </Badge>
                   </div>
 
                   <div className="space-y-2">
-                    {QUALITATIVE_SCALES.likelihood.map((scale, index) => (
+                    {qualitativeScales.likelihood.map((scale, index) => (
                       <div 
                         key={index}
                         className={`p-3 rounded-lg border cursor-pointer transition-all ${

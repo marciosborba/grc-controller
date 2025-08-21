@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 import type { Risk, CreateRiskRequest, RiskCategory, TreatmentType } from '@/types/risk-management';
 import { RISK_CATEGORIES, TREATMENT_TYPES } from '@/types/risk-management';
 
@@ -90,6 +91,7 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
   onCreate,
   onUpdate
 }) => {
+  const { tenantSettings } = useTenantSettings();
   const [currentStep, setCurrentStep] = useState(0);
   const [isProcessActive, setIsProcessActive] = useState(true); // Iniciar automaticamente
   const [formData, setFormData] = useState<GuidedFormData>({
@@ -260,7 +262,7 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
       dueDate: formData.dueDate,
       analysisData: {
         riskType: 'Processo',
-        matrixSize: '5x5',
+        matrixSize: tenantSettings?.risk_matrix?.type || '5x5',
         probabilityAnswers: [],
         impactAnswers: [],
         probabilityScore: formData.probability,
@@ -284,11 +286,22 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
   };
 
   const calculateRiskLevel = (score: number) => {
-    if (score >= 20) return 'Muito Alto';
-    if (score >= 15) return 'Alto';
-    if (score >= 8) return 'Médio';
-    if (score >= 4) return 'Baixo';
-    return 'Muito Baixo';
+    const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
+    
+    if (isMatrix4x4) {
+      // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-12), Crítico (13-16)
+      if (score >= 13) return 'Crítico';
+      if (score >= 7) return 'Alto';
+      if (score >= 3) return 'Médio';
+      return 'Baixo';
+    } else {
+      // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Muito Alto (20-25)
+      if (score >= 20) return 'Muito Alto';
+      if (score >= 9) return 'Alto';
+      if (score >= 5) return 'Médio';
+      if (score >= 3) return 'Baixo';
+      return 'Muito Baixo';
+    }
   };
 
   const addArrayItem = (field: 'stakeholders' | 'existingControls' | 'kris', tempField: 'stakeholder' | 'control' | 'kri') => {
@@ -436,11 +449,19 @@ export const ProcessView: React.FC<ProcessViewProps> = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">1 - Insignificante</SelectItem>
-                    <SelectItem value="2">2 - Menor</SelectItem>
-                    <SelectItem value="3">3 - Moderado</SelectItem>
-                    <SelectItem value="4">4 - Maior</SelectItem>
-                    <SelectItem value="5">5 - Catastrófico</SelectItem>
+                    {Array.from({ length: tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5 }, (_, i) => {
+                      const value = i + 1;
+                      const label = tenantSettings?.risk_matrix?.impact_labels?.[i] || 
+                        (tenantSettings?.risk_matrix?.type === '4x4' ? 
+                          ['Insignificante', 'Menor', 'Moderado', 'Maior'][i] :
+                          ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'][i]
+                        );
+                      return (
+                        <SelectItem key={value} value={value.toString()}>
+                          {value} - {label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
