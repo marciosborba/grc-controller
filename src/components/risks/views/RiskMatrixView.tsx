@@ -13,7 +13,7 @@ interface RiskMatrixViewProps {
 
 const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) => {
   const riskValue = impact * likelihood;
-  const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5' || true; // Default para 5x5
+  const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5';
   
   if (isMatrix5x5) {
     // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Crítico (20-25)
@@ -28,6 +28,27 @@ const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) =
     else if (riskValue >= 8) return 'bg-orange-500 text-white'; // Alto (8-15) - LARANJA
     else if (riskValue >= 3) return 'bg-yellow-500 text-white'; // Médio (3-7) - AMARELO
     else return 'bg-green-500 text-white'; // Baixo (1-2) - VERDE
+  }
+};
+
+// Função para calcular o nível de risco consistente com as cores
+const calculateConsistentRiskLevel = (impact: number, likelihood: number, tenantSettings: any) => {
+  const riskValue = impact * likelihood;
+  const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5';
+  
+  if (isMatrix5x5) {
+    // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Crítico (20-25)
+    if (riskValue >= 20) return 'Crítico';
+    else if (riskValue >= 9) return 'Alto';
+    else if (riskValue >= 5) return 'Médio';
+    else if (riskValue >= 3) return 'Baixo';
+    else return 'Muito Baixo';
+  } else {
+    // Matriz 4x4: Baixo (1-2), Médio (3-7), Alto (8-15), Crítico (16)
+    if (riskValue >= 16) return 'Crítico';
+    else if (riskValue >= 8) return 'Alto';
+    else if (riskValue >= 3) return 'Médio';
+    else return 'Baixo';
   }
 };
 
@@ -200,16 +221,16 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
       byLevel[level] = 0;
     });
     
-    // Contar riscos por nível usando a função da tenant
+    // Contar riscos por nível usando nossa função consistente
     processedRisks.forEach(risk => {
-      const level = calculateRiskLevel(risk.likelihood, risk.impact);
+      const level = calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings);
       if (byLevel[level] !== undefined) {
         byLevel[level]++;
       }
     });
     
     return { total, byLevel };
-  }, [processedRisks, calculateRiskLevel, riskLevels, settingsLoading]);
+  }, [processedRisks, tenantSettings, riskLevels, settingsLoading]);
 
   // Show loading while tenant settings are loading
   if (settingsLoading) {
@@ -330,7 +351,7 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                       risk => risk.impact === impactLevel.level && risk.likelihood === likelihoodLevel.level
                     );
                     
-                    const riskLevel = calculateRiskLevel(likelihoodLevel.level, impactLevel.level);
+                    const riskLevel = calculateConsistentRiskLevel(impactLevel.level, likelihoodLevel.level, tenantSettings);
                     const riskScore = impactLevel.level * likelihoodLevel.level;
                     
                     return (
@@ -407,7 +428,8 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
           ) : (
             <div className="divide-y divide-border">
               {processedRisks.map((risk, index) => {
-                const riskLevel = calculateRiskLevel(risk.likelihood, risk.impact);
+                // Usar nossa função consistente em vez da do hook
+                const riskLevel = calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings);
                 const riskScore = risk.impact * risk.likelihood;
                 const riskColor = getRiskColor(risk.impact, risk.likelihood, tenantSettings);
                 
