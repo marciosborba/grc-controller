@@ -15,20 +15,19 @@ const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) =
   const riskValue = impact * likelihood;
   const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5' || true; // Default para 5x5
   
-  // Cores IDÊNTICAS ao dashboard - texto BRANCO em todos os quadrantes
   if (isMatrix5x5) {
-    // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-14), Crítico (15-25)
-    if (riskValue >= 15) return 'bg-red-500 text-white'; // Crítico - VERMELHO
-    else if (riskValue >= 9) return 'bg-orange-500 text-white'; // Alto - laranja
-    else if (riskValue >= 5) return 'bg-yellow-500 text-white'; // Médio - amarelo
-    else if (riskValue >= 3) return 'bg-green-500 text-white'; // Baixo - verde
-    else return 'bg-blue-500 text-white'; // Muito Baixo - azul
+    // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Crítico (20-25)
+    if (riskValue >= 20) return 'bg-red-500 text-white'; // Crítico (20-25) - VERMELHO
+    else if (riskValue >= 9) return 'bg-orange-500 text-white'; // Alto (9-19) - LARANJA
+    else if (riskValue >= 5) return 'bg-yellow-500 text-white'; // Médio (5-8) - AMARELO
+    else if (riskValue >= 3) return 'bg-green-500 text-white'; // Baixo (3-4) - VERDE
+    else return 'bg-blue-500 text-white'; // Muito Baixo (1-2) - AZUL
   } else {
-    // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-9), Crítico (10-16)
-    if (riskValue >= 10) return 'bg-red-500 text-white'; // Crítico - VERMELHO
-    else if (riskValue >= 7) return 'bg-orange-500 text-white'; // Alto - laranja
-    else if (riskValue >= 3) return 'bg-yellow-500 text-white'; // Médio - amarelo
-    else return 'bg-green-500 text-white'; // Baixo - verde
+    // Matriz 4x4: Baixo (1-2), Médio (3-7), Alto (8-15), Crítico (16)
+    if (riskValue >= 16) return 'bg-red-500 text-white'; // Crítico (16) - VERMELHO
+    else if (riskValue >= 8) return 'bg-orange-500 text-white'; // Alto (8-15) - LARANJA
+    else if (riskValue >= 3) return 'bg-yellow-500 text-white'; // Médio (3-7) - AMARELO
+    else return 'bg-green-500 text-white'; // Baixo (1-2) - VERDE
   }
 };
 
@@ -89,8 +88,15 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
             default: return label;
           }
         } else {
-          // Para matriz 5x5: manter labels originais ou customizar se necessário
-          return label;
+          // Para matriz 5x5: index 0 = topo (level 5), index 4 = base (level 1)
+          switch(index) {
+            case 0: return 'Maior';         // Topo (level 5) - Vermelho
+            case 1: return 'Alto';          // level 4 - Laranja
+            case 2: return 'Moderado';      // level 3 - Amarelo
+            case 3: return 'Menor';         // level 2 - Verde
+            case 4: return 'Insignificante'; // Base (level 1) - Azul
+            default: return label;
+          }
         }
       };
       
@@ -280,13 +286,13 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                 { level: 'Muito Baixo', color: 'bg-blue-500 text-white', range: '1-2' },
                 { level: 'Baixo', color: 'bg-green-500 text-white', range: '3-4' },
                 { level: 'Médio', color: 'bg-yellow-500 text-white', range: '5-8' },
-                { level: 'Alto', color: 'bg-orange-500 text-white', range: '9-14' },
-                { level: 'Crítico', color: 'bg-red-500 text-white', range: '15-25' }
+                { level: 'Alto', color: 'bg-orange-500 text-white', range: '9-19' },
+                { level: 'Crítico', color: 'bg-red-500 text-white', range: '20-25' }
               ] : [
                 { level: 'Baixo', color: 'bg-green-500 text-white', range: '1-2' },
-                { level: 'Médio', color: 'bg-yellow-500 text-white', range: '3-6' },
-                { level: 'Alto', color: 'bg-orange-500 text-white', range: '7-9' },
-                { level: 'Crítico', color: 'bg-red-500 text-white', range: '10-16' }
+                { level: 'Médio', color: 'bg-yellow-500 text-white', range: '3-7' },
+                { level: 'Alto', color: 'bg-orange-500 text-white', range: '8-15' },
+                { level: 'Crítico', color: 'bg-red-500 text-white', range: '16' }
               ]
             ).map(({ level, color, range }) => (
               <span
@@ -325,23 +331,33 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                     );
                     
                     const riskLevel = calculateRiskLevel(likelihoodLevel.level, impactLevel.level);
+                    const riskScore = impactLevel.level * likelihoodLevel.level;
                     
                     return (
                       <div
                         key={`${impactLevel.level}-${likelihoodLevel.level}`}
-                        className={`min-h-[60px] p-1 rounded border-2 border-gray-200 ${
+                        className={`min-h-[60px] p-2 rounded border-2 border-gray-200 relative ${
                           getRiskColor(impactLevel.level, likelihoodLevel.level, tenantSettings)
                         } ${cellRisks.length > 0 ? 'cursor-pointer hover:opacity-80' : ''}`}
                         onClick={() => cellRisks.length > 0 && setSelectedRisk(cellRisks[0])}
                       >
-                        <div className="text-xs font-semibold mb-1">
-                          {riskLevel}
+                        {/* Score no canto superior direito */}
+                        <div className="absolute top-1 right-1 text-white font-bold text-xs bg-black/20 
+                                      rounded px-1 py-0.5 backdrop-blur-sm">
+                          {riskScore}
                         </div>
-                        {cellRisks.length > 0 && (
-                          <div className="text-xs">
-                            {cellRisks.length} risco{cellRisks.length > 1 ? 's' : ''}
+                        
+                        {/* Conteúdo principal centralizado */}
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <div className="text-xs font-semibold mb-1 text-center">
+                            {riskLevel}
                           </div>
-                        )}
+                          {cellRisks.length > 0 && (
+                            <div className="text-xs text-center">
+                              {cellRisks.length} risco{cellRisks.length > 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
