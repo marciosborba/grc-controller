@@ -68,6 +68,7 @@ import { RiskLibraryIntegrated } from './shared/RiskLibraryIntegrated';
 import { CommunicationCenterIntegrated } from './shared/CommunicationCenterIntegrated';
 import { ApprovalWorkflowIntegrated } from './shared/ApprovalWorkflowIntegrated';
 import { GuidedRiskCreation } from './GuidedRiskCreation';
+import { RiskRegistrationWizard } from './wizard/RiskRegistrationWizard';
 
 // Tipos
 export type ViewMode = 'dashboard' | 'table' | 'kanban' | 'process' | 'matrix' | 'documentation' | 'library' | 'communications' | 'approvals';
@@ -841,19 +842,21 @@ export const RiskManagementCenterImproved: React.FC = () => {
           </DialogHeader>
           
           <div className="mt-4">
-            <GuidedRiskCreation 
-              onComplete={(riskId) => {
-                console.log('✅ Risco criado via Processo Guiado:', { riskId });
+            <RiskRegistrationWizard 
+              onComplete={(riskData) => {
+                console.log('✅ Risco criado via Wizard 7 Etapas:', riskData);
                 setGuidedCreationOpen(false);
                 
-                // Atualizar dados se necessário
-                if (onRiskCreated) {
-                  onRiskCreated(riskId);
-                }
-                
                 toast({
-                  title: '🎉 Risco Criado com Sucesso',
-                  description: 'Risco foi registrado através do processo manual guiado.',
+                  title: '🎉 Registro de Risco Concluído',
+                  description: `Risco "${riskData.risk_title}" foi registrado com sucesso através do processo de 7 etapas.`,
+                });
+              }}
+              onCancel={() => {
+                setGuidedCreationOpen(false);
+                toast({
+                  title: 'Registro Cancelado',
+                  description: 'O processo de registro de risco foi cancelado.',
                 });
               }}
             />
