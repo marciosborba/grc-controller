@@ -45,6 +45,39 @@ export const useRiskManagement = () => {
   if (!isValidTenant) {
     console.warn('[RISK-SECURITY] User without valid tenant accessing risk management');
   }
+  
+  // Funções de mapeamento
+  const mapSupabaseStatusToRiskStatus = (status: string): RiskStatus => {
+    console.log('🔄 mapSupabaseStatusToRiskStatus: status do banco =', status);
+    
+    switch (status) {
+      case 'draft': return 'Identificado';
+      case 'completed': return 'Avaliado';
+      case 'in_treatment': return 'Em Tratamento';
+      case 'monitoring': return 'Monitorado';
+      case 'closed': return 'Fechado';
+      case 'cancelled': return 'Fechado';
+      default: 
+        console.log('🔄 Status não mapeado, usando "Identificado":', status);
+        return 'Identificado';
+    }
+  };
+  
+  const mapRiskLevel = (level: string): string => {
+    console.log('🔄 mapRiskLevel: level do banco =', level);
+    
+    switch (level) {
+      case 'Crítico': return 'Crítico';
+      case 'Muito Alto': return 'Muito Alto';
+      case 'Alto': return 'Alto';
+      case 'Médio': return 'Médio';
+      case 'Baixo': return 'Baixo';
+      case 'Muito Baixo': return 'Muito Baixo';
+      default: 
+        console.log('🔄 Level não mapeado, usando original:', level);
+        return level || 'Médio';
+    }
+  };
 
   // ============================================================================
   // QUERIES - BUSCA DE DADOS
@@ -66,9 +99,9 @@ export const useRiskManagement = () => {
         throw new Error('Acesso negado: tenant não identificado');
       }
 
-      // Buscar riscos com filtro por tenant
+      // Buscar riscos com filtro por tenant - ALTERADO PARA risk_registrations
       const { data, error } = await supabase
-        .from('risk_assessments')
+        .from('risk_registrations')
         .select('*')
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
@@ -113,8 +146,8 @@ export const useRiskManagement = () => {
       }
 
       const { data: riskData, error } = await supabase
-        .from('risk_assessments')
-        .select('risk_level, status, created_at, due_date, tenant_id')
+        .from('risk_registrations')
+        .select('risk_level, status, created_at, review_date, tenant_id')
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
 
       if (error) throw error;
@@ -131,8 +164,16 @@ export const useRiskManagement = () => {
       })));
       
       const risksByLevel = risks.reduce((acc, risk) => {
-        const level = (risk.risk_level || 'Médio') as RiskLevel;
-        acc[level] = (acc[level] || 0) + 1;
+        // Mapear o nível do banco para o formato esperado
+        const originalLevel = mapRiskLevel(risk.risk_level || 'Médio');
+        
+        // Para as métricas do dashboard, consolidar 'Crítico' em 'Muito Alto'
+        let levelForMetrics = originalLevel;
+        if (originalLevel === 'Crítico') {
+          levelForMetrics = 'Muito Alto';
+        }
+        
+        acc[levelForMetrics as RiskLevel] = (acc[levelForMetrics as RiskLevel] || 0) + 1;
         return acc;
       }, {} as Record<RiskLevel, number>);
       
@@ -498,72 +539,68 @@ export const useRiskManagement = () => {
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
     // Usar descrição diretamente
-    const description = supabaseRisk.description || '';
-    // Usar analysis_data da coluna se existir
-    const analysisData = supabaseRisk.analysis_data || null;
-
-    // Determinar status baseado na análise
+    const description = supabaseRisk.risk_description || '';
+    
+    // Determinar status baseado no status do registro
     let finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status);
     
-    // Se tem analysis_data completa, pode ser "Avaliado"
-    if (analysisData && analysisData.qualitativeRiskLevel && finalStatus === 'Identificado') {
-      finalStatus = 'Avaliado';
-      console.log('🔄 Risco com análise completa - status alterado para "Avaliado"');
-    }
+    // Calcular riskScore baseado nos scores disponíveis
+    const probability = supabaseRisk.likelihood_score || supabaseRisk.probability_score || 3;
+    const impact = supabaseRisk.impact_score || 3;
+    const riskScore = supabaseRisk.risk_score || (probability * impact);
     
     const transformedRisk = {
       id: supabaseRisk.id,
-      name: supabaseRisk.title,
+      name: supabaseRisk.risk_title || 'Risco sem título',
       description: description,
-      category: supabaseRisk.risk_category,
-      probability: supabaseRisk.likelihood_score,
-      impact: supabaseRisk.impact_score,
-      riskScore: supabaseRisk.risk_score || 0,
-      riskLevel: supabaseRisk.risk_level || 'Médio',
+      category: supabaseRisk.risk_category || 'Operacional',
+      probability: probability,
+      impact: impact,
+      riskScore: riskScore,
+      riskLevel: mapRiskLevel(supabaseRisk.risk_level) || 'Médio',
       status: finalStatus,
-      treatmentType: supabaseRisk.risk_action_plans?.[0]?.treatment_type || 'Mitigar',
+      treatmentType: supabaseRisk.treatment_strategy || 'Mitigar',
       owner: supabaseRisk.created_by || '',
-      assignedTo: supabaseRisk.assigned_to,
+      assignedTo: supabaseRisk.responsible_area || '',
       identifiedDate: new Date(supabaseRisk.created_at),
-      dueDate: supabaseRisk.due_date ? new Date(supabaseRisk.due_date) : undefined,
+      dueDate: supabaseRisk.review_date ? new Date(supabaseRisk.review_date) : undefined,
       createdBy: supabaseRisk.created_by || '',
       createdAt: new Date(supabaseRisk.created_at),
-      updatedAt: new Date(supabaseRisk.updated_at),
-      analysisData: analysisData
+      updatedAt: new Date(supabaseRisk.updated_at || supabaseRisk.created_at),
+      analysisData: {
+        gut_analysis: {
+          gravity: supabaseRisk.gut_gravity,
+          urgency: supabaseRisk.gut_urgency,
+          tendency: supabaseRisk.gut_tendency
+        },
+        monitoring: {
+          frequency: supabaseRisk.monitoring_frequency,
+          responsible: supabaseRisk.monitoring_responsible,
+          closure_criteria: supabaseRisk.closure_criteria
+        }
+      }
     };
     
-    console.log('🔄 transformSupabaseRiskToRisk:', {
+    console.log('🔄 transformSupabaseRiskToRisk (risk_registrations):', {
       original: {
         id: supabaseRisk.id,
-        title: supabaseRisk.title,
+        risk_title: supabaseRisk.risk_title,
         risk_level: supabaseRisk.risk_level,
-        risk_score: supabaseRisk.risk_score
+        status: supabaseRisk.status
       },
       transformed: {
         id: transformedRisk.id,
         name: transformedRisk.name,
         riskLevel: transformedRisk.riskLevel,
-        riskScore: transformedRisk.riskScore
+        riskScore: transformedRisk.riskScore,
+        status: transformedRisk.status
       }
     });
     
     return transformedRisk;
   };
 
-  const mapSupabaseStatusToRiskStatus = (status: string): RiskStatus => {
-    console.log('🔄 mapSupabaseStatusToRiskStatus: status do banco =', status);
-    
-    switch (status) {
-      case 'open': return 'Identificado';
-      case 'in_progress': return 'Em Tratamento';
-      case 'mitigated': return 'Monitorado';
-      case 'closed': return 'Fechado';
-      case 'assessed': return 'Avaliado'; // Apenas quando explicitamente avaliado
-      default: 
-        console.log('🔄 Status não mapeado, usando "Identificado":', status);
-        return 'Identificado'; // Padrão deve ser "Identificado", não "Avaliado"
-    }
-  };
+
 
   const filterRisks = (filters: RiskFilters): Risk[] => {
     let filtered = risks;

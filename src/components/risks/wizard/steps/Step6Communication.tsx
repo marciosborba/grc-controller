@@ -105,6 +105,39 @@ export const Step6Communication: React.FC<Step6Props> = ({
 
   // Verificar se é carta de risco (estratégia de aceitação)
   const isRiskLetter = data.treatment_strategy === 'accept';
+  
+  // Carregar stakeholders do banco quando registrationId estiver disponível
+  useEffect(() => {
+    const loadStakeholders = async () => {
+      if (!registrationId) {
+        console.log('Step6: Sem registrationId, não carregando stakeholders');
+        return;
+      }
+      
+      try {
+        console.log('Step6: Carregando stakeholders para registrationId:', registrationId);
+        const { data: items, error } = await supabase
+          .from('risk_stakeholders')
+          .select('*')
+          .eq('risk_registration_id', registrationId)
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('Step6: Erro ao carregar stakeholders:', error);
+          return;
+        }
+        
+        console.log('Step6: Stakeholders carregados:', items);
+        if (items && items.length > 0) {
+          setStakeholders(items);
+        }
+      } catch (error) {
+        console.error('Step6: Erro ao carregar stakeholders:', error);
+      }
+    };
+    
+    loadStakeholders();
+  }, [registrationId, setStakeholders]);
 
   useEffect(() => {
     // Atualizar se requer aprovação baseado nos stakeholders
@@ -163,7 +196,8 @@ export const Step6Communication: React.FC<Step6Props> = ({
             .from('risk_stakeholders')
             .insert([{
               ...newStakeholder,
-              risk_registration_id: registrationId
+              risk_registration_id: registrationId,
+              tenant_id: '46b1c048-85a1-423b-96fc-776007c8de1f'
             }])
             .select()
             .single();

@@ -241,15 +241,59 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   const currentStepData = steps.find(step => step.id === currentStep);
   const progress = (currentStep / steps.length) * 100;
 
-  // Carregar dados existentes se for modo de edição
+  // useEffect principal para gerenciar criação/carregamento do registro
   useEffect(() => {
+    console.log('🔄 useEffect principal executado:', {
+      editMode,
+      existingRiskId,
+      userExists: !!user,
+      userId: user?.id,
+      tenantId: user?.tenantId,
+      registrationId
+    });
+    
     if (editMode && existingRiskId) {
+      console.log('📖 Modo edição: carregando dados existentes...');
       loadExistingRiskData();
-    } else if (!editMode) {
-      // Criar novo registro no Supabase
-      createNewRiskRegistration();
+    } else if (!editMode && user?.id && user?.tenantId && !registrationId) {
+      console.log('🆕 Iniciando criação de novo registro de risco...');
+      console.log('Dados do usuário:', {
+        userId: user.id,
+        tenantId: user.tenantId,
+        userExists: !!user,
+        registrationId
+      });
+      
+      // Adicionar um pequeno delay para garantir que o contexto está totalmente carregado
+      setTimeout(() => {
+        createNewRiskRegistration();
+      }, 100);
+    } else if (!editMode && user?.id && !user?.tenantId) {
+      console.log('⚠️ Aguardando dados do usuário para criar registro...');
+    } else if (!editMode && user?.id && user?.tenantId && registrationId) {
+      console.log('✅ Registro já existe, não criando novo:', registrationId);
     }
-  }, [editMode, existingRiskId]);
+  }, [editMode, existingRiskId, user?.id, user?.tenantId, registrationId]);
+  
+  // useEffect para monitorar mudanças no registrationId
+  useEffect(() => {
+    console.log('🆔 registrationId mudou:', {
+      registrationId,
+      hasId: !!registrationId,
+      editMode,
+      currentStep
+    });
+  }, [registrationId]);
+  
+  // useEffect para monitorar mudanças no usuário
+  useEffect(() => {
+    console.log('👤 Dados do usuário mudaram:', {
+      userExists: !!user,
+      userId: user?.id,
+      tenantId: user?.tenantId,
+      registrationId
+    });
+  }, [user]);
   
   // useEffect adicional para garantir scroll quando a etapa muda
   useEffect(() => {
@@ -304,7 +348,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   const loadActionPlanItems = async (riskId: string) => {
     try {
       const { data, error } = await supabase
-        .from('risk_action_plans')
+        .from('risk_registration_action_plans')
         .select('*')
         .eq('risk_registration_id', riskId)
         .order('created_at', { ascending: true });
@@ -334,25 +378,115 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   };
 
   const createNewRiskRegistration = async () => {
-    if (!user?.tenant_id) return;
+    console.log('🔍 [DEBUG] Iniciando createNewRiskRegistration...');
+    
+    if (!user?.tenantId || !user?.id) {
+      console.log('❌ Dados do usuário incompletos:', {
+        hasTenantId: !!user?.tenantId,
+        hasUserId: !!user?.id,
+        user
+      });
+      return;
+    }
+    
+    // Evitar criar múltiplos registros
+    if (registrationId) {
+      console.log('⚠️ Registro já existe, pulando criação:', registrationId);
+      return;
+    }
+    
+    // Verificar se já está em processo de criação
+    if (isLoading) {
+      console.log('⚠️ Já está criando registro, aguardando...');
+      return;
+    }
+    
+    setIsLoading(true);
     
     try {
+      console.log('💾 Criando novo registro no banco...');
+      console.log('🔍 [DEBUG] Dados para inserção:', {
+        tenant_id: user.tenantId,
+        created_by: user.id,
+        status: 'draft',
+        current_step: 1,
+        completion_percentage: 0
+      });
+      
+      // Verificar se o usuário está autenticado no Supabase
+      const { data: { user: supabaseUser }, error: authError } = await supabase.auth.getUser();
+      console.log('🔍 [DEBUG] Usuário autenticado no Supabase:', {
+        isAuthenticated: !!supabaseUser,
+        userId: supabaseUser?.id,
+        authError
+      });
+      
+      if (authError) {
+        console.error('❌ Erro de autenticação:', authError);
+        throw new Error(`Erro de autenticação: ${authError.message}`);
+      }
+      
+      if (!supabaseUser) {
+        console.error('❌ Usuário não autenticado no Supabase');
+        throw new Error('Usuário não autenticado');
+      }
+      
+      console.log('🔍 [DEBUG] Executando inserção no banco...');
       const { data, error } = await supabase
         .from('risk_registrations')
         .insert({
-          tenant_id: user.tenant_id,
+          tenant_id: user.tenantId,
           created_by: user.id,
-          status: 'draft'
+          status: 'draft',
+          current_step: 1,
+          completion_percentage: 0
         })
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('🔍 [DEBUG] Resultado da inserção:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro ao criar registro:', error);
+        console.error('🔍 [DEBUG] Detalhes do erro:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        throw error;
+      }
       
+      if (!data) {
+        console.error('❌ Nenhum dado retornado da inserção');
+        throw new Error('Nenhum dado retornado da inserção');
+      }
+      
+      console.log('🔍 [DEBUG] Definindo registrationId:', data.id);
       setRegistrationId(data.id);
-      console.log('Novo registro de risco criado:', data.id);
+      console.log('✅ Novo registro de risco criado com sucesso:', data.id);
+      
+      toast({
+        title: '✅ Registro Iniciado',
+        description: 'Novo registro de risco criado. Você pode começar a preencher os dados.',
+      });
+      
     } catch (error) {
-      console.error('Erro ao criar registro de risco:', error);
+      console.error('❌ Erro ao criar registro de risco:', error);
+      console.error('🔍 [DEBUG] Stack trace:', error.stack);
+      
+      let errorMessage = 'Não foi possível criar o registro de risco.';
+      if (error?.message) {
+        errorMessage += ` Erro: ${error.message}`;
+      }
+      
+      toast({
+        title: 'Erro ao criar registro',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -471,14 +605,29 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         }
         break;
       case 7:
-        if (!registrationData.monitoring_frequency || !registrationData.monitoring_responsible || !registrationData.closure_criteria) {
-          toast({
-            title: '⚠️ Configuração de Monitoramento',
-            description: 'Por favor, complete a configuração de monitoramento.',
-            variant: 'destructive'
-          });
-          return false;
-        }
+        // Validar apenas se pelo menos um campo de monitoramento foi preenchido
+        const hasMonitoringData = registrationData.monitoring_frequency || 
+                                 registrationData.monitoring_responsible || 
+                                 registrationData.closure_criteria;
+        
+        // Permitir finalizar mesmo sem todos os campos de monitoramento
+        // A etapa 7 é opcional para finalização
+        console.log('🔍 Validando etapa 7:', {
+          hasMonitoringData,
+          monitoring_frequency: registrationData.monitoring_frequency,
+          monitoring_responsible: registrationData.monitoring_responsible,
+          closure_criteria: registrationData.closure_criteria
+        });
+        
+        // Não bloquear a finalização se não tiver dados de monitoramento
+        // if (!hasMonitoringData) {
+        //   toast({
+        //     title: '⚠️ Configuração de Monitoramento',
+        //     description: 'Por favor, preencha pelo menos um campo de monitoramento.',
+        //     variant: 'destructive'
+        //   });
+        //   return false;
+        // }
         break;
     }
     return true;
@@ -623,21 +772,32 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         console.log(`${stakeholdersToSave.length} stakeholders já salvos no banco`);
       }
       
+      console.log('🎉 Registro finalizado com sucesso na tabela risk_registrations!');
+      
+      // Confirmar que o registro aparecerá na lista
+      toast({
+        title: '✅ Registro Completo',
+        description: 'O risco foi registrado e aparecerá na lista detalhada.',
+      });
+      
       console.log('🎉 Finalizando processo...');
       
-      // Chamar callback de conclusão
-      onComplete({
-        ...finalData,
-        action_plans: actionPlanItems,
-        stakeholders: stakeholders
-      });
-
       toast({
         title: '🎉 Registro de Risco Concluído',
         description: `Risco "${registrationData.risk_title}" foi registrado com sucesso.`,
       });
       
       console.log('✅ Processo de finalização concluído com sucesso!');
+      
+      // Aguardar um momento para mostrar o toast e depois fechar o formulário
+      setTimeout(() => {
+        // Chamar callback de conclusão para fechar o formulário
+        onComplete({
+          ...finalData,
+          action_plans: actionPlanItems,
+          stakeholders: stakeholders
+        });
+      }, 1500); // 1.5 segundos para o usuário ver o toast de sucesso
       
     } catch (error) {
       console.error('❌ Erro ao finalizar registro:', error);
@@ -838,11 +998,16 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           {currentStep === steps.length ? (
             <Button
               onClick={handleComplete}
-              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700"
+              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
               disabled={isLoading}
+              size="lg"
             >
-              <CheckCircle className="h-4 w-4" />
-              <span>{isLoading ? 'Finalizando...' : 'Finalizar Registro'}</span>
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <CheckCircle className="h-5 w-5" />
+              )}
+              <span>{isLoading ? 'Salvando...' : 'Finalizar Registro'}</span>
             </Button>
           ) : (
             <Button

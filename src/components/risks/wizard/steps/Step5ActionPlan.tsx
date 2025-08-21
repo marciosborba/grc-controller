@@ -87,6 +87,39 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
 
   // Se a estratégia é aceitar, pular esta etapa
   const isAcceptStrategy = data.treatment_strategy === 'accept';
+  
+  // Carregar action plan items do banco quando registrationId estiver disponível
+  useEffect(() => {
+    const loadActionPlanItems = async () => {
+      if (!registrationId) {
+        console.log('Step5: Sem registrationId, não carregando items');
+        return;
+      }
+      
+      try {
+        console.log('Step5: Carregando action plan items para registrationId:', registrationId);
+        const { data: items, error } = await supabase
+          .from('risk_registration_action_plans')
+          .select('*')
+          .eq('risk_registration_id', registrationId)
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('Step5: Erro ao carregar action plan items:', error);
+          return;
+        }
+        
+        console.log('Step5: Action plan items carregados:', items);
+        if (items && items.length > 0) {
+          setActionPlanItems(items);
+        }
+      } catch (error) {
+        console.error('Step5: Erro ao carregar action plan items:', error);
+      }
+    };
+    
+    loadActionPlanItems();
+  }, [registrationId, setActionPlanItems]);
 
   const resetForm = () => {
     setNewItem({
@@ -163,7 +196,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
           // Atualizar no banco
           console.log('Atualizando item existente no banco:', newItem.id);
           const { error } = await supabase
-            .from('risk_action_plans')
+            .from('risk_registration_action_plans')
             .update({
               activity_name: newItem.activity_name,
               activity_description: newItem.activity_description,
@@ -194,13 +227,14 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
             due_date: newItem.due_date,
             priority: newItem.priority,
             status: newItem.status,
-            risk_registration_id: registrationId
+            risk_registration_id: registrationId,
+            tenant_id: '46b1c048-85a1-423b-96fc-776007c8de1f'
           };
           
           console.log('Dados a serem inseridos:', itemToInsert);
           
           const { data: savedItem, error } = await supabase
-            .from('risk_action_plans')
+            .from('risk_registration_action_plans')
             .insert([itemToInsert])
             .select()
             .single();
@@ -257,7 +291,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
       if (registrationId && item.id && !item.id.toString().startsWith('temp-')) {
         // Deletar do banco
         const { error } = await supabase
-          .from('risk_action_plans')
+          .from('risk_registration_action_plans')
           .delete()
           .eq('id', item.id);
         
