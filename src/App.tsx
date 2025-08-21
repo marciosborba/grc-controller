@@ -16,9 +16,10 @@ import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy imports for feature modules
-const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved").then(module => ({ default: module.default || module.RiskManagementCenterImproved })));
+const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved").then(module => ({ default: module.RiskManagementCenterImproved })));
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
 const RiskManagementPageLegacy = lazy(() => import("@/components/risks/NewRiskManagementPage"));
+const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 const CompliancePage = lazy(() => import("@/components/compliance/CompliancePage"));
 // Audit IA Module - Comprehensive audit management with AI
@@ -193,6 +194,11 @@ const App = () => (
                   <Route path="risks-legacy" element={
                     <Suspense fallback={<PageLoader />}>
                       <RiskManagementPageLegacy />
+                    </Suspense>
+                  } />
+                  <Route path="risks/matrix" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskMatrixPage />
                     </Suspense>
                   } />
                   <Route path="compliance" element={

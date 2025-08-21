@@ -1,1 +1,339 @@
-import React, { useState, useEffect } from 'react';\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';\nimport { Button } from '@/components/ui/button';\nimport { Badge } from '@/components/ui/badge';\nimport { Input } from '@/components/ui/input';\nimport { Textarea } from '@/components/ui/textarea';\nimport { \n  FileText,\n  Download,\n  Send,\n  Eye,\n  Edit,\n  CheckCircle,\n  Clock,\n  User,\n  Calendar,\n  Shield,\n  AlertTriangle,\n  Signature,\n  Lock,\n  Unlock,\n  Star,\n  Archive,\n  Plus,\n  Search,\n  Filter,\n  Brain,\n  Zap,\n  Users,\n  Building,\n  Globe,\n  Mail,\n  Phone,\n  MapPin,\n  FileCheck,\n  Printer,\n  Share2\n} from 'lucide-react';\nimport { useToast } from '@/hooks/use-toast';\nimport type { Risk } from '@/types/risk-management';\n\ninterface RiskAcceptanceLetter {\n  id: string;\n  riskId: string;\n  riskName: string;\n  letterNumber: string;\n  title: string;\n  executiveSummary: string;\n  riskDescription: string;\n  impactAnalysis: string;\n  justification: string;\n  acceptanceRationale: string;\n  mitigatingFactors: string[];\n  residualRisk: string;\n  monitoringPlan: string;\n  reviewDate: string;\n  expirationDate: string;\n  approver: string;\n  approverTitle: string;\n  approverSignature?: string;\n  signedAt?: string;\n  status: 'draft' | 'pending_approval' | 'approved' | 'rejected' | 'expired';\n  createdBy: string;\n  createdAt: string;\n  lastModified: string;\n  version: number;\n  alexRiskGenerated: boolean;\n  complianceReferences: string[];\n  stakeholders: string[];\n  attachments: string[];\n  legalReview: boolean;\n  businessUnit: string;\n  riskCategory: string;\n  riskLevel: string;\n  financialImpact: number;\n  probability: number;\n  timeframe: string;\n}\n\ninterface RiskAcceptanceLetterIntegratedProps {\n  risks: Risk[];\n  onCreateLetter: (letter: RiskAcceptanceLetter) => void;\n  onSignLetter?: (letterId: string) => void;\n}\n\nexport const RiskAcceptanceLetterIntegrated: React.FC<RiskAcceptanceLetterIntegratedProps> = ({\n  risks,\n  onCreateLetter,\n  onSignLetter\n}) => {\n  const [letters, setLetters] = useState<RiskAcceptanceLetter[]>([]);\n  const [selectedLetter, setSelectedLetter] = useState<RiskAcceptanceLetter | null>(null);\n  const [isCreating, setIsCreating] = useState(false);\n  const [isEditing, setIsEditing] = useState(false);\n  const [searchTerm, setSearchTerm] = useState('');\n  const [filterStatus, setFilterStatus] = useState<string>('all');\n  const [isLoading, setIsLoading] = useState(true);\n  const [showPreview, setShowPreview] = useState(false);\n  \n  // Estados do formulário\n  const [formData, setFormData] = useState<Partial<RiskAcceptanceLetter>>({\n    riskId: '',\n    title: '',\n    executiveSummary: '',\n    riskDescription: '',\n    impactAnalysis: '',\n    justification: '',\n    acceptanceRationale: '',\n    mitigatingFactors: [],\n    residualRisk: '',\n    monitoringPlan: '',\n    reviewDate: '',\n    expirationDate: '',\n    approver: '',\n    approverTitle: '',\n    businessUnit: '',\n    timeframe: '12 meses'\n  });\n  \n  const { toast } = useToast();\n\n  useEffect(() => {\n    loadAcceptanceLetters();\n  }, []);\n\n  const loadAcceptanceLetters = async () => {\n    setIsLoading(true);\n    \n    // Simular carregamento\n    setTimeout(() => {\n      const mockLetters: RiskAcceptanceLetter[] = [\n        {\n          id: 'letter-001',\n          riskId: 'risk-001',\n          riskName: 'Vulnerabilidade Crítica de Segurança',\n          letterNumber: 'RAL-2024-001',\n          title: 'Carta de Aceitação de Risco - Vulnerabilidade Temporária',\n          executiveSummary: 'Esta carta formaliza a aceitação temporária do risco de vulnerabilidade crítica de segurança enquanto implementamos as correções necessárias.',\n          riskDescription: 'Vulnerabilidade identificada no sistema de autenticação que pode permitir acesso não autorizado.',\n          impactAnalysis: 'Potencial exposição de dados de clientes e comprometimento da integridade do sistema.',\n          justification: 'Aceitação temporária necessária para manter operações críticas enquanto implementamos correção definitiva.',\n          acceptanceRationale: 'O custo de interrupção das operações supera o risco temporário, considerando os controles compensatórios implementados.',\n          mitigatingFactors: [\n            'Monitoramento 24/7 implementado',\n            'Controles de acesso adicionais ativados',\n            'Backup de segurança em tempo real',\n            'Equipe de resposta a incidentes em alerta'\n          ],\n          residualRisk: 'Baixo, considerando os controles compensatórios implementados',\n          monitoringPlan: 'Monitoramento contínuo através de SIEM, revisão diária de logs de acesso, alertas automáticos para tentativas de acesso suspeitas.',\n          reviewDate: '2024-12-30',\n          expirationDate: '2025-01-15',\n          approver: 'João Silva',\n          approverTitle: 'Diretor de TI',\n          approverSignature: 'assinatura_digital_hash_123',\n          signedAt: '2024-12-15T14:30:00Z',\n          status: 'approved',\n          createdBy: 'Maria Santos',\n          createdAt: '2024-12-14T10:00:00Z',\n          lastModified: '2024-12-15T14:30:00Z',\n          version: 1,\n          alexRiskGenerated: true,\n          complianceReferences: ['ISO 27001', 'LGPD', 'SOX'],\n          stakeholders: ['TI', 'Segurança', 'Compliance', 'Jurídico'],\n          attachments: ['relatorio_vulnerabilidade.pdf', 'plano_correcao.pdf'],\n          legalReview: true,\n          businessUnit: 'Tecnologia da Informação',\n          riskCategory: 'Tecnológico',\n          riskLevel: 'Muito Alto',\n          financialImpact: 2300000,\n          probability: 4,\n          timeframe: '30 dias'\n        },\n        {\n          id: 'letter-002',\n          riskId: 'risk-003',\n          riskName: 'Não Conformidade LGPD',\n          letterNumber: 'RAL-2024-002',\n          title: 'Carta de Aceitação de Risco - Adequação LGPD Gradual',\n          executiveSummary: 'Aceitação do risco de não conformidade parcial com LGPD durante período de adequação gradual.',\n          riskDescription: 'Alguns processos ainda não estão totalmente adequados aos requisitos da LGPD.',\n          impactAnalysis: 'Possibilidade de multas regulatórias e danos reputacionais.',\n          justification: 'Implementação gradual necessária para não interromper operações críticas.',\n          acceptanceRationale: 'Abordagem faseada permite adequação sem impacto operacional significativo.',\n          mitigatingFactors: [\n            'Plano de adequação aprovado pela ANPD',\n            'Treinamentos em andamento',\n            'Políticas de privacidade atualizadas',\n            'DPO nomeado e atuante'\n          ],\n          residualRisk: 'Médio, com tendência de redução conforme implementação do plano',\n          monitoringPlan: 'Acompanhamento mensal do plano de adequação, auditorias trimestrais, relatórios para ANPD.',\n          reviewDate: '2025-01-15',\n          expirationDate: '2025-03-31',\n          approver: 'Pedro Costa',\n          approverTitle: 'Diretor Jurídico',\n          status: 'pending_approval',\n          createdBy: 'Ana Silva',\n          createdAt: '2024-12-10T09:00:00Z',\n          lastModified: '2024-12-12T16:45:00Z',\n          version: 2,\n          alexRiskGenerated: false,\n          complianceReferences: ['LGPD', 'Marco Civil da Internet'],\n          stakeholders: ['Jurídico', 'TI', 'RH', 'Marketing'],\n          attachments: ['plano_adequacao_lgpd.pdf'],\n          legalReview: true,\n          businessUnit: 'Compliance',\n          riskCategory: 'Regulatório',\n          riskLevel: 'Alto',\n          financialImpact: 500000,\n          probability: 3,\n          timeframe: '6 meses'\n        }\n      ];\n      \n      setLetters(mockLetters);\n      setIsLoading(false);\n    }, 1000);\n  };\n\n  const filteredLetters = letters.filter(letter => {\n    const matchesSearch = letter.title.toLowerCase().includes(searchTerm.toLowerCase()) ||\n                         letter.riskName.toLowerCase().includes(searchTerm.toLowerCase()) ||\n                         letter.letterNumber.toLowerCase().includes(searchTerm.toLowerCase());\n    \n    const matchesStatus = filterStatus === 'all' || letter.status === filterStatus;\n    \n    return matchesSearch && matchesStatus;\n  });\n\n  const handleCreateLetter = () => {\n    if (!formData.riskId || !formData.title || !formData.justification) {\n      toast({\n        title: '❌ Campos Obrigatórios',\n        description: 'Preencha todos os campos obrigatórios',\n        variant: 'destructive'\n      });\n      return;\n    }\n    \n    const selectedRisk = risks.find(r => r.id === formData.riskId);\n    \n    const newLetter: RiskAcceptanceLetter = {\n      id: `letter-${Date.now()}`,\n      letterNumber: `RAL-2024-${String(letters.length + 1).padStart(3, '0')}`,\n      riskName: selectedRisk?.name || '',\n      status: 'draft',\n      createdBy: 'Usuário Atual',\n      createdAt: new Date().toISOString(),\n      lastModified: new Date().toISOString(),\n      version: 1,\n      alexRiskGenerated: false,\n      complianceReferences: [],\n      stakeholders: [],\n      attachments: [],\n      legalReview: false,\n      riskCategory: selectedRisk?.category || '',\n      riskLevel: selectedRisk?.riskLevel || '',\n      financialImpact: 0,\n      probability: selectedRisk?.probability || 1,\n      ...formData\n    } as RiskAcceptanceLetter;\n    \n    setLetters(prev => [newLetter, ...prev]);\n    onCreateLetter(newLetter);\n    \n    // Reset form\n    setFormData({\n      riskId: '',\n      title: '',\n      executiveSummary: '',\n      riskDescription: '',\n      impactAnalysis: '',\n      justification: '',\n      acceptanceRationale: '',\n      mitigatingFactors: [],\n      residualRisk: '',\n      monitoringPlan: '',\n      reviewDate: '',\n      expirationDate: '',\n      approver: '',\n      approverTitle: '',\n      businessUnit: '',\n      timeframe: '12 meses'\n    });\n    \n    setIsCreating(false);\n    \n    toast({\n      title: '✅ Carta Criada',\n      description: 'Carta de aceitação de risco criada com sucesso',\n    });\n  };\n\n  const handleSignLetter = (letterId: string) => {\n    setLetters(prev => prev.map(letter => \n      letter.id === letterId ? {\n        ...letter,\n        status: 'approved' as const,\n        signedAt: new Date().toISOString(),\n        approverSignature: 'assinatura_digital_hash_' + Date.now()\n      } : letter\n    ));\n    \n    onSignLetter?.(letterId);\n    \n    toast({\n      title: '✅ Carta Assinada',\n      description: 'Carta de aceitação assinada digitalmente',\n    });\n  };\n\n  const getStatusColor = (status: string) => {\n    switch (status) {\n      case 'draft': return 'bg-gray-100 text-gray-800';\n      case 'pending_approval': return 'bg-yellow-100 text-yellow-800';\n      case 'approved': return 'bg-green-100 text-green-800';\n      case 'rejected': return 'bg-red-100 text-red-800';\n      case 'expired': return 'bg-orange-100 text-orange-800';\n      default: return 'bg-gray-100 text-gray-800';\n    }\n  };\n\n  const getStatusIcon = (status: string) => {\n    switch (status) {\n      case 'draft': return Edit;\n      case 'pending_approval': return Clock;\n      case 'approved': return CheckCircle;\n      case 'rejected': return AlertTriangle;\n      case 'expired': return AlertTriangle;\n      default: return FileText;\n    }\n  };\n\n  const formatCurrency = (value: number) => {\n    return new Intl.NumberFormat('pt-BR', {\n      style: 'currency',\n      currency: 'BRL'\n    }).format(value);\n  };\n\n  const formatDate = (dateString: string) => {\n    return new Date(dateString).toLocaleDateString('pt-BR');\n  };\n\n  const generateLetterPreview = (letter: RiskAcceptanceLetter) => {\n    return `\n# CARTA DE ACEITAÇÃO DE RISCO\n\n**Número:** ${letter.letterNumber}\n**Data:** ${formatDate(letter.createdAt)}\n**Versão:** ${letter.version}\n\n---\n\n## IDENTIFICAÇÃO DO RISCO\n\n**Risco:** ${letter.riskName}\n**Categoria:** ${letter.riskCategory}\n**Nível:** ${letter.riskLevel}\n**Unidade de Negócio:** ${letter.businessUnit}\n\n---\n\n## SUMÁRIO EXECUTIVO\n\n${letter.executiveSummary}\n\n---\n\n## DESCRIÇÃO DO RISCO\n\n${letter.riskDescription}\n\n---\n\n## ANÁLISE DE IMPACTO\n\n${letter.impactAnalysis}\n\n**Impacto Financeiro Estimado:** ${formatCurrency(letter.financialImpact)}\n**Probabilidade:** ${letter.probability}/5\n**Prazo:** ${letter.timeframe}\n\n---\n\n## JUSTIFICATIVA PARA ACEITAÇÃO\n\n${letter.justification}\n\n---\n\n## RATIONALE DE ACEITAÇÃO\n\n${letter.acceptanceRationale}\n\n---\n\n## FATORES MITIGADORES\n\n${letter.mitigatingFactors.map(factor => `• ${factor}`).join('\\n')}\n\n---\n\n## RISCO RESIDUAL\n\n${letter.residualRisk}\n\n---\n\n## PLANO DE MONITORAMENTO\n\n${letter.monitoringPlan}\n\n---\n\n## CRONOGRAMA\n\n**Data de Revisão:** ${formatDate(letter.reviewDate)}\n**Data de Expiração:** ${formatDate(letter.expirationDate)}\n\n---\n\n## APROVAÇÃO\n\n**Aprovador:** ${letter.approver}\n**Cargo:** ${letter.approverTitle}\n**Data da Assinatura:** ${letter.signedAt ? formatDate(letter.signedAt) : 'Pendente'}\n**Assinatura Digital:** ${letter.approverSignature ? '✓ Assinado' : 'Pendente'}\n\n---\n\n## CONFORMIDADE\n\n**Referências Regulatórias:** ${letter.complianceReferences.join(', ')}\n**Revisão Jurídica:** ${letter.legalReview ? 'Concluída' : 'Pendente'}\n\n---\n\n*Este documento foi gerado automaticamente pelo sistema GRC Controller.*\n    `;\n  };\n\n  if (isLoading) {\n    return (\n      <div className=\"flex items-center justify-center h-64\">\n        <div className=\"text-center\">\n          <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4\"></div>\n          <p className=\"text-muted-foreground\">Carregando cartas de aceitação...</p>\n        </div>\n      </div>\n    );\n  }\n\n  return (\n    <div className=\"space-y-6\">\n      {/* Header */}\n      <Card className=\"bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200\">\n        <CardHeader>\n          <CardTitle className=\"flex items-center space-x-2\">\n            <FileText className=\"h-6 w-6 text-blue-600\" />\n            <span>Cartas de Aceitação de Risco</span>\n            <Badge variant=\"secondary\" className=\"bg-blue-100 text-blue-700\">\n              {letters.length} cartas\n            </Badge>\n          </CardTitle>\n          <p className=\"text-muted-foreground\">\n            Gestão completa de cartas de aceitação com assinatura digital e trilha de auditoria\n          </p>\n        </CardHeader>\n      </Card>\n\n      {/* Controles */}\n      <Card>\n        <CardContent className=\"pt-6\">\n          <div className=\"flex items-center justify-between mb-4\">\n            <div className=\"flex items-center space-x-2\">\n              <Button \n                onClick={() => setIsCreating(true)}\n                className=\"bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white\"\n              >\n                <Plus className=\"h-4 w-4 mr-2\" />\n                Nova Carta de Aceitação\n              </Button>\n              \n              <Badge variant=\"outline\" className=\"text-xs\">\n                <Clock className=\"h-3 w-3 mr-1\" />\n                {letters.filter(l => l.status === 'pending_approval').length} pendentes\n              </Badge>\n            </div>\n            \n            <div className=\"flex items-center space-x-2\">\n              <Badge variant=\"outline\" className=\"text-xs\">\n                <Brain className=\"h-3 w-3 mr-1\" />\n                {letters.filter(l => l.alexRiskGenerated).length} geradas por Alex Risk\n              </Badge>\n              \n              <Badge variant=\"outline\" className=\"text-xs\">\n                <CheckCircle className=\"h-3 w-3 mr-1\" />\n                {letters.filter(l => l.status === 'approved').length} aprovadas\n              </Badge>\n            </div>\n          </div>\n          \n          {/* Filtros */}\n          <div className=\"grid grid-cols-1 md:grid-cols-3 gap-3\">\n            <div className=\"relative\">\n              <Search className=\"absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4\" />\n              <Input\n                placeholder=\"Buscar cartas...\"\n                value={searchTerm}\n                onChange={(e) => setSearchTerm(e.target.value)}\n                className=\"pl-10\"\n              />\n            </div>\n            \n            <select \n              value={filterStatus} \n              onChange={(e) => setFilterStatus(e.target.value)}\n              className=\"px-3 py-2 border border-input rounded-md bg-background text-sm\"\n            >\n              <option value=\"all\">Todos os Status</option>\n              <option value=\"draft\">Rascunho</option>\n              <option value=\"pending_approval\">Pendente</option>\n              <option value=\"approved\">Aprovado</option>\n              <option value=\"rejected\">Rejeitado</option>\n              <option value=\"expired\">Expirado</option>\n            </select>\n            \n            <Button variant=\"outline\" size=\"sm\">\n              <Filter className=\"h-4 w-4 mr-1\" />\n              Mais Filtros\n            </Button>\n          </div>\n        </CardContent>\n      </Card>\n\n      {/* Lista de Cartas */}\n      <div className=\"grid grid-cols-1 lg:grid-cols-2 gap-6\">\n        {filteredLetters.map((letter) => {\n          const StatusIcon = getStatusIcon(letter.status);\n          \n          return (\n            <Card key={letter.id} className=\"hover:shadow-lg transition-all\">\n              <CardContent className=\"p-6\">\n                <div className=\"flex items-start justify-between mb-4\">\n                  <div className=\"flex-1 min-w-0\">\n                    <div className=\"flex items-center space-x-2 mb-2\">\n                      <StatusIcon className=\"h-4 w-4 text-blue-600\" />\n                      <h3 className=\"font-semibold truncate\">{letter.title}</h3>\n                    </div>\n                    \n                    <p className=\"text-sm text-muted-foreground mb-2\">\n                      {letter.letterNumber} • {letter.riskName}\n                    </p>\n                    \n                    <p className=\"text-sm text-muted-foreground line-clamp-2\">\n                      {letter.executiveSummary}\n                    </p>\n                  </div>\n                  \n                  <div className=\"flex flex-col items-end space-y-2\">\n                    <Badge className={`text-xs ${getStatusColor(letter.status)}`}>\n                      {letter.status}\n                    </Badge>\n                    \n                    {letter.alexRiskGenerated && (\n                      <Badge variant=\"secondary\" className=\"text-xs bg-purple-100 text-purple-700\">\n                        <Brain className=\"h-3 w-3 mr-1\" />\n                        Alex IA\n                      </Badge>\n                    )}\n                  </div>\n                </div>\n                \n                {/* Informações do Risco */}\n                <div className=\"grid grid-cols-2 gap-4 mb-4 text-sm\">\n                  <div>\n                    <span className=\"text-muted-foreground\">Categoria:</span>\n                    <p className=\"font-medium\">{letter.riskCategory}</p>\n                  </div>\n                  \n                  <div>\n                    <span className=\"text-muted-foreground\">Nível:</span>\n                    <p className=\"font-medium\">{letter.riskLevel}</p>\n                  </div>\n                  \n                  <div>\n                    <span className=\"text-muted-foreground\">Impacto:</span>\n                    <p className=\"font-medium\">{formatCurrency(letter.financialImpact)}</p>\n                  </div>\n                  \n                  <div>\n                    <span className=\"text-muted-foreground\">Prazo:</span>\n                    <p className=\"font-medium\">{letter.timeframe}</p>\n                  </div>\n                </div>\n                \n                {/* Aprovador */}\n                <div className=\"border-t pt-4 mb-4\">\n                  <div className=\"flex items-center space-x-2 text-sm\">\n                    <User className=\"h-4 w-4 text-muted-foreground\" />\n                    <span>{letter.approver} - {letter.approverTitle}</span>\n                    {letter.approverSignature && (\n                      <Badge variant=\"secondary\" className=\"text-xs bg-green-100 text-green-700\">\n                        <Signature className=\"h-3 w-3 mr-1\" />\n                        Assinado\n                      </Badge>\n                    )}\n                  </div>\n                </div>\n                \n                {/* Datas */}\n                <div className=\"grid grid-cols-2 gap-4 mb-4 text-xs text-muted-foreground\">\n                  <div className=\"flex items-center space-x-1\">\n                    <Calendar className=\"h-3 w-3\" />\n                    <span>Criado: {formatDate(letter.createdAt)}</span>\n                  </div>\n                  \n                  <div className=\"flex items-center space-x-1\">\n                    <Clock className=\"h-3 w-3\" />\n                    <span>Expira: {formatDate(letter.expirationDate)}</span>\n                  </div>\n                </div>\n                \n                {/* Ações */}\n                <div className=\"flex items-center justify-between\">\n                  <div className=\"flex items-center space-x-2\">\n                    <Button \n                      variant=\"outline\" \n                      size=\"sm\"\n                      onClick={() => {\n                        setSelectedLetter(letter);\n                        setShowPreview(true);\n                      }}\n                    >\n                      <Eye className=\"h-3 w-3 mr-1\" />\n                      Visualizar\n                    </Button>\n                    \n                    <Button variant=\"outline\" size=\"sm\">\n                      <Download className=\"h-3 w-3 mr-1\" />\n                      PDF\n                    </Button>\n                    \n                    {letter.status === 'draft' && (\n                      <Button variant=\"outline\" size=\"sm\">\n                        <Edit className=\"h-3 w-3 mr-1\" />\n                        Editar\n                      </Button>\n                    )}\n                  </div>\n                  \n                  {letter.status === 'pending_approval' && (\n                    <Button \n                      onClick={() => handleSignLetter(letter.id)}\n                      size=\"sm\"\n                      className=\"bg-green-600 hover:bg-green-700 text-white\"\n                    >\n                      <Signature className=\"h-3 w-3 mr-1\" />\n                      Assinar\n                    </Button>\n                  )}\n                </div>\n              </CardContent>\n            </Card>\n          );\n        })}\n        \n        {filteredLetters.length === 0 && (\n          <div className=\"lg:col-span-2\">\n            <Card>\n              <CardContent className=\"py-12 text-center\">\n                <FileText className=\"h-12 w-12 text-muted-foreground mx-auto mb-4\" />\n                <h3 className=\"text-lg font-medium mb-2\">Nenhuma carta encontrada</h3>\n                <p className=\"text-muted-foreground mb-4\">\n                  Tente ajustar os filtros ou criar uma nova carta de aceitação\n                </p>\n                <Button \n                  onClick={() => setIsCreating(true)}\n                  className=\"bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white\"\n                >\n                  <Plus className=\"h-4 w-4 mr-2\" />\n                  Criar Primeira Carta\n                </Button>\n              </CardContent>\n            </Card>\n          </div>\n        )}\n      </div>\n      \n      {/* Dialog de Criação */}\n      {isCreating && (\n        <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4\">\n          <Card className=\"w-full max-w-4xl max-h-[90vh] overflow-y-auto\">\n            <CardHeader>\n              <CardTitle>Nova Carta de Aceitação de Risco</CardTitle>\n            </CardHeader>\n            <CardContent className=\"space-y-6\">\n              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">\n                <div>\n                  <label className=\"text-sm font-medium\">Risco *</label>\n                  <select \n                    value={formData.riskId || ''} \n                    onChange={(e) => setFormData(prev => ({ ...prev, riskId: e.target.value }))}\n                    className=\"w-full px-3 py-2 border border-input rounded-md bg-background mt-1\"\n                  >\n                    <option value=\"\">Selecionar risco...</option>\n                    {risks.map(risk => (\n                      <option key={risk.id} value={risk.id}>{risk.name}</option>\n                    ))}\n                  </select>\n                </div>\n                \n                <div>\n                  <label className=\"text-sm font-medium\">Título *</label>\n                  <Input\n                    value={formData.title || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}\n                    placeholder=\"Título da carta de aceitação\"\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div className=\"md:col-span-2\">\n                  <label className=\"text-sm font-medium\">Sumário Executivo</label>\n                  <Textarea\n                    value={formData.executiveSummary || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, executiveSummary: e.target.value }))}\n                    placeholder=\"Resumo executivo da aceitação do risco...\"\n                    rows={3}\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div className=\"md:col-span-2\">\n                  <label className=\"text-sm font-medium\">Justificativa *</label>\n                  <Textarea\n                    value={formData.justification || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, justification: e.target.value }))}\n                    placeholder=\"Justificativa para aceitação do risco...\"\n                    rows={4}\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div>\n                  <label className=\"text-sm font-medium\">Aprovador</label>\n                  <Input\n                    value={formData.approver || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, approver: e.target.value }))}\n                    placeholder=\"Nome do aprovador\"\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div>\n                  <label className=\"text-sm font-medium\">Cargo do Aprovador</label>\n                  <Input\n                    value={formData.approverTitle || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, approverTitle: e.target.value }))}\n                    placeholder=\"Cargo/função do aprovador\"\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div>\n                  <label className=\"text-sm font-medium\">Data de Revisão</label>\n                  <Input\n                    type=\"date\"\n                    value={formData.reviewDate || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, reviewDate: e.target.value }))}\n                    className=\"mt-1\"\n                  />\n                </div>\n                \n                <div>\n                  <label className=\"text-sm font-medium\">Data de Expiração</label>\n                  <Input\n                    type=\"date\"\n                    value={formData.expirationDate || ''}\n                    onChange={(e) => setFormData(prev => ({ ...prev, expirationDate: e.target.value }))}\n                    className=\"mt-1\"\n                  />\n                </div>\n              </div>\n              \n              <div className=\"flex space-x-2\">\n                <Button \n                  onClick={handleCreateLetter}\n                  className=\"flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white\"\n                >\n                  Criar Carta\n                </Button>\n                \n                <Button \n                  onClick={() => setIsCreating(false)}\n                  variant=\"outline\"\n                  className=\"flex-1\"\n                >\n                  Cancelar\n                </Button>\n              </div>\n            </CardContent>\n          </Card>\n        </div>\n      )}\n      \n      {/* Dialog de Preview */}\n      {showPreview && selectedLetter && (\n        <div className=\"fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4\">\n          <Card className=\"w-full max-w-4xl max-h-[90vh] overflow-y-auto\">\n            <CardHeader>\n              <div className=\"flex items-center justify-between\">\n                <CardTitle>Preview - {selectedLetter.letterNumber}</CardTitle>\n                <div className=\"flex items-center space-x-2\">\n                  <Button variant=\"outline\" size=\"sm\">\n                    <Download className=\"h-4 w-4 mr-1\" />\n                    PDF\n                  </Button>\n                  <Button variant=\"outline\" size=\"sm\">\n                    <Printer className=\"h-4 w-4 mr-1\" />\n                    Imprimir\n                  </Button>\n                  <Button \n                    onClick={() => setShowPreview(false)}\n                    variant=\"outline\" \n                    size=\"sm\"\n                  >\n                    ✕\n                  </Button>\n                </div>\n              </div>\n            </CardHeader>\n            <CardContent>\n              <div className=\"bg-white p-8 border rounded-lg\">\n                <pre className=\"whitespace-pre-wrap text-sm leading-relaxed\">\n                  {generateLetterPreview(selectedLetter)}\n                </pre>\n              </div>\n            </CardContent>\n          </Card>\n        </div>\n      )}\n    </div>\n  );\n};
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  FileText,
+  Download,
+  Send,
+  Eye,
+  Edit,
+  CheckCircle,
+  Clock,
+  User,
+  Calendar,
+  Shield,
+  AlertTriangle,
+  Signature,
+  Lock,
+  Unlock,
+  Star,
+  Archive,
+  Plus,
+  Search,
+  Filter,
+  Brain,
+  Zap,
+  Users,
+  Building,
+  Globe,
+  Mail,
+  Phone,
+  MapPin,
+  FileCheck,
+  Printer,
+  Share2
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+interface RiskAcceptanceLetterData {
+  name: string;
+  description: string;
+  level: string;
+  category: string;
+  justification: string;
+}
+
+interface RiskAcceptanceLetterIntegratedProps {
+  riskData: RiskAcceptanceLetterData;
+  onGenerate: (letterData: any) => void;
+}
+
+export const RiskAcceptanceLetterIntegrated: React.FC<RiskAcceptanceLetterIntegratedProps> = ({
+  riskData,
+  onGenerate
+}) => {
+  const [formData, setFormData] = useState({
+    approver: '',
+    approverTitle: '',
+    reviewDate: '',
+    expirationDate: '',
+    executiveSummary: '',
+    acceptanceRationale: '',
+    mitigatingFactors: '',
+    residualRisk: '',
+    monitoringPlan: ''
+  });
+  
+  const { toast } = useToast();
+
+  const handleGenerate = () => {
+    if (!formData.approver || !formData.approverTitle) {
+      toast({
+        title: '⚠️ Campos Obrigatórios',
+        description: 'Preencha o aprovador e cargo antes de gerar a carta.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const letterData = {
+      id: `letter-${Date.now()}`,
+      letterNumber: `RAL-2024-${String(Date.now()).slice(-3)}`,
+      riskName: riskData.name,
+      title: `Carta de Aceitação de Risco - ${riskData.name}`,
+      executiveSummary: formData.executiveSummary || `Esta carta formaliza a aceitação do risco "${riskData.name}" conforme análise realizada.`,
+      riskDescription: riskData.description,
+      justification: riskData.justification,
+      acceptanceRationale: formData.acceptanceRationale || 'Aceitação baseada na análise de custo-benefício e controles implementados.',
+      mitigatingFactors: formData.mitigatingFactors.split('\n').filter(f => f.trim()),
+      residualRisk: formData.residualRisk || 'Baixo, considerando os controles implementados',
+      monitoringPlan: formData.monitoringPlan || 'Monitoramento contínuo através de indicadores específicos.',
+      reviewDate: formData.reviewDate,
+      expirationDate: formData.expirationDate,
+      approver: formData.approver,
+      approverTitle: formData.approverTitle,
+      status: 'draft',
+      createdBy: 'Alex Risk',
+      createdAt: new Date().toISOString(),
+      lastModified: new Date().toISOString(),
+      version: 1,
+      alexRiskGenerated: true,
+      riskCategory: riskData.category,
+      riskLevel: riskData.level
+    };
+
+    onGenerate(letterData);
+    
+    toast({
+      title: '✅ Carta Gerada',
+      description: 'Carta de aceitação de risco gerada com sucesso!',
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <FileText className="h-6 w-6 text-yellow-600" />
+            <span>Carta de Aceitação de Risco</span>
+            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+              Alex Risk
+            </Badge>
+          </CardTitle>
+          <p className="text-muted-foreground">
+            Documento formal para aceitação do risco: <strong>{riskData.name}</strong>
+          </p>
+        </CardHeader>
+      </Card>
+
+      {/* Informações do Risco */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Informações do Risco</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Nome do Risco</label>
+              <p className="font-medium">{riskData.name}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Categoria</label>
+              <p className="font-medium">{riskData.category}</p>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Nível</label>
+              <Badge variant="outline" className="font-medium">
+                {riskData.level}
+              </Badge>
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Descrição</label>
+            <p className="text-sm mt-1">{riskData.description}</p>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium text-muted-foreground">Justificativa para Aceitação</label>
+            <p className="text-sm mt-1">{riskData.justification}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Formulário da Carta */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Detalhes da Carta de Aceitação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Aprovador *</label>
+              <Input
+                value={formData.approver}
+                onChange={(e) => setFormData(prev => ({ ...prev, approver: e.target.value }))}
+                placeholder="Nome do aprovador"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Cargo do Aprovador *</label>
+              <Input
+                value={formData.approverTitle}
+                onChange={(e) => setFormData(prev => ({ ...prev, approverTitle: e.target.value }))}
+                placeholder="Cargo/função do aprovador"
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Data de Revisão</label>
+              <Input
+                type="date"
+                value={formData.reviewDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, reviewDate: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Data de Expiração</label>
+              <Input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, expirationDate: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">Sumário Executivo</label>
+            <Textarea
+              value={formData.executiveSummary}
+              onChange={(e) => setFormData(prev => ({ ...prev, executiveSummary: e.target.value }))}
+              placeholder="Resumo executivo da aceitação do risco..."
+              rows={3}
+              className="mt-1"
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">Rationale de Aceitação</label>
+            <Textarea
+              value={formData.acceptanceRationale}
+              onChange={(e) => setFormData(prev => ({ ...prev, acceptanceRationale: e.target.value }))}
+              placeholder="Explicação detalhada do motivo da aceitação..."
+              rows={3}
+              className="mt-1"
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">Fatores Mitigadores</label>
+            <Textarea
+              value={formData.mitigatingFactors}
+              onChange={(e) => setFormData(prev => ({ ...prev, mitigatingFactors: e.target.value }))}
+              placeholder="Liste os fatores que mitigam o risco (um por linha)..."
+              rows={4}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Digite um fator por linha
+            </p>
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">Risco Residual</label>
+            <Textarea
+              value={formData.residualRisk}
+              onChange={(e) => setFormData(prev => ({ ...prev, residualRisk: e.target.value }))}
+              placeholder="Descrição do risco residual após controles..."
+              rows={2}
+              className="mt-1"
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium">Plano de Monitoramento</label>
+            <Textarea
+              value={formData.monitoringPlan}
+              onChange={(e) => setFormData(prev => ({ ...prev, monitoringPlan: e.target.value }))}
+              placeholder="Como o risco será monitorado..."
+              rows={3}
+              className="mt-1"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Preview da Carta</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-6 rounded-lg border">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold">CARTA DE ACEITAÇÃO DE RISCO</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Documento gerado automaticamente pelo Alex Risk
+              </p>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <div>
+                <strong>Risco:</strong> {riskData.name}
+              </div>
+              <div>
+                <strong>Categoria:</strong> {riskData.category}
+              </div>
+              <div>
+                <strong>Nível:</strong> {riskData.level}
+              </div>
+              <div>
+                <strong>Aprovador:</strong> {formData.approver || '[A ser preenchido]'} - {formData.approverTitle || '[Cargo a ser preenchido]'}
+              </div>
+              {formData.reviewDate && (
+                <div>
+                  <strong>Data de Revisão:</strong> {new Date(formData.reviewDate).toLocaleDateString('pt-BR')}
+                </div>
+              )}
+              {formData.expirationDate && (
+                <div>
+                  <strong>Data de Expiração:</strong> {new Date(formData.expirationDate).toLocaleDateString('pt-BR')}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ações */}
+      <div className="flex space-x-3">
+        <Button 
+          onClick={handleGenerate}
+          className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white"
+          disabled={!formData.approver || !formData.approverTitle}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Gerar Carta de Aceitação
+        </Button>
+        
+        <Button variant="outline" className="flex-1">
+          <Eye className="h-4 w-4 mr-2" />
+          Visualizar Completa
+        </Button>
+      </div>
+    </div>
+  );
+};

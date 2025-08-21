@@ -71,6 +71,12 @@ export const useTenantSettings = () => {
         };
       }
 
+      // Se a configuração existe mas não tem o tipo definido, inferir baseado nas labels
+      if (settings.risk_matrix && !settings.risk_matrix.type) {
+        const labelCount = settings.risk_matrix.impact_labels?.length || 5;
+        settings.risk_matrix.type = labelCount === 4 ? '4x4' : '5x5';
+      }
+      
       return settings;
     },
     enabled: !!user && !!userTenantId,
@@ -79,7 +85,7 @@ export const useTenantSettings = () => {
   });
 
   // Função para calcular o nível de risco baseado na configuração do tenant
-  const calculateRiskLevel = (probability: number, impact: number): 'Muito Baixo' | 'Baixo' | 'Médio' | 'Alto' | 'Muito Alto' => {
+  const calculateRiskLevel = (probability: number, impact: number): 'Muito Baixo' | 'Baixo' | 'Médio' | 'Alto' | 'Muito Alto' | 'Crítico' => {
     if (!tenantSettings?.risk_matrix) {
       // Fallback para 5x5 se não há configuração
       const score = probability * impact;
@@ -93,12 +99,14 @@ export const useTenantSettings = () => {
     const { risk_matrix } = tenantSettings;
     const score = probability * impact;
 
-    if (risk_matrix.risk_levels.critical.includes(score)) return 'Muito Alto';
+    if (risk_matrix.risk_levels.critical.includes(score)) {
+      return risk_matrix.type === '4x4' ? 'Crítico' : 'Muito Alto';
+    }
     if (risk_matrix.risk_levels.high.includes(score)) return 'Alto';
     if (risk_matrix.risk_levels.medium.includes(score)) return 'Médio';
     if (risk_matrix.risk_levels.low.includes(score)) return 'Baixo';
     
-    return 'Muito Baixo';
+    return risk_matrix.type === '4x4' ? 'Baixo' : 'Muito Baixo';
   };
 
   // Função para obter as labels da matriz
@@ -129,6 +137,19 @@ export const useTenantSettings = () => {
     return { rows: 5, cols: 5 };
   };
 
+  // Função para obter os níveis de risco corretos
+  const getRiskLevels = () => {
+    if (!tenantSettings?.risk_matrix) {
+      return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
+    }
+
+    const { type } = tenantSettings.risk_matrix;
+    if (type === '4x4') {
+      return ['Baixo', 'Médio', 'Alto', 'Crítico'];
+    }
+    return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
+  };
+
   return {
     tenantSettings,
     isLoading,
@@ -137,6 +158,7 @@ export const useTenantSettings = () => {
     calculateRiskLevel,
     getMatrixLabels,
     getMatrixDimensions,
+    getRiskLevels,
     isMatrix4x4: tenantSettings?.risk_matrix?.type === '4x4',
     isMatrix5x5: tenantSettings?.risk_matrix?.type === '5x5'
   };
