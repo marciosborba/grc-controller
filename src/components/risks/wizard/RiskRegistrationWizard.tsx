@@ -261,20 +261,22 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         }
         break;
       case 2:
-        if (!registrationData.methodology_id || !registrationData.impact_score || !registrationData.probability_score) {
+        if (!registrationData.analysis_methodology || !registrationData.impact_score || !registrationData.likelihood_score) {
           toast({
             title: '⚠️ Análise Incompleta',
-            description: 'Por favor, complete a análise do risco.',
+            description: 'Por favor, selecione uma metodologia e complete a análise do risco.',
             variant: 'destructive'
           });
           return false;
         }
         break;
       case 3:
-        if (!registrationData.gravity_score || !registrationData.urgency_score || !registrationData.tendency_score) {
+        if (!registrationData.gut_gravity || registrationData.gut_gravity < 1 || 
+            !registrationData.gut_urgency || registrationData.gut_urgency < 1 || 
+            !registrationData.gut_tendency || registrationData.gut_tendency < 1) {
           toast({
             title: '⚠️ Classificação GUT Incompleta',
-            description: 'Por favor, complete a classificação GUT.',
+            description: 'Por favor, complete a classificação GUT (Gravidade, Urgência e Tendência).',
             variant: 'destructive'
           });
           return false;

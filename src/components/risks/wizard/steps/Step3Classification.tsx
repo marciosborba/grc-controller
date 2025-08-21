@@ -153,15 +153,15 @@ export const Step3Classification: React.FC<Step3Props> = ({
   data,
   updateData
 }) => {
-  const [gravity, setGravity] = useState(data.gut_gravity || 0);
-  const [urgency, setUrgency] = useState(data.gut_urgency || 0);
-  const [tendency, setTendency] = useState(data.gut_tendency || 0);
+  const [gravity, setGravity] = useState(data.gut_gravity || 1);
+  const [urgency, setUrgency] = useState(data.gut_urgency || 1);
+  const [tendency, setTendency] = useState(data.gut_tendency || 1);
   const [gutScore, setGutScore] = useState(0);
   const [priority, setPriority] = useState<any>({});
 
   // Calcular score e prioridade GUT
   useEffect(() => {
-    if (gravity && urgency && tendency) {
+    if (gravity >= 1 && urgency >= 1 && tendency >= 1) {
       const score = gravity * urgency * tendency;
       const priorityData = calculateGUTPriority(gravity, urgency, tendency);
       
@@ -175,7 +175,7 @@ export const Step3Classification: React.FC<Step3Props> = ({
         gut_priority: priorityData.level
       });
     }
-  }, [gravity, urgency, tendency]);
+  }, [gravity, urgency, tendency, updateData]);
 
   const renderGUTFactor = (
     factor: 'gravity' | 'urgency' | 'tendency',

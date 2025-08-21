@@ -15,7 +15,11 @@ import {
   Zap, 
   AlertCircle,
   CheckCircle,
-  Target
+  Target,
+  Shield,
+  Globe,
+  Activity,
+  Database
 } from 'lucide-react';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 
@@ -27,6 +31,7 @@ interface Step2Props {
 }
 
 const METHODOLOGIES = [
+  // Metodologias Clássicas
   {
     value: 'qualitative',
     name: 'Análise Qualitativa',
@@ -34,7 +39,8 @@ const METHODOLOGIES = [
     icon: '📊',
     complexity: 'Baixa',
     timeRequired: '15-30 min',
-    bestFor: 'Riscos operacionais, processos gerais'
+    bestFor: 'Riscos operacionais, processos gerais',
+    category: 'traditional'
   },
   {
     value: 'quantitative',
@@ -43,7 +49,8 @@ const METHODOLOGIES = [
     icon: '💰',
     complexity: 'Alta',
     timeRequired: '45-90 min',
-    bestFor: 'Riscos financeiros, investimentos'
+    bestFor: 'Riscos financeiros, investimentos',
+    category: 'traditional'
   },
   {
     value: 'semi_quantitative',
@@ -52,8 +59,55 @@ const METHODOLOGIES = [
     icon: '⚖️',
     complexity: 'Média',
     timeRequired: '30-45 min',
-    bestFor: 'Riscos estratégicos, projetos'
+    bestFor: 'Riscos estratégicos, projetos',
+    category: 'traditional'
   },
+  
+  // Frameworks Internacionais
+  {
+    value: 'nist',
+    name: 'NIST Cybersecurity Framework',
+    description: 'Framework do NIST para gestão de riscos de cibersegurança com 5 funções principais',
+    icon: '🛡️',
+    complexity: 'Alta',
+    timeRequired: '60-120 min',
+    bestFor: 'Riscos de segurança cibernética, tecnologia',
+    category: 'framework'
+  },
+  {
+    value: 'iso31000',
+    name: 'ISO 31000',
+    description: 'Padrão internacional para gestão de riscos com princípios e diretrizes',
+    icon: '🌐',
+    complexity: 'Média',
+    timeRequired: '45-90 min',
+    bestFor: 'Todos os tipos de riscos, governança',
+    category: 'framework'
+  },
+  
+  // Metodologias Avançadas
+  {
+    value: 'monte_carlo',
+    name: 'Simulação Monte Carlo',
+    description: 'Simulação estatística para modelagem de incertezas e cenários probabilísticos',
+    icon: '🎲',
+    complexity: 'Muito Alta',
+    timeRequired: '120-240 min',
+    bestFor: 'Riscos financeiros complexos, projetos de investimento',
+    category: 'advanced'
+  },
+  {
+    value: 'fair',
+    name: 'FAIR (Factor Analysis)',
+    description: 'Framework quantitativo para análise de riscos baseado em frequência e magnitude',
+    icon: '📈',
+    complexity: 'Muito Alta',
+    timeRequired: '90-180 min',
+    bestFor: 'Riscos de segurança da informação, análise econômica',
+    category: 'advanced'
+  },
+  
+  // Metodologias Especializadas
   {
     value: 'bow_tie',
     name: 'Bow-Tie Analysis',
@@ -61,7 +115,8 @@ const METHODOLOGIES = [
     icon: '🎯',
     complexity: 'Alta',
     timeRequired: '60-120 min',
-    bestFor: 'Riscos de segurança, operacionais críticos'
+    bestFor: 'Riscos de segurança, operacionais críticos',
+    category: 'specialized'
   },
   {
     value: 'fmea',
@@ -70,9 +125,17 @@ const METHODOLOGIES = [
     icon: '🔧',
     complexity: 'Alta',
     timeRequired: '90-180 min',
-    bestFor: 'Processos técnicos, manufatura'
+    bestFor: 'Processos técnicos, manufatura',
+    category: 'specialized'
   }
 ];
+
+const METHODOLOGY_CATEGORIES = {
+  traditional: { label: 'Metodologias Tradicionais', color: 'bg-blue-500' },
+  framework: { label: 'Frameworks Internacionais', color: 'bg-green-500' },
+  advanced: { label: 'Metodologias Avançadas', color: 'bg-purple-500' },
+  specialized: { label: 'Metodologias Especializadas', color: 'bg-orange-500' }
+};
 
 const QUALITATIVE_SCALES = {
   impact: [
@@ -169,47 +232,61 @@ export const Step2Analysis: React.FC<Step2Props> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {METHODOLOGIES.map((methodology) => (
-              <Card 
-                key={methodology.value}
-                className={`cursor-pointer transition-all hover:shadow-md ${
-                  selectedMethodology === methodology.value 
-                    ? 'ring-2 ring-primary border-primary' 
-                    : 'hover:border-primary/50'
-                }`}
-                onClick={() => handleMethodologyChange(methodology.value)}
-              >
-                <CardContent className="pt-4">
-                  <div className="flex items-start gap-3">
-                    <div className="text-2xl">{methodology.icon}</div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold">{methodology.name}</h3>
-                        {selectedMethodology === methodology.value && (
-                          <CheckCircle className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">
+          {/* Renderizar por categorias */}
+          {Object.entries(METHODOLOGY_CATEGORIES).map(([categoryKey, category]) => {
+            const methodologiesInCategory = METHODOLOGIES.filter(m => m.category === categoryKey);
+            if (methodologiesInCategory.length === 0) return null;
+            
+            return (
+              <div key={categoryKey} className="mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`w-3 h-3 rounded-full ${category.color}`} />
+                  <h4 className="font-semibold text-sm">{category.label}</h4>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {methodologiesInCategory.map((methodology) => (
+                    <Card 
+                      key={methodology.value}
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        selectedMethodology === methodology.value 
+                          ? 'ring-2 ring-primary border-primary' 
+                          : 'hover:border-primary/50'
+                      }`}
+                      onClick={() => handleMethodologyChange(methodology.value)}
+                    >
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-3">
+                          <div className="text-2xl">{methodology.icon}</div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold">{methodology.name}</h3>
+                              {selectedMethodology === methodology.value && (
+                                <CheckCircle className="h-4 w-4 text-primary" />
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3">
                         {methodology.description}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {methodology.complexity} complexidade
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {methodology.timeRequired}
-                        </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {methodology.complexity} complexidade
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {methodology.timeRequired}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            <strong>Ideal para:</strong> {methodology.bestFor}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        <strong>Ideal para:</strong> {methodology.bestFor}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
 
           {selectedMethodologyDetails && (
             <Alert className="mt-4">
@@ -376,6 +453,451 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                   >
                     Risco {riskLevel}
                   </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* NIST Cybersecurity Framework */}
+      {selectedMethodology === 'nist' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              NIST Cybersecurity Framework
+            </CardTitle>
+            <CardDescription>
+              Avaliação baseada nas 5 funções do NIST: Identify, Protect, Detect, Respond, Recover.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>NIST Framework:</strong> Avalie o risco considerando as capacidades atuais da organização 
+                em cada uma das 5 funções principais do framework.
+              </AlertDescription>
+            </Alert>
+            
+            {/* Avaliação das 5 Funções NIST */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <Label className="flex items-center gap-2 mb-4">
+                  <Shield className="h-4 w-4" />
+                  Impacto Potencial
+                </Label>
+                <Select value={data.impact_score?.toString() || ''} onValueChange={(value) => setImpactScore(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o nível de impacto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - Informativo (Low)</SelectItem>
+                    <SelectItem value="2">2 - Baixo (Low)</SelectItem>
+                    <SelectItem value="3">3 - Moderado (Moderate)</SelectItem>
+                    <SelectItem value="4">4 - Alto (High)</SelectItem>
+                    <SelectItem value="5">5 - Crítico (Critical)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="flex items-center gap-2 mb-4">
+                  <Activity className="h-4 w-4" />
+                  Probabilidade de Ocorrência
+                </Label>
+                <Select value={data.likelihood_score?.toString() || ''} onValueChange={(value) => setLikelihoodScore(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a probabilidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - Muito Baixa (&lt;10%)</SelectItem>
+                    <SelectItem value="2">2 - Baixa (10-30%)</SelectItem>
+                    <SelectItem value="3">3 - Média (30-50%)</SelectItem>
+                    <SelectItem value="4">4 - Alta (50-70%)</SelectItem>
+                    <SelectItem value="5">5 - Muito Alta (&gt;70%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {impactScore && likelihoodScore && (
+              <Card className="bg-slate-50 dark:bg-slate-900">
+                <CardContent className="pt-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold mb-2">Avaliação NIST</div>
+                    <div className="flex justify-center gap-8 mb-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{impactScore}</div>
+                        <div className="text-sm text-muted-foreground">Impacto</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{likelihoodScore}</div>
+                        <div className="text-sm text-muted-foreground">Probabilidade</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{riskScore}</div>
+                        <div className="text-sm text-muted-foreground">Score</div>
+                      </div>
+                    </div>
+                    <Badge className={`${getRiskLevelColor(riskLevel)} text-white text-lg px-4 py-2`}>
+                      {riskLevel}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ISO 31000 */}
+      {selectedMethodology === 'iso31000' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              ISO 31000 - Gestão de Riscos
+            </CardTitle>
+            <CardDescription>
+              Avaliação estruturada baseada nos princípios e diretrizes da ISO 31000.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>ISO 31000:</strong> Framework internacional para gestão de riscos focado em 
+                integração, estrutura, processo e melhoria contínua.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <Label className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="h-4 w-4" />
+                  Consequência/Impacto
+                </Label>
+                <Select value={data.impact_score?.toString() || ''} onValueChange={(value) => setImpactScore(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Avalie as consequências" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - Insignificante</SelectItem>
+                    <SelectItem value="2">2 - Pequena</SelectItem>
+                    <SelectItem value="3">3 - Moderada</SelectItem>
+                    <SelectItem value="4">4 - Grande</SelectItem>
+                    <SelectItem value="5">5 - Severa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="h-4 w-4" />
+                  Verossimilhança
+                </Label>
+                <Select value={data.likelihood_score?.toString() || ''} onValueChange={(value) => setLikelihoodScore(parseInt(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Avalie a verossimilhança" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 - Raro</SelectItem>
+                    <SelectItem value="2">2 - Improvável</SelectItem>
+                    <SelectItem value="3">3 - Possível</SelectItem>
+                    <SelectItem value="4">4 - Provável</SelectItem>
+                    <SelectItem value="5">5 - Quase Certo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {impactScore && likelihoodScore && (
+              <Card className="bg-slate-50 dark:bg-slate-900">
+                <CardContent className="pt-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold mb-2">Matriz de Risco ISO 31000</div>
+                    <Badge className={`${getRiskLevelColor(riskLevel)} text-white text-lg px-4 py-2`}>
+                      Nível: {riskLevel} (Score: {riskScore})
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Monte Carlo Simulation */}
+      {selectedMethodology === 'monte_carlo' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Simulação Monte Carlo
+            </CardTitle>
+            <CardDescription>
+              Análise quantitativa avançada com modelagem estatística de cenários.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Monte Carlo:</strong> Simulação estatística para modelar incertezas e 
+                gerar distribuições probabilísticas de resultados.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <Label className="text-sm font-semibold mb-2">Parâmetros de Impacto Financeiro</Label>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Valor Mínimo (R$)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 10000"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          min_impact: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Valor Máximo (R$)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 500000"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          max_impact: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Valor Mais Provável (R$)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Ex: 150000"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          most_likely_impact: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-semibold mb-2">Parâmetros de Frequência</Label>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Frequência Mínima (por ano)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1"
+                      placeholder="Ex: 0.1"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          min_frequency: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Frequência Máxima (por ano)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1"
+                      placeholder="Ex: 5.0"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          max_frequency: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Frequência Mais Provável (por ano)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1"
+                      placeholder="Ex: 1.5"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          most_likely_frequency: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Card className="bg-slate-50 dark:bg-slate-900">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-lg font-semibold mb-2">Simulação Configurada</div>
+                  <p className="text-sm text-muted-foreground">
+                    Os parâmetros definidos serão utilizados para gerar distribuições probabilísticas 
+                    e calcular métricas como VaR (Value at Risk) e Expected Loss.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* FAIR Analysis */}
+      {selectedMethodology === 'fair' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-primary" />
+              FAIR - Factor Analysis of Information Risk
+            </CardTitle>
+            <CardDescription>
+              Framework quantitativo focado em frequência e magnitude de perdas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>FAIR:</strong> Metodologia que decompõe o risco em fatores de 
+                frequência (LEF) e magnitude de impacto (LM) para análise quantitativa precisa.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <Label className="text-sm font-semibold mb-4">Frequência de Eventos de Perda (LEF)</Label>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Threat Event Frequency (TEF)</Label>
+                    <Input 
+                      type="number" 
+                      step="0.1"
+                      placeholder="Eventos por ano"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          tef: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Vulnerability (V) %</Label>
+                    <Input 
+                      type="number" 
+                      min="0" 
+                      max="100"
+                      placeholder="0-100%"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          vulnerability: parseFloat(e.target.value) / 100 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Threat Capability (TC)</Label>
+                    <Select onValueChange={(value) => updateData({ 
+                      methodology_config: { 
+                        ...data.methodology_config, 
+                        threat_capability: value 
+                      }
+                    })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Capacidade da ameaça" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="very_high">Muito Alta</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="very_low">Muito Baixa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-semibold mb-4">Magnitude de Perda (LM)</Label>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Primary Loss (R$)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Perda primária"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          primary_loss: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Secondary Loss (R$)</Label>
+                    <Input 
+                      type="number" 
+                      placeholder="Perda secundária"
+                      onChange={(e) => updateData({ 
+                        methodology_config: { 
+                          ...data.methodology_config, 
+                          secondary_loss: parseFloat(e.target.value) 
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Control Strength</Label>
+                    <Select onValueChange={(value) => updateData({ 
+                      methodology_config: { 
+                        ...data.methodology_config, 
+                        control_strength: value 
+                      }
+                    })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Força dos controles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="very_high">Muito Alta</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="very_low">Muito Baixa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Card className="bg-slate-50 dark:bg-slate-900">
+              <CardContent className="pt-4">
+                <div className="text-center">
+                  <div className="text-lg font-semibold mb-2">Análise FAIR Configurada</div>
+                  <p className="text-sm text-muted-foreground">
+                    Os fatores FAIR permitirão calcular distribuições de risco quantitativas 
+                    baseadas em frequência e magnitude de eventos de perda.
+                  </p>
                 </div>
               </CardContent>
             </Card>
