@@ -95,8 +95,103 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   const [registrationId, setRegistrationId] = useState<string | null>(existingRiskId || null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Função para rolar para o topo da página
+  const scrollToTop = () => {
+    console.log('🔝 Executando scroll para o topo...');
+    console.log('Posição atual do scroll:', window.pageYOffset || document.documentElement.scrollTop);
+    
+    // Método 1: Scroll instantâneo primeiro
+    try {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+      console.log('✅ Scroll instantâneo executado');
+    } catch (error) {
+      console.warn('❌ Erro com scroll instantâneo:', error);
+    }
+    
+    // Método 2: Scroll suave após um pequeno delay
+    setTimeout(() => {
+      try {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'smooth'
+        });
+        console.log('✅ Scroll suave executado');
+      } catch (error) {
+        console.warn('❌ Erro com scroll suave:', error);
+      }
+    }, 50);
+    
+    // Método 3: Forçar scroll em elementos específicos
+    setTimeout(() => {
+      try {
+        // Tentar rolar elementos específicos que podem estar capturando o scroll
+        const scrollableElements = [
+          document.documentElement,
+          document.body,
+          document.querySelector('main'),
+          document.querySelector('.scroll-container'),
+          document.querySelector('[data-scroll-container]')
+        ].filter(Boolean);
+        
+        scrollableElements.forEach((element, index) => {
+          if (element) {
+            element.scrollTop = 0;
+            console.log(`✅ Scroll aplicado ao elemento ${index + 1}:`, element.tagName || element.className);
+          }
+        });
+        
+        // Tentar scrollIntoView no header do wizard
+        const wizardHeader = document.querySelector('h2');
+        if (wizardHeader) {
+          wizardHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          console.log('✅ ScrollIntoView executado no header do wizard');
+        }
+        
+      } catch (error) {
+        console.warn('❌ Erro com scroll forçado:', error);
+      }
+    }, 100);
+    
+    // Verificar se o scroll funcionou
+    setTimeout(() => {
+      const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+      console.log('Posição final do scroll:', currentScroll);
+      if (currentScroll > 100) {
+        console.warn('⚠️ Scroll pode não ter funcionado completamente');
+      }
+    }, 1000);
+  };
+  
+  // Estados específicos para Step 5 (Action Plan)
+  const [actionPlanItems, setActionPlanItems] = useState<any[]>([]);
+  
+  // Estados específicos para Step 6 (Communication)
+  const [stakeholders, setStakeholders] = useState<any[]>([]);
+  
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Funções wrapper para sincronizar estados
+  const updateStakeholders = (newStakeholders: any[]) => {
+    console.log('Atualizando stakeholders:', newStakeholders);
+    setStakeholders(newStakeholders);
+    setRegistrationData(prev => ({
+      ...prev,
+      stakeholders: newStakeholders
+    }));
+  };
+  
+  const updateActionPlanItems = (newItems: any[]) => {
+    console.log('Atualizando action plan items:', newItems);
+    setActionPlanItems(newItems);
+    setRegistrationData(prev => ({
+      ...prev,
+      action_plans: newItems
+    }));
+  };
 
   const steps = [
     {
@@ -155,12 +250,28 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       createNewRiskRegistration();
     }
   }, [editMode, existingRiskId]);
+  
+  // useEffect adicional para garantir scroll quando a etapa muda
+  useEffect(() => {
+    console.log('🔄 useEffect: Etapa mudou para', currentStep, '- executando scroll...');
+    
+    // Delay maior para garantir que o DOM seja atualizado
+    const timeoutId = setTimeout(() => {
+      console.log('🔄 useEffect: Executando scroll para etapa', currentStep);
+      scrollToTop();
+    }, 500);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [currentStep]);
 
   const loadExistingRiskData = async () => {
     if (!existingRiskId) return;
     
     setIsLoading(true);
     try {
+      // Carregar dados principais do risco
       const { data, error } = await supabase
         .from('risk_registrations')
         .select('*')
@@ -171,6 +282,13 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       
       setRegistrationData(data);
       setRegistrationId(data.id);
+      
+      // Carregar action plan items
+      await loadActionPlanItems(data.id);
+      
+      // Carregar stakeholders
+      await loadStakeholders(data.id);
+      
     } catch (error) {
       console.error('Erro ao carregar dados do risco:', error);
       toast({
@@ -180,6 +298,38 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const loadActionPlanItems = async (riskId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('risk_action_plans')
+        .select('*')
+        .eq('risk_registration_id', riskId)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      
+      updateActionPlanItems(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar action plan items:', error);
+    }
+  };
+  
+  const loadStakeholders = async (riskId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('risk_stakeholders')
+        .select('*')
+        .eq('risk_registration_id', riskId)
+        .order('created_at', { ascending: true });
+        
+      if (error) throw error;
+      
+      updateStakeholders(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar stakeholders:', error);
     }
   };
 
@@ -200,6 +350,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       if (error) throw error;
       
       setRegistrationId(data.id);
+      console.log('Novo registro de risco criado:', data.id);
     } catch (error) {
       console.error('Erro ao criar registro de risco:', error);
     }
@@ -246,6 +397,14 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       title: '✅ Etapa Concluída',
       description: `Avançando para: ${steps[currentStep]?.title}`,
     });
+    
+    console.log('🚀 handleNext: Agendando scroll para o topo...');
+    
+    // Rolar para o topo após um delay maior para garantir que o conteúdo seja renderizado
+    setTimeout(() => {
+      console.log('🚀 handleNext: Executando scroll agendado...');
+      scrollToTop();
+    }, 300);
   };
 
   const validateCurrentStep = (): boolean => {
@@ -296,7 +455,13 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         // Action Plan é opcional se estratégia for 'accept'
         break;
       case 6:
-        if (!registrationData.stakeholders || registrationData.stakeholders.length === 0) {
+        console.log('Validando etapa 6 - stakeholders:', {
+          stakeholdersState: stakeholders,
+          stakeholdersLength: stakeholders?.length,
+          registrationDataStakeholders: registrationData.stakeholders
+        });
+        
+        if (!stakeholders || stakeholders.length === 0) {
           toast({
             title: '⚠️ Stakeholders Necessários',
             description: 'Por favor, adicione pelo menos um stakeholder.',
@@ -327,41 +492,167 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       } else {
         setCurrentStep(currentStep - 1);
       }
+      
+      console.log('⬅️ handlePrevious: Agendando scroll para o topo...');
+      
+      // Rolar para o topo após um delay maior
+      setTimeout(() => {
+        console.log('⬅️ handlePrevious: Executando scroll agendado...');
+        scrollToTop();
+      }, 300);
     }
   };
 
   const handleComplete = async () => {
+    console.log('🏁 Iniciando finalização do registro...');
+    console.log('Dados atuais do registro:', {
+      registrationId,
+      registrationData,
+      actionPlanItems,
+      stakeholders,
+      user: user?.id
+    });
+    
+    // Verificar se registrationId existe
+    if (!registrationId) {
+      console.error('❌ registrationId não encontrado!');
+      toast({
+        title: 'Erro de Registro',
+        description: 'ID do registro não encontrado. Tente recarregar a página.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     if (!validateCurrentStep()) {
+      console.log('❌ Validação da etapa final falhou');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Atualizar status para 'completed'
+      console.log('💾 Preparando dados finais para salvar...');
+      
+      // Preparar dados finais com validação de constraints
       const finalData = {
-        ...registrationData,
+        // Campos básicos
         status: 'completed',
-        completed_at: new Date().toISOString()
+        completion_percentage: 100,
+        current_step: 7,
+        completed_at: new Date().toISOString(),
+        
+        // Etapa 1: Identificação
+        risk_title: registrationData.risk_title || null,
+        risk_description: registrationData.risk_description || null,
+        risk_category: registrationData.risk_category || null,
+        risk_source: registrationData.risk_source || null,
+        identified_date: registrationData.identification_date || null,
+        business_area: registrationData.responsible_area || null,
+        
+        // Etapa 2: Análise
+        analysis_methodology: registrationData.analysis_methodology || null,
+        impact_score: registrationData.impact_score || null,
+        likelihood_score: registrationData.likelihood_score || registrationData.probability_score || null,
+        risk_score: registrationData.risk_score || null,
+        risk_level: registrationData.risk_level || null,
+        analysis_notes: registrationData.analysis_notes || null,
+        
+        // Etapa 3: Classificação GUT
+        gut_gravity: registrationData.gut_gravity || registrationData.gravity_score || null,
+        gut_urgency: registrationData.gut_urgency || registrationData.urgency_score || null,
+        gut_tendency: registrationData.gut_tendency || registrationData.tendency_score || null,
+        gut_priority: registrationData.gut_priority || null,
+        
+        // Etapa 4: Tratamento
+        treatment_strategy: registrationData.treatment_strategy || null,
+        treatment_rationale: registrationData.treatment_rationale || null,
+        treatment_cost: registrationData.treatment_cost || null,
+        treatment_timeline: registrationData.treatment_timeline || null,
+        
+        // Etapa 6: Comunicação
+        requires_approval: registrationData.requires_approval || false,
+        
+        // Etapa 7: Monitoramento
+        monitoring_frequency: registrationData.monitoring_frequency || null,
+        residual_impact: registrationData.residual_impact || null,
+        residual_likelihood: registrationData.residual_probability || null,
+        residual_score: registrationData.residual_risk_score || null,
+        closure_date: registrationData.review_date || null,
+        closure_notes: registrationData.monitoring_notes || null
       };
-
-      const { error } = await supabase
+      
+      // Remover campos undefined ou que não existem na tabela
+      Object.keys(finalData).forEach(key => {
+        if (finalData[key] === undefined) {
+          delete finalData[key];
+        }
+      });
+      
+      console.log('Dados finais a serem salvos:', finalData);
+      
+      console.log('💾 Atualizando registro principal...');
+      const { data: updatedData, error } = await supabase
         .from('risk_registrations')
         .update(finalData)
-        .eq('id', registrationId);
+        .eq('id', registrationId)
+        .select()
+        .single();
 
-      if (error) throw error;
-
-      onComplete(finalData);
+      if (error) {
+        console.error('❌ Erro ao atualizar registro principal:', error);
+        throw error;
+      }
+      
+      console.log('✅ Registro principal atualizado com sucesso:', updatedData);
+      
+      // Verificar se há action plan items para salvar
+      if (actionPlanItems && actionPlanItems.length > 0) {
+        console.log('💾 Verificando action plan items...');
+        const itemsToSave = actionPlanItems.filter(item => 
+          item.id && !item.id.toString().startsWith('temp-')
+        );
+        console.log(`${itemsToSave.length} action plan items já salvos no banco`);
+      }
+      
+      // Verificar se há stakeholders para salvar
+      if (stakeholders && stakeholders.length > 0) {
+        console.log('💾 Verificando stakeholders...');
+        const stakeholdersToSave = stakeholders.filter(stakeholder => 
+          stakeholder.id && !stakeholder.id.toString().startsWith('temp-')
+        );
+        console.log(`${stakeholdersToSave.length} stakeholders já salvos no banco`);
+      }
+      
+      console.log('🎉 Finalizando processo...');
+      
+      // Chamar callback de conclusão
+      onComplete({
+        ...finalData,
+        action_plans: actionPlanItems,
+        stakeholders: stakeholders
+      });
 
       toast({
         title: '🎉 Registro de Risco Concluído',
         description: `Risco "${registrationData.risk_title}" foi registrado com sucesso.`,
       });
+      
+      console.log('✅ Processo de finalização concluído com sucesso!');
+      
     } catch (error) {
-      console.error('Erro ao finalizar registro:', error);
+      console.error('❌ Erro ao finalizar registro:', error);
+      
+      let errorMessage = 'Não foi possível finalizar o registro do risco.';
+      if (error?.message) {
+        errorMessage += ` Erro: ${error.message}`;
+      }
+      if (error?.details) {
+        errorMessage += ` Detalhes: ${error.details}`;
+      }
+      
       toast({
         title: 'Erro ao finalizar',
-        description: 'Não foi possível finalizar o registro do risco.',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -420,6 +711,8 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
             data={registrationData}
             updateData={updateRegistrationData}
             registrationId={registrationId}
+            actionPlanItems={actionPlanItems}
+            setActionPlanItems={updateActionPlanItems}
           />
         );
       case 6:
@@ -428,6 +721,8 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
             data={registrationData}
             updateData={updateRegistrationData}
             registrationId={registrationId}
+            stakeholders={stakeholders}
+            setStakeholders={updateStakeholders}
           />
         );
       case 7:

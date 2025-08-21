@@ -65,6 +65,14 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
   actionPlanItems,
   setActionPlanItems
 }) => {
+  
+  // Debug logs
+  console.log('Step5ActionPlan props:', {
+    registrationId,
+    actionPlanItems,
+    hasSetActionPlanItems: typeof setActionPlanItems === 'function',
+    data
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newItem, setNewItem] = useState<ActionPlanItem>({
@@ -95,20 +103,57 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
   };
 
   const validateItem = (item: ActionPlanItem) => {
-    return item.activity_name && 
-           item.responsible_name && 
-           item.responsible_email && 
-           item.due_date;
+    const errors = [];
+    
+    if (!item.activity_name?.trim()) {
+      errors.push('Nome da atividade é obrigatório');
+    }
+    
+    if (!item.responsible_name?.trim()) {
+      errors.push('Nome do responsável é obrigatório');
+    }
+    
+    if (!item.responsible_email?.trim()) {
+      errors.push('Email do responsável é obrigatório');
+    } else {
+      // Validação básica de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(item.responsible_email)) {
+        errors.push('Email do responsável deve ter um formato válido');
+      }
+    }
+    
+    if (!item.due_date) {
+      errors.push('Data de vencimento é obrigatória');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   };
 
   const addOrUpdateItem = async () => {
-    if (!validateItem(newItem)) {
-      toast.error('Preencha todos os campos obrigatórios');
+    const validation = validateItem(newItem);
+    if (!validation.isValid) {
+      toast.error(`Erro de validação:\n${validation.errors.join('\n')}`);
       return;
+    }
+    
+    console.log('Iniciando salvamento da atividade:', {
+      newItem,
+      registrationId,
+      editingIndex,
+      hasRegistrationId: !!registrationId
+    });
+    
+    // Verificar se registrationId existe
+    if (!registrationId) {
+      console.warn('registrationId não encontrado, salvando apenas na memória');
     }
 
     try {
-      let updatedItems = [...actionPlanItems];
+      let updatedItems = [...(actionPlanItems || [])];
 
       if (editingIndex !== null) {
         // Atualizar item existente
@@ -116,51 +161,97 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
         
         if (registrationId && newItem.id) {
           // Atualizar no banco
+          console.log('Atualizando item existente no banco:', newItem.id);
           const { error } = await supabase
             .from('risk_action_plans')
-            .update(newItem)
+            .update({
+              activity_name: newItem.activity_name,
+              activity_description: newItem.activity_description,
+              responsible_name: newItem.responsible_name,
+              responsible_email: newItem.responsible_email,
+              due_date: newItem.due_date,
+              priority: newItem.priority,
+              status: newItem.status
+            })
             .eq('id', newItem.id);
           
-          if (error) throw error;
+          if (error) {
+            console.error('Erro ao atualizar no banco:', error);
+            throw error;
+          }
+          console.log('Item atualizado com sucesso no banco');
         }
       } else {
         // Adicionar novo item
         if (registrationId) {
           // Salvar no banco
+          console.log('Salvando novo item no banco para registrationId:', registrationId);
+          const itemToInsert = {
+            activity_name: newItem.activity_name,
+            activity_description: newItem.activity_description,
+            responsible_name: newItem.responsible_name,
+            responsible_email: newItem.responsible_email,
+            due_date: newItem.due_date,
+            priority: newItem.priority,
+            status: newItem.status,
+            risk_registration_id: registrationId
+          };
+          
+          console.log('Dados a serem inseridos:', itemToInsert);
+          
           const { data: savedItem, error } = await supabase
             .from('risk_action_plans')
-            .insert([{
-              ...newItem,
-              risk_registration_id: registrationId
-            }])
+            .insert([itemToInsert])
             .select()
             .single();
           
-          if (error) throw error;
+          if (error) {
+            console.error('Erro ao salvar no banco:', error);
+            throw error;
+          }
+          
+          console.log('Item salvo com sucesso:', savedItem);
           updatedItems.push(savedItem);
         } else {
           // Apenas na memória (ainda não foi salvo o registro principal)
+          console.log('Salvando item apenas na memória (sem registrationId)');
           updatedItems.push({ ...newItem, id: `temp-${Date.now()}` });
         }
       }
 
       setActionPlanItems(updatedItems);
       resetForm();
-      toast.success(editingIndex !== null ? 'Atividade atualizada!' : 'Atividade adicionada!');
+      
+      const successMessage = editingIndex !== null ? 'Atividade atualizada!' : 'Atividade adicionada!';
+      console.log(successMessage);
+      toast.success(successMessage);
     } catch (error) {
       console.error('Erro ao salvar atividade:', error);
-      toast.error('Erro ao salvar atividade');
+      
+      let errorMessage = 'Erro ao salvar atividade';
+      if (error?.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      if (error?.details) {
+        errorMessage += ` (${error.details})`;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
   const editItem = (index: number) => {
-    setNewItem({ ...actionPlanItems[index] });
-    setEditingIndex(index);
-    setIsEditing(true);
+    if (actionPlanItems && actionPlanItems[index]) {
+      setNewItem({ ...actionPlanItems[index] });
+      setEditingIndex(index);
+      setIsEditing(true);
+    }
   };
 
   const deleteItem = async (index: number) => {
     try {
+      if (!actionPlanItems || !actionPlanItems[index]) return;
+      
       const item = actionPlanItems[index];
       
       if (registrationId && item.id && !item.id.toString().startsWith('temp-')) {
@@ -366,17 +457,17 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
       </Card>
 
       {/* Lista de Atividades */}
-      {actionPlanItems.length > 0 && (
+      {actionPlanItems && actionPlanItems.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Atividades do Plano de Ação ({actionPlanItems.length})
+              Atividades do Plano de Ação ({actionPlanItems?.length || 0})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {actionPlanItems.map((item, index) => {
+              {actionPlanItems?.map((item, index) => {
                 const priorityInfo = getPriorityInfo(item.priority);
                 const statusInfo = getStatusInfo(item.status);
                 
@@ -522,7 +613,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${
-                actionPlanItems.length > 0 ? 'bg-green-500' : 'bg-yellow-500'
+(actionPlanItems?.length || 0) > 0 ? 'bg-green-500' : 'bg-yellow-500'
               }`} />
               <span className="text-sm font-medium">
                 Status da Etapa 5: Plano de Ação
@@ -530,9 +621,9 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold">
-                {actionPlanItems.length} atividade{actionPlanItems.length !== 1 ? 's' : ''}
+                {actionPlanItems?.length || 0} atividade{(actionPlanItems?.length || 0) !== 1 ? 's' : ''}
               </div>
-              {actionPlanItems.length === 0 && (
+              {(actionPlanItems?.length || 0) === 0 && (
                 <div className="text-xs text-amber-600">
                   Adicione pelo menos uma atividade
                 </div>

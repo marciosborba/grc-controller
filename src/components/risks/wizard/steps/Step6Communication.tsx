@@ -84,6 +84,14 @@ export const Step6Communication: React.FC<Step6Props> = ({
   stakeholders,
   setStakeholders
 }) => {
+  
+  // Debug logs
+  console.log('Step6Communication props:', {
+    registrationId,
+    stakeholders,
+    hasSetStakeholders: typeof setStakeholders === 'function',
+    data
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [newStakeholder, setNewStakeholder] = useState<Stakeholder>({
@@ -100,9 +108,11 @@ export const Step6Communication: React.FC<Step6Props> = ({
 
   useEffect(() => {
     // Atualizar se requer aprovação baseado nos stakeholders
-    const hasApprovalStakeholders = stakeholders.some(s => s.notification_type === 'approval');
-    setRequiresApproval(hasApprovalStakeholders);
-    updateData({ requires_approval: hasApprovalStakeholders || isRiskLetter });
+    if (stakeholders && Array.isArray(stakeholders)) {
+      const hasApprovalStakeholders = stakeholders.some(s => s.notification_type === 'approval');
+      setRequiresApproval(hasApprovalStakeholders);
+      updateData({ requires_approval: hasApprovalStakeholders || isRiskLetter });
+    }
   }, [stakeholders, isRiskLetter]);
 
   const resetForm = () => {
@@ -130,7 +140,7 @@ export const Step6Communication: React.FC<Step6Props> = ({
     }
 
     try {
-      let updatedStakeholders = [...stakeholders];
+      let updatedStakeholders = [...(stakeholders || [])];
 
       if (editingIndex !== null) {
         // Atualizar stakeholder existente
@@ -176,13 +186,17 @@ export const Step6Communication: React.FC<Step6Props> = ({
   };
 
   const editStakeholder = (index: number) => {
-    setNewStakeholder({ ...stakeholders[index] });
-    setEditingIndex(index);
-    setIsEditing(true);
+    if (stakeholders && stakeholders[index]) {
+      setNewStakeholder({ ...stakeholders[index] });
+      setEditingIndex(index);
+      setIsEditing(true);
+    }
   };
 
   const deleteStakeholder = async (index: number) => {
     try {
+      if (!stakeholders || !stakeholders[index]) return;
+      
       const stakeholder = stakeholders[index];
       
       if (registrationId && stakeholder.id && !stakeholder.id.toString().startsWith('temp-')) {
@@ -221,6 +235,11 @@ export const Step6Communication: React.FC<Step6Props> = ({
     try {
       // Aqui implementaríamos o envio de emails/notificações
       // Por ora, apenas atualizar o status
+      if (!stakeholders || stakeholders.length === 0) {
+        toast.error('Nenhum stakeholder cadastrado');
+        return;
+      }
+      
       const updates = stakeholders.map(stakeholder => ({
         ...stakeholder,
         notified_at: new Date().toISOString()
@@ -427,14 +446,14 @@ export const Step6Communication: React.FC<Step6Props> = ({
       </Card>
 
       {/* Lista de Stakeholders */}
-      {stakeholders.length > 0 && (
+      {stakeholders && stakeholders.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Stakeholders Cadastrados ({stakeholders.length})
+                  Stakeholders Cadastrados ({stakeholders?.length || 0})
                 </CardTitle>
                 <CardDescription>
                   Lista de pessoas que serão comunicadas sobre este risco
@@ -450,7 +469,7 @@ export const Step6Communication: React.FC<Step6Props> = ({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stakeholders.map((stakeholder, index) => {
+              {stakeholders?.map((stakeholder, index) => {
                 const typeInfo = getNotificationTypeInfo(stakeholder.notification_type);
                 
                 return (
@@ -522,7 +541,7 @@ export const Step6Communication: React.FC<Step6Props> = ({
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
                   <strong>Aprovação Necessária:</strong> Este risco requer aprovação formal de{' '}
-                  {stakeholders.filter(s => s.notification_type === 'approval').length} stakeholder(s) 
+                  {stakeholders?.filter(s => s.notification_type === 'approval').length || 0} stakeholder(s) 
                   antes da finalização.
                 </AlertDescription>
               </Alert>
@@ -537,7 +556,7 @@ export const Step6Communication: React.FC<Step6Props> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${
-                stakeholders.length > 0 ? 'bg-green-500' : 'bg-yellow-500'
+                (stakeholders?.length || 0) > 0 ? 'bg-green-500' : 'bg-yellow-500'
               }`} />
               <span className="text-sm font-medium">
                 Status da Etapa 6: Comunicação
@@ -545,10 +564,10 @@ export const Step6Communication: React.FC<Step6Props> = ({
             </div>
             <div className="text-right">
               <div className="text-sm font-semibold">
-                {stakeholders.length} stakeholder{stakeholders.length !== 1 ? 's' : ''}
+                {stakeholders?.length || 0} stakeholder{(stakeholders?.length || 0) !== 1 ? 's' : ''}
               </div>
               <div className="text-xs text-muted-foreground">
-                {stakeholders.filter(s => s.notification_type === 'approval').length} aprovação(ões) necessária(s)
+                {stakeholders?.filter(s => s.notification_type === 'approval').length || 0} aprovação(ões) necessária(s)
               </div>
             </div>
           </div>
