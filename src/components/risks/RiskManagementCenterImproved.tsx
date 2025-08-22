@@ -866,3 +866,5 @@ export const RiskManagementCenterImproved: React.FC = () => {
     </div>
   );
 };
+
+export default RiskManagementCenterImproved;

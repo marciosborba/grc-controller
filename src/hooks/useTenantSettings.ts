@@ -15,10 +15,21 @@ export interface RiskMatrixConfig {
   likelihood_labels: string[];
 }
 
+export interface SIQuestion {
+  question: string;
+  answer_options: string[];
+}
+
+export interface SIQuestionnaireConfig {
+  probability_questions: SIQuestion[];
+  impact_questions: SIQuestion[];
+}
+
 export interface TenantSettings {
   risk_matrix: RiskMatrixConfig;
   company_data?: any;
   theme_config?: any;
+  si_questionnaire?: SIQuestionnaireConfig;
 }
 
 export const useTenantSettings = () => {
@@ -150,6 +161,114 @@ export const useTenantSettings = () => {
     return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
   };
 
+  // Função para obter configuração do questionário SI
+  const getSIQuestionnaireConfig = (): SIQuestionnaireConfig => {
+    if (tenantSettings?.si_questionnaire) {
+      return tenantSettings.si_questionnaire;
+    }
+    
+    // Configuração padrão se não existir
+    const defaultAnswers = ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
+    
+    return {
+      probability_questions: [
+        {
+          question: 'Com que frequência eventos similares já ocorreram na organização?',
+          answer_options: ['Nunca', 'Raramente', 'Ocasionalmente', 'Frequentemente', 'Constantemente', 'Não se aplica']
+        },
+        {
+          question: 'Qual é a qualidade dos controles preventivos existentes?',
+          answer_options: ['Excelente', 'Boa', 'Regular', 'Ruim', 'Inexistente', 'Não se aplica']
+        },
+        {
+          question: 'Quão complexo é o processo ou sistema envolvido?',
+          answer_options: ['Muito Simples', 'Simples', 'Moderado', 'Complexo', 'Muito Complexo', 'Não se aplica']
+        },
+        {
+          question: 'Qual é o nível de dependência de fatores externos?',
+          answer_options: ['Nenhuma', 'Baixa', 'Média', 'Alta', 'Total', 'Não se aplica']
+        },
+        {
+          question: 'Como é a capacitação da equipe responsável?',
+          answer_options: ['Excelente', 'Boa', 'Regular', 'Insuficiente', 'Inadequada', 'Não se aplica']
+        },
+        {
+          question: 'Qual é a estabilidade do ambiente tecnológico?',
+          answer_options: ['Muito Estável', 'Estável', 'Moderado', 'Instável', 'Muito Instável', 'Não se aplica']
+        },
+        {
+          question: 'Existem mudanças frequentes nos processos?',
+          answer_options: ['Nunca', 'Raramente', 'Ocasionalmente', 'Frequentemente', 'Constantemente', 'Não se aplica']
+        },
+        {
+          question: 'Qual é o nível de monitoramento e detecção?',
+          answer_options: ['Excelente', 'Bom', 'Regular', 'Ruim', 'Inexistente', 'Não se aplica']
+        }
+      ],
+      impact_questions: [
+        {
+          question: 'Qual seria o impacto financeiro direto?',
+          answer_options: ['< R$ 1.000', 'R$ 1.000 - R$ 10.000', 'R$ 10.000 - R$ 100.000', 'R$ 100.000 - R$ 1.000.000', '> R$ 1.000.000', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria a reputação da organização?',
+          answer_options: ['Nenhum impacto', 'Impacto local', 'Impacto regional', 'Impacto nacional', 'Impacto internacional', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o impacto nas operações diárias?',
+          answer_options: ['Nenhuma interrupção', '< 1 hora', '1-4 horas', '4-24 horas', '> 24 horas', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria o atendimento aos clientes?',
+          answer_options: ['Nenhum impacto', 'Poucos clientes', 'Alguns clientes', 'Muitos clientes', 'Todos os clientes', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o impacto regulatório/legal?',
+          answer_options: ['Nenhum', 'Advertência', 'Multa leve', 'Multa pesada', 'Processo judicial', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria a segurança da informação?',
+          answer_options: ['Nenhum vazamento', 'Dados internos', 'Dados de clientes', 'Dados sensíveis', 'Dados críticos', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o impacto nos colaboradores?',
+          answer_options: ['Nenhum', 'Desconforto', 'Estresse', 'Demissões', 'Acidentes', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria os objetivos estratégicos?',
+          answer_options: ['Nenhum impacto', 'Atraso mínimo', 'Atraso moderado', 'Atraso significativo', 'Inviabilização', 'Não se aplica']
+        }
+      ]
+    };
+  };
+
+  // Função para salvar configuração do questionário SI
+  const saveSIQuestionnaireConfig = async (config: SIQuestionnaireConfig) => {
+    if (!userTenantId) {
+      throw new Error('Tenant ID não encontrado');
+    }
+
+    const updatedSettings = {
+      ...tenantSettings,
+      si_questionnaire: config
+    };
+
+    const { error } = await supabase
+      .from('tenants')
+      .update({ 
+        settings: updatedSettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userTenantId);
+
+    if (error) {
+      throw error;
+    }
+
+    // Recarregar configurações
+    await refetch();
+  };
+
   return {
     tenantSettings,
     isLoading,
@@ -159,6 +278,8 @@ export const useTenantSettings = () => {
     getMatrixLabels,
     getMatrixDimensions,
     getRiskLevels,
+    getSIQuestionnaireConfig,
+    saveSIQuestionnaireConfig,
     isMatrix4x4: tenantSettings?.risk_matrix?.type === '4x4',
     isMatrix5x5: tenantSettings?.risk_matrix?.type === '5x5'
   };

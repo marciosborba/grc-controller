@@ -195,13 +195,23 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
 
   const calculateRiskLevel = () => {
     const score = (formData.probability * formData.impact * formData.vulnerability) / 5;
+    const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
     let level = '';
     
-    if (score >= 20) level = 'Muito Alto';
-    else if (score >= 15) level = 'Alto';
-    else if (score >= 8) level = 'Médio';
-    else if (score >= 4) level = 'Baixo';
-    else level = 'Muito Baixo';
+    if (isMatrix4x4) {
+      // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-12), Crítico (13-16)
+      if (score >= 13) level = 'Crítico';
+      else if (score >= 7) level = 'Alto';
+      else if (score >= 3) level = 'Médio';
+      else level = 'Baixo';
+    } else {
+      // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Muito Alto (20-25)
+      if (score >= 20) level = 'Muito Alto';
+      else if (score >= 9) level = 'Alto';
+      else if (score >= 5) level = 'Médio';
+      else if (score >= 3) level = 'Baixo';
+      else level = 'Muito Baixo';
+    }
     
     setFormData(prev => ({ ...prev, risk_level: level }));
   };
@@ -669,11 +679,19 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1 - Insignificante</SelectItem>
-                      <SelectItem value="2">2 - Menor</SelectItem>
-                      <SelectItem value="3">3 - Moderado</SelectItem>
-                      <SelectItem value="4">4 - Maior</SelectItem>
-                      <SelectItem value="5">5 - Catastrófico</SelectItem>
+                      {Array.from({ length: tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5 }, (_, i) => {
+                        const value = i + 1;
+                        const label = tenantSettings?.risk_matrix?.impact_labels?.[i] || 
+                          (tenantSettings?.risk_matrix?.type === '4x4' ? 
+                            ['Insignificante', 'Menor', 'Moderado', 'Maior'][i] :
+                            ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'][i]
+                          );
+                        return (
+                          <SelectItem key={value} value={value.toString()}>
+                            {value} - {label}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

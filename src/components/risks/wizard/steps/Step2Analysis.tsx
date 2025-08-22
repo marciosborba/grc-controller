@@ -19,9 +19,18 @@ import {
   Shield,
   Globe,
   Activity,
-  Database
+  Database,
+  Settings,
+  Edit,
+  Plus,
+  Trash2,
+  Save,
+  X
 } from 'lucide-react';
-import { useTenantSettings } from '@/hooks/useTenantSettings';
+import { useTenantSettings, SIQuestionnaireConfig, SIQuestion } from '@/hooks/useTenantSettings';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface Step2Props {
   data: any;
@@ -127,6 +136,16 @@ const METHODOLOGIES = [
     timeRequired: '90-180 min',
     bestFor: 'Processos técnicos, manufatura',
     category: 'specialized'
+  },
+  {
+    value: 'risco_si_simplificado',
+    name: 'Risco SI Simplificado',
+    description: 'Metodologia baseada em questionário estruturado com 8 perguntas para probabilidade e 8 para impacto',
+    icon: '📋',
+    complexity: 'Baixa',
+    timeRequired: '20-40 min',
+    bestFor: 'Avaliação rápida e estruturada, riscos de TI',
+    category: 'specialized'
   }
 ];
 
@@ -179,16 +198,33 @@ const getQualitativeScales = (tenantSettings: any) => {
   }
 };
 
+// As configurações do questionário SI agora são gerenciadas pela tenant via useTenantSettings
+
 export const Step2Analysis: React.FC<Step2Props> = ({
   data,
   updateData
 }) => {
-  const { tenantSettings } = useTenantSettings();
+  const { tenantSettings, getSIQuestionnaireConfig, saveSIQuestionnaireConfig } = useTenantSettings();
+  const { toast } = useToast();
   const [selectedMethodology, setSelectedMethodology] = useState(data.analysis_methodology || '');
   const [impactScore, setImpactScore] = useState(data.impact_score || 1);
   const [likelihoodScore, setLikelihoodScore] = useState(data.likelihood_score || 1);
   const [riskScore, setRiskScore] = useState(0);
   const [riskLevel, setRiskLevel] = useState('');
+  
+  // Obter configuração do questionário da tenant
+  const siConfig = getSIQuestionnaireConfig();
+  
+  // Estados para Risco SI Simplificado
+  const [siResponses, setSiResponses] = useState({
+    probability: data.si_probability_responses || Array(siConfig.probability_questions.length).fill(0),
+    impact: data.si_impact_responses || Array(siConfig.impact_questions.length).fill(0)
+  });
+  
+  // Estados para edição do questionário
+  const [isEditingQuestionnaire, setIsEditingQuestionnaire] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<SIQuestionnaireConfig>(siConfig);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   // Função de fallback para calcular nível de risco
   const calculateRiskLevelFallback = (score: number, tenantSettings: any) => {
@@ -210,32 +246,242 @@ export const Step2Analysis: React.FC<Step2Props> = ({
     }
   };
 
+  // Função para verificar se uma resposta é "Não se aplica"
+  const isNotApplicable = (questionConfig: any, responseIndex: number) => {
+    const selectedOption = questionConfig.answer_options[responseIndex];
+    return selectedOption && selectedOption.toLowerCase().includes('não se aplica');
+  };
+
+  // Função para calcular scores do Risco SI Simplificado
+  const calculateSIScores = () => {
+    const maxScale = tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5;
+    
+    // Calcular média das respostas de probabilidade (cada pergunta pode ter número diferente de opções)
+    let probabilitySum = 0;
+    let probabilityCount = 0;
+    
+    siResponses.probability.forEach((response, index) => {
+      if (index < siConfig.probability_questions.length) {
+        const questionConfig = siConfig.probability_questions[index];
+        
+        // Verificar se a resposta é "Não se aplica" e pular se for
+        if (isNotApplicable(questionConfig, response)) {
+          return; // Pula esta pergunta no cálculo
+        }
+        
+        const numOptions = questionConfig.answer_options.length;
+        // Normalizar resposta para escala 0-1 e depois para 1-maxScale
+        const normalizedResponse = ((response + 1) / numOptions) * maxScale;
+        probabilitySum += normalizedResponse;
+        probabilityCount++;
+      }
+    });
+    
+    const probabilityScore = probabilityCount > 0 ? 
+      Math.round(Math.min(Math.max(probabilitySum / probabilityCount, 1), maxScale)) : 1;
+    
+    // Calcular média das respostas de impacto (cada pergunta pode ter número diferente de opções)
+    let impactSum = 0;
+    let impactCount = 0;
+    
+    siResponses.impact.forEach((response, index) => {
+      if (index < siConfig.impact_questions.length) {
+        const questionConfig = siConfig.impact_questions[index];
+        
+        // Verificar se a resposta é "Não se aplica" e pular se for
+        if (isNotApplicable(questionConfig, response)) {
+          return; // Pula esta pergunta no cálculo
+        }
+        
+        const numOptions = questionConfig.answer_options.length;
+        // Normalizar resposta para escala 0-1 e depois para 1-maxScale
+        const normalizedResponse = ((response + 1) / numOptions) * maxScale;
+        impactSum += normalizedResponse;
+        impactCount++;
+      }
+    });
+    
+    const impactScore = impactCount > 0 ? 
+      Math.round(Math.min(Math.max(impactSum / impactCount, 1), maxScale)) : 1;
+    
+    return { probabilityScore, impactScore };
+  };
+
   // Calcular score e nível do risco baseado na configuração da tenant
   useEffect(() => {
-    if (impactScore && likelihoodScore) {
-      const score = impactScore * likelihoodScore;
+    let finalImpactScore = impactScore;
+    let finalLikelihoodScore = likelihoodScore;
+    
+    // Se for metodologia SI Simplificado, calcular scores baseado nas respostas
+    if (selectedMethodology === 'risco_si_simplificado') {
+      const siScores = calculateSIScores();
+      finalImpactScore = siScores.impactScore;
+      finalLikelihoodScore = siScores.probabilityScore;
+      setImpactScore(finalImpactScore);
+      setLikelihoodScore(finalLikelihoodScore);
+    }
+    
+    if (finalImpactScore && finalLikelihoodScore) {
+      const score = finalImpactScore * finalLikelihoodScore;
       setRiskScore(score);
       
       // Usar função do hook para calcular nível baseado na configuração da tenant
       const level = tenantSettings?.calculateRiskLevel ? 
-        tenantSettings.calculateRiskLevel(likelihoodScore, impactScore) :
+        tenantSettings.calculateRiskLevel(finalLikelihoodScore, finalImpactScore) :
         calculateRiskLevelFallback(score, tenantSettings);
       
       setRiskLevel(level);
       
       updateData({
-        impact_score: impactScore,
-        likelihood_score: likelihoodScore,
+        impact_score: finalImpactScore,
+        likelihood_score: finalLikelihoodScore,
         risk_score: score,
         risk_level: level,
-        analysis_methodology: selectedMethodology
+        analysis_methodology: selectedMethodology,
+        // Salvar apenas as respostas do SI Simplificado (as perguntas ficam na configuração da tenant)
+        si_probability_responses: siResponses.probability,
+        si_impact_responses: siResponses.impact
       });
     }
-  }, [impactScore, likelihoodScore, selectedMethodology, tenantSettings]);
+  }, [impactScore, likelihoodScore, selectedMethodology, tenantSettings, siResponses, siConfig]);
 
   const handleMethodologyChange = (methodology: string) => {
     setSelectedMethodology(methodology);
     updateData({ analysis_methodology: methodology });
+  };
+
+  // Funções para gerenciar edição do questionário
+  const handleSaveQuestionnaireConfig = async () => {
+    setIsSavingConfig(true);
+    try {
+      await saveSIQuestionnaireConfig(editingConfig);
+      setIsEditingQuestionnaire(false);
+      
+      // Ajustar respostas se o número de perguntas mudou
+      const newProbabilityResponses = Array(editingConfig.probability_questions.length).fill(0);
+      const newImpactResponses = Array(editingConfig.impact_questions.length).fill(0);
+      
+      // Preservar respostas existentes se possível
+      siResponses.probability.forEach((response, index) => {
+        if (index < newProbabilityResponses.length) {
+          newProbabilityResponses[index] = response;
+        }
+      });
+      
+      siResponses.impact.forEach((response, index) => {
+        if (index < newImpactResponses.length) {
+          newImpactResponses[index] = response;
+        }
+      });
+      
+      setSiResponses({
+        probability: newProbabilityResponses,
+        impact: newImpactResponses
+      });
+      
+      toast({
+        title: 'Configuração salva',
+        description: 'Questionário SI Simplificado atualizado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar configuração do questionário',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const addQuestion = (type: 'probability' | 'impact') => {
+    const newConfig = { ...editingConfig };
+    const newQuestion: SIQuestion = {
+      question: type === 'probability' ? 'Nova pergunta de probabilidade' : 'Nova pergunta de impacto',
+      answer_options: ['Opção 1', 'Opção 2', 'Opção 3', 'Não se aplica']
+    };
+    
+    if (type === 'probability') {
+      newConfig.probability_questions.push(newQuestion);
+    } else {
+      newConfig.impact_questions.push(newQuestion);
+    }
+    setEditingConfig(newConfig);
+  };
+
+  const removeQuestion = (type: 'probability' | 'impact', index: number) => {
+    const newConfig = { ...editingConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions.splice(index, 1);
+    } else {
+      newConfig.impact_questions.splice(index, 1);
+    }
+    setEditingConfig(newConfig);
+  };
+
+  const updateQuestion = (type: 'probability' | 'impact', index: number, value: string) => {
+    const newConfig = { ...editingConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[index].question = value;
+    } else {
+      newConfig.impact_questions[index].question = value;
+    }
+    setEditingConfig(newConfig);
+  };
+
+  const addAnswerOption = (type: 'probability' | 'impact', questionIndex: number) => {
+    const newConfig = { ...editingConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options.push('Nova opção');
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options.push('Nova opção');
+    }
+    setEditingConfig(newConfig);
+  };
+
+  const removeAnswerOption = (type: 'probability' | 'impact', questionIndex: number, optionIndex: number) => {
+    const question = type === 'probability' ? 
+      editingConfig.probability_questions[questionIndex] : 
+      editingConfig.impact_questions[questionIndex];
+    
+    // Verificar se está tentando remover "Não se aplica"
+    const optionToRemove = question.answer_options[optionIndex];
+    if (optionToRemove && optionToRemove.toLowerCase().includes('não se aplica')) {
+      toast({
+        title: 'Erro',
+        description: 'A opção "Não se aplica" não pode ser removida',
+        variant: 'destructive'
+      });
+      return;
+    }
+      
+    if (question.answer_options.length <= 3) { // Mínimo 2 opções + "Não se aplica"
+      toast({
+        title: 'Erro',
+        description: 'Deve haver pelo menos 2 opções de resposta além de "Não se aplica"',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    const newConfig = { ...editingConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options.splice(optionIndex, 1);
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options.splice(optionIndex, 1);
+    }
+    setEditingConfig(newConfig);
+  };
+
+  const updateAnswerOption = (type: 'probability' | 'impact', questionIndex: number, optionIndex: number, value: string) => {
+    const newConfig = { ...editingConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options[optionIndex] = value;
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options[optionIndex] = value;
+    }
+    setEditingConfig(newConfig);
   };
 
   const getRiskLevelColor = (level: string) => {
@@ -794,6 +1040,422 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                 </div>
               </CardContent>
             </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Risco SI Simplificado */}
+      {selectedMethodology === 'risco_si_simplificado' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  Risco SI Simplificado - Questionário Estruturado
+                </CardTitle>
+                <CardDescription>
+                  Avaliação baseada em questionário com {siConfig.probability_questions.length} perguntas para probabilidade e {siConfig.impact_questions.length} para impacto.
+                </CardDescription>
+              </div>
+              <Dialog open={isEditingQuestionnaire} onOpenChange={setIsEditingQuestionnaire}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setEditingConfig(siConfig)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurar Questionário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Configurar Questionário SI Simplificado</DialogTitle>
+                    <DialogDescription>
+                      Personalize as perguntas e opções de resposta para sua organização.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      {/* Perguntas de Probabilidade */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-lg font-semibold">Perguntas de Probabilidade</Label>
+                          <Button size="sm" onClick={() => addQuestion('probability')}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        <div className="space-y-6">
+                          {editingConfig.probability_questions.map((questionConfig, index) => (
+                            <div key={index} className="p-4 border rounded-lg">
+                              <div className="flex items-start gap-2 mb-3">
+                                <span className="text-sm font-medium w-8 mt-2">{index + 1}.</span>
+                                <Textarea
+                                  value={questionConfig.question}
+                                  onChange={(e) => updateQuestion('probability', index, e.target.value)}
+                                  placeholder={`Pergunta ${index + 1}`}
+                                  rows={2}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeQuestion('probability', index)}
+                                  className="mt-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="ml-10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-sm font-medium">Opções de Resposta:</Label>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => addAnswerOption('probability', index)}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Adicionar
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {questionConfig.answer_options.map((option, optionIndex) => (
+                                    <div key={optionIndex} className="flex items-center gap-2">
+                                      <span className="text-xs w-6">{optionIndex + 1}.</span>
+                                      <Input
+                                        value={option}
+                                        onChange={(e) => updateAnswerOption('probability', index, optionIndex, e.target.value)}
+                                        placeholder={`Opção ${optionIndex + 1}`}
+                                        className="text-sm"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => removeAnswerOption('probability', index, optionIndex)}
+                                        disabled={questionConfig.answer_options.length <= 3 || option.toLowerCase().includes('não se aplica')}
+                                        title={option.toLowerCase().includes('não se aplica') ? 'A opção "Não se aplica" não pode ser removida' : ''}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Perguntas de Impacto */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-lg font-semibold">Perguntas de Impacto</Label>
+                          <Button size="sm" onClick={() => addQuestion('impact')}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        <div className="space-y-6">
+                          {editingConfig.impact_questions.map((questionConfig, index) => (
+                            <div key={index} className="p-4 border rounded-lg">
+                              <div className="flex items-start gap-2 mb-3">
+                                <span className="text-sm font-medium w-8 mt-2">{index + 1}.</span>
+                                <Textarea
+                                  value={questionConfig.question}
+                                  onChange={(e) => updateQuestion('impact', index, e.target.value)}
+                                  placeholder={`Pergunta ${index + 1}`}
+                                  rows={2}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeQuestion('impact', index)}
+                                  className="mt-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="ml-10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-sm font-medium">Opções de Resposta:</Label>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => addAnswerOption('impact', index)}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Adicionar
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {questionConfig.answer_options.map((option, optionIndex) => (
+                                    <div key={optionIndex} className="flex items-center gap-2">
+                                      <span className="text-xs w-6">{optionIndex + 1}.</span>
+                                      <Input
+                                        value={option}
+                                        onChange={(e) => updateAnswerOption('impact', index, optionIndex, e.target.value)}
+                                        placeholder={`Opção ${optionIndex + 1}`}
+                                        className="text-sm"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => removeAnswerOption('impact', index, optionIndex)}
+                                        disabled={questionConfig.answer_options.length <= 3 || option.toLowerCase().includes('não se aplica')}
+                                        title={option.toLowerCase().includes('não se aplica') ? 'A opção "Não se aplica" não pode ser removida' : ''}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditingQuestionnaire(false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveQuestionnaireConfig} disabled={isSavingConfig}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {isSavingConfig ? 'Salvando...' : 'Salvar Configuração'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Risco SI Simplificado:</strong> Metodologia que utiliza questionários estruturados 
+                para avaliar probabilidade e impacto de forma sistemática e consistente.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Questionário de Probabilidade */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="flex items-center gap-2 text-lg font-semibold">
+                    <Zap className="h-5 w-5" />
+                    Avaliação de Probabilidade
+                  </Label>
+                  <Badge variant="outline">
+                    Score: {(() => {
+                      let sum = 0;
+                      let count = 0;
+                      siResponses.probability.forEach((response, index) => {
+                        if (index < siConfig.probability_questions.length) {
+                          const questionConfig = siConfig.probability_questions[index];
+                          
+                          // Pular se for "Não se aplica"
+                          if (isNotApplicable(questionConfig, response)) {
+                            return;
+                          }
+                          
+                          const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
+                          sum += normalizedScore;
+                          count++;
+                        }
+                      });
+                      return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                    })()}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {siConfig.probability_questions.map((questionConfig, index) => {
+                    const isNA = isNotApplicable(questionConfig, siResponses.probability[index] || 0);
+                    return (
+                      <div key={index} className={`p-4 border rounded-lg ${isNA ? 'bg-gray-50 opacity-60' : ''}`}>
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            {index + 1}. {questionConfig.question}
+                            {isNA && <Badge variant="secondary" className="text-xs">Não se aplica</Badge>}
+                          </Label>
+                        </div>
+                        <Select 
+                          value={siResponses.probability[index]?.toString() || '0'} 
+                          onValueChange={(value) => {
+                            const newResponses = [...siResponses.probability];
+                            newResponses[index] = parseInt(value);
+                            setSiResponses(prev => ({ ...prev, probability: newResponses }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma resposta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {questionConfig.answer_options.map((answer, answerIndex) => (
+                              <SelectItem key={answerIndex} value={answerIndex.toString()}>
+                                {answerIndex + 1} - {answer}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Questionário de Impacto */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="flex items-center gap-2 text-lg font-semibold">
+                    <TrendingUp className="h-5 w-5" />
+                    Avaliação de Impacto
+                  </Label>
+                  <Badge variant="outline">
+                    Score: {(() => {
+                      let sum = 0;
+                      let count = 0;
+                      siResponses.impact.forEach((response, index) => {
+                        if (index < siConfig.impact_questions.length) {
+                          const questionConfig = siConfig.impact_questions[index];
+                          
+                          // Pular se for "Não se aplica"
+                          if (isNotApplicable(questionConfig, response)) {
+                            return;
+                          }
+                          
+                          const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
+                          sum += normalizedScore;
+                          count++;
+                        }
+                      });
+                      return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                    })()}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {siConfig.impact_questions.map((questionConfig, index) => {
+                    const isNA = isNotApplicable(questionConfig, siResponses.impact[index] || 0);
+                    return (
+                      <div key={index} className={`p-4 border rounded-lg ${isNA ? 'bg-gray-50 opacity-60' : ''}`}>
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            {index + 1}. {questionConfig.question}
+                            {isNA && <Badge variant="secondary" className="text-xs">Não se aplica</Badge>}
+                          </Label>
+                        </div>
+                        <Select 
+                          value={siResponses.impact[index]?.toString() || '0'} 
+                          onValueChange={(value) => {
+                            const newResponses = [...siResponses.impact];
+                            newResponses[index] = parseInt(value);
+                            setSiResponses(prev => ({ ...prev, impact: newResponses }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma resposta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {questionConfig.answer_options.map((answer, answerIndex) => (
+                              <SelectItem key={answerIndex} value={answerIndex.toString()}>
+                                {answerIndex + 1} - {answer}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Resultado da Análise SI */}
+            {siResponses.probability.some(r => r > 0) && siResponses.impact.some(r => r > 0) && (
+              <Card className="bg-slate-50 dark:bg-slate-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Resultado da Análise SI Simplificado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{impactScore}</div>
+                      <div className="text-sm text-muted-foreground">Score de Impacto</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Média: {(() => {
+                          let sum = 0;
+                          let count = 0;
+                          siResponses.impact.forEach((response, index) => {
+                            if (index < siConfig.impact_questions.length) {
+                              const questionConfig = siConfig.impact_questions[index];
+                              
+                              // Pular se for "Não se aplica"
+                              if (isNotApplicable(questionConfig, response)) {
+                                return;
+                              }
+                              
+                              const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
+                              sum += normalizedScore;
+                              count++;
+                            }
+                          });
+                          return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                        })()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{likelihoodScore}</div>
+                      <div className="text-sm text-muted-foreground">Score de Probabilidade</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Média: {(() => {
+                          let sum = 0;
+                          let count = 0;
+                          siResponses.probability.forEach((response, index) => {
+                            if (index < siConfig.probability_questions.length) {
+                              const questionConfig = siConfig.probability_questions[index];
+                              
+                              // Pular se for "Não se aplica"
+                              if (isNotApplicable(questionConfig, response)) {
+                                return;
+                              }
+                              
+                              const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
+                              sum += normalizedScore;
+                              count++;
+                            }
+                          });
+                          return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                        })()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{riskScore}</div>
+                      <div className="text-sm text-muted-foreground">Score Final</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {impactScore} × {likelihoodScore}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <Badge 
+                      className={`${getRiskLevelColor(riskLevel)} text-white text-xl px-6 py-3`}
+                    >
+                      Risco {riskLevel}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
       )}
