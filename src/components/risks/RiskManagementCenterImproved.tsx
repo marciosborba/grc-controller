@@ -57,6 +57,8 @@ import { DashboardView } from './views/DashboardView';
 import { TableView } from './views/TableView';
 import { KanbanView } from './views/KanbanView';
 import { ProcessView } from './views/ProcessView';
+import { AlexRiskTest } from './AlexRiskTest';
+import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
 import { RiskMatrixView } from './views/RiskMatrixView';
 import { RiskFilters } from './shared/RiskFilters';
 import { QuickMetrics } from './shared/QuickMetrics';
@@ -777,25 +779,34 @@ export const RiskManagementCenterImproved: React.FC = () => {
       
       {/* Dialog do Processo Guiado Alex Risk */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
-              <Brain className="h-6 w-6 text-purple-600" />
-              <span>Registro de Risco - Processo Guiado com Alex Risk</span>
+        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden p-0" style={{ maxWidth: '95vw' }}>
+          <DialogHeader className="px-3 pt-3 pb-2">
+            <DialogTitle className="flex items-center space-x-2 text-sm">
+              <Brain className="h-5 w-5 text-purple-600" />
+              <span>Alex Risk - Processo Guiado</span>
             </DialogTitle>
-            <DialogDescription>
-              Processo inteligente e guiado para identificação, análise e tratamento de riscos corporativos com suporte de IA.
+            <DialogDescription className="text-xs">
+              Processo inteligente e guiado com suporte de IA.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <ProcessView 
-              risks={risks}
-              onCreate={(riskData) => {
+          <div className="px-3 pb-3">
+            <AlexRiskGuidedProcess 
+              onComplete={(riskData) => {
                 createRisk(riskData);
                 setProcessDialogOpen(false);
+                toast({
+                  title: '🎉 Alex Risk Processo Concluído',
+                  description: `Risco "${riskData.risk_title}" registrado com sucesso!`,
+                });
               }}
-              onUpdate={updateRisk}
+              onCancel={() => {
+                setProcessDialogOpen(false);
+                toast({
+                  title: 'Alex Risk Cancelado',
+                  description: 'O processo guiado foi cancelado.',
+                });
+              }}
             />
           </div>
         </DialogContent>

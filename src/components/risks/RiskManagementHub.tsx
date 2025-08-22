@@ -38,6 +38,9 @@ import { RiskAcceptanceLetter } from './RiskAcceptanceLetter';
 import { RiskProcessGuide } from './RiskProcessGuide';
 import { IntegratedRiskManagement } from './IntegratedRiskManagement';
 import RiskManagementPage from './RiskManagementPage';
+import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
+import { AlexRiskGuidedProcessSimple } from './AlexRiskGuidedProcessSimple';
+import { AlexRiskTest } from './AlexRiskTest';
 
 interface DashboardMetrics {
   total_risks: number;
@@ -74,6 +77,7 @@ export const RiskManagementHub: React.FC = () => {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
+  const [showAlexRiskProcess, setShowAlexRiskProcess] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
@@ -82,6 +86,10 @@ export const RiskManagementHub: React.FC = () => {
     fetchDashboardData();
     setupQuickActions();
   }, []);
+
+  useEffect(() => {
+    console.log('showAlexRiskProcess state changed:', showAlexRiskProcess);
+  }, [showAlexRiskProcess]);
 
   const fetchDashboardData = async () => {
     try {
@@ -189,6 +197,17 @@ export const RiskManagementHub: React.FC = () => {
         icon: Plus,
         color: 'bg-green-100 text-green-800',
         action: () => setActiveTab('management')
+      },
+      {
+        id: 'alex_risk_process',
+        title: 'Análise Alex Risk',
+        description: 'Processo guiado por IA completo',
+        icon: Brain,
+        color: 'bg-purple-100 text-purple-800',
+        action: () => {
+          console.log('Alex Risk card clicked');
+          setShowAlexRiskProcess(true);
+        }
       },
       {
         id: 'ai_analysis',
@@ -603,6 +622,25 @@ export const RiskManagementHub: React.FC = () => {
           <RiskReports />
         </TabsContent>
       </Tabs>
+      
+      {/* Modal Alex Risk Guided Process */}
+      {showAlexRiskProcess && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+            <AlexRiskTest
+              onComplete={(riskData) => {
+                setShowAlexRiskProcess(false);
+                fetchDashboardData(); // Atualizar dashboard
+                toast({
+                  title: '🎉 Alex Risk Processo Concluído',
+                  description: `Risco "${riskData.risk_title}" registrado com sucesso!`,
+                });
+              }}
+              onCancel={() => setShowAlexRiskProcess(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
