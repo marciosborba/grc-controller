@@ -720,6 +720,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
               searchTerm={searchTerm}
               filters={filters}
               onUpdate={updateRisk}
+              onDelete={deleteRisk}
             />
           )}
           
