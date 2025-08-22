@@ -50,7 +50,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskFilters } from '@/hooks/useRiskFilters';
-import { supabase } from '@/integrations/supabase/client';
 import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 
 // Importar views melhoradas
@@ -95,7 +94,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
   
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [alexRiskActive, setAlexRiskActive] = useState(true);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [processDialogOpen, setProcessDialogOpen] = useState(false);
@@ -276,120 +274,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
     });
   };
   
-  // Função de debug temporária
-  const handleDebugData = async () => {
-    try {
-      console.log('🔍 DEBUG: Iniciando investigação de dados...');
-      
-      // 1. Verificar dados do usuário
-      console.log('🔍 DEBUG: Usuário atual:', {
-        user: !!user,
-        userId: user?.id,
-        tenantId: user?.tenantId,
-        email: user?.email
-      });
-      
-      // 2. Verificar total de registros na tabela
-      const { data: allData, count: totalCount, error: countError } = await supabase
-        .from('risk_registrations')
-        .select('*', { count: 'exact' });
-      
-      console.log('🔍 DEBUG: Total de registros na tabela:', {
-        totalCount,
-        error: countError?.message,
-        sampleData: allData?.slice(0, 3)
-      });
-      
-      // 3. Verificar registros do tenant atual
-      if (user?.tenantId) {
-        const { data: tenantData, count: tenantCount, error: tenantError } = await supabase
-          .from('risk_registrations')
-          .select('*', { count: 'exact' })
-          .eq('tenant_id', user.tenantId);
-        
-        console.log('🔍 DEBUG: Registros do tenant atual:', {
-          tenantId: user.tenantId,
-          tenantCount,
-          error: tenantError?.message,
-          tenantData: tenantData?.slice(0, 3)
-        });
-        
-        // 4. Se não houver dados, criar um risco de exemplo
-        if (tenantCount === 0) {
-          console.log('🔍 DEBUG: Nenhum dado encontrado, criando risco de exemplo...');
-          
-          const { data: newRisk, error: createError } = await supabase
-            .from('risk_registrations')
-            .insert({
-              risk_title: 'Risco de Exemplo - Debug',
-              risk_description: 'Risco criado para teste dos cards de métricas',
-              risk_category: 'Operacional',
-              risk_level: 'Médio',
-              probability: 3,
-              likelihood_score: 3,
-              impact_score: 3,
-              status: 'draft',
-              current_step: 1,
-              tenant_id: user.tenantId,
-              created_by: user.id,
-              severity: 'medium'
-            })
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('❌ DEBUG: Erro ao criar risco de exemplo:', createError);
-          } else {
-            console.log('✅ DEBUG: Risco de exemplo criado:', newRisk);
-            
-            // Forçar refresh das queries
-            window.location.reload();
-          }
-        }
-      }
-      
-      // 5. Verificar estado das queries
-      console.log('🔍 DEBUG: Estado das queries:', {
-        isLoadingRisks,
-        isLoadingMetrics,
-        risksCount: risks.length,
-        metricsData: metrics
-      });
-      
-      toast({
-        title: '🔍 Debug Concluído',
-        description: 'Verifique o console para detalhes dos dados.',
-      });
-      
-    } catch (error) {
-      console.error('❌ DEBUG: Erro na investigação:', error);
-      toast({
-        title: '❌ Erro no Debug',
-        description: 'Erro ao investigar dados. Verifique o console.',
-        variant: 'destructive'
-      });
-    }
-  };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      // Simular refresh - em produção seria uma chamada real
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast({
-        title: '✅ Dados Atualizados',
-        description: 'Todas as informações foram sincronizadas',
-      });
-    } catch (error) {
-      toast({
-        title: '❌ Erro na Atualização',
-        description: 'Falha ao sincronizar dados. Tente novamente.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const getViewIcon = (view: ViewMode) => {
     switch (view) {
@@ -515,45 +400,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
           
           {/* Painel de Notificações */}
           <NotificationPanel />
-
-          {/* Documentação */}
-          <Button 
-            variant="outline" 
-            onClick={() => setViewMode('documentation')}
-            className="flex items-center space-x-2 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-colors border-orange-200 dark:border-orange-800"
-          >
-            <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            <span className="hidden sm:inline">Doc</span>
-          </Button>
-          
-          {/* Debug Button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleDebugData}
-            className="flex items-center space-x-1 bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline">Debug</span>
-          </Button>
-          
-          {/* Refresh */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="flex items-center space-x-1"
-          >
-            <RefreshCw className={['h-4 w-4', isRefreshing ? 'animate-spin' : ''].filter(Boolean).join(' ')} />
-            <span className="hidden sm:inline">Sync</span>
-          </Button>
-          
-          {/* Configurações */}
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Config</span>
-          </Button>
         </div>
       </div>
 
