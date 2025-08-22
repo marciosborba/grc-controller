@@ -25,11 +25,17 @@ export interface SIQuestionnaireConfig {
   impact_questions: SIQuestion[];
 }
 
+export interface SupplierQuestionnaireConfig {
+  probability_questions: SIQuestion[];
+  impact_questions: SIQuestion[];
+}
+
 export interface TenantSettings {
   risk_matrix: RiskMatrixConfig;
   company_data?: any;
   theme_config?: any;
   si_questionnaire?: SIQuestionnaireConfig;
+  supplier_questionnaire?: SupplierQuestionnaireConfig;
 }
 
 export const useTenantSettings = () => {
@@ -242,6 +248,85 @@ export const useTenantSettings = () => {
     };
   };
 
+  // Função para obter configuração do questionário de Fornecedores
+  const getSupplierQuestionnaireConfig = (): SupplierQuestionnaireConfig => {
+    if (tenantSettings?.supplier_questionnaire) {
+      return tenantSettings.supplier_questionnaire;
+    }
+    
+    // Configuração padrão para Risco de Fornecedor
+    return {
+      probability_questions: [
+        {
+          question: 'Qual é o histórico de desempenho do fornecedor?',
+          answer_options: ['Excelente', 'Bom', 'Regular', 'Ruim', 'Péssimo', 'Não se aplica']
+        },
+        {
+          question: 'Como é a estabilidade financeira do fornecedor?',
+          answer_options: ['Muito Estável', 'Estável', 'Moderada', 'Instável', 'Crítica', 'Não se aplica']
+        },
+        {
+          question: 'Qual é o nível de dependência deste fornecedor?',
+          answer_options: ['Baixa', 'Moderada', 'Alta', 'Crítica', 'Exclusiva', 'Não se aplica']
+        },
+        {
+          question: 'Como é a localização geográfica do fornecedor?',
+          answer_options: ['Local', 'Regional', 'Nacional', 'Internacional', 'Alto Risco Geográfico', 'Não se aplica']
+        },
+        {
+          question: 'Qual é a qualidade dos controles de segurança do fornecedor?',
+          answer_options: ['Excelente', 'Boa', 'Regular', 'Insuficiente', 'Inadequada', 'Não se aplica']
+        },
+        {
+          question: 'Como é a capacidade de recuperação do fornecedor?',
+          answer_options: ['Muito Alta', 'Alta', 'Média', 'Baixa', 'Muito Baixa', 'Não se aplica']
+        },
+        {
+          question: 'Qual é o nível de compliance regulatório do fornecedor?',
+          answer_options: ['Totalmente Aderente', 'Aderente', 'Parcialmente Aderente', 'Não Aderente', 'Desconhecido', 'Não se aplica']
+        },
+        {
+          question: 'Como é a transparência e comunicação do fornecedor?',
+          answer_options: ['Excelente', 'Boa', 'Regular', 'Ruim', 'Péssima', 'Não se aplica']
+        }
+      ],
+      impact_questions: [
+        {
+          question: 'Qual seria o impacto financeiro de uma interrupção?',
+          answer_options: ['< R$ 10.000', 'R$ 10.000 - R$ 100.000', 'R$ 100.000 - R$ 1.000.000', 'R$ 1.000.000 - R$ 10.000.000', '> R$ 10.000.000', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria a continuidade das operações?',
+          answer_options: ['Sem impacto', 'Atraso mínimo', 'Interrupção parcial', 'Interrupção total', 'Paralisação prolongada', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o impacto na qualidade dos produtos/serviços?',
+          answer_options: ['Nenhum', 'Leve degradação', 'Degradação moderada', 'Degradação severa', 'Falha total', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria o relacionamento com clientes?',
+          answer_options: ['Sem impacto', 'Insatisfação leve', 'Insatisfação moderada', 'Perda de clientes', 'Perda massiva de clientes', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o impacto regulatório e legal?',
+          answer_options: ['Nenhum', 'Notificação', 'Multa leve', 'Multa pesada', 'Processo judicial', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria a reputação da empresa?',
+          answer_options: ['Sem impacto', 'Impacto local', 'Impacto setorial', 'Impacto nacional', 'Impacto internacional', 'Não se aplica']
+        },
+        {
+          question: 'Qual seria o tempo para encontrar fornecedor alternativo?',
+          answer_options: ['< 1 semana', '1-4 semanas', '1-3 meses', '3-12 meses', '> 12 meses', 'Não se aplica']
+        },
+        {
+          question: 'Como afetaria a segurança da informação?',
+          answer_options: ['Sem risco', 'Risco baixo', 'Risco moderado', 'Risco alto', 'Risco crítico', 'Não se aplica']
+        }
+      ]
+    };
+  };
+
   // Função para salvar configuração do questionário SI
   const saveSIQuestionnaireConfig = async (config: SIQuestionnaireConfig) => {
     if (!userTenantId) {
@@ -251,6 +336,33 @@ export const useTenantSettings = () => {
     const updatedSettings = {
       ...tenantSettings,
       si_questionnaire: config
+    };
+
+    const { error } = await supabase
+      .from('tenants')
+      .update({ 
+        settings: updatedSettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userTenantId);
+
+    if (error) {
+      throw error;
+    }
+
+    // Recarregar configurações
+    await refetch();
+  };
+
+  // Função para salvar configuração do questionário de Fornecedores
+  const saveSupplierQuestionnaireConfig = async (config: SupplierQuestionnaireConfig) => {
+    if (!userTenantId) {
+      throw new Error('Tenant ID não encontrado');
+    }
+
+    const updatedSettings = {
+      ...tenantSettings,
+      supplier_questionnaire: config
     };
 
     const { error } = await supabase
@@ -280,6 +392,8 @@ export const useTenantSettings = () => {
     getRiskLevels,
     getSIQuestionnaireConfig,
     saveSIQuestionnaireConfig,
+    getSupplierQuestionnaireConfig,
+    saveSupplierQuestionnaireConfig,
     isMatrix4x4: tenantSettings?.risk_matrix?.type === '4x4',
     isMatrix5x5: tenantSettings?.risk_matrix?.type === '5x5'
   };

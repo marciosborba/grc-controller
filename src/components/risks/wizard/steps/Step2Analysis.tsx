@@ -27,7 +27,7 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { useTenantSettings, SIQuestionnaireConfig, SIQuestion } from '@/hooks/useTenantSettings';
+import { useTenantSettings, SIQuestionnaireConfig, SIQuestion, SupplierQuestionnaireConfig } from '@/hooks/useTenantSettings';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -146,6 +146,16 @@ const METHODOLOGIES = [
     timeRequired: '20-40 min',
     bestFor: 'Avaliação rápida e estruturada, riscos de TI',
     category: 'specialized'
+  },
+  {
+    value: 'risco_fornecedor',
+    name: 'Risco de Fornecedor',
+    description: 'Metodologia especializada para avaliação de riscos na cadeia de suprimentos e fornecedores',
+    icon: '🏭',
+    complexity: 'Média',
+    timeRequired: '30-60 min',
+    bestFor: 'Riscos de fornecedores, cadeia de suprimentos, terceirização',
+    category: 'specialized'
   }
 ];
 
@@ -204,7 +214,7 @@ export const Step2Analysis: React.FC<Step2Props> = ({
   data,
   updateData
 }) => {
-  const { tenantSettings, getSIQuestionnaireConfig, saveSIQuestionnaireConfig } = useTenantSettings();
+  const { tenantSettings, getSIQuestionnaireConfig, saveSIQuestionnaireConfig, getSupplierQuestionnaireConfig, saveSupplierQuestionnaireConfig } = useTenantSettings();
   const { toast } = useToast();
   const [selectedMethodology, setSelectedMethodology] = useState(data.analysis_methodology || '');
   const [impactScore, setImpactScore] = useState(data.impact_score || 1);
@@ -212,8 +222,9 @@ export const Step2Analysis: React.FC<Step2Props> = ({
   const [riskScore, setRiskScore] = useState(0);
   const [riskLevel, setRiskLevel] = useState('');
   
-  // Obter configuração do questionário da tenant
+  // Obter configuração dos questionários da tenant
   const siConfig = getSIQuestionnaireConfig();
+  const supplierConfig = getSupplierQuestionnaireConfig();
   
   // Estados para Risco SI Simplificado
   const [siResponses, setSiResponses] = useState({
@@ -221,10 +232,20 @@ export const Step2Analysis: React.FC<Step2Props> = ({
     impact: data.si_impact_responses || Array(siConfig.impact_questions.length).fill(0)
   });
   
-  // Estados para edição do questionário
+  // Estados para Risco de Fornecedor
+  const [supplierResponses, setSupplierResponses] = useState({
+    probability: data.supplier_probability_responses || Array(supplierConfig.probability_questions.length).fill(0),
+    impact: data.supplier_impact_responses || Array(supplierConfig.impact_questions.length).fill(0)
+  });
+  
+  // Estados para edição dos questionários
   const [isEditingQuestionnaire, setIsEditingQuestionnaire] = useState(false);
   const [editingConfig, setEditingConfig] = useState<SIQuestionnaireConfig>(siConfig);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
+  
+  const [isEditingSupplierQuestionnaire, setIsEditingSupplierQuestionnaire] = useState(false);
+  const [editingSupplierConfig, setEditingSupplierConfig] = useState<SupplierQuestionnaireConfig>(supplierConfig);
+  const [isSavingSupplierConfig, setIsSavingSupplierConfig] = useState(false);
 
   // Função de fallback para calcular nível de risco
   const calculateRiskLevelFallback = (score: number, tenantSettings: any) => {
@@ -256,7 +277,8 @@ export const Step2Analysis: React.FC<Step2Props> = ({
   const calculateSIScores = () => {
     const maxScale = tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5;
     
-    // Calcular média das respostas de probabilidade (cada pergunta pode ter número diferente de opções)
+    // Calcular média das respostas de probabilidade
+    // Cada resposta tem peso direto: 1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5, 6=anula questão
     let probabilitySum = 0;
     let probabilityCount = 0;
     
@@ -269,10 +291,12 @@ export const Step2Analysis: React.FC<Step2Props> = ({
           return; // Pula esta pergunta no cálculo
         }
         
-        const numOptions = questionConfig.answer_options.length;
-        // Normalizar resposta para escala 0-1 e depois para 1-maxScale
-        const normalizedResponse = ((response + 1) / numOptions) * maxScale;
-        probabilitySum += normalizedResponse;
+        // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+        const responseWeight = response + 1;
+        // Limitar ao máximo da matriz (4 ou 5)
+        const finalWeight = Math.min(responseWeight, maxScale);
+        
+        probabilitySum += finalWeight;
         probabilityCount++;
       }
     });
@@ -280,7 +304,8 @@ export const Step2Analysis: React.FC<Step2Props> = ({
     const probabilityScore = probabilityCount > 0 ? 
       Math.round(Math.min(Math.max(probabilitySum / probabilityCount, 1), maxScale)) : 1;
     
-    // Calcular média das respostas de impacto (cada pergunta pode ter número diferente de opções)
+    // Calcular média das respostas de impacto
+    // Cada resposta tem peso direto: 1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5, 6=anula questão
     let impactSum = 0;
     let impactCount = 0;
     
@@ -293,10 +318,73 @@ export const Step2Analysis: React.FC<Step2Props> = ({
           return; // Pula esta pergunta no cálculo
         }
         
-        const numOptions = questionConfig.answer_options.length;
-        // Normalizar resposta para escala 0-1 e depois para 1-maxScale
-        const normalizedResponse = ((response + 1) / numOptions) * maxScale;
-        impactSum += normalizedResponse;
+        // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+        const responseWeight = response + 1;
+        // Limitar ao máximo da matriz (4 ou 5)
+        const finalWeight = Math.min(responseWeight, maxScale);
+        
+        impactSum += finalWeight;
+        impactCount++;
+      }
+    });
+    
+    const impactScore = impactCount > 0 ? 
+      Math.round(Math.min(Math.max(impactSum / impactCount, 1), maxScale)) : 1;
+    
+    return { probabilityScore, impactScore };
+  };
+
+  // Função para calcular scores do Risco de Fornecedor
+  const calculateSupplierScores = () => {
+    const maxScale = tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5;
+    
+    // Calcular média das respostas de probabilidade
+    // Cada resposta tem peso direto: 1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5, 6=anula questão
+    let probabilitySum = 0;
+    let probabilityCount = 0;
+    
+    supplierResponses.probability.forEach((response, index) => {
+      if (index < supplierConfig.probability_questions.length) {
+        const questionConfig = supplierConfig.probability_questions[index];
+        
+        // Verificar se a resposta é "Não se aplica" e pular se for
+        if (isNotApplicable(questionConfig, response)) {
+          return; // Pula esta pergunta no cálculo
+        }
+        
+        // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+        const responseWeight = response + 1;
+        // Limitar ao máximo da matriz (4 ou 5)
+        const finalWeight = Math.min(responseWeight, maxScale);
+        
+        probabilitySum += finalWeight;
+        probabilityCount++;
+      }
+    });
+    
+    const probabilityScore = probabilityCount > 0 ? 
+      Math.round(Math.min(Math.max(probabilitySum / probabilityCount, 1), maxScale)) : 1;
+    
+    // Calcular média das respostas de impacto
+    // Cada resposta tem peso direto: 1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5, 6=anula questão
+    let impactSum = 0;
+    let impactCount = 0;
+    
+    supplierResponses.impact.forEach((response, index) => {
+      if (index < supplierConfig.impact_questions.length) {
+        const questionConfig = supplierConfig.impact_questions[index];
+        
+        // Verificar se a resposta é "Não se aplica" e pular se for
+        if (isNotApplicable(questionConfig, response)) {
+          return; // Pula esta pergunta no cálculo
+        }
+        
+        // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+        const responseWeight = response + 1;
+        // Limitar ao máximo da matriz (4 ou 5)
+        const finalWeight = Math.min(responseWeight, maxScale);
+        
+        impactSum += finalWeight;
         impactCount++;
       }
     });
@@ -321,6 +409,15 @@ export const Step2Analysis: React.FC<Step2Props> = ({
       setLikelihoodScore(finalLikelihoodScore);
     }
     
+    // Se for metodologia Risco de Fornecedor, calcular scores baseado nas respostas
+    if (selectedMethodology === 'risco_fornecedor') {
+      const supplierScores = calculateSupplierScores();
+      finalImpactScore = supplierScores.impactScore;
+      finalLikelihoodScore = supplierScores.probabilityScore;
+      setImpactScore(finalImpactScore);
+      setLikelihoodScore(finalLikelihoodScore);
+    }
+    
     if (finalImpactScore && finalLikelihoodScore) {
       const score = finalImpactScore * finalLikelihoodScore;
       setRiskScore(score);
@@ -338,12 +435,14 @@ export const Step2Analysis: React.FC<Step2Props> = ({
         risk_score: score,
         risk_level: level,
         analysis_methodology: selectedMethodology,
-        // Salvar apenas as respostas do SI Simplificado (as perguntas ficam na configuração da tenant)
+        // Salvar respostas dos questionários (as perguntas ficam na configuração da tenant)
         si_probability_responses: siResponses.probability,
-        si_impact_responses: siResponses.impact
+        si_impact_responses: siResponses.impact,
+        supplier_probability_responses: supplierResponses.probability,
+        supplier_impact_responses: supplierResponses.impact
       });
     }
-  }, [impactScore, likelihoodScore, selectedMethodology, tenantSettings, siResponses, siConfig]);
+  }, [impactScore, likelihoodScore, selectedMethodology, tenantSettings, siResponses, siConfig, supplierResponses, supplierConfig]);
 
   const handleMethodologyChange = (methodology: string) => {
     setSelectedMethodology(methodology);
@@ -482,6 +581,140 @@ export const Step2Analysis: React.FC<Step2Props> = ({
       newConfig.impact_questions[questionIndex].answer_options[optionIndex] = value;
     }
     setEditingConfig(newConfig);
+  };
+
+  // Funções para gerenciar edição do questionário de fornecedores
+  const handleSaveSupplierQuestionnaireConfig = async () => {
+    setIsSavingSupplierConfig(true);
+    try {
+      await saveSupplierQuestionnaireConfig(editingSupplierConfig);
+      setIsEditingSupplierQuestionnaire(false);
+      
+      // Ajustar respostas se o número de perguntas mudou
+      const newProbabilityResponses = Array(editingSupplierConfig.probability_questions.length).fill(0);
+      const newImpactResponses = Array(editingSupplierConfig.impact_questions.length).fill(0);
+      
+      // Preservar respostas existentes se possível
+      supplierResponses.probability.forEach((response, index) => {
+        if (index < newProbabilityResponses.length) {
+          newProbabilityResponses[index] = response;
+        }
+      });
+      
+      supplierResponses.impact.forEach((response, index) => {
+        if (index < newImpactResponses.length) {
+          newImpactResponses[index] = response;
+        }
+      });
+      
+      setSupplierResponses({
+        probability: newProbabilityResponses,
+        impact: newImpactResponses
+      });
+      
+      toast({
+        title: 'Configuração salva',
+        description: 'Questionário de Fornecedor atualizado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao salvar configuração do questionário',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSavingSupplierConfig(false);
+    }
+  };
+
+  const addSupplierQuestion = (type: 'probability' | 'impact') => {
+    const newConfig = { ...editingSupplierConfig };
+    const newQuestion: SIQuestion = {
+      question: type === 'probability' ? 'Nova pergunta de probabilidade' : 'Nova pergunta de impacto',
+      answer_options: ['Opção 1', 'Opção 2', 'Opção 3', 'Não se aplica']
+    };
+    
+    if (type === 'probability') {
+      newConfig.probability_questions.push(newQuestion);
+    } else {
+      newConfig.impact_questions.push(newQuestion);
+    }
+    setEditingSupplierConfig(newConfig);
+  };
+
+  const removeSupplierQuestion = (type: 'probability' | 'impact', index: number) => {
+    const newConfig = { ...editingSupplierConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions.splice(index, 1);
+    } else {
+      newConfig.impact_questions.splice(index, 1);
+    }
+    setEditingSupplierConfig(newConfig);
+  };
+
+  const updateSupplierQuestion = (type: 'probability' | 'impact', index: number, value: string) => {
+    const newConfig = { ...editingSupplierConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[index].question = value;
+    } else {
+      newConfig.impact_questions[index].question = value;
+    }
+    setEditingSupplierConfig(newConfig);
+  };
+
+  const addSupplierAnswerOption = (type: 'probability' | 'impact', questionIndex: number) => {
+    const newConfig = { ...editingSupplierConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options.push('Nova opção');
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options.push('Nova opção');
+    }
+    setEditingSupplierConfig(newConfig);
+  };
+
+  const removeSupplierAnswerOption = (type: 'probability' | 'impact', questionIndex: number, optionIndex: number) => {
+    const question = type === 'probability' ? 
+      editingSupplierConfig.probability_questions[questionIndex] : 
+      editingSupplierConfig.impact_questions[questionIndex];
+    
+    // Verificar se está tentando remover "Não se aplica"
+    const optionToRemove = question.answer_options[optionIndex];
+    if (optionToRemove && optionToRemove.toLowerCase().includes('não se aplica')) {
+      toast({
+        title: 'Erro',
+        description: 'A opção "Não se aplica" não pode ser removida',
+        variant: 'destructive'
+      });
+      return;
+    }
+      
+    if (question.answer_options.length <= 3) { // Mínimo 2 opções + "Não se aplica"
+      toast({
+        title: 'Erro',
+        description: 'Deve haver pelo menos 2 opções de resposta além de "Não se aplica"',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    const newConfig = { ...editingSupplierConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options.splice(optionIndex, 1);
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options.splice(optionIndex, 1);
+    }
+    setEditingSupplierConfig(newConfig);
+  };
+
+  const updateSupplierAnswerOption = (type: 'probability' | 'impact', questionIndex: number, optionIndex: number, value: string) => {
+    const newConfig = { ...editingSupplierConfig };
+    if (type === 'probability') {
+      newConfig.probability_questions[questionIndex].answer_options[optionIndex] = value;
+    } else {
+      newConfig.impact_questions[questionIndex].answer_options[optionIndex] = value;
+    }
+    setEditingSupplierConfig(newConfig);
   };
 
   const getRiskLevelColor = (level: string) => {
@@ -1238,7 +1471,9 @@ export const Step2Analysis: React.FC<Step2Props> = ({
               <Info className="h-4 w-4" />
               <AlertDescription>
                 <strong>Risco SI Simplificado:</strong> Metodologia que utiliza questionários estruturados 
-                para avaliar probabilidade e impacto de forma sistemática e consistente.
+                para avaliar probabilidade e impacto de forma sistemática e consistente.<br/><br/>
+                <strong>Sistema de Pesos:</strong> Cada resposta tem peso direto (1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5). 
+                A opção "Não se aplica" anula a questão no cálculo. O score final é a média dos pesos das questões aplicáveis.
               </AlertDescription>
             </Alert>
             
@@ -1263,8 +1498,11 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                             return;
                           }
                           
-                          const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
-                          sum += normalizedScore;
+                          // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                          const responseWeight = response + 1;
+                          // Limitar ao máximo da matriz (4 ou 5)
+                          const finalWeight = Math.min(responseWeight, maxScale);
+                          sum += finalWeight;
                           count++;
                         }
                       });
@@ -1329,8 +1567,11 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                             return;
                           }
                           
-                          const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
-                          sum += normalizedScore;
+                          // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                          const responseWeight = response + 1;
+                          // Limitar ao máximo da matriz (4 ou 5)
+                          const finalWeight = Math.min(responseWeight, maxScale);
+                          sum += finalWeight;
                           count++;
                         }
                       });
@@ -1403,8 +1644,11 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                                 return;
                               }
                               
-                              const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
-                              sum += normalizedScore;
+                              // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                              const responseWeight = response + 1;
+                              // Limitar ao máximo da matriz (4 ou 5)
+                              const finalWeight = Math.min(responseWeight, maxScale);
+                              sum += finalWeight;
                               count++;
                             }
                           });
@@ -1428,8 +1672,441 @@ export const Step2Analysis: React.FC<Step2Props> = ({
                                 return;
                               }
                               
-                              const normalizedScore = ((response + 1) / questionConfig.answer_options.length) * 5;
-                              sum += normalizedScore;
+                              // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                              const responseWeight = response + 1;
+                              // Limitar ao máximo da matriz (4 ou 5)
+                              const finalWeight = Math.min(responseWeight, maxScale);
+                              sum += finalWeight;
+                              count++;
+                            }
+                          });
+                          return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                        })()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{riskScore}</div>
+                      <div className="text-sm text-muted-foreground">Score Final</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {impactScore} × {likelihoodScore}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <Badge 
+                      className={`${getRiskLevelColor(riskLevel)} text-white text-xl px-6 py-3`}
+                    >
+                      Risco {riskLevel}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Risco de Fornecedor */}
+      {selectedMethodology === 'risco_fornecedor' && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5 text-primary" />
+                  Risco de Fornecedor - Questionário Especializado
+                </CardTitle>
+                <CardDescription>
+                  Avaliação baseada em questionário com {supplierConfig.probability_questions.length} perguntas para probabilidade e {supplierConfig.impact_questions.length} para impacto.
+                </CardDescription>
+              </div>
+              <Dialog open={isEditingSupplierQuestionnaire} onOpenChange={setIsEditingSupplierQuestionnaire}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" onClick={() => setEditingSupplierConfig(supplierConfig)}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurar Questionário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Configurar Questionário de Fornecedor</DialogTitle>
+                    <DialogDescription>
+                      Personalize as perguntas e opções de resposta para avaliação de fornecedores.
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      {/* Perguntas de Probabilidade */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-lg font-semibold">Perguntas de Probabilidade</Label>
+                          <Button size="sm" onClick={() => addSupplierQuestion('probability')}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        <div className="space-y-6">
+                          {editingSupplierConfig.probability_questions.map((questionConfig, index) => (
+                            <div key={index} className="p-4 border rounded-lg">
+                              <div className="flex items-start gap-2 mb-3">
+                                <span className="text-sm font-medium w-8 mt-2">{index + 1}.</span>
+                                <Textarea
+                                  value={questionConfig.question}
+                                  onChange={(e) => updateSupplierQuestion('probability', index, e.target.value)}
+                                  placeholder={`Pergunta ${index + 1}`}
+                                  rows={2}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeSupplierQuestion('probability', index)}
+                                  className="mt-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="ml-10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-sm font-medium">Opções de Resposta:</Label>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => addSupplierAnswerOption('probability', index)}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Adicionar
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {questionConfig.answer_options.map((option, optionIndex) => (
+                                    <div key={optionIndex} className="flex items-center gap-2">
+                                      <span className="text-xs w-6">{optionIndex + 1}.</span>
+                                      <Input
+                                        value={option}
+                                        onChange={(e) => updateSupplierAnswerOption('probability', index, optionIndex, e.target.value)}
+                                        placeholder={`Opção ${optionIndex + 1}`}
+                                        className="text-sm"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => removeSupplierAnswerOption('probability', index, optionIndex)}
+                                        disabled={questionConfig.answer_options.length <= 3 || option.toLowerCase().includes('não se aplica')}
+                                        title={option.toLowerCase().includes('não se aplica') ? 'A opção "Não se aplica" não pode ser removida' : ''}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Perguntas de Impacto */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-lg font-semibold">Perguntas de Impacto</Label>
+                          <Button size="sm" onClick={() => addSupplierQuestion('impact')}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar
+                          </Button>
+                        </div>
+                        <div className="space-y-6">
+                          {editingSupplierConfig.impact_questions.map((questionConfig, index) => (
+                            <div key={index} className="p-4 border rounded-lg">
+                              <div className="flex items-start gap-2 mb-3">
+                                <span className="text-sm font-medium w-8 mt-2">{index + 1}.</span>
+                                <Textarea
+                                  value={questionConfig.question}
+                                  onChange={(e) => updateSupplierQuestion('impact', index, e.target.value)}
+                                  placeholder={`Pergunta ${index + 1}`}
+                                  rows={2}
+                                  className="flex-1"
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeSupplierQuestion('impact', index)}
+                                  className="mt-1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="ml-10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-sm font-medium">Opções de Resposta:</Label>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => addSupplierAnswerOption('impact', index)}
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Adicionar
+                                  </Button>
+                                </div>
+                                <div className="space-y-2">
+                                  {questionConfig.answer_options.map((option, optionIndex) => (
+                                    <div key={optionIndex} className="flex items-center gap-2">
+                                      <span className="text-xs w-6">{optionIndex + 1}.</span>
+                                      <Input
+                                        value={option}
+                                        onChange={(e) => updateSupplierAnswerOption('impact', index, optionIndex, e.target.value)}
+                                        placeholder={`Opção ${optionIndex + 1}`}
+                                        className="text-sm"
+                                      />
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => removeSupplierAnswerOption('impact', index, optionIndex)}
+                                        disabled={questionConfig.answer_options.length <= 3 || option.toLowerCase().includes('não se aplica')}
+                                        title={option.toLowerCase().includes('não se aplica') ? 'A opção "Não se aplica" não pode ser removida' : ''}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditingSupplierQuestionnaire(false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSaveSupplierQuestionnaireConfig} disabled={isSavingSupplierConfig}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {isSavingSupplierConfig ? 'Salvando...' : 'Salvar Configuração'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Risco de Fornecedor:</strong> Metodologia especializada para avaliação de riscos na cadeia de suprimentos, 
+                considerando fatores como dependência, estabilidade financeira, localização geográfica e capacidade de recuperação.<br/><br/>
+                <strong>Sistema de Pesos:</strong> Cada resposta tem peso direto (1=peso1, 2=peso2, 3=peso3, 4=peso4, 5=peso5). 
+                A opção "Não se aplica" anula a questão no cálculo. O score final é a média dos pesos das questões aplicáveis.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Questionário de Probabilidade */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="flex items-center gap-2 text-lg font-semibold">
+                    <Zap className="h-5 w-5" />
+                    Avaliação de Probabilidade
+                  </Label>
+                  <Badge variant="outline">
+                    Score: {(() => {
+                      let sum = 0;
+                      let count = 0;
+                      supplierResponses.probability.forEach((response, index) => {
+                        if (index < supplierConfig.probability_questions.length) {
+                          const questionConfig = supplierConfig.probability_questions[index];
+                          
+                          // Pular se for "Não se aplica"
+                          if (isNotApplicable(questionConfig, response)) {
+                            return;
+                          }
+                          
+                          // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                          const responseWeight = response + 1;
+                          // Limitar ao máximo da matriz (4 ou 5)
+                          const finalWeight = Math.min(responseWeight, maxScale);
+                          sum += finalWeight;
+                          count++;
+                        }
+                      });
+                      return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                    })()}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {supplierConfig.probability_questions.map((questionConfig, index) => {
+                    const isNA = isNotApplicable(questionConfig, supplierResponses.probability[index] || 0);
+                    return (
+                      <div key={index} className={`p-4 border rounded-lg ${isNA ? 'bg-gray-50 opacity-60' : ''}`}>
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            {index + 1}. {questionConfig.question}
+                            {isNA && <Badge variant="secondary" className="text-xs">Não se aplica</Badge>}
+                          </Label>
+                        </div>
+                        <Select 
+                          value={supplierResponses.probability[index]?.toString() || '0'} 
+                          onValueChange={(value) => {
+                            const newResponses = [...supplierResponses.probability];
+                            newResponses[index] = parseInt(value);
+                            setSupplierResponses(prev => ({ ...prev, probability: newResponses }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma resposta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {questionConfig.answer_options.map((answer, answerIndex) => (
+                              <SelectItem key={answerIndex} value={answerIndex.toString()}>
+                                {answerIndex + 1} - {answer}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Questionário de Impacto */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <Label className="flex items-center gap-2 text-lg font-semibold">
+                    <TrendingUp className="h-5 w-5" />
+                    Avaliação de Impacto
+                  </Label>
+                  <Badge variant="outline">
+                    Score: {(() => {
+                      let sum = 0;
+                      let count = 0;
+                      supplierResponses.impact.forEach((response, index) => {
+                        if (index < supplierConfig.impact_questions.length) {
+                          const questionConfig = supplierConfig.impact_questions[index];
+                          
+                          // Pular se for "Não se aplica"
+                          if (isNotApplicable(questionConfig, response)) {
+                            return;
+                          }
+                          
+                          // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                          const responseWeight = response + 1;
+                          // Limitar ao máximo da matriz (4 ou 5)
+                          const finalWeight = Math.min(responseWeight, maxScale);
+                          sum += finalWeight;
+                          count++;
+                        }
+                      });
+                      return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                    })()}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-4">
+                  {supplierConfig.impact_questions.map((questionConfig, index) => {
+                    const isNA = isNotApplicable(questionConfig, supplierResponses.impact[index] || 0);
+                    return (
+                      <div key={index} className={`p-4 border rounded-lg ${isNA ? 'bg-gray-50 opacity-60' : ''}`}>
+                        <div className="mb-3">
+                          <Label className="text-sm font-medium flex items-center gap-2">
+                            {index + 1}. {questionConfig.question}
+                            {isNA && <Badge variant="secondary" className="text-xs">Não se aplica</Badge>}
+                          </Label>
+                        </div>
+                        <Select 
+                          value={supplierResponses.impact[index]?.toString() || '0'} 
+                          onValueChange={(value) => {
+                            const newResponses = [...supplierResponses.impact];
+                            newResponses[index] = parseInt(value);
+                            setSupplierResponses(prev => ({ ...prev, impact: newResponses }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma resposta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {questionConfig.answer_options.map((answer, answerIndex) => (
+                              <SelectItem key={answerIndex} value={answerIndex.toString()}>
+                                {answerIndex + 1} - {answer}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Resultado da Análise de Fornecedor */}
+            {supplierResponses.probability.some(r => r > 0) && supplierResponses.impact.some(r => r > 0) && (
+              <Card className="bg-slate-50 dark:bg-slate-900">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Resultado da Análise de Risco de Fornecedor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{impactScore}</div>
+                      <div className="text-sm text-muted-foreground">Score de Impacto</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Média: {(() => {
+                          let sum = 0;
+                          let count = 0;
+                          supplierResponses.impact.forEach((response, index) => {
+                            if (index < supplierConfig.impact_questions.length) {
+                              const questionConfig = supplierConfig.impact_questions[index];
+                              
+                              // Pular se for "Não se aplica"
+                              if (isNotApplicable(questionConfig, response)) {
+                                return;
+                              }
+                              
+                              // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                              const responseWeight = response + 1;
+                              // Limitar ao máximo da matriz (4 ou 5)
+                              const finalWeight = Math.min(responseWeight, maxScale);
+                              sum += finalWeight;
+                              count++;
+                            }
+                          });
+                          return count > 0 ? (sum / count).toFixed(1) : '0.0';
+                        })()}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">{likelihoodScore}</div>
+                      <div className="text-sm text-muted-foreground">Score de Probabilidade</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Média: {(() => {
+                          let sum = 0;
+                          let count = 0;
+                          supplierResponses.probability.forEach((response, index) => {
+                            if (index < supplierConfig.probability_questions.length) {
+                              const questionConfig = supplierConfig.probability_questions[index];
+                              
+                              // Pular se for "Não se aplica"
+                              if (isNotApplicable(questionConfig, response)) {
+                                return;
+                              }
+                              
+                              // Peso direto da resposta: índice 0 = peso 1, índice 1 = peso 2, etc.
+                              const responseWeight = response + 1;
+                              // Limitar ao máximo da matriz (4 ou 5)
+                              const finalWeight = Math.min(responseWeight, maxScale);
+                              sum += finalWeight;
                               count++;
                             }
                           });
