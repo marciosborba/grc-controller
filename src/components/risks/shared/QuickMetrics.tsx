@@ -19,7 +19,18 @@ interface QuickMetricsProps {
 }
 
 export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }) => {
-  if (isLoading || !metrics) {
+  console.log('🔍 QuickMetrics Debug DETALHADO:', { 
+    isLoading, 
+    hasMetrics: !!metrics, 
+    metricsData: metrics,
+    metricsKeys: metrics ? Object.keys(metrics) : [],
+    totalRisks: metrics?.totalRisks,
+    risksByLevel: metrics?.risksByLevel,
+    risksByStatus: metrics?.risksByStatus
+  });
+  
+  // Mostrar skeleton apenas se estiver carregando inicial
+  if (isLoading && !metrics) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, index) => {
@@ -40,6 +51,32 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
       </div>
     );
   }
+  
+  // Se não tiver métricas, criar métricas padrão
+  const defaultMetrics: RiskMetrics = {
+    totalRisks: 0,
+    risksByLevel: {
+      'Muito Alto': 0,
+      'Alto': 0,
+      'Médio': 0,
+      'Baixo': 0,
+      'Muito Baixo': 0
+    },
+    risksByCategory: {},
+    risksByStatus: {
+      'Identificado': 0,
+      'Avaliado': 0,
+      'Em Tratamento': 0,
+      'Monitorado': 0,
+      'Fechado': 0,
+      'Reaberto': 0
+    },
+    overdueActivities: 0,
+    riskTrend: 'Estável',
+    averageResolutionTime: 0
+  };
+  
+  const currentMetrics = metrics || defaultMetrics;
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
@@ -63,7 +100,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'total',
       title: 'Total de Riscos',
-      value: metrics.totalRisks,
+      value: currentMetrics.totalRisks,
       icon: Shield,
       color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-950 dark:bg-opacity-50',
       description: 'Riscos identificados'
@@ -71,7 +108,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'muito-alto',
       title: 'Muito Alto',
-      value: metrics.risksByLevel['Muito Alto'] || 0,
+      value: currentMetrics.risksByLevel['Muito Alto'] || 0,
       icon: XCircle,
       color: getRiskLevelColor('Muito Alto'),
       description: 'Atenção imediata'
@@ -79,7 +116,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'alto',
       title: 'Alto',
-      value: metrics.risksByLevel['Alto'] || 0,
+      value: currentMetrics.risksByLevel['Alto'] || 0,
       icon: AlertTriangle,
       color: getRiskLevelColor('Alto'),
       description: 'Prioridade alta'
@@ -87,7 +124,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'em-tratamento',
       title: 'Em Tratamento',
-      value: metrics.risksByStatus['Em Tratamento'] || 0,
+      value: currentMetrics.risksByStatus['Em Tratamento'] || 0,
       icon: Activity,
       color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-950 dark:bg-opacity-50',
       description: 'Ações em progresso'
@@ -95,7 +132,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'atrasados',
       title: 'Atrasados',
-      value: metrics.overdueActivities,
+      value: currentMetrics.overdueActivities,
       icon: Clock,
       color: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950 dark:bg-opacity-50',
       description: 'Ações vencidas'
@@ -103,8 +140,8 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     {
       id: 'tendencia',
       title: 'Tendência',
-      value: metrics.riskTrend,
-      icon: () => getTrendIcon(metrics.riskTrend),
+      value: currentMetrics.riskTrend,
+      icon: () => getTrendIcon(currentMetrics.riskTrend),
       color: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-950 dark:bg-opacity-50',
       description: 'Evolução geral',
       isText: true

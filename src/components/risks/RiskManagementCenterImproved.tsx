@@ -50,11 +50,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskFilters } from '@/hooks/useRiskFilters';
+import { supabase } from '@/integrations/supabase/client';
 import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 
 // Importar views melhoradas
 import { DashboardView } from './views/DashboardView';
 import { TableView } from './views/TableView';
+import { ExpandableCardsView } from './views/ExpandableCardsView';
 import { KanbanView } from './views/KanbanView';
 import { ProcessView } from './views/ProcessView';
 import { AlexRiskTest } from './AlexRiskTest';
@@ -64,6 +66,7 @@ import { RiskFilters } from './shared/RiskFilters';
 import { QuickMetrics } from './shared/QuickMetrics';
 import { AlexRiskIntegration } from './shared/AlexRiskIntegration';
 import { RiskDocumentation } from './RiskDocumentation';
+import { NotificationPanel } from './NotificationPanel';
 
 // Novos componentes integrados
 import { RiskLibraryIntegrated } from './shared/RiskLibraryIntegrated';
@@ -133,24 +136,29 @@ export const RiskManagementCenterImproved: React.FC = () => {
       category: 'primary'
     },
     {
-      id: 'alex-analysis',
-      title: 'Análise Alex Risk',
-      description: 'Insights inteligentes',
-      icon: Brain,
+      id: 'action-plans-management',
+      title: 'Gestão de Planos de Ação',
+      description: 'Acompanhamento centralizado',
+      icon: Target,
       color: 'bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700',
-      action: () => handleAlexAnalysis(),
+      action: () => handleActionPlansManagement(),
       category: 'primary',
-      badge: 'IA'
+      badge: metrics?.overdueActivities > 0 ? metrics.overdueActivities : undefined
     },
     {
-      id: 'risk-library',
-      title: 'Biblioteca de Riscos',
-      description: 'Templates e modelos',
-      icon: Library,
+      id: 'risk-matrix',
+      title: 'Matriz de Riscos',
+      description: 'Visualização matricial',
+      icon: Target,
       color: 'bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700',
-      action: () => handleRiskLibrary(),
-      category: 'primary',
-      badge: '50+ templates'
+      action: () => {
+        navigate('/risks/matrix');
+        toast({
+          title: '🎯 Matriz de Risco',
+          description: 'Redirecionando para a página da matriz de riscos...',
+        });
+      },
+      category: 'primary'
     },
     
     // Ações Secundárias
@@ -164,19 +172,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
       category: 'secondary'
     },
     {
-      id: 'risk-matrix',
-      title: 'Matriz de Riscos',
-      description: 'Visualização matricial',
-      icon: Target,
+      id: 'risk-library',
+      title: 'Biblioteca de Riscos',
+      description: 'Templates e modelos',
+      icon: Library,
       color: 'bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700',
-      action: () => {
-        navigate('/risks/matrix');
-        toast({
-          title: '🎯 Matriz de Risco',
-          description: 'Redirecionando para a página da matriz de riscos...',
-        });
-      },
-      category: 'secondary'
+      action: () => handleRiskLibrary(),
+      category: 'secondary',
+      badge: '50+ templates'
     },
     {
       id: 'reports',
@@ -186,7 +189,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       color: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700',
       action: () => handleReports(),
       category: 'secondary',
-      badge: metrics?.totalRisks || 0
+      badge: metrics?.totalRisks > 0 ? metrics.totalRisks : undefined
     },
     
     // Integrações
@@ -208,7 +211,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       color: 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700',
       action: () => setViewMode('approvals'),
       category: 'integration',
-      badge: metrics?.pendingApprovals || 0
+      badge: metrics?.pendingApprovals > 0 ? metrics.pendingApprovals : undefined
     },
     {
       id: 'notifications',
@@ -218,7 +221,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       color: 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700',
       action: () => handleNotifications(),
       category: 'integration',
-      badge: metrics?.overdueActivities || 0
+      badge: metrics?.overdueActivities > 0 ? metrics.overdueActivities : undefined
     }
   ];
 
@@ -239,6 +242,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
     toast({
       title: '📚 Biblioteca de Riscos',
       description: 'Abrindo biblioteca com templates e modelos de riscos...',
+    });
+  };
+
+  const handleActionPlansManagement = () => {
+    navigate('/action-plans');
+    toast({
+      title: '🎯 Gestão de Planos de Ação',
+      description: 'Redirecionando para o acompanhamento centralizado de planos de ação...',
     });
   };
 
@@ -263,6 +274,101 @@ export const RiskManagementCenterImproved: React.FC = () => {
       title: '🔔 Central de Alertas',
       description: 'Verificando notificações pendentes...',
     });
+  };
+  
+  // Função de debug temporária
+  const handleDebugData = async () => {
+    try {
+      console.log('🔍 DEBUG: Iniciando investigação de dados...');
+      
+      // 1. Verificar dados do usuário
+      console.log('🔍 DEBUG: Usuário atual:', {
+        user: !!user,
+        userId: user?.id,
+        tenantId: user?.tenantId,
+        email: user?.email
+      });
+      
+      // 2. Verificar total de registros na tabela
+      const { data: allData, count: totalCount, error: countError } = await supabase
+        .from('risk_registrations')
+        .select('*', { count: 'exact' });
+      
+      console.log('🔍 DEBUG: Total de registros na tabela:', {
+        totalCount,
+        error: countError?.message,
+        sampleData: allData?.slice(0, 3)
+      });
+      
+      // 3. Verificar registros do tenant atual
+      if (user?.tenantId) {
+        const { data: tenantData, count: tenantCount, error: tenantError } = await supabase
+          .from('risk_registrations')
+          .select('*', { count: 'exact' })
+          .eq('tenant_id', user.tenantId);
+        
+        console.log('🔍 DEBUG: Registros do tenant atual:', {
+          tenantId: user.tenantId,
+          tenantCount,
+          error: tenantError?.message,
+          tenantData: tenantData?.slice(0, 3)
+        });
+        
+        // 4. Se não houver dados, criar um risco de exemplo
+        if (tenantCount === 0) {
+          console.log('🔍 DEBUG: Nenhum dado encontrado, criando risco de exemplo...');
+          
+          const { data: newRisk, error: createError } = await supabase
+            .from('risk_registrations')
+            .insert({
+              risk_title: 'Risco de Exemplo - Debug',
+              risk_description: 'Risco criado para teste dos cards de métricas',
+              risk_category: 'Operacional',
+              risk_level: 'Médio',
+              probability: 3,
+              likelihood_score: 3,
+              impact_score: 3,
+              status: 'draft',
+              current_step: 1,
+              tenant_id: user.tenantId,
+              created_by: user.id,
+              severity: 'medium'
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('❌ DEBUG: Erro ao criar risco de exemplo:', createError);
+          } else {
+            console.log('✅ DEBUG: Risco de exemplo criado:', newRisk);
+            
+            // Forçar refresh das queries
+            window.location.reload();
+          }
+        }
+      }
+      
+      // 5. Verificar estado das queries
+      console.log('🔍 DEBUG: Estado das queries:', {
+        isLoadingRisks,
+        isLoadingMetrics,
+        risksCount: risks.length,
+        metricsData: metrics
+      });
+      
+      toast({
+        title: '🔍 Debug Concluído',
+        description: 'Verifique o console para detalhes dos dados.',
+      });
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Erro na investigação:', error);
+      toast({
+        title: '❌ Erro no Debug',
+        description: 'Erro ao investigar dados. Verifique o console.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleRefresh = async () => {
@@ -407,6 +513,9 @@ export const RiskManagementCenterImproved: React.FC = () => {
             }
           />
           
+          {/* Painel de Notificações */}
+          <NotificationPanel />
+
           {/* Documentação */}
           <Button 
             variant="outline" 
@@ -415,6 +524,17 @@ export const RiskManagementCenterImproved: React.FC = () => {
           >
             <BookOpen className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             <span className="hidden sm:inline">Doc</span>
+          </Button>
+          
+          {/* Debug Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDebugData}
+            className="flex items-center space-x-1 bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline">Debug</span>
           </Button>
           
           {/* Refresh */}
@@ -577,7 +697,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                         <Icon className="h-4 w-4" />
                         <span className="hidden sm:inline">
                           {view === 'dashboard' && 'Dashboard'}
-                          {view === 'table' && 'Tabela'}
+                          {view === 'table' && 'Lista'}
                           {view === 'kanban' && 'Kanban'}
                           {view === 'process' && 'Processo'}
                           {view === 'matrix' && 'Matriz'}
@@ -705,7 +825,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
           )}
           
           {viewMode === 'table' && (
-            <TableView 
+            <ExpandableCardsView 
               risks={risks} 
               searchTerm={searchTerm}
               filters={filters}
