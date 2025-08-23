@@ -1,442 +1,440 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  MessageSquare,
+  Brain,
   Send,
-  Minimize2,
-  Maximize2,
-  X,
-  Bot,
-  User,
   Lightbulb,
   FileText,
   CheckCircle,
   AlertTriangle,
-  Zap,
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  RefreshCw
+  MessageSquare,
+  Sparkles,
+  BookOpen,
+  Target,
+  Zap
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import type { AlexPolicyConfig } from '@/types/policy-management';
 
 interface Message {
   id: string;
-  type: 'user' | 'assistant';
+  type: 'user' | 'alex';
   content: string;
   timestamp: Date;
-  suggestions?: string[];
-  actions?: MessageAction[];
-}
-
-interface MessageAction {
-  id: string;
-  label: string;
-  type: 'generate' | 'analyze' | 'improve' | 'template';
-  data?: any;
+  suggestions?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    action: string;
+    priority: 'high' | 'medium' | 'low';
+  }>;
 }
 
 interface AlexPolicyChatProps {
-  isActive: boolean;
-  onToggle: (active: boolean) => void;
-  config: AlexPolicyConfig;
-  context?: {
-    module: string;
-    tenant_id?: string;
-    current_view?: string;
-    policy_id?: string;
-    policy_content?: string;
-  };
+  policyId?: string;
+  policyTitle?: string;
+  mode: 'elaboration' | 'review' | 'approval' | 'publication' | 'lifecycle' | 'analytics';
+  onApplySuggestion?: (suggestion: any) => void;
+  className?: string;
 }
 
-export const AlexPolicyChat: React.FC<AlexPolicyChatProps> = ({
-  isActive,
-  onToggle,
-  config,
-  context
+const AlexPolicyChat: React.FC<AlexPolicyChatProps> = ({
+  policyId,
+  policyTitle,
+  mode,
+  onApplySuggestion,
+  className
 }) => {
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Inicializar chat quando abrir
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      initializeChat();
-    }
-  }, [isOpen]);
-
-  // Auto scroll para última mensagem
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Ativar Alex Policy quando chat é aberto
-  useEffect(() => {
-    if (isOpen && !isActive) {
-      onToggle(true);
-    }
-  }, [isOpen, isActive, onToggle]);
-
-  const initializeChat = () => {
-    const welcomeMessage: Message = {
-      id: 'welcome',
-      type: 'assistant',
-      content: `Olá! Sou o Alex Policy, seu assistente especializado em gestão de políticas corporativas. 
-
-Como posso ajudá-lo hoje? Posso auxiliar com:
-• Elaboração e estruturação de políticas
-• Análise de conformidade regulatória  
-• Sugestões de melhorias
-• Templates e melhores práticas
-• Métricas e relatórios
-
-Estou aqui para tornar sua gestão de políticas mais eficiente e eficaz!`,
-      timestamp: new Date()
-    };
-    setMessages([welcomeMessage]);
   };
 
-  const sendMessage = async (content: string) => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Inicializar com mensagem de boas-vindas baseada no modo
+  useEffect(() => {
+    const welcomeMessage = getWelcomeMessage();
+    setMessages([{
+      id: '1',
+      type: 'alex',
+      content: welcomeMessage.content,
+      timestamp: new Date(),
+      suggestions: welcomeMessage.suggestions
+    }]);
+  }, [mode, policyTitle]);
+
+  const getWelcomeMessage = () => {
+    switch (mode) {
+      case 'elaboration':
+        return {
+          content: `Olá! Sou Alex Policy, seu assistente de IA para gestão de políticas. ${policyTitle ? `Vejo que você está trabalhando na política "${policyTitle}".` : 'Estou aqui para ajudar na elaboração de políticas.'} Como posso ajudar hoje?`,
+          suggestions: [
+            {
+              id: 'suggest-structure',
+              title: 'Sugerir estrutura',
+              description: 'Receber sugestões de estrutura para a política',
+              action: 'suggest_structure',
+              priority: 'high' as const
+            },
+            {
+              id: 'check-compliance',
+              title: 'Verificar conformidade',
+              description: 'Analisar conformidade com regulamentações',
+              action: 'check_compliance',
+              priority: 'medium' as const
+            },
+            {
+              id: 'improve-language',
+              title: 'Melhorar linguagem',
+              description: 'Sugestões para clareza e precisão',
+              action: 'improve_language',
+              priority: 'medium' as const
+            }
+          ]
+        };
+      case 'review':
+        return {
+          content: `Pronto para revisar ${policyTitle ? `"${policyTitle}"` : 'esta política'}! Posso ajudar identificando inconsistências, gaps de conformidade e sugerindo melhorias.`,
+          suggestions: [
+            {
+              id: 'deep-review',
+              title: 'Revisão profunda',
+              description: 'Análise completa da política',
+              action: 'deep_review',
+              priority: 'high' as const
+            },
+            {
+              id: 'check-gaps',
+              title: 'Identificar gaps',
+              description: 'Encontrar lacunas e inconsistências',
+              action: 'check_gaps',
+              priority: 'high' as const
+            }
+          ]
+        };
+      case 'approval':
+        return {
+          content: `Analisando ${policyTitle ? `"${policyTitle}"` : 'esta política'} para aprovação. Posso verificar critérios de aprovação e identificar possíveis bloqueadores.`,
+          suggestions: [
+            {
+              id: 'approval-checklist',
+              title: 'Checklist de aprovação',
+              description: 'Verificar todos os critérios necessários',
+              action: 'approval_checklist',
+              priority: 'high' as const
+            }
+          ]
+        };
+      default:
+        return {
+          content: `Olá! Sou Alex Policy. Como posso ajudar com ${policyTitle ? `"${policyTitle}"` : 'suas políticas'} hoje?`,
+          suggestions: []
+        };
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: 'user',
-      content,
+      content: inputValue,
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
     setIsLoading(true);
 
-    // Simular resposta da IA (substituir por integração real)
+    // Simular resposta da IA (em produção, seria uma chamada real para a API)
     setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `Entendi sua pergunta sobre "${content}". 
-
-Esta é uma resposta simulada do Alex Policy. Em uma implementação real, eu analisaria sua solicitação usando:
-
-• Conhecimento especializado em políticas corporativas
-• Base de dados de regulamentações atualizadas
-• Melhores práticas do mercado
-• Contexto específico da sua organização
-
-Posso ajudar com mais alguma coisa relacionada a políticas?`,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
+      const alexResponse = generateAlexResponse(inputValue, mode);
+      setMessages(prev => [...prev, alexResponse]);
       setIsLoading(false);
     }, 1500);
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+  const generateAlexResponse = (userInput: string, currentMode: string): Message => {
+    const responses = {
+      elaboration: [
+        {
+          content: "Baseado na sua solicitação, aqui estão algumas sugestões para melhorar a estrutura da política:",
+          suggestions: [
+            {
+              id: 'add-purpose',
+              title: 'Adicionar seção de propósito',
+              description: 'Incluir uma seção clara sobre o propósito e objetivos da política',
+              action: 'add_purpose_section',
+              priority: 'high' as const
+            },
+            {
+              id: 'define-scope',
+              title: 'Definir escopo',
+              description: 'Especificar claramente o escopo de aplicação da política',
+              action: 'define_scope',
+              priority: 'high' as const
+            }
+          ]
+        },
+        {
+          content: "Analisei o conteúdo e identifiquei oportunidades de melhoria na linguagem e clareza:",
+          suggestions: [
+            {
+              id: 'simplify-language',
+              title: 'Simplificar linguagem',
+              description: 'Tornar o texto mais acessível e claro',
+              action: 'simplify_language',
+              priority: 'medium' as const
+            }
+          ]
+        }
+      ],
+      review: [
+        {
+          content: "Completei a análise da política. Encontrei alguns pontos que precisam de atenção:",
+          suggestions: [
+            {
+              id: 'fix-inconsistency',
+              title: 'Corrigir inconsistência',
+              description: 'Há uma inconsistência entre as seções 2.1 e 3.4',
+              action: 'fix_inconsistency',
+              priority: 'high' as const
+            },
+            {
+              id: 'update-references',
+              title: 'Atualizar referências',
+              description: 'Algumas referências regulatórias estão desatualizadas',
+              action: 'update_references',
+              priority: 'medium' as const
+            }
+          ]
+        }
+      ],
+      approval: [
+        {
+          content: "Verifiquei os critérios de aprovação. A política está quase pronta, mas há alguns itens pendentes:",
+          suggestions: [
+            {
+              id: 'add-approval-matrix',
+              title: 'Matriz de aprovação',
+              description: 'Adicionar matriz de aprovação conforme governança',
+              action: 'add_approval_matrix',
+              priority: 'high' as const
+            }
+          ]
+        }
+      ]
+    };
 
-    const message = inputValue.trim();
-    setInputValue('');
+    const modeResponses = responses[currentMode as keyof typeof responses] || responses.elaboration;
+    const randomResponse = modeResponses[Math.floor(Math.random() * modeResponses.length)];
+
+    return {
+      id: Date.now().toString(),
+      type: 'alex',
+      content: randomResponse.content,
+      timestamp: new Date(),
+      suggestions: randomResponse.suggestions
+    };
+  };
+
+  const handleSuggestionClick = (suggestion: any) => {
+    if (onApplySuggestion) {
+      onApplySuggestion(suggestion);
+    }
     
-    try {
-      await sendMessage(message);
-    } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao enviar mensagem para Alex Policy',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copiado',
-        description: 'Texto copiado para a área de transferência',
-      });
-    } catch (error) {
-      console.error('Erro ao copiar:', error);
-    }
-  };
-
-  const getMessageIcon = (type: string) => {
-    return type === 'user' ? User : Bot;
-  };
-
-  const getMessageBgColor = (type: string) => {
-    return type === 'user' 
-      ? 'bg-primary text-primary-foreground' 
-      : 'bg-muted text-foreground';
-  };
-
-  const formatMessage = (content: string) => {
-    // Simples formatação de markdown
-    return content
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code class="bg-muted px-1 rounded">$1</code>')
-      .replace(/\n/g, '<br />');
-  };
-
-  // Sugestões contextuais baseadas na view atual
-  const getContextualSuggestions = () => {
-    const baseUrl = context?.current_view || 'dashboard';
+    // Adicionar mensagem confirmando a aplicação
+    const confirmMessage: Message = {
+      id: Date.now().toString(),
+      type: 'alex',
+      content: `✅ Sugestão "${suggestion.title}" aplicada com sucesso! Posso ajudar com mais alguma coisa?`,
+      timestamp: new Date()
+    };
     
-    switch (baseUrl) {
-      case 'elaboration':
-        return [
-          'Como estruturar uma política de segurança?',
-          'Gerar template para política de RH',
-          'Quais seções são obrigatórias?',
-          'Revisar conteúdo desta política'
-        ];
-      case 'review':
-        return [
-          'Analisar conformidade regulatória',
-          'Verificar completude da política',
-          'Sugerir melhorias no texto',
-          'Comparar com melhores práticas'
-        ];
-      case 'approval':
-        return [
-          'Avaliar impacto organizacional',
-          'Verificar matriz de aprovação',
-          'Analisar riscos da implementação',
-          'Sugerir cronograma de aprovação'
-        ];
-      default:
-        return [
-          'Como posso ajudar com políticas?',
-          'Mostrar métricas de compliance',
-          'Políticas próximas do vencimento',
-          'Sugestões de melhoria'
-        ];
+    setMessages(prev => [...prev, confirmMessage]);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-800 border-red-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'high': return AlertTriangle;
+      case 'medium': return Target;
+      case 'low': return CheckCircle;
+      default: return Lightbulb;
     }
   };
 
   return (
-    <>
-      {/* Botão de Ativação */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger asChild>
-          <Button 
-            variant={isActive ? "default" : "outline"}
-            size="sm"
-            className="relative"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            <span>Alex Policy</span>
-            {isActive && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            )}
-          </Button>
-        </DialogTrigger>
+    <Card className={`h-full flex flex-col ${className}`}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+              <Brain className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <span className="text-lg font-bold">Alex Policy</span>
+              <div className="flex items-center space-x-1 mt-1">
+                <Sparkles className="h-3 w-3 text-blue-500" />
+                <span className="text-xs text-muted-foreground">Assistente IA para Políticas</span>
+              </div>
+            </div>
+          </div>
+          <Badge variant="secondary" className="ml-auto">
+            {mode === 'elaboration' ? 'Elaboração' :
+             mode === 'review' ? 'Revisão' :
+             mode === 'approval' ? 'Aprovação' :
+             mode === 'publication' ? 'Publicação' :
+             mode === 'lifecycle' ? 'Ciclo de Vida' : 'Analytics'}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
 
-        <DialogContent className="max-w-2xl max-h-[80vh] p-0">
-          <DialogHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center space-x-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
-                <span>Alex Policy - Assistente Especializado</span>
-                <Badge variant="secondary" className="bg-primary/10 text-primary">
-                  IA
-                </Badge>
-              </DialogTitle>
-              
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsMinimized(!isMinimized)}
+      <CardContent className="flex-1 flex flex-col p-0">
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-4 pb-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 ${
+                    message.type === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}
                 >
-                  {isMinimized ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-              <span>{isActive ? 'Ativo e pronto para ajudar' : 'Em standby'}</span>
-              {config.auto_suggestions && (
-                <Badge variant="outline" className="text-xs">
-                  <Lightbulb className="h-3 w-3 mr-1" />
-                  Auto-sugestões
-                </Badge>
-              )}
-            </div>
-          </DialogHeader>
-
-          {!isMinimized && (
-            <div className="flex flex-col h-[500px]">
-              {/* Área de Mensagens */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message) => {
-                    const MessageIcon = getMessageIcon(message.type);
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex items-start space-x-3 ${
-                          message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                        }`}
-                      >
-                        <div className={`p-2 rounded-lg ${
-                          message.type === 'user' 
-                            ? 'bg-primary/10 text-primary' 
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          <MessageIcon className="h-4 w-4" />
-                        </div>
-                        
-                        <div className={`flex-1 space-y-2 ${
-                          message.type === 'user' ? 'text-right' : ''
-                        }`}>
-                          <div className={`inline-block p-3 rounded-lg max-w-[80%] ${
-                            getMessageBgColor(message.type)
-                          }`}>
-                            <div 
-                              dangerouslySetInnerHTML={{ 
-                                __html: formatMessage(message.content) 
-                              }}
-                            />
+                  <div className="flex items-start space-x-2">
+                    {message.type === 'alex' && (
+                      <Brain className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm">{message.content}</p>
+                      
+                      {message.suggestions && message.suggestions.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            Sugestões:
                           </div>
-                          
-                          {message.type === 'assistant' && (
-                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                              <span>{new Date(message.timestamp).toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}</span>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(message.content)}
-                                className="h-6 w-6 p-0"
+                          {message.suggestions.map((suggestion) => {
+                            const PriorityIcon = getPriorityIcon(suggestion.priority);
+                            return (
+                              <div
+                                key={suggestion.id}
+                                className={`p-2 rounded-md border ${getPriorityColor(suggestion.priority)} cursor-pointer hover:opacity-80 transition-opacity`}
+                                onClick={() => handleSuggestionClick(suggestion)}
                               >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                              >
-                                <ThumbsUp className="h-3 w-3" />
-                              </Button>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                              >
-                                <ThumbsDown className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <PriorityIcon className="h-3 w-3" />
+                                  <span className="text-xs font-medium">{suggestion.title}</span>
+                                </div>
+                                <p className="text-xs opacity-80">{suggestion.description}</p>
+                              </div>
+                            );
+                          })}
                         </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {isLoading && (
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-                        <Bot className="h-4 w-4" />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RefreshCw className="h-4 w-4 animate-spin text-primary" />
-                        <span className="text-sm text-muted-foreground">Alex Policy está pensando...</span>
-                      </div>
+                      )}
                     </div>
-                  )}
-                  
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
-
-              {/* Sugestões Contextuais */}
-              {messages.length <= 1 && (
-                <div className="p-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-3">Sugestões para começar:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {getContextualSuggestions().map((suggestion, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-auto p-2 text-left justify-start"
-                        onClick={() => setInputValue(suggestion)}
-                      >
-                        <Lightbulb className="h-3 w-3 mr-2 flex-shrink-0" />
-                        <span className="truncate">{suggestion}</span>
-                      </Button>
-                    ))}
                   </div>
-                </div>
-              )}
-
-              {/* Área de Input */}
-              <div className="p-4 border-t">
-                <div className="flex items-center space-x-2">
-                  <Input
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Digite sua pergunta sobre políticas..."
-                    disabled={isLoading}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputValue.trim() || isLoading}
-                    size="sm"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                  <span>Pressione Enter para enviar</span>
-                  <div className="flex items-center space-x-2">
-                    <span>Confiança: {(config.confidence_threshold * 100).toFixed(0)}%</span>
-                    <span>•</span>
-                    <span>Idioma: {config.preferred_language}</span>
+                  
+                  <div className="text-xs opacity-60 mt-2">
+                    {message.timestamp.toLocaleTimeString('pt-BR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+            ))}
+            
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-lg p-3 max-w-[80%]">
+                  <div className="flex items-center space-x-2">
+                    <Brain className="h-4 w-4 text-blue-500 animate-pulse" />
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
+
+        <div className="p-4 border-t">
+          <div className="flex space-x-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Pergunte ao Alex sobre políticas..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              disabled={isLoading}
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isLoading || !inputValue.trim()}
+              size="sm"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-1 mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Como melhorar esta política?")}
+            >
+              <Lightbulb className="h-3 w-3 mr-1" />
+              Melhorar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Verificar conformidade regulatória")}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Conformidade
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Sugerir estrutura padrão")}
+            >
+              <FileText className="h-3 w-3 mr-1" />
+              Estrutura
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
