@@ -293,7 +293,7 @@ const App = () => (
                       <AssessmentDetailPage />
                     </Suspense>
                   } />
-                  <Route path="policies" element={
+                  <Route path="policy-management" element={
                     <Suspense fallback={<PageLoader />}>
                       <PolicyManagementPage />
                     </Suspense>
