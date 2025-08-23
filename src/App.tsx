@@ -32,7 +32,7 @@ const AIWorkingPapers = lazy(() => import("@/components/audit/AIWorkingPapers"))
 const AuditReportGenerator = lazy(() => import("@/components/audit/AuditReportGenerator"));
 const AuditEvidenceManager = lazy(() => import("@/components/audit/AuditEvidenceManager"));
 const AlexAuditAI = lazy(() => import("@/components/audit/AlexAuditAI"));
-const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPageTest"));
+const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
 // Assessments module
