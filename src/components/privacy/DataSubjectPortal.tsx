@@ -234,7 +234,7 @@ export function DataSubjectPortal() {
           <div className="flex justify-center items-center mb-4">
             <Shield className="w-12 h-12 text-blue-600 mr-3" />
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Portal de Privacidade</h1>
+              <h1 className="text-4xl font-bold text-foreground">Portal de Privacidade</h1>
               <p className="text-lg text-gray-600">Seus Direitos de Privacidade</p>
             </div>
           </div>
@@ -296,7 +296,7 @@ export function DataSubjectPortal() {
                       <form onSubmit={newRequestForm.handleSubmit(handleNewRequestSubmit)} className="space-y-6">
                         {/* Personal Information */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-gray-900">Informações Pessoais</h4>
+                          <h4 className="font-medium text-foreground">Informações Pessoais</h4>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
@@ -350,7 +350,7 @@ export function DataSubjectPortal() {
 
                         {/* Request Type */}
                         <div className="space-y-4">
-                          <h4 className="font-medium text-gray-900">Tipo de Solicitação</h4>
+                          <h4 className="font-medium text-foreground">Tipo de Solicitação</h4>
                           
                           <FormField
                             control={newRequestForm.control}
@@ -503,14 +503,14 @@ export function DataSubjectPortal() {
                   {/* Results */}
                   {trackingResults.length > 0 && (
                     <div className="mt-6 space-y-4">
-                      <h4 className="font-medium text-gray-900">Suas Solicitações</h4>
+                      <h4 className="font-medium text-foreground">Suas Solicitações</h4>
                       {trackingResults.map((request) => {
                         const statusInfo = getStatusInfo(request.status);
                         return (
                           <Card key={request.id} className="border-l-4 border-l-blue-500">
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-2">
-                                <h5 className="font-medium text-gray-900">
+                                <h5 className="font-medium text-foreground">
                                   {REQUEST_TYPES[request.request_type as keyof typeof REQUEST_TYPES]}
                                 </h5>
                                 <Badge className={statusInfo.color}>
@@ -565,7 +565,7 @@ export function DataSubjectPortal() {
                                 {info.icon}
                               </div>
                               <div>
-                                <h4 className="font-medium text-gray-900 mb-1">{label}</h4>
+                                <h4 className="font-medium text-foreground mb-1">{label}</h4>
                                 <p className="text-sm text-gray-600">{info.description}</p>
                                 <div className="mt-2">
                                   <Badge variant="outline" className="text-xs">

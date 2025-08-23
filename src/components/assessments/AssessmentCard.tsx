@@ -224,14 +224,14 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
 
   const getStatusColor = (status: AssessmentStatus) => {
     switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'not_started': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-orange-100 text-orange-800';
-      case 'under_review': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      case 'expired': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'draft': return 'bg-muted text-muted-foreground';
+      case 'not_started': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+      case 'in_progress': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200';
+      case 'under_review': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200';
+      case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+      case 'expired': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -272,7 +272,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
       "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
       isExpanded 
         ? "shadow-lg border-primary/30" 
-        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
+        : "hover:bg-muted/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
@@ -336,12 +336,12 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
           <CardContent className="pt-0">
             <div className="space-y-6">
               {/* Navigation Tabs */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <div className="flex space-x-1 bg-muted p-1 rounded-lg">
                 <button
                   onClick={() => setActiveSection('general')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                     activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      ? 'bg-background shadow-sm text-primary' 
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 >
@@ -353,7 +353,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
                   onClick={() => setActiveSection('progress')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                     activeSection === 'progress' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      ? 'bg-background shadow-sm text-primary' 
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 >
@@ -370,7 +370,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
                   onClick={() => setActiveSection('users')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                     activeSection === 'users' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      ? 'bg-background shadow-sm text-primary' 
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 >
@@ -387,7 +387,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
                   onClick={() => setActiveSection('controls')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                     activeSection === 'controls' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      ? 'bg-background shadow-sm text-primary' 
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 >
@@ -404,7 +404,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
                   onClick={() => setActiveSection('history')}
                   className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
                     activeSection === 'history' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                      ? 'bg-background shadow-sm text-primary' 
                       : 'text-muted-foreground hover:text-primary'
                   }`}
                 >

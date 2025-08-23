@@ -36,6 +36,7 @@ import {
   Clock
 } from 'lucide-react';
 
+
 const riskTrendData = [
   { month: 'Jan', critical: 4, high: 12, medium: 8, low: 3 },
   { month: 'Fev', critical: 3, high: 10, medium: 12, low: 5 },
@@ -235,136 +236,146 @@ export const ExecutiveDashboard = () => {
   }, []);
 
   return (
-    <div className="space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard Executivo</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Visão estratégica consolidada de GRC • Última atualização: há 5 minutos
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard Executivo</h1>
+          <p className="text-muted-foreground">
+            Visão estratégica consolidada de GRC • Atualização em tempo real
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-            <Brain className="h-4 w-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Insights IA</span>
-            <span className="sm:hidden">IA</span>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="default" className="gap-2">
+            <Brain className="h-4 w-4" />
+            <span>Insights IA</span>
           </Button>
-          <ExecutiveReportButton 
-            size="sm" 
-            className="grc-button-primary text-xs sm:text-sm"
-          />
+          <ExecutiveReportButton size="default" />
         </div>
       </div>
 
-      {/* AI Assistant Banner - Responsivo */}
-      <Card className="grc-card bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border-primary/20 overflow-hidden">
-        <CardContent className="p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row items-start space-y-3 sm:space-y-0 sm:space-x-4">
-            <div className="p-2 sm:p-3 bg-primary/10 rounded-lg self-center sm:self-start">
-              <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+      {/* AI Insights Banner */}
+      <Card className="border-l-4 border-l-primary bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Brain className="h-5 w-5 text-primary" />
             </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h3 className="font-semibold text-foreground mb-2 text-sm sm:text-base">Resumo Inteligente - IA</h3>
-              <p className="text-muted-foreground mb-3 sm:mb-4 text-xs sm:text-sm">
-                <span className="block sm:inline"><strong>Status Atual:</strong> {realTimeData.criticalRisks} riscos críticos ativos de {realTimeData.criticalRisks + 16} identificados.</span>{' '}
-                <span className="block sm:inline mt-1 sm:mt-0">Score de compliance em {realTimeData.complianceScore}% com base em {realTimeData.completedAssessments} assessments concluídos.</span>{' '}
-                <span className="block sm:inline mt-1 sm:mt-0"><strong>Foco:</strong> {realTimeData.openIncidents > 0 ? `${realTimeData.openIncidents} incidentes aguardam resolução.` : 'Todos incidentes resolvidos.'}</span>
+            <div className="flex-1 space-y-3">
+              <h3 className="font-semibold text-foreground">Resumo Inteligente</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                <strong>Status:</strong> {realTimeData.criticalRisks} riscos críticos ativos. 
+                Score de compliance em {realTimeData.complianceScore}% com {realTimeData.completedAssessments} assessments concluídos. 
+                {realTimeData.openIncidents > 0 ? `${realTimeData.openIncidents} incidentes aguardam resolução.` : 'Todos incidentes resolvidos.'}
               </p>
-              <div className="flex flex-wrap justify-center sm:justify-start gap-1 sm:gap-2">
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-[10px] sm:text-xs px-2 py-1">
-                  ↗ Risco em declínio
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="bg-success/10 text-success border-success/20">
+                  ↗ Tendência positiva
                 </Badge>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] sm:text-xs px-2 py-1">
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                   🎯 Meta Q2 atingida
                 </Badge>
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px] sm:text-xs px-2 py-1">
-                  ⚠ LGPD requer atenção
-                </Badge>
+                {realTimeData.complianceScore < 90 && (
+                  <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20">
+                    ⚠ Atenção necessária
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* KPI Cards - Melhor espaçamento em mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        <Card className="grc-card overflow-hidden">
-          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Risco Residual</p>
-                <div className="p-1 sm:p-2 bg-success/10 rounded-lg">
-                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-success" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Risco Residual</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-bold text-foreground">{realTimeData.riskScore}</span>
+                  <span className="text-sm text-muted-foreground">/5.0</span>
                 </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.riskScore}</p>
-                <p className="text-[10px] sm:text-xs text-success flex items-center leading-tight">
-                  <TrendingDown className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">{realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Atenção'}</span>
-                </p>
+              <div className="p-3 bg-success/10 rounded-lg">
+                <Shield className="h-5 w-5 text-success" />
               </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingDown className="h-3 w-3 text-success" />
+              <span className={`font-medium ${realTimeData.riskScore <= 2.5 ? 'text-success' : 'text-warning'}`}>
+                {realTimeData.riskScore <= 2.5 ? 'Controlado' : 'Requer Atenção'}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="grc-card overflow-hidden">
-          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Compliance</p>
-                <div className="p-1 sm:p-2 bg-primary/10 rounded-lg">
-                  <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Compliance Score</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-bold text-foreground">{realTimeData.complianceScore}</span>
+                  <span className="text-sm text-muted-foreground">%</span>
                 </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.complianceScore}%</p>
-                <p className="text-[10px] sm:text-xs text-success flex items-center leading-tight">
-                  <TrendingUp className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">{realTimeData.complianceScore >= 90 ? 'Meta OK' : 'Progresso'}</span>
-                </p>
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <FileCheck className="h-5 w-5 text-primary" />
               </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <TrendingUp className="h-3 w-3 text-success" />
+              <span className={`font-medium ${realTimeData.complianceScore >= 90 ? 'text-success' : 'text-primary'}`}>
+                {realTimeData.complianceScore >= 90 ? 'Meta Atingida' : 'Em Progresso'}
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="grc-card overflow-hidden">
-          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">Assessments</p>
-                <div className="p-1 sm:p-2 bg-accent/10 rounded-lg">
-                  <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 text-accent" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Assessments</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-bold text-foreground">{realTimeData.completedAssessments}</span>
+                  <span className="text-sm text-muted-foreground">/{realTimeData.totalAssessments}</span>
                 </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.completedAssessments}/{realTimeData.totalAssessments}</p>
-                <p className="text-[10px] sm:text-xs text-primary flex items-center leading-tight">
-                  <Target className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">{Math.round((realTimeData.completedAssessments / Math.max(realTimeData.totalAssessments, 1)) * 100)}% feitos</span>
-                </p>
+              <div className="p-3 bg-accent/10 rounded-lg">
+                <Target className="h-5 w-5 text-accent" />
               </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <Activity className="h-3 w-3 text-accent" />
+              <span className="font-medium text-accent">
+                {Math.round((realTimeData.completedAssessments / Math.max(realTimeData.totalAssessments, 1)) * 100)}% Concluídos
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="grc-card overflow-hidden">
-          <CardContent className="p-2 sm:p-3 md:p-4 h-full">
-            <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px]">
-              <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight">LGPD</p>
-                <div className="p-1 sm:p-2 bg-warning/10 rounded-lg">
-                  <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-warning" />
+        <Card className="hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">LGPD & Ética</p>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl font-bold text-foreground">{realTimeData.totalDPIA + realTimeData.ethicsReports}</span>
+                  <span className="text-sm text-muted-foreground">itens</span>
                 </div>
               </div>
-              <div className="flex-1 flex flex-col justify-center">
-                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{realTimeData.totalDPIA + realTimeData.ethicsReports}</p>
-                <p className="text-[10px] sm:text-xs text-warning flex items-center leading-tight">
-                  <Activity className="h-2 w-2 sm:h-3 sm:w-3 mr-1 flex-shrink-0" />
-                  <span className="truncate">DPIAs + Ética</span>
-                </p>
+              <div className="p-3 bg-warning/10 rounded-lg">
+                <Shield className="h-5 w-5 text-warning" />
               </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs">
+              <CheckCircle className="h-3 w-3 text-warning" />
+              <span className="font-medium text-warning">
+                DPIAs e Relatórios
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -373,16 +384,16 @@ export const ExecutiveDashboard = () => {
       {/* Charts Row - Novos gráficos com dados reais */}
       <DashboardCharts />
 
-      {/* Risk Matrix and Performance Trends */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Risk Matrix */}
         <RiskMatrix />
 
         {/* Performance Trends */}
-        <Card className="grc-card overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-base">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-success" />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-success" />
               <span>Tendências de Performance</span>
             </CardTitle>
           </CardHeader>
@@ -420,63 +431,71 @@ export const ExecutiveDashboard = () => {
         </Card>
       </div>
 
-      {/* Quick Actions with Real Data - Responsivo */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
-            <div className="p-2 sm:p-3 md:p-4 bg-danger/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-danger/20 transition-colors">
-              <XCircle className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-danger" />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="p-4 bg-danger/10 rounded-lg w-fit mx-auto group-hover:bg-danger/20 transition-colors">
+              <XCircle className="h-8 w-8 text-danger" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Riscos Críticos</h3>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
-              {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} ativo{realTimeData.criticalRisks !== 1 ? 's' : ''}
-            </p>
-            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Riscos Críticos</h3>
+              <p className="text-sm text-muted-foreground">
+                {realTimeData.criticalRisks} risco{realTimeData.criticalRisks !== 1 ? 's' : ''} crítico{realTimeData.criticalRisks !== 1 ? 's' : ''} ativo{realTimeData.criticalRisks !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <Button variant="outline" className="w-full">
               Revisar Agora
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
-            <div className="p-2 sm:p-3 md:p-4 bg-warning/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-warning/20 transition-colors">
-              <Clock className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-warning" />
+        <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="p-4 bg-warning/10 rounded-lg w-fit mx-auto group-hover:bg-warning/20 transition-colors">
+              <Clock className="h-8 w-8 text-warning" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Incidentes Ativos</h3>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
-              {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} em tratamento
-            </p>
-            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Incidentes Ativos</h3>
+              <p className="text-sm text-muted-foreground">
+                {realTimeData.openIncidents} incidente{realTimeData.openIncidents !== 1 ? 's' : ''} em tratamento
+              </p>
+            </div>
+            <Button variant="outline" className="w-full">
               Analisar
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
-            <div className="p-2 sm:p-3 md:p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-primary/20 transition-colors">
-              <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary" />
+        <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="p-4 bg-primary/10 rounded-lg w-fit mx-auto group-hover:bg-primary/20 transition-colors">
+              <FileCheck className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Políticas Ativas</h3>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
-              {realTimeData.totalPolicies} política{realTimeData.totalPolicies !== 1 ? 's' : ''} vigente{realTimeData.totalPolicies !== 1 ? 's' : ''}
-            </p>
-            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Políticas Ativas</h3>
+              <p className="text-sm text-muted-foreground">
+                {realTimeData.totalPolicies} política{realTimeData.totalPolicies !== 1 ? 's' : ''} vigente{realTimeData.totalPolicies !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <Button variant="outline" className="w-full">
               Gerenciar
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-6 text-center flex flex-col h-full">
-            <div className="p-2 sm:p-3 md:p-4 bg-accent/10 rounded-lg w-fit mx-auto mb-2 sm:mb-3 md:mb-4 group-hover:bg-accent/20 transition-colors">
-              <Users className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-accent" />
+        <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="p-4 bg-accent/10 rounded-lg w-fit mx-auto group-hover:bg-accent/20 transition-colors">
+              <Users className="h-8 w-8 text-accent" />
             </div>
-            <h3 className="font-semibold text-foreground mb-1 sm:mb-2 text-xs sm:text-sm md:text-base leading-tight">Fornecedores</h3>
-            <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-2 sm:mb-3 md:mb-4 flex-grow leading-tight">
-              {realTimeData.totalVendors} fornecedor{realTimeData.totalVendors !== 1 ? 'es' : ''} monitorado{realTimeData.totalVendors !== 1 ? 's' : ''}
-            </p>
-            <Button variant="outline" size="sm" className="w-full text-[10px] sm:text-xs md:text-sm mt-auto py-1 sm:py-2">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Fornecedores</h3>
+              <p className="text-sm text-muted-foreground">
+                {realTimeData.totalVendors} fornecedor{realTimeData.totalVendors !== 1 ? 'es' : ''} monitorado{realTimeData.totalVendors !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <Button variant="outline" className="w-full">
               Ver Todos
             </Button>
           </CardContent>

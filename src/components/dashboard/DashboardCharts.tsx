@@ -126,7 +126,7 @@ const DashboardCharts = () => {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {Array(4).fill(null).map((_, i) => (
-          <Card key={i} className="w-full overflow-hidden">
+          <Card key={i} className="w-full">
             <CardContent className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </CardContent>
@@ -240,11 +240,11 @@ const DashboardCharts = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Riscos por Severidade */}
-      <Card className="grc-card overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
-            <span>Distribuição de Riscos por Severidade</span>
+            <span>Distribuição de Riscos</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -271,11 +271,11 @@ const DashboardCharts = () => {
       </Card>
 
       {/* Status dos Assessments */}
-      <Card className="grc-card overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <FileCheck className="h-5 w-5 text-primary" />
-            <span>Status dos Assessments ({data.assessments.length} total)</span>
+            <span>Assessments ({data.assessments.length})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -302,11 +302,11 @@ const DashboardCharts = () => {
       </Card>
 
       {/* Incidentes de Privacidade por Severidade */}
-      <Card className="grc-card overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-danger" />
-            <span>Incidentes de Privacidade ({data.privacyIncidents.length} total)</span>
+            <span>Incidentes de Privacidade ({data.privacyIncidents.length})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -331,11 +331,11 @@ const DashboardCharts = () => {
       </Card>
 
       {/* Fornecedores por Nível de Risco */}
-      <Card className="grc-card overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Building className="h-5 w-5 text-accent" />
-            <span>Fornecedores por Nível de Risco ({data.vendors.length} total)</span>
+            <span>Fornecedores ({data.vendors.length})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -360,11 +360,11 @@ const DashboardCharts = () => {
       </Card>
 
       {/* Módulo LGPD e Privacidade - Span 2 columns */}
-      <Card className="grc-card lg:col-span-2 overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center space-x-2">
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <span>Módulo LGPD e Privacidade - Visão Consolidada</span>
+            <span>LGPD e Privacidade - Visão Consolidada</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

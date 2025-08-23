@@ -105,7 +105,7 @@ export const AIChatAssistant: React.FC<AIChatAssistantProps> = ({
             <div>
               <CardTitle className="text-sm font-medium">{getTypeLabel()}</CardTitle>
               <Badge variant="outline" className="text-xs">
-                Assistente IA - Hugging Face
+                Assistente IA - GLM 4.5
               </Badge>
             </div>
           </div>

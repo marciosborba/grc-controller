@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
@@ -16,11 +16,11 @@ const navigationItems = [{
       description: 'Questionários e avaliações'
     },
     {
-      title: 'Auditoria',
+      title: 'Auditoria IA',
       url: '/audit',
       icon: Eye,
       permissions: ['audit.read', 'all'],
-      description: 'Planejamento e execução de auditorias'
+      description: 'Auditoria completa com IA - Alex Audit'
     },
     {
       title: 'Canal de Ética',
@@ -58,11 +58,25 @@ const navigationItems = [{
       description: 'Visão geral e métricas principais'
     },
     {
-      title: 'Gestão de Riscos',
+      title: 'Notificações',
+      url: '/notifications',
+      icon: Bell,
+      permissions: ['all'],
+      description: 'Central de notificações e alertas'
+    },
+    {
+      title: 'Risco Corporativo',
       url: '/risks',
       icon: AlertTriangle,
       permissions: ['risk.read', 'all'],
-      description: 'Identificação e mitigação de riscos'
+      description: 'Gestão completa de riscos corporativos com ALEX RISK'
+    },
+    {
+      title: 'Gestão de Riscos (Legado)',
+      url: '/risks-legacy',
+      icon: AlertTriangle,
+      permissions: ['risk.read', 'all'],
+      description: 'Módulo original de gestão de riscos'
     },
     {
       title: 'Incidentes',
@@ -121,6 +135,12 @@ const navigationItems = [{
     icon: Building2,
     permissions: ['platform_admin'],
     description: 'Gestão de organizações e limites'
+  }, {
+    title: 'Gestão de IA',
+    url: '/admin/ai-management',
+    icon: Brain,
+    permissions: ['platform_admin'],
+    description: 'Configuração e gestão de assistentes de IA'
   }]
 }];
 export function AppSidebar() {
@@ -160,14 +180,14 @@ export function AppSidebar() {
     // Para outras rotas, mantém a lógica original
     return currentPath === path || currentPath.startsWith(path + '/');
   };
-  const getNavCls = (isActiveItem: boolean) => isActiveItem ? "bg-primary/10 text-primary font-medium border border-primary/20" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+  const getNavCls = (isActiveItem: boolean) => isActiveItem ? "text-primary font-medium" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
   const handleProfileClick = () => {
     navigate('/profile');
   };
-  return <Sidebar className={`${collapsed ? "w-16" : "w-72"} transition-all duration-300 border-r border-border`} collapsible="icon">
+  return <Sidebar className="border-r border-border" collapsible="icon">
       {/* Header - Responsivo */}
-      <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 border-b border-border">
+      <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
         {!collapsed && <div className="flex items-center space-x-2 min-w-0 flex-1">
             <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
             <div className="min-w-0 flex-1">
@@ -179,7 +199,7 @@ export function AppSidebar() {
       </div>
 
       {/* AI Assistant Banner - Responsivo */}
-      {!collapsed && <div className="m-3 sm:m-4 p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+      {!collapsed && <div className="mx-3 sm:mx-4 mt-3 sm:mt-4 mb-2 sm:mb-3 p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
           <div className="flex items-center space-x-2 mb-1 sm:mb-2">
             <Brain className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
             <span className="text-xs sm:text-sm font-medium text-primary">Assistente IA</span>
@@ -189,7 +209,7 @@ export function AppSidebar() {
           </p>
         </div>}
 
-      <SidebarContent className="px-1 sm:px-2 py-3 sm:py-4">
+      <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
         {navigationItems.map((group, groupIndex) => {
           const filteredItems = group.items.filter(item => hasPermission(item.permissions));
           
@@ -198,7 +218,7 @@ export function AppSidebar() {
           
           return (
             <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
-              {!collapsed && (
+              {!collapsed && group.label !== 'Módulos' && (
                 <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${
                   group.label === 'Administração da Plataforma' 
                     ? 'text-orange-600 dark:text-orange-400 border-b border-orange-200 dark:border-orange-800 pb-1 sm:pb-2' 
@@ -242,7 +262,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Info - Responsivo */}
-      {!collapsed && user && <div className="mt-auto p-3 sm:p-4 border-t border-border">
+      {!collapsed && user && <div className="mt-auto px-3 sm:px-4 py-3 sm:py-4 border-t border-border">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 sm:p-2 transition-colors"
             onClick={handleProfileClick}

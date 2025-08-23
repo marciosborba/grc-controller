@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sidebar Spacing Reduction</title>
+    <style>
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        /* Layout simulado */
+        .layout-container {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            background: #f8fafc;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
+            background: #1e293b;
+            color: white;
+            padding: 20px;
+            z-index: 10;
+        }
+        
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #94a3b8;
+        }
+        
+        .sidebar-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #334155;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .sidebar-item:hover {
+            background: #475569;
+        }
+        
+        /* Conteúdo principal */
+        .content-area {
+            margin-left: 240px;
+            min-height: 100vh;
+            background: white;
+        }
+        
+        .header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .main-content {
+            background: #f8fafc;
+        }
+        
+        /* ANTES: Padding original */
+        .main-content.original {
+            padding-left: 24px; /* pl-6 = 24px */
+            padding-right: 16px;
+            padding-top: 16px;
+            padding-bottom: 16px;
+        }
+        
+        /* DEPOIS: Padding reduzido em 10px */
+        .main-content.reduced {
+            padding-left: 14px; /* 24px - 10px = 14px */
+            padding-right: 16px;
+            padding-top: 16px;
+            padding-bottom: 16px;
+        }
+        
+        @media (min-width: 640px) {
+            .main-content.original {
+                padding-left: 32px; /* sm:pl-8 = 32px */
+            }
+            
+            .main-content.reduced {
+                padding-left: 22px; /* 32px - 10px = 22px */
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .main-content.original {
+                padding-left: 40px; /* lg:pl-10 = 40px */
+            }
+            
+            .main-content.reduced {
+                padding-left: 30px; /* 40px - 10px = 30px */
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .comparison-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .comparison-half {
+            flex: 1;
+            position: relative;
+        }
+        
+        .comparison-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc2626;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 20;
+        }
+        
+        .comparison-label.after {
+            background: #16a34a;
+        }
+        
+        .measurement-indicator {
+            position: absolute;
+            top: 100px;
+            left: 240px;
+            width: 0;
+            height: 50px;
+            border-left: 2px dashed #f59e0b;
+            z-index: 15;
+        }
+        
+        .measurement-indicator::after {
+            content: attr(data-width);
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            background: #f59e0b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .measurement-indicator.original {
+            margin-left: 24px;
+        }
+        
+        .measurement-indicator.reduced {
+            margin-left: 14px;
+        }
+        
+        @media (min-width: 640px) {
+            .measurement-indicator.original {
+                margin-left: 32px;
+            }
+            
+            .measurement-indicator.reduced {
+                margin-left: 22px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .measurement-indicator.original {
+                margin-left: 40px;
+            }
+            
+            .measurement-indicator.reduced {
+                margin-left: 30px;
+            }
+        }
+        
+        /* Utilitários */
+        .font-bold { font-weight: bold; }
+        .text-lg { font-size: 1.125rem; }
+        .text-gray-600 { color: #6b7280; }
+        .mb-4 { margin-bottom: 1rem; }
+        .text-center { text-align: center; }
+        .bg-blue-50 { background-color: #eff6ff; }
+        .border-blue-200 { border-color: #bfdbfe; }
+        .text-blue-900 { color: #1e3a8a; }
+        .rounded { border-radius: 0.25rem; }
+        .p-4 { padding: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <!-- Comparação lado a lado -->
+    <div class="comparison-container">
+        <!-- ANTES: Layout Original -->
+        <div class="comparison-half">
+            <div class="comparison-label">❌ ANTES: Espaçamento Original</div>
+            <div class="layout-container">
+                <div class="sidebar">
+                    <h2>🏢 GRC Controller</h2>
+                    <div class="sidebar-item">📊 Dashboard</div>
+                    <div class="sidebar-item">📋 Assessments</div>
+                    <div class="sidebar-item">⚠️ Risks</div>
+                    <div class="sidebar-item">🔒 Privacy</div>
+                    <div class="sidebar-item">⚙️ Settings</div>
+                </div>
+                
+                <div class="content-area">
+                    <div class="header">
+                        <h1 class="font-bold text-lg">Dashboard Principal</h1>
+                    </div>
+                    
+                    <div class="main-content original">
+                        <div class="measurement-indicator original" data-width="Mobile: 24px | SM: 32px | LG: 40px"></div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Card de Exemplo 1</h3>
+                            <p class="text-gray-600">Este card mostra o espaçamento original entre o sidebar e o conteúdo. Note a distância da borda esquerda.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Card de Exemplo 2</h3>
+                            <p class="text-gray-600">O padding-left original é maior, criando mais espaço entre o sidebar e o conteúdo.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Métricas de Espaçamento</h3>
+                            <div class="bg-blue-50 border-blue-200 p-4 rounded">
+                                <p class="text-blue-900">
+                                    <strong>Espaçamento Original:</strong><br>
+                                    • Mobile: 24px (pl-6)<br>
+                                    • Tablet: 32px (sm:pl-8)<br>
+                                    • Desktop: 40px (lg:pl-10)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEPOIS: Layout Reduzido -->
+        <div class="comparison-half">
+            <div class="comparison-label after">✅ DEPOIS: Espaçamento Reduzido (-10px)</div>
+            <div class="layout-container">
+                <div class="sidebar">
+                    <h2>🏢 GRC Controller</h2>
+                    <div class="sidebar-item">📊 Dashboard</div>
+                    <div class="sidebar-item">📋 Assessments</div>
+                    <div class="sidebar-item">⚠️ Risks</div>
+                    <div class="sidebar-item">🔒 Privacy</div>
+                    <div class="sidebar-item">⚙️ Settings</div>
+                </div>
+                
+                <div class="content-area">
+                    <div class="header">
+                        <h1 class="font-bold text-lg">Dashboard Principal</h1>
+                    </div>
+                    
+                    <div class="main-content reduced">
+                        <div class="measurement-indicator reduced" data-width="Mobile: 14px | SM: 22px | LG: 30px"></div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Card de Exemplo 1</h3>
+                            <p class="text-gray-600">Este card mostra o espaçamento reduzido em 10px. Note como o conteúdo ficou mais próximo do sidebar.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Card de Exemplo 2</h3>
+                            <p class="text-gray-600">O padding-left reduzido cria melhor aproveitamento do espaço horizontal da tela.</p>
+                        </div>
+                        
+                        <div class="card">
+                            <h3 class="font-bold mb-4">Métricas de Espaçamento</h3>
+                            <div class="bg-blue-50 border-blue-200 p-4 rounded">
+                                <p class="text-blue-900">
+                                    <strong>Espaçamento Reduzido:</strong><br>
+                                    • Mobile: 14px (24px - 10px)<br>
+                                    • Tablet: 22px (32px - 10px)<br>
+                                    • Desktop: 30px (40px - 10px)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações sobre a implementação -->
+    <div style="position: fixed; bottom: 20px; right: 20px; background: #1e293b; color: white; padding: 15px; border-radius: 8px; max-width: 300px; font-size: 14px; z-index: 30;">
+        <strong>📁 Alterações Aplicadas:</strong><br>
+        • <code>src/index.css</code> - Regras CSS customizadas<br>
+        • <code>src/components/layout/AppLayout.tsx</code> - Layout principal<br><br>
+        
+        <strong>🎯 Resultado:</strong><br>
+        Espaçamento entre sidebar e conteúdo reduzido em 10px em todos os breakpoints responsivos.
+    </div>
+
+    <script>
+        console.log('📐 Teste de Redução de Espaçamento Sidebar');
+        console.log('✅ Implementação:');
+        console.log('');
+        console.log('CSS Customizado aplicado em src/index.css:');
+        console.log('main.flex-1 {');
+        console.log('  padding-left: calc(1.5rem - 10px) !important; /* Mobile: 24px → 14px */');
+        console.log('}');
+        console.log('');
+        console.log('@media (min-width: 640px) {');
+        console.log('  main.flex-1 {');
+        console.log('    padding-left: calc(2rem - 10px) !important; /* SM: 32px → 22px */');
+        console.log('  }');
+        console.log('}');
+        console.log('');
+        console.log('@media (min-width: 1024px) {');
+        console.log('  main.flex-1 {');
+        console.log('    padding-left: calc(2.5rem - 10px) !important; /* LG: 40px → 30px */');
+        console.log('  }');
+        console.log('}');
+        console.log('');
+        console.log('🌐 Para ver na aplicação real: http://localhost:8081');
+    </script>
+</body>
+</html>

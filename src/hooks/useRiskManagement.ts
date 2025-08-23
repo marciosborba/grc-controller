@@ -7,6 +7,7 @@ import {
   tenantAccessMiddleware,
   TENANT_SECURITY_CONFIG 
 } from '@/utils/tenantSecurity';
+import { useTenantSettings } from './useTenantSettings';
 import type { 
   Risk, 
   ActionPlan, 
@@ -38,11 +39,113 @@ export const useRiskManagement = () => {
     logActivity,
     isValidTenant 
   } = useTenantSecurity();
+  const { calculateRiskLevel, getMatrixLabels, getMatrixDimensions, isMatrix4x4 } = useTenantSettings();
 
   // Verificar se usuário tem tenant válido
   if (!isValidTenant) {
     console.warn('[RISK-SECURITY] User without valid tenant accessing risk management');
   }
+  
+  // Funções de mapeamento
+  const mapSupabaseStatusToRiskStatus = (status: string, currentStep?: number): RiskStatus => {
+    console.log('🔄 mapSupabaseStatusToRiskStatus:', { status, currentStep });
+    
+    // Mapear status do banco para português da aplicação
+    // Status do banco: 'draft', 'in_progress', 'completed', 'cancelled'
+    // Usar current_step para distinguir entre diferentes fases de in_progress
+    
+    switch (status) {
+      case 'draft': 
+        return 'Identificado';
+      
+      case 'in_progress':
+        // Usar current_step para distinguir as fases
+        if (currentStep === 2) return 'Avaliado';
+        if (currentStep === 5) return 'Em Tratamento';
+        if (currentStep === 7) return 'Monitorado';
+        // Padrão para in_progress sem step definido
+        return 'Em Tratamento';
+      
+      case 'completed': 
+        return 'Fechado';
+      
+      case 'cancelled': 
+        return 'Fechado';
+      
+      // Para compatibilidade com dados antigos em português
+      case 'Identificado': return 'Identificado';
+      case 'Avaliado': return 'Avaliado';
+      case 'Em Tratamento': return 'Em Tratamento';
+      case 'Monitorado': return 'Monitorado';
+      case 'Fechado': return 'Fechado';
+      case 'Reaberto': return 'Reaberto';
+      
+      default: 
+        console.log('🔄 Status não mapeado, usando "Identificado":', status);
+        return 'Identificado';
+    }
+  };
+  
+  const mapRiskStatusToSupabaseStatus = (status: RiskStatus): { status: string; current_step?: number } => {
+    console.log('🔄 mapRiskStatusToSupabaseStatus: status da aplicação =', status);
+    
+    // Mapear status em português para valores aceitos pela constraint do banco
+    // Constraint: status IN ('draft', 'in_progress', 'completed', 'cancelled')
+    // Usar current_step para distinguir entre diferentes fases
+    let mappedStatus: string;
+    let currentStep: number | undefined;
+    
+    switch (status) {
+      case 'Identificado': 
+        mappedStatus = 'draft';
+        currentStep = 1; // Etapa 1: Identificação
+        break;
+      case 'Avaliado': 
+        mappedStatus = 'in_progress';
+        currentStep = 2; // Etapa 2: Análise
+        break;
+      case 'Em Tratamento': 
+        mappedStatus = 'in_progress';
+        currentStep = 5; // Etapa 5: Plano de Ação
+        break;
+      case 'Monitorado': 
+        mappedStatus = 'in_progress';
+        currentStep = 7; // Etapa 7: Monitoramento
+        break;
+      case 'Fechado': 
+        mappedStatus = 'completed';
+        currentStep = 7; // Processo finalizado
+        break;
+      case 'Reaberto': 
+        mappedStatus = 'draft';
+        currentStep = 1; // Reaberto volta para identificação
+        break;
+      default: 
+        console.log('🔄 Status não mapeado, usando "draft":', status);
+        mappedStatus = 'draft';
+        currentStep = 1;
+    }
+    
+    console.log('✅ Status mapeado:', status, '->', { status: mappedStatus, current_step: currentStep });
+    console.log('📝 Constraint aceita: draft, in_progress, completed, cancelled');
+    return { status: mappedStatus, current_step: currentStep };
+  };
+  
+  const mapRiskLevel = (level: string): string => {
+    console.log('🔄 mapRiskLevel: level do banco =', level);
+    
+    switch (level) {
+      case 'Crítico': return 'Crítico';
+      case 'Muito Alto': return 'Muito Alto';
+      case 'Alto': return 'Alto';
+      case 'Médio': return 'Médio';
+      case 'Baixo': return 'Baixo';
+      case 'Muito Baixo': return 'Muito Baixo';
+      default: 
+        console.log('🔄 Level não mapeado, usando original:', level);
+        return level || 'Médio';
+    }
+  };
 
   // ============================================================================
   // QUERIES - BUSCA DE DADOS
@@ -64,9 +167,9 @@ export const useRiskManagement = () => {
         throw new Error('Acesso negado: tenant não identificado');
       }
 
-      // Buscar riscos com filtro por tenant
+      // Buscar riscos com filtro por tenant - ALTERADO PARA risk_registrations
       const { data, error } = await supabase
-        .from('risk_assessments')
+        .from('risk_registrations')
         .select('*')
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
@@ -96,51 +199,102 @@ export const useRiskManagement = () => {
       // Transformar dados do Supabase para o formato da aplicação
       return validatedData.map(transformSupabaseRiskToRisk);
     },
-    enabled: !!user && !!userTenantId
+    enabled: !!user && !!userTenantId,
+    staleTime: 0, // Forçar refetch
+    cacheTime: 0  // Não cachear durante debug
   });
 
   // Buscar métricas de risco (ISOLAMENTO POR TENANT)
+  console.log('🔍 useRiskManagement: Configurando query de métricas', { userTenantId, user: !!user });
+  
   const {
     data: metrics,
     isLoading: isLoadingMetrics
   } = useQuery({
     queryKey: ['risk-metrics', userTenantId],
     queryFn: async (): Promise<RiskMetrics> => {
+      console.log('🔍 useRiskManagement: Executando queryFn de métricas', { userTenantId });
+      
       if (!userTenantId) {
+        console.error('❌ useRiskManagement: userTenantId não encontrado');
         throw new Error('Acesso negado: tenant não identificado');
       }
+      
+      // Verificar se há dados na tabela (sem filtro de tenant)
+      const { data: allData, count } = await supabase
+        .from('risk_registrations')
+        .select('*', { count: 'exact', head: true });
+      
+      console.log('🔍 Total de registros na tabela risk_registrations:', count);
+      
+      // Log para debug se não há dados
+      if (count === 0) {
+        console.log('⚠️ Nenhum dado encontrado na tabela risk_registrations');
+      } else {
+        console.log('✅ Encontrados', count, 'registros na tabela');
+      }
 
+      // Usar os mesmos dados da query principal de riscos
       const { data: riskData, error } = await supabase
-        .from('risk_assessments')
-        .select('risk_level, status, created_at, due_date, tenant_id')
+        .from('risk_registrations')
+        .select('*')
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
 
-      if (error) throw error;
+      console.log('🔍 Query de métricas executada:', {
+        userTenantId,
+        dataCount: riskData?.length || 0,
+        error: error?.message,
+        sampleData: riskData?.slice(0, 3)
+      });
+
+      if (error) {
+        console.error('❌ Erro na query de métricas:', error);
+        throw error;
+      }
 
       const now = new Date();
-      const risks = riskData || [];
+      const rawRisks = riskData || [];
+      
+      // Transformar os dados da mesma forma que na query principal
+      const risks = rawRisks.map(transformSupabaseRiskToRisk);
 
       // Calcular métricas
       console.log('📊 useRiskManagement: Calculando métricas para', risks.length, 'riscos');
       console.log('📊 Dados dos riscos para métricas:', risks.map(r => ({
         id: r.id,
-        risk_level: r.risk_level,
+        name: r.name,
+        riskLevel: r.riskLevel,
         status: r.status
       })));
       
       const risksByLevel = risks.reduce((acc, risk) => {
-        const level = (risk.risk_level || 'Médio') as RiskLevel;
-        acc[level] = (acc[level] || 0) + 1;
+        // Usar o riskLevel já transformado
+        let levelForMetrics = risk.riskLevel;
+        
+        console.log('🔍 Processando risco:', {
+          name: risk.name,
+          riskLevel: risk.riskLevel,
+          status: risk.status
+        });
+        
+        // Para as métricas do dashboard, consolidar 'Crítico' em 'Muito Alto'
+        if (levelForMetrics === 'Crítico') {
+          levelForMetrics = 'Muito Alto';
+        }
+        
+        acc[levelForMetrics as RiskLevel] = (acc[levelForMetrics as RiskLevel] || 0) + 1;
         return acc;
       }, {} as Record<RiskLevel, number>);
       
       console.log('📊 Métricas por nível calculadas:', risksByLevel);
 
       const risksByStatus = risks.reduce((acc, risk) => {
-        const status = risk.status as RiskStatus;
-        acc[status] = (acc[status] || 0) + 1;
+        // Usar o status já transformado
+        acc[risk.status] = (acc[risk.status] || 0) + 1;
         return acc;
       }, {} as Record<RiskStatus, number>);
+      
+      console.log('📊 Métricas por status calculadas:', risksByStatus);
 
       // Calcular atividades em atraso (ISOLAMENTO POR TENANT)
       // Verificar se a tabela risk_action_activities existe
@@ -160,7 +314,7 @@ export const useRiskManagement = () => {
         overdueActivities = 0;
       }
 
-      return {
+      const metricsResult = {
         totalRisks: risks.length,
         risksByLevel,
         risksByCategory: {} as any, // TODO: implementar quando tivermos category
@@ -169,8 +323,24 @@ export const useRiskManagement = () => {
         riskTrend: 'Estável',
         averageResolutionTime: 0 // TODO: calcular baseado em histórico
       };
+      
+      console.log('✅ useRiskManagement: Métricas calculadas com sucesso:', metricsResult);
+      return metricsResult;
     },
-    enabled: !!user && !!userTenantId
+    enabled: !!user && !!userTenantId,
+    staleTime: 0, // Forçar refetch
+    cacheTime: 0  // Não cachear durante debug
+  });
+  
+  // Log de estado após declaração de TODAS as variáveis
+  console.log('🔍 Estado das queries:', {
+    isLoadingRisks,
+    isLoadingMetrics,
+    hasRisks: risks.length,
+    hasMetrics: !!metrics,
+    enabled: !!user && !!userTenantId,
+    user: !!user,
+    userTenantId
   });
 
   // ============================================================================
@@ -198,14 +368,14 @@ export const useRiskManagement = () => {
 
       // Preparar dados mínimos para inserção (apenas campos essenciais)
       const baseRiskData: any = {
-        title: riskData.name,
-        description: riskData.description,
+        risk_title: riskData.name,
+        risk_description: riskData.description,
         risk_category: riskData.category,
         probability: Math.max(1, Math.min(5, Math.floor(riskData.probability))),
         likelihood_score: Math.max(1, Math.min(5, Math.floor(riskData.probability))),
         impact_score: Math.max(1, Math.min(5, Math.floor(riskData.impact))),
         risk_level: riskLevel,
-        status: 'Identificado',
+        ...mapRiskStatusToSupabaseStatus('Identificado'),
         severity: 'medium'
       };
       
@@ -239,7 +409,7 @@ export const useRiskManagement = () => {
       console.log('🚀 Inserindo no banco...');
       
       let { data, error } = await supabase
-        .from('risk_assessments')
+        .from('risk_registrations')
         .insert([baseRiskData])
         .select()
         .single();
@@ -249,7 +419,7 @@ export const useRiskManagement = () => {
         throw error;
       }
       
-      console.log('✅ Risco criado com sucesso:', data.title);
+      console.log('✅ Risco criado com sucesso:', data.risk_title);
 
       // Criar plano de ação se necessário
       if (riskData.treatmentType !== 'Aceitar') {
@@ -267,8 +437,9 @@ export const useRiskManagement = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
-      queryClient.invalidateQueries({ queryKey: ['risk-metrics'] });
+      console.log('✅ Risco criado - invalidando caches:', { userTenantId });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-metrics', userTenantId] });
       toast.success('Risco criado com sucesso');
     },
     onError: (error: any) => {
@@ -281,10 +452,16 @@ export const useRiskManagement = () => {
     mutationFn: async ({ riskId, data }: { riskId: string; data: UpdateRiskRequest }) => {
       let updateData: any = {};
 
-      if (data.name) updateData.title = data.name;
-      if (data.description) updateData.description = data.description;
+      if (data.name) updateData.risk_title = data.name;
+      if (data.description) updateData.risk_description = data.description;
       if (data.category) updateData.risk_category = data.category;
-      if (data.status) updateData.status = data.status;
+      if (data.status) {
+        const statusMapping = mapRiskStatusToSupabaseStatus(data.status);
+        updateData.status = statusMapping.status;
+        if (statusMapping.current_step !== undefined) {
+          updateData.current_step = statusMapping.current_step;
+        }
+      }
       if (data.assignedTo !== undefined) {
         updateData.assigned_to = data.assignedTo || null; // Campo TEXT para nome da pessoa
       }
@@ -298,7 +475,7 @@ export const useRiskManagement = () => {
       // Recalcular score se probabilidade ou impacto mudaram
       if (data.probability || data.impact) {
         const { data: currentRisk } = await supabase
-          .from('risk_assessments')
+          .from('risk_registrations')
           .select('likelihood_score, impact_score')
           .eq('id', riskId)
           .single();
@@ -316,7 +493,7 @@ export const useRiskManagement = () => {
 
       // Atualizar o risco principal
       const { data: result, error } = await supabase
-        .from('risk_assessments')
+        .from('risk_registrations')
         .update(updateData)
         .eq('id', riskId)
         .select()
@@ -329,7 +506,7 @@ export const useRiskManagement = () => {
       
       console.log('✅ Risco atualizado com sucesso no banco:', {
         id: result.id,
-        title: result.title,
+        risk_title: result.risk_title,
         likelihood_score: result.likelihood_score,
         impact_score: result.impact_score,
         risk_level: result.risk_level,
@@ -374,12 +551,14 @@ export const useRiskManagement = () => {
       return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
-      queryClient.invalidateQueries({ queryKey: ['risk-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-metrics', userTenantId] });
       toast.success('Risco atualizado com sucesso');
     },
     onError: (error: any) => {
       console.error('Erro detalhado ao atualizar risco:', error);
+      // Reverter atualização otimista em caso de erro
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
       toast.error(`Erro ao atualizar risco: ${error.message || 'Erro desconhecido'}`);
     }
   });
@@ -393,15 +572,15 @@ export const useRiskManagement = () => {
       await supabase.from('risk_communications').delete().eq('risk_id', riskId);
       
       const { error } = await supabase
-        .from('risk_assessments')
+        .from('risk_registrations')
         .delete()
         .eq('id', riskId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
-      queryClient.invalidateQueries({ queryKey: ['risk-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['risk-metrics', userTenantId] });
       toast.success('Risco excluído com sucesso');
     },
     onError: (error: any) => {
@@ -432,7 +611,7 @@ export const useRiskManagement = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
       toast.success('Atividade adicionada com sucesso');
     }
   });
@@ -455,7 +634,7 @@ export const useRiskManagement = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
       toast.success('Atividade atualizada com sucesso');
     }
   });
@@ -484,7 +663,7 @@ export const useRiskManagement = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['risks'] });
+      queryClient.invalidateQueries({ queryKey: ['risks', userTenantId] });
       toast.success('Carta de aceitação criada com sucesso');
     }
   });
@@ -493,85 +672,71 @@ export const useRiskManagement = () => {
   // FUNÇÕES UTILITÁRIAS
   // ============================================================================
 
-  const calculateRiskLevel = (score: number): RiskLevel => {
-    console.log('📊 calculateRiskLevel: score =', score);
-    
-    // Usar a mesma lógica que está sendo usada na correção automática
-    if (score >= 20) return 'Muito Alto';
-    if (score >= 15) return 'Alto';
-    if (score >= 8) return 'Médio';
-    if (score >= 4) return 'Baixo';
-    return 'Muito Baixo';
-  };
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
     // Usar descrição diretamente
-    const description = supabaseRisk.description || '';
-    // Usar analysis_data da coluna se existir
-    const analysisData = supabaseRisk.analysis_data || null;
-
-    // Determinar status baseado na análise
-    let finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status);
+    const description = supabaseRisk.risk_description || '';
     
-    // Se tem analysis_data completa, pode ser "Avaliado"
-    if (analysisData && analysisData.qualitativeRiskLevel && finalStatus === 'Identificado') {
-      finalStatus = 'Avaliado';
-      console.log('🔄 Risco com análise completa - status alterado para "Avaliado"');
-    }
+    // Determinar status baseado no status do registro e current_step
+    let finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status, supabaseRisk.current_step);
+    
+    // Calcular riskScore baseado nos scores disponíveis
+    const probability = supabaseRisk.likelihood_score || supabaseRisk.probability_score || 3;
+    const impact = supabaseRisk.impact_score || 3;
+    const riskScore = supabaseRisk.risk_score || (probability * impact);
     
     const transformedRisk = {
       id: supabaseRisk.id,
-      name: supabaseRisk.title,
+      name: supabaseRisk.risk_title || 'Risco sem título',
       description: description,
-      category: supabaseRisk.risk_category,
-      probability: supabaseRisk.likelihood_score,
-      impact: supabaseRisk.impact_score,
-      riskScore: supabaseRisk.risk_score || 0,
-      riskLevel: supabaseRisk.risk_level || 'Médio',
+      category: supabaseRisk.risk_category || 'Operacional',
+      probability: probability,
+      impact: impact,
+      riskScore: riskScore,
+      riskLevel: mapRiskLevel(supabaseRisk.risk_level) || 'Médio',
       status: finalStatus,
-      treatmentType: supabaseRisk.risk_action_plans?.[0]?.treatment_type || 'Mitigar',
+      treatmentType: supabaseRisk.treatment_strategy || 'Mitigar',
       owner: supabaseRisk.created_by || '',
-      assignedTo: supabaseRisk.assigned_to,
+      assignedTo: supabaseRisk.assigned_to || '',
       identifiedDate: new Date(supabaseRisk.created_at),
       dueDate: supabaseRisk.due_date ? new Date(supabaseRisk.due_date) : undefined,
       createdBy: supabaseRisk.created_by || '',
       createdAt: new Date(supabaseRisk.created_at),
-      updatedAt: new Date(supabaseRisk.updated_at),
-      analysisData: analysisData
+      updatedAt: new Date(supabaseRisk.updated_at || supabaseRisk.created_at),
+      analysisData: {
+        gut_analysis: {
+          gravity: supabaseRisk.gut_gravity,
+          urgency: supabaseRisk.gut_urgency,
+          tendency: supabaseRisk.gut_tendency
+        },
+        monitoring: {
+          frequency: supabaseRisk.monitoring_frequency,
+          responsible: supabaseRisk.monitoring_responsible,
+          closure_criteria: supabaseRisk.closure_criteria
+        }
+      }
     };
     
-    console.log('🔄 transformSupabaseRiskToRisk:', {
+    console.log('🔄 transformSupabaseRiskToRisk (risk_registrations):', {
       original: {
         id: supabaseRisk.id,
-        title: supabaseRisk.title,
+        risk_title: supabaseRisk.risk_title,
         risk_level: supabaseRisk.risk_level,
-        risk_score: supabaseRisk.risk_score
+        status: supabaseRisk.status
       },
       transformed: {
         id: transformedRisk.id,
         name: transformedRisk.name,
         riskLevel: transformedRisk.riskLevel,
-        riskScore: transformedRisk.riskScore
+        riskScore: transformedRisk.riskScore,
+        status: transformedRisk.status
       }
     });
     
     return transformedRisk;
   };
 
-  const mapSupabaseStatusToRiskStatus = (status: string): RiskStatus => {
-    console.log('🔄 mapSupabaseStatusToRiskStatus: status do banco =', status);
-    
-    switch (status) {
-      case 'open': return 'Identificado';
-      case 'in_progress': return 'Em Tratamento';
-      case 'mitigated': return 'Monitorado';
-      case 'closed': return 'Fechado';
-      case 'assessed': return 'Avaliado'; // Apenas quando explicitamente avaliado
-      default: 
-        console.log('🔄 Status não mapeado, usando "Identificado":', status);
-        return 'Identificado'; // Padrão deve ser "Identificado", não "Avaliado"
-    }
-  };
+
 
   const filterRisks = (filters: RiskFilters): Risk[] => {
     let filtered = risks;
@@ -612,6 +777,34 @@ export const useRiskManagement = () => {
   };
 
   // ============================================================================
+  // WRAPPER FUNCTIONS
+  // ============================================================================
+  
+  const updateRisk = (riskId: string, data: UpdateRiskRequest) => {
+    console.log('🔄 updateRisk wrapper chamado:', { riskId, data });
+    
+    // Atualização otimista para melhorar UX
+    if (data.status) {
+      queryClient.setQueryData(['risks', userTenantId], (oldData: Risk[] | undefined) => {
+        if (!oldData) return oldData;
+        
+        return oldData.map(risk => 
+          risk.id === riskId 
+            ? { ...risk, status: data.status! }
+            : risk
+        );
+      });
+    }
+    
+    return updateRiskMutation.mutate({ riskId, data });
+  };
+  
+  const deleteRisk = (riskId: string) => {
+    console.log('🗑️ deleteRisk wrapper chamado:', { riskId });
+    return deleteRiskMutation.mutate(riskId);
+  };
+
+  // ============================================================================
   // RETURN DO HOOK
   // ============================================================================
 
@@ -629,8 +822,8 @@ export const useRiskManagement = () => {
     
     // Mutations
     createRisk: createRiskMutation.mutate,
-    updateRisk: updateRiskMutation.mutate,
-    deleteRisk: deleteRiskMutation.mutate,
+    updateRisk,
+    deleteRisk,
     addActivity: addActivityMutation.mutate,
     updateActivity: updateActivityMutation.mutate,
     createAcceptanceLetter: createAcceptanceLetterMutation.mutate,

@@ -107,14 +107,14 @@ const LoginPage = () => {
     passwordInput.onChange('demo123');
     setIsSignup(false);
   };
-  return <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <Shield className="h-12 w-12 text-blue-600" />
+            <Shield className="h-12 w-12 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 ">GRC Controller</h1>
-          <p className="mt-2 text-sm font-semibold text-slate-600">Gestão de Governança, Riscos e Compliance</p>
+          <h1 className="text-3xl font-bold text-foreground">GRC Controller</h1>
+          <p className="mt-2 text-sm font-semibold text-muted-foreground">Gestão de Governança, Riscos e Compliance</p>
         </div>
 
         <Card>
@@ -153,7 +153,7 @@ const LoginPage = () => {
                     <Label htmlFor="login-password">Senha</Label>
                     <div className="relative">
                       <Input id="login-password" type={showPassword ? 'text' : 'password'} placeholder="********" value={passwordInput.value} onChange={e => passwordInput.onChange(e.target.value)} disabled={isSubmitting || isRateLimited} className={passwordInput.error ? 'border-red-500' : ''} required />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" disabled={isSubmitting}>
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" disabled={isSubmitting}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
@@ -190,7 +190,7 @@ const LoginPage = () => {
                     <Label htmlFor="signup-password">Senha</Label>
                     <div className="relative">
                       <Input id="signup-password" type={showPassword ? 'text' : 'password'} placeholder="Mínimo 6 caracteres" value={passwordInput.value} onChange={e => passwordInput.onChange(e.target.value)} disabled={isSubmitting} className={passwordInput.error ? 'border-red-500' : ''} required />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700" disabled={isSubmitting}>
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" disabled={isSubmitting}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
@@ -211,26 +211,26 @@ const LoginPage = () => {
             <CardTitle className="text-sm">Para Demonstração</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-gray-600 mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               Use as contas demo abaixo ou registre uma nova conta. 
               <strong> Senha das contas demo: demo123</strong>
             </p>
             <div className="space-y-2">
-              <button onClick={() => fillDemoAccount('admin@cyberguard.com')} className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
+              <button onClick={() => fillDemoAccount('admin@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
                 <div className="font-medium">admin@cyberguard.com</div>
-                <div className="text-gray-600">Admin/CISO</div>
+                <div className="text-muted-foreground">Admin/CISO</div>
               </button>
-              <button onClick={() => fillDemoAccount('risk@cyberguard.com')} className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
+              <button onClick={() => fillDemoAccount('risk@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
                 <div className="font-medium">risk@cyberguard.com</div>
-                <div className="text-gray-600">Risk Manager</div>
+                <div className="text-muted-foreground">Risk Manager</div>
               </button>
-              <button onClick={() => fillDemoAccount('compliance@cyberguard.com')} className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
+              <button onClick={() => fillDemoAccount('compliance@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
                 <div className="font-medium">compliance@cyberguard.com</div>
-                <div className="text-gray-600">Compliance Officer</div>
+                <div className="text-muted-foreground">Compliance Officer</div>
               </button>
-              <button onClick={() => fillDemoAccount('auditor@cyberguard.com')} className="w-full text-left p-2 bg-gray-50 hover:bg-gray-100 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
+              <button onClick={() => fillDemoAccount('auditor@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
                 <div className="font-medium">auditor@cyberguard.com</div>
-                <div className="text-gray-600">Auditor</div>
+                <div className="text-muted-foreground">Auditor</div>
               </button>
             </div>
           </CardContent>

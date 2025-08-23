@@ -16,7 +16,8 @@ import {
   Zap,
   Database,
   Key,
-  Globe
+  Globe,
+  Crown
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,13 +33,17 @@ import SSOConfigurationSection from './sections/SSOConfigurationSection';
 import WebhooksSection from './sections/WebhooksSection';
 import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
+import GlobalRulesSection from './sections/GlobalRulesSection';
 import DocumentationModal from './DocumentationModal';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 import type { IntegrationStatus as IntegrationStatusType } from '@/types/general-settings';
 
 
 export const GeneralSettingsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isDocumentationOpen, setIsDocumentationOpen] = useState(false);
   
@@ -182,8 +187,19 @@ export const GeneralSettingsPage = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+        <TabsList className={cn(
+          "grid w-full",
+          (user?.isPlatformAdmin || user?.role === 'admin') 
+            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8" 
+            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
+        )}>
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+          {(user?.isPlatformAdmin || user?.role === 'admin') && (
+            <TabsTrigger value="global-rules" className="text-xs sm:text-sm flex items-center gap-1">
+              <Crown className="h-3 w-3" />
+              Regras Globais
+            </TabsTrigger>
+          )}
           <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
           <TabsTrigger value="mcp" className="text-xs sm:text-sm">MCP</TabsTrigger>
           <TabsTrigger value="email" className="text-xs sm:text-sm">E-mail</TabsTrigger>
@@ -269,6 +285,13 @@ export const GeneralSettingsPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Global Rules Tab - Only for Platform Admins or System Admins */}
+        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+          <TabsContent value="global-rules">
+            <GlobalRulesSection />
+          </TabsContent>
+        )}
 
         {/* API Integrations Tab */}
         <TabsContent value="apis">

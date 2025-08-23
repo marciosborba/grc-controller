@@ -15,18 +15,24 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export const AppHeader = () => {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
 
   const handleProfileClick = () => {
     navigate('/profile');
   };
 
+  const handleNotificationsClick = () => {
+    navigate('/notifications');
+  };
+
   return (
-    <header className="h-14 sm:h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="h-full px-3 sm:px-4 md:px-6 flex items-center justify-between">
+    <header className="h-14 sm:h-16 border-b border-border bg-background w-full flex-shrink-0 relative z-0">
+      <div className="h-full w-full pl-6 sm:pl-8 md:pl-12 pr-3 sm:pr-4 md:pr-6 flex items-center justify-between">
         {/* Left side - Mobile menu and search */}
         <div className="flex items-center space-x-1 sm:space-x-2 flex-1 min-w-0">
           {/* Mobile menu trigger */}
@@ -35,7 +41,7 @@ export const AppHeader = () => {
           </div>
           
           {/* Search - Hidden on mobile */}
-          <div className="hidden sm:flex flex-1 max-w-md">
+          <div className="hidden sm:flex flex-1 max-w-md ml-6 sm:ml-8">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -56,11 +62,19 @@ export const AppHeader = () => {
         {/* Right side - Responsivo */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="relative h-8 w-8 sm:h-10 sm:w-10"
+            onClick={handleNotificationsClick}
+            title="Ver notificações"
+          >
             <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-            <Badge className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs bg-danger">
-              3
-            </Badge>
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs bg-red-500 hover:bg-red-600">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Badge>
+            )}
           </Button>
 
           {/* Theme Toggle */}

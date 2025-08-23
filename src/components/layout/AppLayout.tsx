@@ -1,21 +1,30 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { AppHeader } from './AppHeader';
+
+const AppLayoutContent = () => {
+  const { state } = useSidebar();
+  const isCollapsed = state === 'collapsed';
+  
+  return (
+    <div className="relative min-h-screen w-full bg-background">
+      <AppSidebar />
+      <div className={`absolute inset-y-0 right-0 flex flex-col transition-all duration-300 ${isCollapsed ? 'left-[2.0625rem]' : 'left-[15.0625rem]'}`}>
+        <AppHeader />
+        <main className="flex-1 pl-6 sm:pl-8 lg:pl-10 pr-4 sm:pr-6 lg:pr-8 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6 lg:pb-8 overflow-auto bg-background">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+};
 
 const AppLayout = () => {
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <AppHeader />
-          <main className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-10 py-3 sm:py-4 md:py-6 lg:py-8 overflow-auto">
-            <Outlet />
-          </main>
-        </div>
-      </div>
+      <AppLayoutContent />
     </SidebarProvider>
   );
 };

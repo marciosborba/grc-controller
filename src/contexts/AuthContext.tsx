@@ -88,25 +88,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const buildUserObject = async (supabaseUser: User): Promise<AuthUser> => {
     console.log('Building user object for:', supabaseUser.id);
     try {
-      // Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', supabaseUser.id)
-        .maybeSingle();
+      // Combined query to get all user data in one request
+      const [profileResult, platformAdminResult, userRolesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', supabaseUser.id)
+          .maybeSingle(),
+        supabase
+          .from('platform_admins')
+          .select('role, permissions')
+          .eq('user_id', supabaseUser.id)
+          .maybeSingle(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', supabaseUser.id)
+      ]);
+
+      const { data: profile, error: profileError } = profileResult;
+      const { data: platformAdmin, error: platformAdminError } = platformAdminResult;
+      const { data: userRoles, error: rolesError } = userRolesResult;
 
       if (profileError) {
         console.error('Profile error:', profileError);
       }
       
       console.log(`[AuthContext] Profile loaded:`, !!profile, profile?.full_name || 'No name found');
-
-      // Check if user is platform admin
-      const { data: platformAdmin, error: platformAdminError } = await supabase
-        .from('platform_admins')
-        .select('role, permissions')
-        .eq('user_id', supabaseUser.id)
-        .maybeSingle();
 
       if (platformAdminError && platformAdminError.code !== 'PGRST116') { // PGRST116 is "not found"
         console.error('Platform admin check error:', platformAdminError);
@@ -117,12 +125,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (platformAdmin) {
         console.log(`[AuthContext] Platform admin data:`, platformAdmin);
       }
-
-      // Get user roles (system roles)
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', supabaseUser.id);
 
       if (rolesError) {
         console.error('Roles error:', rolesError);

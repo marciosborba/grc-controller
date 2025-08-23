@@ -35,6 +35,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import {
   Table,
   TableBody,
   TableCell,
@@ -310,7 +316,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
     switch (level) {
       case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200';
       case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200';
-      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-200';
       case 'Baixo': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200';
     }
@@ -738,76 +744,51 @@ const RiskCard: React.FC<RiskCardProps> = ({
           <CardContent className="pt-0">
             <div className="space-y-6">
               {/* Navigation Tabs */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                <button
-                  onClick={() => setActiveSection('general')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  <Shield className="h-4 w-4" />
-                  Informações Gerais
-                </button>
-                
-                <button
-                  onClick={() => setActiveSection('analysis')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'analysis' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Análise de Risco
-                </button>
-                
-                {showActionSection && (
-                  <button
-                    onClick={() => setActiveSection('action')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                      activeSection === 'action' 
-                        ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                        : 'text-muted-foreground hover:text-primary'
-                    }`}
-                  >
-                    <Target className="h-4 w-4" />
-                    Plano de Ação
-                  </button>
-                )}
-                
-                {showAcceptanceSection && (
-                  <button
-                    onClick={() => setActiveSection('acceptance')}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                      activeSection === 'acceptance' 
-                        ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                        : 'text-muted-foreground hover:text-primary'
-                    }`}
-                  >
-                    <FileText className="h-4 w-4" />
-                    Carta de Risco
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => setActiveSection('communication')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'communication' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  <Mail className="h-4 w-4" />
-                  Comunicação
-                </button>
-              </div>
+              <Tabs value={activeSection} onValueChange={(value) => setActiveSection(value as any)} className="w-full">
+                <TabsList className={cn(
+                  "grid w-full",
+                  showActionSection && showAcceptanceSection ? "grid-cols-2 lg:grid-cols-5" :
+                  showActionSection || showAcceptanceSection ? "grid-cols-2 lg:grid-cols-4" :
+                  "grid-cols-2 lg:grid-cols-3"
+                )}>
+                  <TabsTrigger value="general" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
+                    <Shield className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline truncate">Informações</span>
+                    <span className="sm:hidden">Info</span>
+                  </TabsTrigger>
+                  
+                  <TabsTrigger value="analysis" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
+                    <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline truncate">Análise</span>
+                    <span className="sm:hidden">Análise</span>
+                  </TabsTrigger>
+                  
+                  {showActionSection && (
+                    <TabsTrigger value="action" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
+                      <Target className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+                      <span className="hidden sm:inline truncate">Plano de Ação</span>
+                      <span className="sm:hidden">Plano</span>
+                    </TabsTrigger>
+                  )}
+                  
+                  {showAcceptanceSection && (
+                    <TabsTrigger value="acceptance" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
+                      <FileText className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+                      <span className="hidden sm:inline truncate">Carta de Risco</span>
+                      <span className="sm:hidden">Carta</span>
+                    </TabsTrigger>
+                  )}
+                  
+                  <TabsTrigger value="communication" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
+                    <Mail className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
+                    <span className="hidden sm:inline truncate">Comunicação</span>
+                    <span className="sm:hidden">Comunic.</span>
+                  </TabsTrigger>
+                </TabsList>
 
-              {/* Section Content */}
-              {/* 1. INFORMAÇÕES GERAIS */}
-              {activeSection === 'general' && (
-                <div className="space-y-4">
+                {/* Section Content */}
+                {/* 1. INFORMAÇÕES GERAIS */}
+                <TabsContent value="general" className="space-y-4 mt-6">
                   <div className="flex items-center justify-between">
                     <h4 className="text-lg font-medium text-muted-foreground">INFORMAÇÕES GERAIS</h4>
                     {canEdit && (
@@ -970,12 +951,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
 
-              {/* 2. ANÁLISE DE RISCO */}
-              {activeSection === 'analysis' && (
-                <div className="space-y-6">
+                {/* 2. ANÁLISE DE RISCO */}
+                <TabsContent value="analysis" className="space-y-6 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">ANÁLISE ESTRUTURADA DE RISCO</h4>
                   
                   {!isAnalysisMode ? (
@@ -1139,12 +1118,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </Button>
                     </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
 
-              {/* 3. PLANO DE AÇÃO */}
-              {activeSection === 'action' && showActionSection && (
-                <div className="space-y-4">
+                {/* 3. PLANO DE AÇÃO */}
+                <TabsContent value="action" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">PLANO DE AÇÃO</h4>
                   
                   <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -1284,12 +1261,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </Table>
                     </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
 
-              {/* 3. CARTA DE RISCO */}
-              {activeSection === 'acceptance' && showAcceptanceSection && (
-                <div className="space-y-4">
+                {/* 4. CARTA DE RISCO */}
+                <TabsContent value="acceptance" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">CARTA DE ACEITAÇÃO DE RISCO</h4>
                   
                   <div className="bg-yellow-50 dark:bg-yellow-950/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
@@ -1381,12 +1356,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </Button>
                     </div>
                   </div>
-                </div>
-              )}
+                </TabsContent>
 
-              {/* 4. COMUNICAÇÃO */}
-              {activeSection === 'communication' && (
-                <div className="space-y-4">
+                {/* 5. COMUNICAÇÃO */}
+                <TabsContent value="communication" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">COMUNICAÇÃO DO RISCO</h4>
                   
                   {/* Adicionar Nova Comunicação */}
@@ -1525,8 +1498,8 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       </Table>
                     </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
+              </Tabs>
 
               {/* Actions */}
               <Separator />

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 Teste Final - Correção de Cores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Teste Final - Correção de Cores GRC Controller</h1>
+        
+        <div class="test-section info">
+            <h2>📋 Instruções para Teste Manual</h2>
+            <ol>
+                <li>Abra <strong>http://localhost:8080</strong> em uma nova aba</li>
+                <li>Abra DevTools (F12) → Console</li>
+                <li>Execute um dos comandos abaixo para definir uma cor de teste</li>
+                <li>Recarregue a página (F5)</li>
+                <li>Verifique se a cor aparece IMEDIATAMENTE (sem flash azul)</li>
+            </ol>
+        </div>
+        
+        <div class="test-section warning">
+            <h2>🧪 Comandos de Teste</h2>
+            
+            <h3>🟢 Teste Verde</h3>
+            <div class="code">
+localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#22c55e","secondary":"#7e22ce","tertiary":"#be185d"}}');
+            </div>
+            <button class="button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copiar</button>
+            <div hidden>localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#22c55e","secondary":"#7e22ce","tertiary":"#be185d"}}');</div>
+            
+            <h3>🟣 Teste Roxo</h3>
+            <div class="code">
+localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#8b5cf6","secondary":"#7e22ce","tertiary":"#be185d"}}');
+            </div>
+            <button class="button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copiar</button>
+            <div hidden>localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#8b5cf6","secondary":"#7e22ce","tertiary":"#be185d"}}');</div>
+            
+            <h3>🟡 Teste Amarelo</h3>
+            <div class="code">
+localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#f59e0b","secondary":"#7e22ce","tertiary":"#be185d"}}');
+            </div>
+            <button class="button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copiar</button>
+            <div hidden>localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#f59e0b","secondary":"#7e22ce","tertiary":"#be185d"}}');</div>
+            
+            <h3>🔴 Teste Vermelho</h3>
+            <div class="code">
+localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#ef4444","secondary":"#7e22ce","tertiary":"#be185d"}}');
+            </div>
+            <button class="button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copiar</button>
+            <div hidden>localStorage.setItem('grc-theme-preferences', '{"theme":"light","language":"pt-BR","colorPalette":{"primary":"#ef4444","secondary":"#7e22ce","tertiary":"#be185d"}}');</div>
+            
+            <h3>🗑️ Limpar Configuração</h3>
+            <div class="code">
+localStorage.removeItem('grc-theme-preferences');
+            </div>
+            <button class="button" onclick="copyToClipboard(this.nextElementSibling.textContent)">Copiar</button>
+            <div hidden>localStorage.removeItem('grc-theme-preferences');</div>
+        </div>
+        
+        <div class="test-section success">
+            <h2>✅ Critérios de Sucesso</h2>
+            <ul>
+                <li><strong>Shield Icon Verde:</strong> O ícone escudo na página de login deve aparecer na cor escolhida</li>
+                <li><strong>Spinner Verde:</strong> O ícone de carregamento deve girar na cor escolhida</li>
+                <li><strong>Botões Verdes:</strong> Botões primários devem usar a cor escolhida</li>
+                <li><strong>Sem Flash:</strong> NÃO deve aparecer azul primeiro e depois mudar para verde</li>
+                <li><strong>Logs no Console:</strong> Deve mostrar "🎨 Script dinâmico executado" e "🔍 Verificação de aplicação"</li>
+            </ul>
+        </div>
+        
+        <div class="test-section info">
+            <h2>🔍 Verificações Técnicas</h2>
+            <p>No console do navegador, você deve ver logs como:</p>
+            <div class="code">
+🎨 Script dinâmico executado: {
+  savedTheme: "Encontrado",
+  primaryColor: "142 71% 45%",
+  primaryHex: "#22c55e",
+  source: "localStorage"
+}
+
+🔍 Verificação de aplicação: {
+  cssVariableValue: "142 71% 45%",
+  expectedValue: "142 71% 45%",
+  match: true
+}
+
+🎨 ThemeContext: Cores aplicadas com !important {
+  primary: "142 71% 45%",
+  secondary: "272 64% 47%",
+  accent: "335 56% 42%"
+}
+            </div>
+        </div>
+        
+        <div class="test-section warning">
+            <h2>❌ Se o Teste Falhar</h2>
+            <p>Se ainda aparece azul em vez da cor escolhida, verifique:</p>
+            <ul>
+                <li>Se o localStorage está sendo definido corretamente</li>
+                <li>Se os logs aparecem no console</li>
+                <li>Se há erros no console</li>
+                <li>Se a página está sendo recarregada após definir o localStorage</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Comando copiado! Cole no console do navegador.');
+            }).catch(() => {
+                alert('❌ Erro ao copiar. Selecione e copie manualmente.');
+            });
+        }
+        
+        // Auto-abrir a aplicação
+        setTimeout(() => {
+            if (confirm('🚀 Abrir http://localhost:8080 automaticamente?')) {
+                window.open('http://localhost:8080', '_blank');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

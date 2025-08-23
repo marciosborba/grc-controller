@@ -14,7 +14,18 @@ export function ThemeToggle() {
   const { theme, setTheme, savePreferences, saving } = useThemeContext()
 
   const handleThemeChange = async (newTheme: string) => {
+    console.log('🎨 ThemeToggle: Mudando tema para:', newTheme)
+    console.log('🎨 ThemeToggle: Tema atual:', theme)
+    console.log('🎨 ThemeToggle: Classes do HTML antes:', document.documentElement.classList.toString())
+    
     setTheme(newTheme)
+    
+    // Verificar se a mudança foi aplicada
+    setTimeout(() => {
+      console.log('🎨 ThemeToggle: Classes do HTML depois:', document.documentElement.classList.toString())
+      console.log('🎨 ThemeToggle: Background atual:', getComputedStyle(document.documentElement).getPropertyValue('--background'))
+    }, 100)
+    
     // Auto save theme preference
     try {
       await savePreferences()
