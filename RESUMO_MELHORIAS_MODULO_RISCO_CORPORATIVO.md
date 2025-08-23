@@ -1,4 +1,4 @@
-# 🎯 Resumo das Melhorias - Módulo de Risco Corporativo
+# 🎯 Resumo das Melhorias - Módulo de Gestão de Riscos
 
 ## ✅ Implementações Concluídas
 

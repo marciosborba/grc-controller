@@ -36,7 +36,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
 
   // Filtrar políticas que precisam de aprovação
   const policiesForApproval = policies.filter(p => 
-    p.status === 'approved' || p.workflow_stage === 'approval'
+    p.status === 'pending_approval' || p.workflow_stage === 'approval'
   );
 
   const handleApprovalAction = async (policyId: string, action: 'approve' | 'reject') => {
@@ -134,7 +134,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="flex items-center gap-1">
+          <Badge variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-800 bg-orange-50 dark:border-orange-600 dark:text-orange-200 dark:bg-orange-950/20">
             <Stamp className="h-3 w-3" />
             Pendentes: {policiesForApproval.length}
           </Badge>
@@ -184,7 +184,16 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                   </div>
                   
                   {policy.priority && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        policy.priority === 'high' 
+                          ? 'border-red-300 text-red-800 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-950/20'
+                          : policy.priority === 'medium'
+                          ? 'border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20'
+                          : 'border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20'
+                      }`}
+                    >
                       Prioridade: {policy.priority === 'high' ? 'Alta' :
                                   policy.priority === 'medium' ? 'Média' : 'Baixa'}
                     </Badge>
@@ -286,10 +295,10 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                   </div>
 
                   {/* Aviso sobre rejeição */}
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg dark:bg-yellow-950/20 dark:border-yellow-800">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                      <div className="text-sm text-yellow-800">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 dark:text-yellow-400" />
+                      <div className="text-sm text-yellow-800 dark:text-yellow-200">
                         <strong>Importante:</strong> Políticas rejeitadas retornarão para a fase de elaboração 
                         e precisarão passar novamente por todo o processo de revisão.
                       </div>

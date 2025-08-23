@@ -40,20 +40,20 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
   const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   const expiringSoon = policies.filter(p => {
-    if (!p.expiry_date) return false;
-    const expiryDate = new Date(p.expiry_date);
+    if (!p.expiration_date) return false;
+    const expiryDate = new Date(p.expiration_date);
     return expiryDate <= thirtyDaysFromNow && expiryDate >= today;
   });
 
   const needingReview = policies.filter(p => {
-    if (!p.next_review_date) return false;
-    const reviewDate = new Date(p.next_review_date);
+    if (!p.review_date) return false;
+    const reviewDate = new Date(p.review_date);
     return reviewDate <= thirtyDaysFromNow && reviewDate >= today;
   });
 
   const expired = policies.filter(p => {
-    if (!p.expiry_date) return false;
-    const expiryDate = new Date(p.expiry_date);
+    if (!p.expiration_date) return false;
+    const expiryDate = new Date(p.expiration_date);
     return expiryDate < today;
   });
 
@@ -204,9 +204,9 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               <div>
-                <div className="text-2xl font-bold text-green-600">{active.length}</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{active.length}</div>
                 <div className="text-sm text-muted-foreground">Ativas</div>
               </div>
             </div>
@@ -216,9 +216,9 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-yellow-600" />
+              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               <div>
-                <div className="text-2xl font-bold text-yellow-600">{needingReview.length}</div>
+                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{needingReview.length}</div>
                 <div className="text-sm text-muted-foreground">Precisam Revisão</div>
               </div>
             </div>
@@ -228,9 +228,9 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <div className="text-2xl font-bold text-orange-600">{expiringSoon.length}</div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{expiringSoon.length}</div>
                 <div className="text-sm text-muted-foreground">Expirando</div>
               </div>
             </div>
@@ -240,9 +240,9 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <XCircle className="h-5 w-5 text-red-600" />
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
               <div>
-                <div className="text-2xl font-bold text-red-600">{expired.length}</div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{expired.length}</div>
                 <div className="text-sm text-muted-foreground">Expiradas</div>
               </div>
             </div>
@@ -258,7 +258,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
           {/* Políticas expiradas */}
           {expired.length > 0 && (
             <div>
-              <h4 className="text-md font-medium text-red-600 mb-2">Expiradas ({expired.length})</h4>
+              <h4 className="text-md font-medium text-red-600 dark:text-red-400 mb-2">Expiradas ({expired.length})</h4>
               <div className="space-y-2">
                 {expired.map((policy) => {
                   const lifecycleStatus = getLifecycleStatus(policy);
@@ -295,7 +295,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
           {/* Políticas expirando */}
           {expiringSoon.length > 0 && (
             <div>
-              <h4 className="text-md font-medium text-orange-600 mb-2">Expirando em Breve ({expiringSoon.length})</h4>
+              <h4 className="text-md font-medium text-orange-600 dark:text-orange-400 mb-2">Expirando em Breve ({expiringSoon.length})</h4>
               <div className="space-y-2">
                 {expiringSoon.map((policy) => {
                   const daysUntil = getDaysUntil(policy.expiry_date);
@@ -333,7 +333,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
           {/* Políticas precisando revisão */}
           {needingReview.length > 0 && (
             <div>
-              <h4 className="text-md font-medium text-yellow-600 mb-2">Precisam Revisão ({needingReview.length})</h4>
+              <h4 className="text-md font-medium text-yellow-600 dark:text-yellow-400 mb-2">Precisam Revisão ({needingReview.length})</h4>
               <div className="space-y-2">
                 {needingReview.map((policy) => {
                   const daysUntil = getDaysUntil(policy.next_review_date);
@@ -371,7 +371,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
           {/* Políticas ativas */}
           {active.length > 0 && (
             <div>
-              <h4 className="text-md font-medium text-green-600 mb-2">Ativas ({active.length})</h4>
+              <h4 className="text-md font-medium text-green-600 dark:text-green-400 mb-2">Ativas ({active.length})</h4>
               <div className="space-y-2">
                 {active.slice(0, 5).map((policy) => {
                   const lifecycleStatus = getLifecycleStatus(policy);

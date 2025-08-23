@@ -22,13 +22,6 @@ const PolicyManagementPageTest: React.FC = () => {
         </p>
       </div>
 
-      {/* Confirmação */}
-      <Alert className="border-green-200 bg-green-50 text-green-900">
-        <CheckCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>SUCESSO!</strong> A rota /policy-management está funcionando corretamente.
-        </AlertDescription>
-      </Alert>
 
       {/* Cards de teste */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -91,14 +84,6 @@ const PolicyManagementPageTest: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Próximos passos */}
-      <Alert>
-        <AlertDescription>
-          <strong>Próximos passos:</strong> Se você está vendo esta página, significa que a rota está funcionando. 
-          O problema anterior pode ter sido cache do navegador ou estado de autenticação. 
-          Agora você pode voltar ao componente principal do módulo.
-        </AlertDescription>
-      </Alert>
     </div>
   );
 };

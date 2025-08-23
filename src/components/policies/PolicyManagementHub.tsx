@@ -53,6 +53,7 @@ interface Policy {
   approved_at?: string;
   content?: any;
   metadata?: any;
+  document_url?: string;
 }
 
 const PolicyManagementHub: React.FC = () => {
@@ -90,24 +91,52 @@ const PolicyManagementHub: React.FC = () => {
 
   // Carregar dados iniciais
   useEffect(() => {
-    if (user?.tenant?.id) {
+    const tenantId = user?.tenant?.id || user?.tenantId;
+    console.log('🔄 useEffect disparado - tenantId:', tenantId);
+    
+    if (tenantId) {
       loadPolicies();
+    } else {
+      console.log('❌ useEffect - Aguardando tenant_id...');
     }
-  }, [user?.tenant?.id]);
+  }, [user?.tenant?.id, user?.tenantId, user]);
 
   const loadPolicies = async () => {
-    if (!user?.tenant?.id) return;
+    console.log('\n=== 🔍 DEBUG CARREGAMENTO DE POLÍTICAS ===');
+    console.log('🔍 loadPolicies chamado');
+    console.log('🔍 user completo:', user);
+    console.log('🔍 user.tenant:', user?.tenant);
+    console.log('🔍 user.tenantId:', user?.tenantId);
+    console.log('🔍 user.tenant?.id:', user?.tenant?.id);
+    
+    // Tentar usar tenantId como fallback
+    const tenantId = user?.tenant?.id || user?.tenantId;
+    console.log('🔍 tenantId final:', tenantId);
+    
+    if (!tenantId) {
+      console.log('❌ Sem tenant_id disponível, retornando');
+      console.log('❌ Verifique se o usuário está autenticado corretamente');
+      return;
+    }
 
     setIsLoading(true);
     try {
+      console.log('🔍 Fazendo query para tenant_id:', tenantId);
+      
+      console.log('🔍 Fazendo consulta das políticas...');
       const { data, error } = await supabase
         .from('policies')
-        .select('*')
-        .eq('tenant_id', user.tenant.id)
+        .select('id, title, description, status, category, document_type, version, created_at, updated_at, effective_date, review_date, expiry_date, created_by, approved_by, approved_at, owner_id, document_url, metadata, priority')
+        .eq('tenant_id', tenantId)
         .order('updated_at', { ascending: false });
 
+      console.log('🔍 Debug - Resultado da query:');
+      console.log('🔍 Debug - data:', data);
+      console.log('🔍 Debug - error:', error);
+      console.log('🔍 Debug - data length:', data?.length || 0);
+
       if (error) {
-        console.error('Erro ao carregar políticas:', error);
+        console.error('❌ Erro ao carregar políticas:', error);
         toast({
           title: "Erro",
           description: "Erro ao carregar políticas",
@@ -116,7 +145,7 @@ const PolicyManagementHub: React.FC = () => {
         return;
       }
 
-      console.log('Políticas carregadas:', data?.length || 0);
+      console.log('✅ Políticas carregadas:', data?.length || 0);
       setPolicies(data || []);
     } catch (error) {
       console.error('Erro ao carregar políticas:', error);
@@ -234,18 +263,30 @@ const PolicyManagementHub: React.FC = () => {
         
         <div className="flex items-center space-x-3">
           {/* Alex Policy Status */}
-          <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-            <Brain className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">Alex Policy</span>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Ativo
+          <button className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-10 px-4 py-2 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800" type="button">
+            <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
+              <Brain className="h-3 w-3 text-white" />
+            </div>
+            <span>Alex Policy</span>
+            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
+              IA
             </Badge>
-          </div>
+          </button>
+          
+          {/* Botão Debug */}
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              console.log('🔄 Forçando recarregamento...');
+              loadPolicies();
+            }}
+          >
+            🔄 Debug
+          </Button>
           
           {/* Botão Nova Política */}
           <Button onClick={() => setActiveView('elaboration')}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-3 w-3 mb-0.5 mr-2" />
             Nova Política
           </Button>
         </div>
@@ -257,7 +298,7 @@ const PolicyManagementHub: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-3 w-3 mb-0.5 text-muted-foreground" />
                 <Input
                   placeholder="Buscar políticas..."
                   value={searchTerm}
@@ -296,54 +337,29 @@ const PolicyManagementHub: React.FC = () => {
               </select>
               
               <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
+                <Filter className="h-3 w-3 mb-0.5 mr-2" />
                 Filtros
               </Button>
             </div>
           </div>
           
-          {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{policies.length}</div>
-              <div className="text-xs text-muted-foreground">Total</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {policies.filter(p => p.status === 'draft').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Rascunhos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {policies.filter(p => p.status === 'review').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Em Revisão</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {policies.filter(p => p.status === 'approved').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Aprovadas</div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
       {/* Tabs principais */}
       <Tabs value={activeView} onValueChange={changeActiveView} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 gap-0.5 p-0.5 h-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex flex-col items-center space-y-1 p-3"
+                className="!flex !flex-col !items-center !justify-center !p-1 !px-0.5 !py-1 !min-w-0 !h-10 !text-xs"
                 title={tab.description}
               >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs hidden sm:block">{tab.label}</span>
+                <Icon className="h-3 w-3 mb-0.5" />
+                <span className="hidden sm:block truncate leading-none text-xs">{tab.label}</span>
               </TabsTrigger>
             );
           })}

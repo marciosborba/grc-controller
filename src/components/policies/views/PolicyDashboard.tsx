@@ -34,7 +34,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
   const stats = useMemo(() => {
     const total = allPolicies.length;
     const draft = allPolicies.filter(p => p.status === 'draft').length;
-    const review = allPolicies.filter(p => p.workflow_stage === 'review').length;
+    const review = allPolicies.filter(p => p.status === 'under_review' || p.workflow_stage === 'review').length;
     const approved = allPolicies.filter(p => p.status === 'approved').length;
     const published = allPolicies.filter(p => p.status === 'published').length;
     
@@ -151,7 +151,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="flex items-center gap-1">
+          <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20">
             <TrendingUp className="h-3 w-3" />
             {stats.recentPolicies.length} criadas esta semana
           </Badge>
@@ -228,19 +228,23 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
 
       {/* Alertas importantes */}
       {stats.needsAttention > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <p className="font-medium text-orange-800">
+                <p className="font-medium text-orange-900 dark:text-orange-100">
                   {stats.needsAttention} política(s) precisam de atenção
                 </p>
-                <p className="text-sm text-orange-600">
+                <p className="text-sm text-orange-700 dark:text-orange-300">
                   Políticas expirando ou que precisam de revisão nos próximos 30 dias
                 </p>
               </div>
-              <Button variant="outline" size="sm" className="ml-auto">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="ml-auto border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-200 dark:hover:bg-orange-900/50"
+              >
                 Ver Detalhes
               </Button>
             </div>
@@ -379,7 +383,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                     <span className="text-sm font-medium">{category}</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-muted-foreground">{count}</span>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs border-blue-300 text-blue-800 bg-blue-50 dark:border-blue-600 dark:text-blue-200 dark:bg-blue-950/20">
                         {((count / stats.total) * 100).toFixed(0)}%
                       </Badge>
                     </div>

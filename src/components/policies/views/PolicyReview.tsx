@@ -38,7 +38,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
 
   // Filtrar políticas que precisam de revisão
   const policiesForReview = policies.filter(p => 
-    p.status === 'draft' || p.workflow_stage === 'review'
+    p.status === 'draft' || p.status === 'under_review' || p.workflow_stage === 'review'
   );
 
   const handleReviewAction = async (policyId: string, action: 'approve' | 'reject' | 'request_changes') => {

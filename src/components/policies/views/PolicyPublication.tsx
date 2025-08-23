@@ -41,7 +41,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
 
   // Filtrar políticas aprovadas para publicação
   const policiesForPublication = policies.filter(p => 
-    p.status === 'approved' && p.workflow_stage === 'publication'
+    p.status === 'approved'
   );
 
   // Políticas já publicadas

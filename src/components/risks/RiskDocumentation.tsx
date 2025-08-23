@@ -304,7 +304,7 @@ export const RiskDocumentation: React.FC = () => {
                 <ul className="space-y-2">
                   <li className="flex items-center">
                     <Eye className="h-4 w-4 text-blue-600 mr-2" />
-                    Auditoria IA
+                    Gestão de Auditoria
                   </li>
                   <li className="flex items-center">
                     <Shield className="h-4 w-4 text-green-600 mr-2" />

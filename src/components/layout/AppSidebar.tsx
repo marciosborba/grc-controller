@@ -16,7 +16,7 @@ const navigationItems = [{
       description: 'Questionários e avaliações'
     },
     {
-      title: 'Auditoria IA',
+      title: 'Gestão de Auditoria',
       url: '/audit',
       icon: Eye,
       permissions: ['audit.read', 'all'],
@@ -65,7 +65,7 @@ const navigationItems = [{
       description: 'Central de notificações e alertas'
     },
     {
-      title: 'Risco Corporativo',
+      title: 'Gestão de Riscos',
       url: '/risks',
       icon: AlertTriangle,
       permissions: ['risk.read', 'all'],

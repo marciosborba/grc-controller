@@ -1,4 +1,4 @@
-# Documentação Completa - Módulo de Risco Corporativo
+# Documentação Completa - Módulo de Gestão de Riscos
 
 ## 📋 Índice
 
@@ -17,9 +17,9 @@
 
 ## 🎯 Visão Geral
 
-### O que é o Módulo de Risco Corporativo?
+### O que é o Módulo de Gestão de Riscos?
 
-O Módulo de Risco Corporativo é uma plataforma integrada e inteligente para gestão completa de riscos organizacionais, desenvolvida com base nas melhores práticas internacionais e potencializada pela inteligência artificial Alex Risk.
+O Módulo de Gestão de Riscos é uma plataforma integrada e inteligente para gestão completa de riscos organizacionais, desenvolvida com base nas melhores práticas internacionais e potencializada pela inteligência artificial Alex Risk.
 
 ### Principais Benefícios
 
@@ -75,7 +75,7 @@ graph TB
 
 ### Integração com Outros Módulos
 
-- **Auditoria IA**: Compartilhamento de achados e recomendações
+- **Gestão de Auditoria**: Compartilhamento de achados e recomendações
 - **Compliance**: Sincronização de requisitos regulatórios
 - **Incidentes**: Correlação automática de eventos
 - **Vendor Risk**: Avaliação de riscos de terceiros
@@ -603,7 +603,7 @@ graph TD
 
 #### 1. Acesso ao Módulo
 1. Faça login no sistema GRC Controller
-2. No menu lateral, clique em **"Risco Corporativo"**
+2. No menu lateral, clique em **"Gestão de Riscos"**
 3. Você será direcionado ao Centro de Gestão de Riscos
 
 #### 2. Familiarização com a Interface

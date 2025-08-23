@@ -347,7 +347,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold truncate">
-                Risco Corporativo - Centro Integrado
+                Gestão de Riscos - Centro Integrado
               </h1>
               <p className="text-muted-foreground text-sm lg:text-base">
                 Plataforma unificada com Alex Risk para gestão completa de riscos corporativos

@@ -17,7 +17,9 @@ import {
   Eye,
   MessageSquare,
   Lightbulb,
-  BookOpen
+  BookOpen,
+  Paperclip,
+  Download
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,6 +41,8 @@ interface PolicyProcessCardProps {
     created_by?: string;
     approved_by?: string;
     approval_date?: string;
+    document_url?: string;
+    metadata?: any;
   };
   mode: 'elaboration' | 'review' | 'approval' | 'publication' | 'lifecycle' | 'analytics';
   onAction: (action: string, policyId: string, data?: any) => void;
@@ -65,31 +69,31 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
     switch (status.toLowerCase()) {
       case 'draft':
         return {
-          color: 'bg-slate-100 text-slate-800 border-slate-200',
+          color: 'bg-slate-200 text-slate-900 border-slate-300',
           icon: FileText,
           label: 'Rascunho'
         };
       case 'pending_approval':
         return {
-          color: 'bg-amber-100 text-amber-800 border-amber-200',
+          color: 'bg-amber-200 text-amber-900 border-amber-300',
           icon: Clock,
           label: 'Aguardando Aprovação'
         };
       case 'approved':
         return {
-          color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+          color: 'bg-emerald-200 text-emerald-900 border-emerald-300',
           icon: CheckCircle,
           label: 'Aprovada'
         };
       case 'under_review':
         return {
-          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          color: 'bg-blue-200 text-blue-900 border-blue-300',
           icon: Eye,
           label: 'Em Revisão'
         };
       case 'rejected':
         return {
-          color: 'bg-red-100 text-red-800 border-red-200',
+          color: 'bg-red-200 text-red-900 border-red-300',
           icon: AlertTriangle,
           label: 'Rejeitada'
         };
@@ -204,13 +208,21 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                       <User className="h-3 w-3" />
                       <span>{policy.category}</span>
                     </span>
+                    {(policy.document_url || policy.metadata?.attachedDocuments?.length > 0) && (
+                      <span className="flex items-center space-x-1">
+                        <Paperclip className="h-3 w-3" />
+                        <span>
+                          {policy.metadata?.attachedDocuments?.length || 1} doc(s)
+                        </span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center space-x-2 flex-shrink-0">
                 {alexInsights.length > 0 && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950/30 dark:text-blue-100 dark:border-blue-700">
                     <Lightbulb className="h-3 w-3 mr-1" />
                     {alexInsights.length} Alex Insights
                   </Badge>
@@ -248,7 +260,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                 </div>
               </div>
 
-              {/* Coluna 2: Timeline e Datas */}
+              {/* Coluna 2: Timeline e Documentos */}
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium text-sm text-muted-foreground mb-2">TIMELINE</h4>
@@ -277,6 +289,110 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                       <div className="flex justify-between">
                         <span className="font-medium">Expiração:</span>
                         <span className="text-muted-foreground">{formatDate(policy.expiry_date)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Documentos Anexados */}
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground mb-2">DOCUMENTOS</h4>
+                  <div className="space-y-2">
+                    {(() => {
+                      // Verificar se tem documentos (debug simplificado)
+                      let attachedDocs = [];
+                      
+                      if (policy.metadata) {
+                        try {
+                          let parsedMetadata;
+                          if (typeof policy.metadata === 'string') {
+                            parsedMetadata = JSON.parse(policy.metadata);
+                          } else {
+                            parsedMetadata = policy.metadata;
+                          }
+                          
+                          if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
+                            attachedDocs = parsedMetadata.attachedDocuments;
+                          }
+                        } catch (error) {
+                          console.error('📄 Erro ao processar metadata do card:', error);
+                        }
+                      }
+                      
+                      const hasDocuments = policy.document_url || attachedDocs.length > 0;
+                      
+                      // Log apenas se tiver documentos para debug
+                      if (hasDocuments) {
+                        console.log('📄 Política com documentos:', policy.title, '- URL:', !!policy.document_url, '- Anexos:', attachedDocs.length);
+                      }
+                      
+                      return hasDocuments;
+                    })() ? (
+                      <div className="space-y-1">
+                        {policy.document_url && (
+                          <div className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                            <div className="flex items-center space-x-2">
+                              <FileText className="h-3 w-3 text-blue-500" />
+                              <span>Documento Principal</span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(policy.document_url, '_blank');
+                              }}
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        {(() => {
+                          let attachedDocs = [];
+                          if (policy.metadata) {
+                            try {
+                              let parsedMetadata;
+                              if (typeof policy.metadata === 'string') {
+                                parsedMetadata = JSON.parse(policy.metadata);
+                              } else {
+                                parsedMetadata = policy.metadata;
+                              }
+                              
+                              if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
+                                attachedDocs = parsedMetadata.attachedDocuments;
+                              }
+                            } catch (error) {
+                              console.error('Erro ao processar metadata no render:', error);
+                            }
+                          }
+                          
+                          return attachedDocs.map((doc: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
+                              <div className="flex items-center space-x-2">
+                                <Paperclip className="h-3 w-3 text-gray-500" />
+                                <span className="truncate max-w-[120px]">{doc.name || `Documento ${index + 1}`}</span>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (doc.url) {
+                                    window.open(doc.url, '_blank');
+                                  }
+                                }}
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground italic">
+                        Nenhum documento anexado
                       </div>
                     )}
                   </div>
@@ -319,10 +435,10 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                           key={index}
                           className={`p-2 rounded-md text-xs ${
                             insight.type === 'suggestion'
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              ? 'bg-blue-50 text-blue-900 border border-blue-200 dark:bg-blue-950/20 dark:text-blue-100 dark:border-blue-800'
                               : insight.type === 'warning'
-                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                              : 'bg-gray-50 text-gray-800 border border-gray-200'
+                              ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-100 dark:border-amber-800'
+                              : 'bg-gray-50 text-gray-900 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-100 dark:border-gray-800'
                           }`}
                         >
                           <div className="font-medium">{insight.title}</div>

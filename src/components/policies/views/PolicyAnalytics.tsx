@@ -284,32 +284,32 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
           <CardContent>
             <div className="space-y-3">
               {analytics.expired > 0 && (
-                <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg border border-red-200 dark:bg-red-950/20 dark:border-red-800">
                   <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <span className="text-sm font-medium text-red-800">Políticas Expiradas</span>
+                    <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <span className="text-sm font-medium text-red-800 dark:text-red-200">Políticas Expiradas</span>
                   </div>
                   <Badge variant="destructive">{analytics.expired}</Badge>
                 </div>
               )}
               
               {analytics.expiringSoon > 0 && (
-                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
                   <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">Expirando em 30 dias</span>
+                    <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                    <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Expirando em 30 dias</span>
                   </div>
-                  <Badge variant="outline" className="text-yellow-800">{analytics.expiringSoon}</Badge>
+                  <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20">{analytics.expiringSoon}</Badge>
                 </div>
               )}
               
               {analytics.inReview > 5 && (
-                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                   <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Muitas em Revisão</span>
+                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Muitas em Revisão</span>
                   </div>
-                  <Badge variant="outline" className="text-blue-800">{analytics.inReview}</Badge>
+                  <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50 dark:border-blue-600 dark:text-blue-200 dark:bg-blue-950/20">{analytics.inReview}</Badge>
                 </div>
               )}
               
