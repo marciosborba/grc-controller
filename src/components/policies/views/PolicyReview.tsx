@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Eye,
   MessageSquare,
@@ -13,595 +11,331 @@ import {
   XCircle,
   Clock,
   User,
+  Calendar,
   FileText,
-  AlertTriangle,
-  ThumbsUp,
-  ThumbsDown,
-  Send,
-  History,
-  Edit3
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Policy, PolicyFilters, AlexPolicyConfig } from '@/types/policy-management';
 
 interface PolicyReviewProps {
-  policies: Policy[];
+  policies: any[];
   onPolicyUpdate: () => void;
-  alexConfig: AlexPolicyConfig;
-  searchTerm: string;
-  filters: PolicyFilters;
+  alexConfig?: any;
 }
 
-interface ReviewComment {
-  id: string;
-  section: string;
-  comment: string;
-  type: 'suggestion' | 'issue' | 'approval';
-  reviewer: string;
-  created_at: string;
-}
-
-export const PolicyReview: React.FC<PolicyReviewProps> = ({
+const PolicyReview: React.FC<PolicyReviewProps> = ({
   policies,
   onPolicyUpdate,
-  alexConfig,
-  searchTerm,
-  filters
+  alexConfig
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
-  const [reviewComments, setReviewComments] = useState<ReviewComment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [selectedSection, setSelectedSection] = useState('general');
-  const [commentType, setCommentType] = useState<'suggestion' | 'issue' | 'approval'>('suggestion');
-  const [loading, setLoading] = useState(false);
-  const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filtrar políticas baseado na busca
-  const filteredPolicies = policies.filter(policy => 
-    policy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.category.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filtrar políticas que precisam de revisão
+  const policiesForReview = policies.filter(p => 
+    p.status === 'draft' || p.workflow_stage === 'review'
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'review': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400';
-      case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-400';
-      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
+  const handleReviewAction = async (policyId: string, action: 'approve' | 'reject' | 'request_changes') => {
+    if (!reviewComment.trim() && action !== 'approve') {
+      toast({
+        title: "Comentário obrigatório",
+        description: "Por favor, adicione um comentário para esta ação",
+        variant: "destructive",
+      });
+      return;
     }
+
+    setIsSubmitting(true);
+    try {
+      const newStatus = action === 'approve' ? 'approved' : 
+                       action === 'reject' ? 'rejected' : 'draft';
+      
+      const { error } = await supabase
+        .from('policies')
+        .update({
+          status: newStatus,
+          workflow_stage: action === 'approve' ? 'approval' : 'elaboration',
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id
+        })
+        .eq('id', policyId);
+
+      if (error) throw error;
+
+      // Adicionar comentário de revisão (implementar tabela de comentários futuramente)
+      
+      toast({
+        title: "Revisão realizada",
+        description: `Política ${action === 'approve' ? 'aprovada' : 
+                                action === 'reject' ? 'rejeitada' : 'retornada'} com sucesso`,
+      });
+
+      setReviewComment('');
+      setSelectedPolicy(null);
+      onPolicyUpdate();
+    } catch (error) {
+      console.error('Erro ao revisar política:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao processar revisão",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      draft: { label: 'Rascunho', variant: 'secondary' as const, icon: FileText },
+      review: { label: 'Em Revisão', variant: 'default' as const, icon: Eye },
+      approved: { label: 'Aprovado', variant: 'default' as const, icon: CheckCircle },
+      rejected: { label: 'Rejeitado', variant: 'destructive' as const, icon: XCircle }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const Icon = config.icon;
+
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </Badge>
+    );
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200';
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200';
+      case 'high': return 'text-red-600 bg-red-50 border-red-200';
       case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'low': return 'text-green-600 bg-green-50 border-green-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const handleApprovePolicy = async (policyId: string) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('policies')
-        .update({
-          status: 'approved',
-          workflow_stage: 'approval',
-          updated_by: user?.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', policyId);
-
-      if (error) throw error;
-
-      // Registrar aprovação
-      await supabase
-        .from('policy_approvals')
-        .insert({
-          policy_id: policyId,
-          approver_id: user?.id,
-          status: 'approved',
-          comments: 'Aprovado na revisão técnica'
-        });
-
-      toast({
-        title: 'Sucesso',
-        description: 'Política aprovada com sucesso'
-      });
-
-      onPolicyUpdate();
-    } catch (error) {
-      console.error('Erro ao aprovar política:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao aprovar política',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRejectPolicy = async (policyId: string, reason: string) => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('policies')
-        .update({
-          status: 'draft',
-          workflow_stage: 'elaboration',
-          updated_by: user?.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', policyId);
-
-      if (error) throw error;
-
-      // Registrar rejeição
-      await supabase
-        .from('policy_approvals')
-        .insert({
-          policy_id: policyId,
-          approver_id: user?.id,
-          status: 'rejected',
-          comments: reason
-        });
-
-      toast({
-        title: 'Política Rejeitada',
-        description: 'Política retornada para elaboração'
-      });
-
-      setShowReviewDialog(false);
-      onPolicyUpdate();
-    } catch (error) {
-      console.error('Erro ao rejeitar política:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao rejeitar política',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const addReviewComment = () => {
-    if (!newComment.trim() || !selectedPolicy) return;
-
-    const comment: ReviewComment = {
-      id: Date.now().toString(),
-      section: selectedSection,
-      comment: newComment,
-      type: commentType,
-      reviewer: user?.email || 'Revisor',
-      created_at: new Date().toISOString()
-    };
-
-    setReviewComments(prev => [...prev, comment]);
-    setNewComment('');
-    
-    toast({
-      title: 'Comentário Adicionado',
-      description: 'Seu comentário foi registrado'
-    });
-  };
-
-  const getCommentIcon = (type: string) => {
-    switch (type) {
-      case 'suggestion': return <Edit3 className="h-4 w-4 text-blue-500" />;
-      case 'issue': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'approval': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      default: return <MessageSquare className="h-4 w-4" />;
-    }
-  };
+  if (policiesForReview.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-semibold mb-2">Nenhuma política para revisão</h3>
+        <p className="text-muted-foreground">
+          Todas as políticas estão em dia ou não requerem revisão no momento.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Eye className="h-6 w-6 text-primary" />
-            Revisão de Políticas
-          </h2>
+        <div>
+          <h2 className="text-2xl font-bold">Revisão de Políticas</h2>
           <p className="text-muted-foreground">
-            Processo de revisão técnica e de compliance com assistência Alex Policy
+            {policiesForReview.length} política(s) aguardando revisão
           </p>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Pendentes: {policiesForReview.length}
+          </Badge>
         </div>
       </div>
 
-      {/* Alex Policy Integration */}
-      {alexConfig.enabled && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">Alex Policy - Modo Revisão</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Análise automática de conformidade e sugestões de melhoria
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary" className="bg-primary/10 text-primary">
-                  <Eye className="h-3 w-3 mr-1" />
-                  Análise Ativa
-                </Badge>
-                <Button variant="outline" size="sm">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Consultar IA
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Lista de Políticas em Revisão */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lista de Políticas */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Políticas em Revisão</span>
-                <Badge variant="secondary">{filteredPolicies.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {filteredPolicies.map((policy) => (
-                <div
-                  key={policy.id}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedPolicy?.id === policy.id 
-                      ? 'border-primary bg-primary/5' 
-                      : 'border-border hover:bg-muted/50'
-                  }`}
-                  onClick={() => setSelectedPolicy(policy)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-medium text-sm truncate flex-1">{policy.title}</h4>
-                    <Badge className={getStatusColor(policy.status)}>
-                      {policy.status}
-                    </Badge>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Lista de políticas para revisão */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
+          
+          {policiesForReview.map((policy) => (
+            <Card 
+              key={policy.id} 
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setSelectedPolicy(policy)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-base">{policy.title}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {policy.description}
+                    </p>
                   </div>
-                  
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-3 w-3" />
-                      <span>{policy.category}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-3 w-3" />
-                      <span>Enviada em {formatDate(policy.updated_at)}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <User className="h-3 w-3" />
-                      <span>v{policy.version}</span>
-                    </div>
-                  </div>
-
-                  {/* Indicador de Prioridade */}
-                  <div className="mt-2">
-                    <Badge variant="outline" className={`text-xs ${getPriorityColor(policy.priority)}`}>
-                      Prioridade: {policy.priority}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-              
-              {filteredPolicies.length === 0 && (
-                <div className="text-center py-8">
-                  <Eye className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    {searchTerm ? 'Nenhuma política encontrada' : 'Nenhuma política aguardando revisão'}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Painel de Revisão */}
-        <div className="lg:col-span-2">
-          {selectedPolicy ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Eye className="h-5 w-5" />
-                    <span>Revisando: {selectedPolicy.title}</span>
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleApprovePolicy(selectedPolicy.id)}
-                      disabled={loading}
-                    >
-                      <ThumbsUp className="h-4 w-4 mr-2" />
-                      Aprovar
-                    </Button>
-                    
-                    <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <ThumbsDown className="h-4 w-4 mr-2" />
-                          Rejeitar
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Rejeitar Política</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label>Motivo da Rejeição</Label>
-                            <Textarea
-                              placeholder="Descreva os motivos para rejeição da política..."
-                              rows={4}
-                              value={newComment}
-                              onChange={(e) => setNewComment(e.target.value)}
-                            />
-                          </div>
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setShowReviewDialog(false)}>
-                              Cancelar
-                            </Button>
-                            <Button 
-                              variant="destructive"
-                              onClick={() => handleRejectPolicy(selectedPolicy.id, newComment)}
-                              disabled={loading || !newComment.trim()}
-                            >
-                              Rejeitar Política
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  {getStatusBadge(policy.status)}
                 </div>
               </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="content" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="content">Conteúdo</TabsTrigger>
-                    <TabsTrigger value="comments">Comentários</TabsTrigger>
-                    <TabsTrigger value="history">Histórico</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="content" className="space-y-4">
-                    {/* Informações da Política */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium">Categoria</Label>
-                        <p className="text-sm text-muted-foreground">{selectedPolicy.category}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Tipo</Label>
-                        <p className="text-sm text-muted-foreground">{selectedPolicy.type}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Prioridade</Label>
-                        <Badge variant="outline" className={getPriorityColor(selectedPolicy.priority)}>
-                          {selectedPolicy.priority}
-                        </Badge>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Requer Treinamento</Label>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedPolicy.requires_training ? 'Sim' : 'Não'}
-                        </p>
-                      </div>
+              
+              <CardContent className="pt-0">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Categoria:</span>
+                      <span>{policy.category}</span>
                     </div>
+                    
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {policy.priority && (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${getPriorityColor(policy.priority)}`}
+                    >
+                      {policy.priority === 'high' ? 'Alta' :
+                       policy.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
+        {/* Painel de revisão */}
+        <div className="space-y-4">
+          {selectedPolicy ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Revisão: {selectedPolicy.title}
+                  </CardTitle>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  {/* Informações da política */}
+                  <div className="space-y-3">
                     <div>
-                      <Label className="text-sm font-medium">Descrição</Label>
+                      <label className="text-sm font-medium">Descrição</label>
                       <p className="text-sm text-muted-foreground mt-1">
                         {selectedPolicy.description || 'Sem descrição'}
                       </p>
                     </div>
-
-                    {/* Conteúdo da Política */}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Categoria</label>
+                        <p className="text-sm text-muted-foreground">{selectedPolicy.category}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Versão</label>
+                        <p className="text-sm text-muted-foreground">{selectedPolicy.version}</p>
+                      </div>
+                    </div>
+                    
                     <div>
-                      <Label className="text-sm font-medium">Conteúdo</Label>
-                      <div className="mt-2 p-4 border rounded-lg bg-muted/20">
-                        {selectedPolicy.content?.sections?.map((section, index) => (
-                          <div key={section.id} className="mb-4">
-                            <h4 className="font-medium text-sm mb-2">{section.title}</h4>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {section.content}
-                            </p>
-                          </div>
-                        )) || (
-                          <p className="text-sm text-muted-foreground">Conteúdo não disponível</p>
-                        )}
+                      <label className="text-sm font-medium">Status Atual</label>
+                      <div className="mt-1">
+                        {getStatusBadge(selectedPolicy.status)}
                       </div>
                     </div>
+                  </div>
 
-                    {/* Alex Policy Analysis */}
-                    {alexConfig.enabled && (
-                      <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm flex items-center space-x-2">
-                            <MessageSquare className="h-4 w-4 text-blue-600" />
-                            <span>Análise Alex Policy</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded border">
-                              <div className="flex items-center space-x-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                <span className="text-sm">Estrutura adequada</span>
-                              </div>
-                              <Badge variant="outline" className="text-green-600">95%</Badge>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded border">
-                              <div className="flex items-center space-x-2">
-                                <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                <span className="text-sm">Linguagem técnica pode ser melhorada</span>
-                              </div>
-                              <Badge variant="outline" className="text-yellow-600">78%</Badge>
-                            </div>
-                            <div className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded border">
-                              <div className="flex items-center space-x-2">
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                <span className="text-sm">Conformidade regulatória</span>
-                              </div>
-                              <Badge variant="outline" className="text-green-600">92%</Badge>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
+                  {/* Comentário de revisão */}
+                  <div>
+                    <label className="text-sm font-medium">Comentário da Revisão</label>
+                    <Textarea
+                      placeholder="Adicione seus comentários sobre esta política..."
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="mt-1"
+                      rows={4}
+                    />
+                  </div>
+
+                  {/* Ações de revisão */}
+                  <div className="flex flex-col space-y-2">
+                    <Button
+                      onClick={() => handleReviewAction(selectedPolicy.id, 'approve')}
+                      disabled={isSubmitting}
+                      className="w-full bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Aprovar para Próxima Etapa
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => handleReviewAction(selectedPolicy.id, 'request_changes')}
+                      disabled={isSubmitting || !reviewComment.trim()}
+                      className="w-full"
+                    >
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Solicitar Alterações
+                    </Button>
+                    
+                    <Button
+                      variant="destructive"
+                      onClick={() => handleReviewAction(selectedPolicy.id, 'reject')}
+                      disabled={isSubmitting || !reviewComment.trim()}
+                      className="w-full"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Rejeitar Política
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Alex Policy Suggestions */}
+              {alexConfig?.enabled && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5 text-blue-600" />
+                      Sugestões Alex Policy
+                    </CardTitle>
+                  </CardHeader>
                   
-                  <TabsContent value="comments" className="space-y-4">
-                    {/* Adicionar Comentário */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Adicionar Comentário de Revisão</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-sm">Seção</Label>
-                            <select 
-                              className="w-full mt-1 p-2 border rounded"
-                              value={selectedSection}
-                              onChange={(e) => setSelectedSection(e.target.value)}
-                            >
-                              <option value="general">Geral</option>
-                              <option value="objective">Objetivo</option>
-                              <option value="scope">Escopo</option>
-                              <option value="responsibilities">Responsabilidades</option>
-                              <option value="content">Conteúdo</option>
-                            </select>
-                          </div>
-                          <div>
-                            <Label className="text-sm">Tipo</Label>
-                            <select 
-                              className="w-full mt-1 p-2 border rounded"
-                              value={commentType}
-                              onChange={(e) => setCommentType(e.target.value as any)}
-                            >
-                              <option value="suggestion">Sugestão</option>
-                              <option value="issue">Problema</option>
-                              <option value="approval">Aprovação</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-sm">Comentário</Label>
-                          <Textarea
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Digite seu comentário de revisão..."
-                            rows={3}
-                          />
-                        </div>
-                        <Button onClick={addReviewComment} disabled={!newComment.trim()}>
-                          <Send className="h-4 w-4 mr-2" />
-                          Adicionar Comentário
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    {/* Lista de Comentários */}
+                  <CardContent>
                     <div className="space-y-3">
-                      {reviewComments.map((comment) => (
-                        <Card key={comment.id}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start space-x-3">
-                              {getCommentIcon(comment.type)}
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <span className="text-sm font-medium">{comment.reviewer}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {comment.section}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    {comment.type}
-                                  </Badge>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatDate(comment.created_at)}
-                                  </span>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{comment.comment}</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-sm text-blue-800">
+                          ✅ <strong>Estrutura:</strong> A política segue a estrutura padrão recomendada.
+                        </p>
+                      </div>
                       
-                      {reviewComments.length === 0 && (
-                        <div className="text-center py-8">
-                          <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">Nenhum comentário de revisão</p>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="history" className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                        <History className="h-4 w-4 text-blue-500" />
-                        <div>
-                          <p className="text-sm font-medium">Política enviada para revisão</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(selectedPolicy.updated_at)}
-                          </p>
-                        </div>
+                      <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p className="text-sm text-yellow-800">
+                          ⚠️ <strong>Compliance:</strong> Considere adicionar referências às normas ISO 27001.
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-3 p-3 border rounded-lg">
-                        <Edit3 className="h-4 w-4 text-green-500" />
-                        <div>
-                          <p className="text-sm font-medium">Política criada</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(selectedPolicy.created_at)}
-                          </p>
-                        </div>
+                      
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm text-green-800">
+                          💡 <strong>Sugestão:</strong> Adicione exemplos práticos para melhor compreensão.
+                        </p>
                       </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           ) : (
             <Card>
-              <CardContent className="flex items-center justify-center h-96">
-                <div className="text-center space-y-4">
-                  <Eye className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <div>
-                    <h3 className="text-lg font-medium text-foreground">Selecione uma Política</h3>
-                    <p className="text-muted-foreground">Escolha uma política da lista para iniciar a revisão</p>
-                  </div>
-                </div>
+              <CardContent className="py-12 text-center">
+                <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Selecione uma Política</h3>
+                <p className="text-muted-foreground">
+                  Clique em uma política na lista para iniciar a revisão
+                </p>
               </CardContent>
             </Card>
           )}
