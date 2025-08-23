@@ -86,11 +86,11 @@ const navigationItems = [{
       description: 'Gestão de incidentes de segurança'
     },
     {
-      title: 'Políticas',
-      url: '/policies',
+      title: 'Gestão de Políticas',
+      url: '/policy-management',
       icon: FileCheck,
       permissions: ['compliance.read', 'all'],
-      description: 'Gestão de políticas corporativas'
+      description: 'Ciclo completo de gestão de políticas com Alex Policy IA - NOVO'
     },
     {
       title: 'Privacidade e LGPD',
