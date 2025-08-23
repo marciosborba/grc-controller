@@ -144,6 +144,7 @@ const navigationItems = [{
   }]
 }];
 export function AppSidebar() {
+  console.log('🚀 [SIDEBAR] AppSidebar carregado - Menu atualizado para "Gestão de Políticas"');
   const {
     state
   } = useSidebar();
