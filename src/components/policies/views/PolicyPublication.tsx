@@ -41,14 +41,19 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
 
   // Filtrar políticas aprovadas para publicação
   const policiesForPublication = policies.filter(p => 
-    p.status === 'approved'
+    p.status === 'approved' || p.status === 'under_review' || p.status === 'pending_approval'
   );
 
   // Políticas já publicadas
   const publishedPolicies = policies.filter(p => p.status === 'published');
 
   const handlePublish = async (policyId: string) => {
+    console.log('🚀 Tentando publicar política:', policyId);
+    console.log('📅 Data de publicação:', publicationDate);
+    console.log('📅 Data de vigência:', effectiveDate);
+    
     if (!publicationDate || !effectiveDate) {
+      console.log('❌ Datas não preenchidas');
       toast({
         title: "Datas obrigatórias",
         description: "Por favor, defina as datas de publicação e vigência",
@@ -59,20 +64,36 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
 
     setIsPublishing(true);
     try {
+      // Converter datetime-local para ISO string
+      const publicationDateISO = new Date(publicationDate).toISOString();
+      const effectiveDateISO = new Date(effectiveDate).toISOString();
+      
+      console.log('📅 Data de publicação (ISO):', publicationDateISO);
+      console.log('📅 Data de vigência (ISO):', effectiveDateISO);
+      
+      const updateData = {
+        status: 'published',
+        workflow_stage: 'published',
+        effective_date: effectiveDateISO,
+        published_by: user?.id,
+        published_at: publicationDateISO,
+        updated_at: new Date().toISOString(),
+        updated_by: user?.id
+      };
+      
+      console.log('📊 Dados para atualização:', updateData);
+      
       const { error } = await supabase
         .from('policies')
-        .update({
-          status: 'published',
-          workflow_stage: 'published',
-          effective_date: effectiveDate,
-          published_by: user?.id,
-          published_at: publicationDate,
-          updated_at: new Date().toISOString(),
-          updated_by: user?.id
-        })
+        .update(updateData)
         .eq('id', policyId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro do Supabase:', error);
+        throw error;
+      }
+      
+      console.log('✅ Política publicada com sucesso!');
 
       toast({
         title: "Política publicada",
@@ -85,10 +106,10 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
       setSelectedPolicy(null);
       onPolicyUpdate();
     } catch (error) {
-      console.error('Erro ao publicar política:', error);
+      console.error('❌ Erro ao publicar política:', error);
       toast({
         title: "Erro",
-        description: "Erro ao publicar política",
+        description: `Erro ao publicar política: ${error.message || error}`,
         variant: "destructive",
       });
     } finally {
@@ -143,31 +164,30 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
           {policiesForPublication.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-3">Prontas para Publicação</h3>
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {policiesForPublication.map((policy) => (
                   <Card 
                     key={policy.id} 
-                    className={`cursor-pointer transition-all hover:shadow-md ${
+                    className={`cursor-pointer transition-all hover:shadow-md rounded-[5px] ${
                       selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
                     }`}
                     onClick={() => setSelectedPolicy(policy)}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-base">{policy.title}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium truncate leading-tight">{policy.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                             {policy.description}
                           </p>
                         </div>
-                        {getStatusBadge(policy.status)}
+                        <div className="ml-2 flex-shrink-0">
+                          {getStatusBadge(policy.status)}
+                        </div>
                       </div>
-                    </CardHeader>
-                    
-                    <CardContent className="pt-0">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Categoria: {policy.category}</span>
-                        <span className="text-muted-foreground">v{policy.version}</span>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground truncate">Categoria: {policy.category}</span>
+                        <span className="text-muted-foreground ml-2">v{policy.version}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -180,22 +200,24 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
           {publishedPolicies.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold mb-3">Políticas Publicadas</h3>
-              <div className="space-y-3">
+              <div className="space-y-1.5">
                 {publishedPolicies.slice(0, 5).map((policy) => (
-                  <Card key={policy.id} className="opacity-75">
-                    <CardHeader className="pb-3">
+                  <Card key={policy.id} className="opacity-75 rounded-[5px]">
+                    <CardContent className="p-3">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-base">{policy.title}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium truncate leading-tight">{policy.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">
                             Publicado em: {policy.published_at ? 
                               new Date(policy.published_at).toLocaleDateString('pt-BR') : 
                               'Data não informada'}
                           </p>
                         </div>
-                        {getStatusBadge(policy.status)}
+                        <div className="ml-2 flex-shrink-0">
+                          {getStatusBadge(policy.status)}
+                        </div>
                       </div>
-                    </CardHeader>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
@@ -250,22 +272,30 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                   {/* Configurações de publicação */}
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium">Data de Publicação</label>
+                      <label className="text-sm font-medium">Data de Publicação *</label>
                       <Input
                         type="datetime-local"
                         value={publicationDate}
-                        onChange={(e) => setPublicationDate(e.target.value)}
+                        onChange={(e) => {
+                          console.log('📅 Data de publicação alterada:', e.target.value);
+                          setPublicationDate(e.target.value);
+                        }}
                         className="mt-1"
+                        min={new Date().toISOString().slice(0, 16)}
                       />
                     </div>
                     
                     <div>
-                      <label className="text-sm font-medium">Data de Vigência</label>
+                      <label className="text-sm font-medium">Data de Vigência *</label>
                       <Input
                         type="date"
                         value={effectiveDate}
-                        onChange={(e) => setEffectiveDate(e.target.value)}
+                        onChange={(e) => {
+                          console.log('📅 Data de vigência alterada:', e.target.value);
+                          setEffectiveDate(e.target.value);
+                        }}
                         className="mt-1"
+                        min={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                     
@@ -283,13 +313,47 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
 
                   {/* Ações de publicação */}
                   <div className="space-y-2">
+                    {/* Debug info */}
+                    <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
+                      <div>Data Publicação: {publicationDate || 'Não preenchida'}</div>
+                      <div>Data Vigência: {effectiveDate || 'Não preenchida'}</div>
+                      <div>Botão habilitado: {(!isPublishing && publicationDate && effectiveDate) ? 'Sim' : 'Não'}</div>
+                      <div className="mt-2 space-x-2">
+                        <button 
+                          onClick={() => {
+                            const now = new Date();
+                            setPublicationDate(now.toISOString().slice(0, 16));
+                            setEffectiveDate(now.toISOString().split('T')[0]);
+                          }}
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                        >
+                          Preencher Datas Automaticamente
+                        </button>
+                      </div>
+                    </div>
+                    
                     <Button
-                      onClick={() => handlePublish(selectedPolicy.id)}
-                      disabled={isPublishing || !publicationDate || !effectiveDate}
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        console.log('🖱️ Botão clicado!');
+                        console.log('📅 publicationDate:', publicationDate);
+                        console.log('📅 effectiveDate:', effectiveDate);
+                        console.log('🔄 isPublishing:', isPublishing);
+                        handlePublish(selectedPolicy.id);
+                      }}
+                      disabled={isPublishing || !publicationDate.trim() || !effectiveDate.trim()}
+                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
-                      <Send className="h-4 w-4 mr-2" />
-                      Publicar Política
+                      {isPublishing ? (
+                        <>
+                          <Clock className="h-4 w-4 mr-2 animate-spin" />
+                          Publicando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Publicar Política
+                        </>
+                      )}
                     </Button>
                     
                     <div className="grid grid-cols-2 gap-2">

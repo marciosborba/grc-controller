@@ -64,54 +64,62 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Sistema de cores melhorado com melhor contraste
+  // Sistema de cores com máximo contraste - fundos saturados com texto branco
   const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
       case 'draft':
         return {
-          color: 'bg-slate-200 text-slate-900 border-slate-300',
+          color: 'bg-gray-600 text-white border-gray-700',
+          style: { backgroundColor: '#4b5563', color: '#ffffff', borderColor: '#374151', fontWeight: '600' },
           icon: FileText,
           label: 'Rascunho'
         };
       case 'pending_approval':
         return {
-          color: 'bg-amber-200 text-amber-900 border-amber-300',
+          color: 'bg-yellow-600 text-white border-yellow-700',
+          style: { backgroundColor: '#d97706', color: '#ffffff', borderColor: '#b45309', fontWeight: '600' },
           icon: Clock,
           label: 'Aguardando Aprovação'
         };
       case 'approved':
         return {
-          color: 'bg-emerald-200 text-emerald-900 border-emerald-300',
+          color: 'bg-green-600 text-white border-green-700',
+          style: { backgroundColor: '#16a34a', color: '#ffffff', borderColor: '#15803d', fontWeight: '600' },
           icon: CheckCircle,
           label: 'Aprovada'
         };
       case 'under_review':
         return {
-          color: 'bg-blue-200 text-blue-900 border-blue-300',
+          color: 'bg-blue-600 text-white border-blue-700',
+          style: { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#1d4ed8', fontWeight: '600' },
           icon: Eye,
           label: 'Em Revisão'
         };
       case 'rejected':
         return {
-          color: 'bg-red-200 text-red-900 border-red-300',
+          color: 'bg-red-600 text-white border-red-700',
+          style: { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', fontWeight: '600' },
           icon: AlertTriangle,
           label: 'Rejeitada'
         };
       case 'published':
         return {
-          color: 'bg-green-100 text-green-800 border-green-200',
+          color: 'bg-emerald-600 text-white border-emerald-700',
+          style: { backgroundColor: '#059669', color: '#ffffff', borderColor: '#047857', fontWeight: '600' },
           icon: BookOpen,
           label: 'Publicada'
         };
       case 'expired':
         return {
-          color: 'bg-orange-100 text-orange-800 border-orange-200',
+          color: 'bg-orange-600 text-white border-orange-700',
+          style: { backgroundColor: '#ea580c', color: '#ffffff', borderColor: '#c2410c', fontWeight: '600' },
           icon: AlertTriangle,
           label: 'Expirada'
         };
       default:
         return {
-          color: 'bg-gray-100 text-gray-800 border-gray-200',
+          color: 'bg-gray-600 text-white border-gray-700',
+          style: { backgroundColor: '#4b5563', color: '#ffffff', borderColor: '#374151', fontWeight: '600' },
           icon: FileText,
           label: status
         };
@@ -172,7 +180,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
   const actions = getModeActions();
 
   return (
-    <Card className={`w-full transition-all duration-200 hover:shadow-md ${className}`}>
+    <Card className={`w-full transition-all duration-200 hover:shadow-md rounded-[5px] ${className}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
@@ -189,10 +197,13 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <h3 className="font-semibold text-lg truncate">{policy.title}</h3>
-                    <Badge className={`${statusConfig.color} flex items-center space-x-1`}>
+                    <div 
+                      className="flex items-center space-x-1 border px-2 py-1 rounded-full text-xs font-medium"
+                      style={statusConfig.style}
+                    >
                       <StatusIcon className="h-3 w-3" />
                       <span>{statusConfig.label}</span>
-                    </Badge>
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -321,10 +332,8 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                       
                       const hasDocuments = policy.document_url || attachedDocs.length > 0;
                       
-                      // Log apenas se tiver documentos para debug
-                      if (hasDocuments) {
-                        console.log('📄 Política com documentos:', policy.title, '- URL:', !!policy.document_url, '- Anexos:', attachedDocs.length);
-                      }
+                      // Log apenas erros
+                      // Logs de sucesso removidos para limpar console
                       
                       return hasDocuments;
                     })() ? (

@@ -231,10 +231,10 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
         };
       case 'alert':
         return {
-          icon: <AlertTriangle className={`${baseClasses} text-red-600`} />,
-          bgColor: 'bg-red-50 dark:bg-red-950',
-          borderColor: 'border-red-200 dark:border-red-800',
-          textColor: 'text-red-900 dark:text-red-100'
+          icon: <AlertTriangle className={`${baseClasses} text-destructive`} />,
+          bgColor: 'bg-destructive/10',
+          borderColor: 'border-destructive/20',
+          textColor: 'text-destructive'
         };
       case 'optimization':
         return {
@@ -253,27 +253,27 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
       case 'analysis':
         return {
           icon: <BarChart3 className={`${baseClasses} text-green-600`} />,
-          bgColor: 'bg-green-50 dark:bg-green-950',
-          borderColor: 'border-green-200 dark:border-green-800',
-          textColor: 'text-green-900 dark:text-green-100'
+          bgColor: 'bg-green-500/10',
+          borderColor: 'border-green-500/20',
+          textColor: 'text-green-600'
         };
       default:
         return {
-          icon: <Info className={`${baseClasses} text-gray-600`} />,
-          bgColor: 'bg-gray-50 dark:bg-gray-950',
-          borderColor: 'border-gray-200 dark:border-gray-800',
-          textColor: 'text-gray-900 dark:text-gray-100'
+          icon: <Info className={`${baseClasses} text-muted-foreground`} />,
+          bgColor: 'bg-muted/10',
+          borderColor: 'border-muted/20',
+          textColor: 'text-muted-foreground'
         };
     }
   };
 
   const getPriorityBadgeColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-300';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'medium': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'low': return 'bg-green-100 text-green-800 border-green-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'critical': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'high': return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
+      case 'medium': return 'bg-primary/10 text-primary border-primary/20';
+      case 'low': return 'bg-green-500/10 text-green-600 border-green-500/20';
+      default: return 'bg-muted/10 text-muted-foreground border-muted/20';
     }
   };
 
@@ -351,17 +351,17 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
             {/* Main Content */}
             <div className="flex-1 overflow-hidden">
               <Tabs value={activeInsightTab} onValueChange={setActiveInsightTab} className="h-full">
-                <div className="border-b bg-slate-50 dark:bg-slate-900 px-4">
+                <div className="border-b bg-muted/30 px-4">
                   <TabsList className="grid w-full grid-cols-3 bg-transparent">
-                    <TabsTrigger value="insights" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800">
+                    <TabsTrigger value="insights" className="data-[state=active]:bg-background">
                       <Lightbulb className="w-4 h-4 mr-2" />
                       Insights
                     </TabsTrigger>
-                    <TabsTrigger value="chat" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800">
+                    <TabsTrigger value="chat" className="data-[state=active]:bg-background">
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Chat IA
                     </TabsTrigger>
-                    <TabsTrigger value="actions" className="data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800">
+                    <TabsTrigger value="actions" className="data-[state=active]:bg-background">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Ações
                     </TabsTrigger>
@@ -464,13 +464,13 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                       </div>
 
                       {currentInsights.length === 0 && (
-                        <Card className="border-dashed border-2 border-slate-300 dark:border-slate-700">
+                        <Card className="border-dashed border-2 border-muted">
                           <CardContent className="flex flex-col items-center justify-center py-8">
-                            <Brain className="w-12 h-12 text-slate-400 dark:text-slate-600 mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+                            <Brain className="w-12 h-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-medium mb-2">
                               Analisando seus dados...
                             </h3>
-                            <p className="text-slate-600 dark:text-slate-400 text-center">
+                            <p className="text-muted-foreground text-center">
                               ALEX VENDOR está processando suas informações para gerar insights personalizados.
                             </p>
                           </CardContent>
@@ -494,7 +494,7 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                               max-w-[80%] p-3 rounded-lg text-sm
                               ${message.type === 'user'
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+                                : 'bg-muted text-muted-foreground'
                               }
                             `}
                           >
@@ -510,10 +510,10 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                       ))}
                       {isLoading && (
                         <div className="flex justify-start">
-                          <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg">
+                          <div className="bg-muted p-3 rounded-lg">
                             <div className="flex items-center space-x-2">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                              <span className="text-sm text-slate-600 dark:text-slate-400">
+                              <span className="text-sm text-muted-foreground">
                                 ALEX VENDOR está pensando...
                               </span>
                             </div>
@@ -524,7 +524,7 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                   </ScrollArea>
                   
                   {/* Chat Input */}
-                  <div className="p-4 border-t bg-slate-50 dark:bg-slate-900">
+                  <div className="p-4 border-t bg-muted/30">
                     <form onSubmit={handleChatSubmit} className="flex space-x-2">
                       <Input
                         value={chatInput}
@@ -560,10 +560,10 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                           {currentInsights.filter(i => i.actionable).map((insight) => (
                             <div key={insight.id} className="flex items-center justify-between p-3 border rounded-lg">
                               <div className="flex-1">
-                                <p className="font-medium text-sm text-slate-900 dark:text-slate-100">
+                                <p className="font-medium text-sm">
                                   {insight.title}
                                 </p>
-                                <p className="text-xs text-slate-600 dark:text-slate-400">
+                                <p className="text-xs text-muted-foreground">
                                   {insight.impact}
                                 </p>
                               </div>
@@ -581,10 +581,10 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                           {currentInsights.filter(i => i.actionable).length === 0 && (
                             <div className="text-center py-8">
                               <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                              <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-2">
+                              <h3 className="font-medium mb-2">
                                 Tudo em ordem!
                               </h3>
-                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                              <p className="text-sm text-muted-foreground">
                                 Não há ações críticas pendentes no momento.
                               </p>
                             </div>
@@ -604,8 +604,8 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
           <div className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                <div className="animate-pulse w-2 h-2 bg-green-600 rounded-full"></div>
+                <span className="text-sm font-medium">
                   ALEX VENDOR ativo
                 </span>
               </div>
@@ -613,7 +613,7 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
                 {currentInsights.filter(i => i.priority === 'high' || i.priority === 'critical').length} alertas
               </Badge>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Monitorando continuamente seus fornecedores e processos
             </p>
           </div>

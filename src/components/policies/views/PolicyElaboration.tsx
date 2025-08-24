@@ -26,7 +26,8 @@ import {
   Download,
   Eye,
   AlertTriangle,
-  Paperclip
+  Paperclip,
+  Brain
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -118,6 +119,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     
     return matchesStatus && matchesSearch;
   });
+  
+  // Debug: verificar se o botão deve aparecer
+  console.log('PolicyElaboration Debug:');
+  console.log('  - Total policies:', policies.length);
+  console.log('  - Filtered policies:', filteredPolicies.length);
+  console.log('  - Should show empty card:', filteredPolicies.length === 0);
 
   // Gerar insights do Alex Policy para cada política
   const generateAlexInsights = (policy: Policy) => {
@@ -168,10 +175,6 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         case 'edit':
           const policyToEdit = policies.find(p => p.id === policyId);
           if (policyToEdit) {
-            console.log('✏️ Abrindo edição:', policyToEdit.title);
-            console.log('  - document_url:', !!(policyToEdit as any).document_url);
-            console.log('  - metadata:', !!(policyToEdit as any).metadata);
-            
             setEditingPolicy(policyToEdit);
             setEditFormData({
               title: policyToEdit.title || '',
@@ -475,8 +478,6 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   };
 
   const loadExistingDocuments = (policy: Policy) => {
-    console.log('📁 Carregando documentos para:', policy.title);
-    
     const documents = [];
     
     // Carregar documento principal se existir
@@ -491,7 +492,6 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         uploadedAt: new Date().toISOString()
       };
       documents.push(mainDoc);
-      console.log('✅ Documento principal carregado');
     }
     
     // Carregar documentos dos metadados se existirem
@@ -520,14 +520,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
             
             documents.push(processedDoc);
           });
-          console.log(`✅ ${parsedMetadata.attachedDocuments.length} anexos carregados dos metadados`);
         }
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar documentos dos metadados:', error);
+      console.error('❌ PolicyElaboration: Erro ao carregar documentos:', error);
     }
     
-    console.log(`📁 Total: ${documents.length} documentos carregados`);
     setAttachedDocuments(documents);
   };
 
@@ -1468,14 +1466,19 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         </div>
         
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
+            type="button"
             onClick={() => setShowAlexChat(!showAlexChat)}
           >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {showAlexChat ? 'Ocultar' : 'Mostrar'} Alex Chat
-          </Button>
+            <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
+              <Brain className="h-3 w-3 text-white" />
+            </div>
+            <span>{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex Chat</span>
+            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
+              IA
+            </Badge>
+          </button>
           
           <Button onClick={handleCreateNewPolicy}>
             <Plus className="h-4 w-4 mr-2" />

@@ -192,10 +192,10 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
   // Helper functions
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'good': return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800 dark:text-green-400';
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-400';
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800 dark:text-red-400';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400';
+      case 'good': return 'text-green-600 bg-green-500/10 border-green-500/20';
+      case 'warning': return 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20';
+      case 'critical': return 'text-destructive bg-destructive/10 border-destructive/20';
+      default: return 'text-muted-foreground bg-muted/10 border-muted/20';
     }
   };
 
@@ -212,23 +212,23 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
     if (trend === 'up' && changeType === 'increase') {
       return <ArrowUpRight className="w-3 h-3 text-green-600" />;
     } else if (trend === 'down' && changeType === 'decrease') {
-      return <ArrowDownRight className="w-3 h-3 text-red-600" />;
+      return <ArrowDownRight className="w-3 h-3 text-destructive" />;
     } else if (trend === 'up') {
       return <TrendingUp className="w-3 h-3 text-blue-600" />;
     } else if (trend === 'down') {
       return <TrendingDown className="w-3 h-3 text-blue-600" />;
     }
-    return <Activity className="w-3 h-3 text-gray-600" />;
+    return <Activity className="w-3 h-3 text-muted-foreground" />;
   };
 
   // Metric Card Component
   const MetricCard: React.FC<{ metric: MetricData; icon?: React.ReactNode }> = ({ metric, icon }) => (
-    <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+    <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
-            {icon && <div className="text-slate-500 dark:text-slate-400">{icon}</div>}
-            <h4 className="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
+            {icon && <div className="text-muted-foreground">{icon}</div>}
+            <h4 className="text-sm font-medium text-muted-foreground truncate">
               {metric.label}
             </h4>
           </div>
@@ -239,11 +239,11 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
 
         <div className="flex items-baseline justify-between mb-2">
           <div className="flex items-baseline space-x-1">
-            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <span className="text-2xl font-bold">
               {metric.value}
             </span>
             {metric.unit && (
-              <span className="text-sm text-slate-500 dark:text-slate-400">
+              <span className="text-sm text-muted-foreground">
                 {metric.unit}
               </span>
             )}
@@ -254,10 +254,10 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
               {getTrendIcon(metric.trend || 'stable', metric.changeType || 'neutral')}
               <span className={`text-xs font-medium ${
                 metric.changeType === 'increase' 
-                  ? 'text-green-600 dark:text-green-400' 
+                  ? 'text-green-600' 
                   : metric.changeType === 'decrease' 
-                  ? 'text-red-600 dark:text-red-400' 
-                  : 'text-gray-600 dark:text-gray-400'
+                  ? 'text-destructive' 
+                  : 'text-muted-foreground'
               }`}>
                 {metric.change}
               </span>
@@ -266,7 +266,7 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
         </div>
 
         {metric.description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+          <p className="text-xs text-muted-foreground mb-2">
             {metric.description}
           </p>
         )}
@@ -274,8 +274,8 @@ export const VendorMetrics: React.FC<VendorMetricsProps> = ({
         {metric.target && (
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Meta: {metric.target}%</span>
-              <span className="text-xs text-slate-600 dark:text-slate-400">
+              <span className="text-xs text-muted-foreground">Meta: {metric.target}%</span>
+              <span className="text-xs text-muted-foreground">
                 {typeof metric.value === 'string' ? parseFloat(metric.value) : metric.value}%
               </span>
             </div>

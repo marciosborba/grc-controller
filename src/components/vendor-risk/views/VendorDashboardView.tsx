@@ -32,7 +32,8 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  PieChart as RechartsPieChart, 
+  PieChart as RechartsPieChart,
+  Pie,
   Cell, 
   LineChart, 
   Line,
@@ -122,36 +123,28 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       value: "94.2%",
       change: "+2.1%",
       trend: "up",
-      icon: CheckCircle,
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950"
+      icon: CheckCircle
     },
     {
       title: "Tempo Médio de Assessment",
       value: "12 dias",
       change: "-3 dias",
       trend: "up",
-      icon: Clock,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950"
+      icon: Clock
     },
     {
       title: "Score Médio de Risco",
       value: "2.8/5.0",
       change: "-0.2",
       trend: "up",
-      icon: Shield,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50 dark:bg-yellow-950"
+      icon: Shield
     },
     {
       title: "Fornecedores Críticos",
       value: dashboardMetrics?.critical_vendors || 0,
       change: "Sem mudança",
       trend: "stable",
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bgColor: "bg-red-50 dark:bg-red-950"
+      icon: AlertTriangle
     }
   ];
 
@@ -185,10 +178,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800';
-      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800';
-      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800';
-      default: return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800';
+      case 'critical': return 'text-destructive bg-destructive/10 border-destructive/20';
+      case 'high': return 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20';
+      case 'medium': return 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+      default: return 'text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/20';
     }
   };
 
@@ -197,14 +190,14 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {kpis.map((kpi, index) => (
-          <Card key={index} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+          <Card key={index}>
             <CardContent className="p-4 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-2 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
+                  <p className="text-sm font-medium text-muted-foreground truncate">
                     {kpi.title}
                   </p>
-                  <p className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">
+                  <p className="text-2xl lg:text-3xl font-bold text-foreground">
                     {kpi.value}
                   </p>
                   <div className="flex items-center space-x-1 text-xs lg:text-sm">
@@ -213,15 +206,15 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
                     ) : kpi.trend === 'down' ? (
                       <ArrowDownRight className="w-4 h-4 text-red-500" />
                     ) : (
-                      <Activity className="w-4 h-4 text-gray-500" />
+                      <Activity className="w-4 h-4 text-muted-foreground" />
                     )}
-                    <span className={kpi.trend === 'up' ? 'text-green-600' : kpi.trend === 'down' ? 'text-red-600' : 'text-gray-600'}>
+                    <span className={kpi.trend === 'up' ? 'text-green-600 dark:text-green-400' : kpi.trend === 'down' ? 'text-destructive' : 'text-muted-foreground'}>
                       {kpi.change}
                     </span>
                   </div>
                 </div>
-                <div className={`p-3 rounded-lg ${kpi.bgColor} flex-shrink-0`}>
-                  <kpi.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${kpi.color}`} />
+                <div className="p-3 rounded-lg bg-primary/10 flex-shrink-0">
+                  <kpi.icon className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -232,10 +225,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Risk Distribution */}
-        <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <PieChart className="w-5 h-5 text-blue-600" />
+              <PieChart className="w-5 h-5 text-primary" />
               <span>Distribuição de Riscos</span>
             </CardTitle>
             <CardDescription>
@@ -268,10 +261,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         </Card>
 
         {/* Assessment Progress */}
-        <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5 text-purple-600" />
+              <BarChart3 className="w-5 h-5 text-primary" />
               <span>Status dos Assessments</span>
             </CardTitle>
             <CardDescription>
@@ -282,13 +275,13 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={assessmentChartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis 
                     dataKey="status" 
-                    className="text-slate-600 dark:text-slate-400"
+                    className="text-muted-foreground"
                     fontSize={12}
                   />
-                  <YAxis className="text-slate-600 dark:text-slate-400" fontSize={12} />
+                  <YAxis className="text-muted-foreground" fontSize={12} />
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -315,10 +308,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       </div>
 
       {/* Trend Analysis */}
-      <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-green-600" />
+            <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
             <span>Tendência de Riscos</span>
           </CardTitle>
           <CardDescription>
@@ -329,13 +322,13 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={riskTrendData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
                   dataKey="month" 
-                  className="text-slate-600 dark:text-slate-400"
+                  className="text-muted-foreground"
                   fontSize={12}
                 />
-                <YAxis className="text-slate-600 dark:text-slate-400" fontSize={12} />
+                <YAxis className="text-muted-foreground" fontSize={12} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -370,10 +363,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       {/* Alerts and Recent Activity */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Critical Alerts */}
-        <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <AlertTriangle className="w-5 h-5 text-destructive" />
               <span>Alertas Críticos</span>
             </CardTitle>
             <CardDescription>
@@ -398,13 +391,13 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         </Card>
 
         {/* ALEX Vendor Insights */}
-        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border border-blue-200 dark:border-blue-800">
+        <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-blue-900 dark:text-blue-100">
+            <CardTitle className="flex items-center space-x-2 text-primary">
               <Brain className="w-5 h-5" />
               <span>ALEX VENDOR Insights</span>
             </CardTitle>
-            <CardDescription className="text-blue-700 dark:text-blue-300">
+            <CardDescription className="text-primary/80">
               Análises e recomendações inteligentes
             </CardDescription>
           </CardHeader>
@@ -412,19 +405,19 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Recomendação:</strong> Priorizar reavaliação de 3 fornecedores estratégicos com score > 4.0
+                <p className="text-sm text-primary/90">
+                  <strong>Recomendação:</strong> Priorizar reavaliação de 3 fornecedores estratégicos com score &gt; 4.0
                 </p>
               </div>
               <div className="flex items-center space-x-2">
                 <Target className="w-4 h-4 text-green-500" />
-                <p className="text-sm text-blue-800 dark:text-blue-200">
+                <p className="text-sm text-primary/90">
                   <strong>Oportunidade:</strong> Automatizar assessments para fornecedores de baixo risco
                 </p>
               </div>
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-4 h-4 text-red-500" />
-                <p className="text-sm text-blue-800 dark:text-blue-200">
+                <p className="text-sm text-primary/90">
                   <strong>Atenção:</strong> Tendência de aumento em riscos de segurança cibernética
                 </p>
               </div>
@@ -432,7 +425,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900"
+              className="w-full text-primary border-primary/30 hover:bg-primary/10"
             >
               Ver Análise Completa
             </Button>
@@ -441,10 +434,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       </div>
 
       {/* Quick Actions */}
-      <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Activity className="w-5 h-5 text-indigo-600" />
+            <Activity className="w-5 h-5 text-primary" />
             <span>Ações Rápidas</span>
           </CardTitle>
           <CardDescription>
@@ -456,22 +449,22 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
             <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
               <Users className="w-6 h-6 mb-2 text-blue-600" />
               <span className="font-medium">Cadastrar Fornecedor</span>
-              <span className="text-xs text-slate-600">Adicionar novo parceiro</span>
+              <span className="text-xs text-muted-foreground">Adicionar novo parceiro</span>
             </Button>
             <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
               <FileCheck className="w-6 h-6 mb-2 text-green-600" />
               <span className="font-medium">Criar Assessment</span>
-              <span className="text-xs text-slate-600">Nova avaliação</span>
+              <span className="text-xs text-muted-foreground">Nova avaliação</span>
             </Button>
             <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
               <Shield className="w-6 h-6 mb-2 text-purple-600" />
               <span className="font-medium">Analisar Riscos</span>
-              <span className="text-xs text-slate-600">Revisar classificação</span>
+              <span className="text-xs text-muted-foreground">Revisar classificação</span>
             </Button>
             <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
               <BarChart3 className="w-6 h-6 mb-2 text-orange-600" />
               <span className="font-medium">Gerar Relatório</span>
-              <span className="text-xs text-slate-600">Dashboard executivo</span>
+              <span className="text-xs text-muted-foreground">Dashboard executivo</span>
             </Button>
           </div>
         </CardContent>

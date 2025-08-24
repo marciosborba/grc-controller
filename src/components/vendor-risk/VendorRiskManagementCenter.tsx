@@ -20,14 +20,19 @@ import {
   Zap,
   Target,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from 'lucide-react';
 import { useVendorRiskManagement } from '@/hooks/useVendorRiskManagement';
+import { useTenantTheme } from '@/hooks/useTenantTheme';
 import { VendorDashboardView } from './views/VendorDashboardView';
 import { VendorTableView } from './views/VendorTableView';
 import { VendorKanbanView } from './views/VendorKanbanView';
 import { VendorProcessView } from './views/VendorProcessView';
+import { VendorAssessmentManager } from './views/VendorAssessmentManager';
 import { AlexVendorIntegration } from './shared/AlexVendorIntegration';
+import { VendorOnboardingWorkflow } from './workflows/VendorOnboardingWorkflow';
+import { VendorNotificationSystem } from './notifications/VendorNotificationSystem';
 
 // ================================================
 // ALEX VENDOR AI PERSONALITY
@@ -59,12 +64,18 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
     fetchRiskDistribution,
     resetError
   } = useVendorRiskManagement();
+  
+  // Integrate with tenant theme system
+  const { tenantTheme, loading: themeLoading } = useTenantTheme();
 
   // State management
   const [activeTab, setActiveTab] = useState('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [showAlexAssistant, setShowAlexAssistant] = useState(false);
+  const [showOnboardingWorkflow, setShowOnboardingWorkflow] = useState(false);
+  const [showNotificationSystem, setShowNotificationSystem] = useState(false);
+  const [selectedVendorId, setSelectedVendorId] = useState<string | undefined>(undefined);
 
   // Initialize data
   useEffect(() => {
@@ -84,15 +95,15 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
       label: "Fornecedores Ativos",
       value: dashboardMetrics?.total_vendors || 0,
       icon: Users,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
     },
     {
       label: "Críticos",
       value: dashboardMetrics?.critical_vendors || 0,
       icon: AlertTriangle,
-      color: "text-red-600",
-      bgColor: "bg-red-50 dark:bg-red-950",
+      color: "text-destructive",
+      bgColor: "bg-destructive/10",
     },
     {
       label: "Assessments Pendentes",
@@ -111,22 +122,22 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="space-y-6 p-6">
       {/* Header with Alex Vendor Branding */}
-      <div className="border-b border-border bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm sticky top-0 z-40">
-        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center lg:space-y-0 space-y-4">
+        <div className="flex-1 min-w-0">
           {/* Main Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg">
+              <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary shadow-lg">
                 <HandHeart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
                   Gestão de Riscos de Fornecedores
                 </h1>
-                <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                  <Brain className="w-4 h-4 text-blue-600" />
+                <p className="text-sm sm:text-base text-muted-foreground flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-primary" />
                   Powered by {ALEX_VENDOR_INTRO.name} - {ALEX_VENDOR_INTRO.role}
                 </p>
               </div>
@@ -138,12 +149,25 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAlexAssistant(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none hover:from-blue-700 hover:to-purple-700"
+                className="flex items-center gap-2 bg-primary text-primary-foreground border-none hover:bg-primary/90"
               >
                 <Brain className="w-4 h-4" />
                 <span className="hidden sm:inline">ALEX VENDOR</span>
               </Button>
-              <Button size="sm" className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setShowNotificationSystem(true)}
+                className="flex items-center gap-2"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Notificações</span>
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={() => setShowOnboardingWorkflow(true)}
+                className="flex items-center gap-2"
+              >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Novo Fornecedor</span>
               </Button>
@@ -153,14 +177,14 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
           {/* Quick Stats */}
           <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
             {quickStats.map((stat, index) => (
-              <Card key={index} className="bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
+              <Card key={index}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                         {stat.label}
                       </p>
-                      <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-lg sm:text-2xl font-bold">
                         {stat.value}
                       </p>
                     </div>
@@ -177,16 +201,16 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
           <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-1">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="Buscar fornecedores, assessments, riscos..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+                  className="pl-10"
                 />
               </div>
               <Select value={selectedFilter} onValueChange={setSelectedFilter}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Filtrar por..." />
                 </SelectTrigger>
@@ -201,7 +225,7 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
             </div>
             
             {/* Alex Insights Badge */}
-            <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200">
+            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
               <Zap className="w-3 h-3 mr-1" />
               <span className="hidden sm:inline">ALEX</span> Insights Ativos
             </Badge>
@@ -212,11 +236,11 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
       {/* Error Display */}
       {error && (
         <div className="px-4 sm:px-6 lg:px-8 py-4">
-          <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+          <Card className="border-destructive/50 bg-destructive/10">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                <p className="text-sm text-destructive">{error}</p>
               </div>
             </CardContent>
           </Card>
@@ -227,31 +251,38 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
       <div className="px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           {/* Tab Navigation */}
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-1">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5 p-1">
             <TabsTrigger 
               value="dashboard" 
-              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger 
               value="table" 
-              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Fornecedores</span>
             </TabsTrigger>
             <TabsTrigger 
-              value="kanban" 
-              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              value="assessments" 
+              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
-              <Target className="w-4 h-4" />
+              <FileCheck className="w-4 h-4" />
               <span className="hidden sm:inline">Assessments</span>
             </TabsTrigger>
             <TabsTrigger 
+              value="kanban" 
+              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            >
+              <Target className="w-4 h-4" />
+              <span className="hidden sm:inline">Kanban</span>
+            </TabsTrigger>
+            <TabsTrigger 
               value="process" 
-              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             >
               <Activity className="w-4 h-4" />
               <span className="hidden sm:inline">Processos</span>
@@ -269,6 +300,13 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
 
             <TabsContent value="table" className="space-y-6">
               <VendorTableView 
+                searchTerm={searchTerm}
+                selectedFilter={selectedFilter}
+              />
+            </TabsContent>
+
+            <TabsContent value="assessments" className="space-y-6">
+              <VendorAssessmentManager 
                 searchTerm={searchTerm}
                 selectedFilter={selectedFilter}
               />
@@ -306,17 +344,38 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
         />
       )}
 
+      {/* Vendor Onboarding Workflow */}
+      <VendorOnboardingWorkflow 
+        vendorId={selectedVendorId}
+        isOpen={showOnboardingWorkflow}
+        onClose={() => {
+          setShowOnboardingWorkflow(false);
+          setSelectedVendorId(undefined);
+        }}
+        onComplete={(vendor) => {
+          // Refresh data after onboarding completion
+          fetchDashboardMetrics();
+          fetchRiskDistribution();
+        }}
+      />
+
+      {/* Vendor Notification System */}
+      <VendorNotificationSystem 
+        isOpen={showNotificationSystem}
+        onClose={() => setShowNotificationSystem(false)}
+      />
+
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-          <Card className="p-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm">
+          <Card className="p-6">
             <CardContent className="flex items-center space-x-4 p-0">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               <div>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <p className="font-medium">
                   ALEX VENDOR processando...
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-muted-foreground">
                   Analisando dados de fornecedores
                 </p>
               </div>
@@ -330,7 +389,7 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
         <Button
           size="lg"
           onClick={() => setShowAlexAssistant(true)}
-          className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300"
+          className="rounded-full w-14 h-14 bg-primary shadow-lg hover:shadow-xl transition-all duration-300"
         >
           <Brain className="w-6 h-6" />
         </Button>
@@ -338,17 +397,17 @@ export const VendorRiskManagementCenter: React.FC<VendorRiskManagementCenterProp
 
       {/* Alex Vendor Welcome Banner (First Visit) */}
       <div className="hidden"> {/* TODO: Show on first visit */}
-        <Card className="mx-4 sm:mx-6 lg:mx-8 mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+        <Card className="mx-4 sm:mx-6 lg:mx-8 mb-6 border-primary/20 bg-primary/5">
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600">
-                <Brain className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary">
+                <Brain className="w-5 h-5 text-primary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg text-blue-900 dark:text-blue-100">
+                <CardTitle className="text-lg">
                   Bem-vindo ao {ALEX_VENDOR_INTRO.name}!
                 </CardTitle>
-                <CardDescription className="text-blue-700 dark:text-blue-300">
+                <CardDescription className="text-primary/80">
                   {ALEX_VENDOR_INTRO.greeting}
                 </CardDescription>
               </div>
