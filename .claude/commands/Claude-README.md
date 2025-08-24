@@ -1,8 +1,5 @@
 # GRC-Controller
-
-Uma plataforma integrativa de gestão de **Governança, Risco e Compliance (GRC)** desenvolvida com foco em segurança, privacidade e eficiência operacional.
-
-## 🎯 Visão Geral
+continue corriginf## 🎯 Visão Geral
 
 O GRC-Controller é uma solução completa para organizações que buscam centralizar e otimizar seus processos de governança, gerenciamento de riscos e compliance regulatório. Construída sobre pilares sólidos de segurança da informação e desenvolvimento seguro, a plataforma oferece uma experiência integrada entre todos os módulos de GRC.
 

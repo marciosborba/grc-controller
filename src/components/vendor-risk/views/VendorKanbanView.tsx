@@ -1,717 +1,724 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from '@hello-pangea/dnd';
-import { 
-  Target,
-  Plus,
-  Eye,
-  Edit,
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useDroppable,
+} from '@dnd-kit/core';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Clock,
-  AlertTriangle,
-  CheckCircle,
+  User,
+  Calendar,
+  Building,
+  MoreHorizontal,
+  Edit,
+  Eye,
+  Send,
+  CheckCircle2,
+  AlertCircle,
   XCircle,
   FileCheck,
-  Calendar,
-  User,
-  Building,
-  BarChart3,
-  Zap,
-  Brain
+  Brain,
+  Link,
+  AlertTriangle
 } from 'lucide-react';
-import { useVendorRiskManagement, VendorAssessment, AssessmentFilters } from '@/hooks/useVendorRiskManagement';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import type { VendorAssessment } from '@/hooks/useVendorRiskManagement';
+import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 
-interface VendorKanbanViewProps {
+export interface VendorKanbanViewProps {
+  assessments: VendorAssessment[];
   searchTerm: string;
   selectedFilter: string;
 }
 
+type AssessmentStatus = 'draft' | 'sent' | 'in_progress' | 'completed' | 'approved' | 'rejected' | 'expired';
+
 interface KanbanColumn {
-  id: string;
+  id: AssessmentStatus;
   title: string;
-  description: string;
-  icon: React.ReactNode;
   color: string;
-  bgColor: string;
-  count: number;
+  description: string;
+  icon: React.ComponentType<any>;
+  gradient: string;
 }
 
-export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
-  searchTerm,
-  selectedFilter
+interface SortableAssessmentCardProps {
+  assessment: VendorAssessment;
+  onUpdate: (assessmentId: string, data: any) => void;
+  onView: (assessment: VendorAssessment) => void;
+}
+
+interface DroppableColumnProps {
+  column: KanbanColumn;
+  assessments: VendorAssessment[];
+  stats: { total: number; highPriority: number; overdue: number };
+  onUpdate: (assessmentId: string, data: any) => void;
+  onView: (assessment: VendorAssessment) => void;
+}
+
+const KANBAN_COLUMNS: KanbanColumn[] = [
+  {
+    id: 'draft',
+    title: 'Rascunho',
+    color: 'text-slate-600',
+    description: 'Em preparação',
+    icon: Edit,
+    gradient: 'from-slate-500 to-slate-600'
+  },
+  {
+    id: 'sent',
+    title: 'Enviado',
+    color: 'text-blue-600',
+    description: 'Aguardando resposta',
+    icon: Send,
+    gradient: 'from-blue-500 to-blue-600'
+  },
+  {
+    id: 'in_progress',
+    title: 'Em Progresso',
+    color: 'text-amber-600',
+    description: 'Em preenchimento',
+    icon: Clock,
+    gradient: 'from-amber-500 to-amber-600'
+  },
+  {
+    id: 'completed',
+    title: 'Completado',
+    color: 'text-indigo-600',
+    description: 'Aguardando revisão',
+    icon: FileCheck,
+    gradient: 'from-indigo-500 to-indigo-600'
+  },
+  {
+    id: 'approved',
+    title: 'Aprovado',
+    color: 'text-green-600',
+    description: 'Concluído com sucesso',
+    icon: CheckCircle2,
+    gradient: 'from-green-500 to-green-600'
+  },
+  {
+    id: 'rejected',
+    title: 'Rejeitado',
+    color: 'text-red-600',
+    description: 'Necessita correções',
+    icon: XCircle,
+    gradient: 'from-red-500 to-red-600'
+  },
+  {
+    id: 'expired',
+    title: 'Expirado',
+    color: 'text-gray-600',
+    description: 'Prazo vencido',
+    icon: AlertTriangle,
+    gradient: 'from-gray-500 to-gray-600'
+  }
+];
+
+const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
+  assessment,
+  onUpdate,
+  onView
 }) => {
   const {
-    assessments,
-    vendors,
-    frameworks,
-    fetchAssessments,
-    fetchVendors,
-    updateAssessment,
-    loading
-  } = useVendorRiskManagement();
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: assessment.id });
 
-  const [localFilters, setLocalFilters] = useState<AssessmentFilters>({});
-  const [groupBy, setGroupBy] = useState<'status' | 'priority' | 'risk_level'>('status');
-
-  // Load data on mount
-  useEffect(() => {
-    fetchAssessments({
-      search: searchTerm,
-      ...localFilters
-    });
-    fetchVendors();
-  }, [searchTerm, localFilters, fetchAssessments, fetchVendors]);
-
-  // Define columns based on groupBy
-  const getColumns = (): KanbanColumn[] => {
-    switch (groupBy) {
-      case 'status':
-        return [
-          {
-            id: 'draft',
-            title: 'Rascunho',
-            description: 'Assessments em preparação',
-            icon: <Edit className="w-4 h-4" />,
-            color: 'text-gray-600',
-            bgColor: 'bg-gray-50 border-gray-200',
-            count: assessments.filter(a => a.status === 'draft').length
-          },
-          {
-            id: 'sent',
-            title: 'Enviado',
-            description: 'Aguardando resposta do fornecedor',
-            icon: <Clock className="w-4 h-4" />,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50 border-blue-200',
-            count: assessments.filter(a => a.status === 'sent').length
-          },
-          {
-            id: 'in_progress',
-            title: 'Em Andamento',
-            description: 'Sendo preenchido pelo fornecedor',
-            icon: <BarChart3 className="w-4 h-4" />,
-            color: 'text-yellow-600',
-            bgColor: 'bg-yellow-50 border-yellow-200',
-            count: assessments.filter(a => a.status === 'in_progress').length
-          },
-          {
-            id: 'completed',
-            title: 'Concluído',
-            description: 'Aguardando revisão interna',
-            icon: <CheckCircle className="w-4 h-4" />,
-            color: 'text-green-600',
-            bgColor: 'bg-green-50 border-green-200',
-            count: assessments.filter(a => a.status === 'completed').length
-          },
-          {
-            id: 'approved',
-            title: 'Aprovado',
-            description: 'Assessment finalizado',
-            icon: <CheckCircle className="w-4 h-4" />,
-            color: 'text-emerald-600',
-            bgColor: 'bg-emerald-50 border-emerald-200',
-            count: assessments.filter(a => a.status === 'approved').length
-          },
-          {
-            id: 'rejected',
-            title: 'Rejeitado',
-            description: 'Necessita correções',
-            icon: <XCircle className="w-4 h-4" />,
-            color: 'text-red-600',
-            bgColor: 'bg-red-50 border-red-200',
-            count: assessments.filter(a => a.status === 'rejected').length
-          }
-        ];
-      
-      case 'priority':
-        return [
-          {
-            id: 'low',
-            title: 'Baixa Prioridade',
-            description: 'Pode ser tratado quando conveniente',
-            icon: <Clock className="w-4 h-4" />,
-            color: 'text-green-600',
-            bgColor: 'bg-green-50 border-green-200',
-            count: assessments.filter(a => a.priority === 'low').length
-          },
-          {
-            id: 'medium',
-            title: 'Prioridade Média',
-            description: 'Prazo padrão de execução',
-            icon: <BarChart3 className="w-4 h-4" />,
-            color: 'text-blue-600',
-            bgColor: 'bg-blue-50 border-blue-200',
-            count: assessments.filter(a => a.priority === 'medium').length
-          },
-          {
-            id: 'high',
-            title: 'Alta Prioridade',
-            description: 'Requer atenção prioritária',
-            icon: <AlertTriangle className="w-4 h-4" />,
-            color: 'text-orange-600',
-            bgColor: 'bg-orange-50 border-orange-200',
-            count: assessments.filter(a => a.priority === 'high').length
-          },
-          {
-            id: 'urgent',
-            title: 'Urgente',
-            description: 'Ação imediata necessária',
-            icon: <Zap className="w-4 h-4" />,
-            color: 'text-red-600',
-            bgColor: 'bg-red-50 border-red-200',
-            count: assessments.filter(a => a.priority === 'urgent').length
-          }
-        ];
-        
-      case 'risk_level':
-        return [
-          {
-            id: 'low',
-            title: 'Risco Baixo',
-            description: 'Fornecedores de baixo risco',
-            icon: <CheckCircle className="w-4 h-4" />,
-            color: 'text-green-600',
-            bgColor: 'bg-green-50 border-green-200',
-            count: assessments.filter(a => a.risk_level === 'low').length
-          },
-          {
-            id: 'medium',
-            title: 'Risco Médio',
-            description: 'Monitoramento regular necessário',
-            icon: <BarChart3 className="w-4 h-4" />,
-            color: 'text-yellow-600',
-            bgColor: 'bg-yellow-50 border-yellow-200',
-            count: assessments.filter(a => a.risk_level === 'medium').length
-          },
-          {
-            id: 'high',
-            title: 'Risco Alto',
-            description: 'Controles adicionais necessários',
-            icon: <AlertTriangle className="w-4 h-4" />,
-            color: 'text-orange-600',
-            bgColor: 'bg-orange-50 border-orange-200',
-            count: assessments.filter(a => a.risk_level === 'high').length
-          },
-          {
-            id: 'critical',
-            title: 'Risco Crítico',
-            description: 'Ação imediata requerida',
-            icon: <XCircle className="w-4 h-4" />,
-            color: 'text-red-600',
-            bgColor: 'bg-red-50 border-red-200',
-            count: assessments.filter(a => a.risk_level === 'critical').length
-          }
-        ];
-        
-      default:
-        return [];
-    }
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  const columns = getColumns();
-
-  // Get assessments for a specific column
-  const getAssessmentsForColumn = (columnId: string): VendorAssessment[] => {
-    return assessments.filter(assessment => {
-      if (groupBy === 'status') {
-        return assessment.status === columnId;
-      } else if (groupBy === 'priority') {
-        return assessment.priority === columnId;
-      } else if (groupBy === 'risk_level') {
-        return assessment.risk_level === columnId;
-      }
-      return false;
-    });
-  };
-
-  // Handle drag end
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination || destination.droppableId === source.droppableId) {
-      return;
-    }
-
-    const assessmentId = draggableId;
-    const newValue = destination.droppableId;
-
-    // Update assessment based on groupBy
-    const updates: Partial<VendorAssessment> = {};
-    if (groupBy === 'status') {
-      updates.status = newValue as any;
-    } else if (groupBy === 'priority') {
-      updates.priority = newValue as any;
-    } else if (groupBy === 'risk_level') {
-      updates.risk_level = newValue as any;
-    }
-
-    await updateAssessment(assessmentId, updates);
-  };
-
-  // Get vendor name
-  const getVendorName = (vendorId: string): string => {
-    const vendor = vendors.find(v => v.id === vendorId);
-    return vendor?.name || 'Fornecedor não encontrado';
-  };
-
-  // Get framework name
-  const getFrameworkName = (frameworkId: string): string => {
-    const framework = frameworks.find(f => f.id === frameworkId);
-    return framework?.name || 'Framework não encontrado';
-  };
-
-  // Get progress color
-  const getProgressColor = (progress: number): string => {
-    if (progress >= 90) return 'bg-green-500';
-    if (progress >= 70) return 'bg-blue-500';
-    if (progress >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
-  // Get status badge color
-  const getStatusBadgeColor = (status: string): string => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'approved': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'in_progress': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'sent': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-      case 'expired': return 'bg-gray-100 text-gray-800 border-gray-200';
+  const getRiskLevelColor = (level?: string) => {
+    switch (level) {
+      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-green-100 text-green-800 border-green-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  // Check if assessment is overdue
-  const isOverdue = (dueDate?: string): boolean => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date();
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
+      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'medium': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'low': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
   };
 
-  // Assessment Card Component
-  const AssessmentCard: React.FC<{ assessment: VendorAssessment; index: number }> = ({ assessment, index }) => (
-    <Draggable draggableId={assessment.id} index={index}>
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className={`mb-3 ${snapshot.isDragging ? 'rotate-2 scale-105' : ''}`}
-        >
-          <Card className={`
-            bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 
-            hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing
-            ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-400 ring-opacity-75' : ''}
-          `}>
-            <CardContent className="p-4 space-y-3">
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
-                    {assessment.assessment_name}
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                    {getVendorName(assessment.vendor_id)}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-1 ml-2">
-                  {isOverdue(assessment.due_date) && (
-                    <Badge variant="destructive" className="text-xs px-1 py-0">
-                      Vencido
-                    </Badge>
-                  )}
-                  {groupBy !== 'priority' && (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs px-1 py-0 ${
-                        assessment.priority === 'urgent' ? 'border-red-200 text-red-700 bg-red-50' :
-                        assessment.priority === 'high' ? 'border-orange-200 text-orange-700 bg-orange-50' :
-                        assessment.priority === 'medium' ? 'border-blue-200 text-blue-700 bg-blue-50' :
-                        'border-green-200 text-green-700 bg-green-50'
-                      }`}
-                    >
-                      {assessment.priority === 'urgent' ? 'Urgente' :
-                       assessment.priority === 'high' ? 'Alta' :
-                       assessment.priority === 'medium' ? 'Média' : 'Baixa'}
-                    </Badge>
-                  )}
-                </div>
-              </div>
+  const isDueSoon = () => {
+    if (!assessment.due_date) return false;
+    const dueDate = new Date(assessment.due_date);
+    const today = new Date();
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7 && diffDays >= 0;
+  };
 
-              {/* Framework */}
-              <div className="flex items-center space-x-2">
-                <FileCheck className="w-3 h-3 text-slate-400" />
-                <span className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                  {getFrameworkName(assessment.framework_id)}
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-slate-600 dark:text-slate-400">Progresso</span>
-                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    {assessment.progress_percentage}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
-                  <div 
-                    className={`h-1.5 rounded-full transition-all duration-300 ${getProgressColor(assessment.progress_percentage)}`}
-                    style={{ width: `${assessment.progress_percentage}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Due Date */}
-              {assessment.due_date && (
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-3 h-3 text-slate-400" />
-                  <span className={`text-xs ${
-                    isOverdue(assessment.due_date) 
-                      ? 'text-red-600 font-medium' 
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}>
-                    {format(new Date(assessment.due_date), 'dd/MM/yyyy', { locale: ptBR })}
-                  </span>
-                </div>
-              )}
-
-              {/* Risk Score */}
-              {assessment.overall_score && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-3 h-3 text-slate-400" />
-                    <span className="text-xs text-slate-600 dark:text-slate-400">Score</span>
-                  </div>
-                  <Badge variant="outline" className={`text-xs px-1 py-0 ${
-                    assessment.overall_score >= 4.5 ? 'border-red-200 text-red-700 bg-red-50' :
-                    assessment.overall_score >= 3.5 ? 'border-orange-200 text-orange-700 bg-orange-50' :
-                    assessment.overall_score >= 2.5 ? 'border-yellow-200 text-yellow-700 bg-yellow-50' :
-                    'border-green-200 text-green-700 bg-green-50'
-                  }`}>
-                    {assessment.overall_score.toFixed(1)}/5.0
-                  </Badge>
-                </div>
-              )}
-
-              {/* Assessment Type */}
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary" className="text-xs px-2 py-0">
-                  {assessment.assessment_type === 'initial' ? 'Inicial' :
-                   assessment.assessment_type === 'annual' ? 'Anual' :
-                   assessment.assessment_type === 'reassessment' ? 'Reavaliação' :
-                   assessment.assessment_type === 'incident_triggered' ? 'Por Incidente' :
-                   'Ad-hoc'}
-                </Badge>
-                
-                {/* ALEX Analysis Indicator */}
-                {assessment.alex_analysis && (
-                  <div className="flex items-center space-x-1">
-                    <Brain className="w-3 h-3 text-blue-500" />
-                    <span className="text-xs text-blue-600 font-medium">ALEX</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end space-x-1 pt-2 border-t border-slate-100 dark:border-slate-700">
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                  <Eye className="w-3 h-3" />
-                </Button>
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                  <Edit className="w-3 h-3" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </Draggable>
-  );
+  const isOverdue = () => {
+    if (!assessment.due_date) return false;
+    const dueDate = new Date(assessment.due_date);
+    const today = new Date();
+    return dueDate < today;
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Controls */}
-      <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="w-5 h-5 text-purple-600" />
-                <span>Assessments Kanban</span>
-              </CardTitle>
-              <CardDescription>
-                Gerencie o fluxo de assessments dos fornecedores
-              </CardDescription>
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`
+        mb-3 cursor-grab active:cursor-grabbing transition-all duration-200 
+        hover:shadow-md border-l-4 
+        ${isOverdue() ? 'border-l-red-500 bg-red-50/50' : 
+          isDueSoon() ? 'border-l-amber-500 bg-amber-50/50' : 
+          'border-l-primary/30'}
+        ${isDragging ? 'rotate-3 scale-105 shadow-lg' : ''}
+      `}
+    >
+      <CardContent className="p-4">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm text-gray-900 truncate">
+              {assessment.assessment_name}
+            </h4>
+            <div className="flex items-center gap-1 mt-1">
+              <Building className="h-3 w-3 text-gray-500" />
+              <span className="text-xs text-gray-600 truncate">
+                {assessment.vendor_registry?.name || 'Fornecedor não identificado'}
+              </span>
             </div>
-            <div className="flex items-center space-x-2">
-              <Select value={groupBy} onValueChange={(value) => setGroupBy(value as any)}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Agrupar por..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="status">Status</SelectItem>
-                  <SelectItem value="priority">Prioridade</SelectItem>
-                  <SelectItem value="risk_level">Nível de Risco</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Assessment
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
-        </CardHeader>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onView(assessment)}>
+                <Eye className="mr-2 h-4 w-4" />
+                Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Link className="mr-2 h-4 w-4" />
+                Link Público
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Brain className="mr-2 h-4 w-4" />
+                Análise Alex
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        <CardContent>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-6">
-            <Select
-              value={localFilters.assessment_type?.[0] || 'all'}
-              onValueChange={(value) => 
-                setLocalFilters(prev => ({
-                  ...prev,
-                  assessment_type: value === 'all' ? undefined : [value]
-                }))
-              }
+        {/* Progress */}
+        {assessment.progress_percentage > 0 && (
+          <div className="mb-3">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-xs text-gray-600">Progresso</span>
+              <span className="text-xs font-semibold text-gray-800">
+                {assessment.progress_percentage}%
+              </span>
+            </div>
+            <Progress 
+              value={assessment.progress_percentage} 
+              className="h-2"
+            />
+          </div>
+        )}
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          <Badge 
+            variant="outline" 
+            className={`text-xs ${getPriorityColor(assessment.priority)}`}
+          >
+            {assessment.priority}
+          </Badge>
+          
+          {assessment.risk_level && (
+            <Badge 
+              variant="outline" 
+              className={`text-xs ${getRiskLevelColor(assessment.risk_level)}`}
             >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                <SelectItem value="initial">Inicial</SelectItem>
-                <SelectItem value="annual">Anual</SelectItem>
-                <SelectItem value="reassessment">Reavaliação</SelectItem>
-                <SelectItem value="incident_triggered">Por Incidente</SelectItem>
-                <SelectItem value="ad_hoc">Ad-hoc</SelectItem>
-              </SelectContent>
-            </Select>
+              {assessment.risk_level}
+            </Badge>
+          )}
 
-            <Select
-              value={localFilters.framework_type?.[0] || 'all'}
-              onValueChange={(value) => 
-                setLocalFilters(prev => ({
-                  ...prev,
-                  framework_type: value === 'all' ? undefined : [value]
-                }))
+          {assessment.assessment_type && (
+            <Badge variant="secondary" className="text-xs">
+              {assessment.assessment_type}
+            </Badge>
+          )}
+
+          {isOverdue() && (
+            <Badge variant="destructive" className="text-xs">
+              Vencido
+            </Badge>
+          )}
+
+          {isDueSoon() && !isOverdue() && (
+            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-200">
+              Vence em breve
+            </Badge>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            <span>
+              {assessment.due_date 
+                ? format(new Date(assessment.due_date), 'dd/MM/yyyy', { locale: ptBR })
+                : 'Sem prazo'
               }
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Framework" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="iso27001">ISO 27001</SelectItem>
-                <SelectItem value="soc2">SOC 2</SelectItem>
-                <SelectItem value="nist">NIST</SelectItem>
-                <SelectItem value="pci_dss">PCI DSS</SelectItem>
-                <SelectItem value="lgpd">LGPD</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
+            </span>
           </div>
-
-          {/* Kanban Board */}
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {columns.map((column) => (
-                <div key={column.id} className="space-y-3">
-                  {/* Column Header */}
-                  <Card className={`border-2 ${column.bgColor} ${column.color}`}>
-                    <CardHeader className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 min-w-0 flex-1">
-                          {column.icon}
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-sm truncate">{column.title}</h3>
-                            <p className="text-xs opacity-75 truncate">{column.description}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="flex-shrink-0 ml-2">
-                          {column.count}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                  </Card>
-
-                  {/* Droppable Area */}
-                  <Droppable droppableId={column.id}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={`
-                          min-h-[400px] p-2 rounded-lg transition-all duration-200
-                          ${snapshot.isDraggingOver 
-                            ? 'bg-blue-50 dark:bg-blue-950 ring-2 ring-blue-400 ring-opacity-50' 
-                            : 'bg-slate-50/50 dark:bg-slate-900/50'
-                          }
-                        `}
-                      >
-                        {getAssessmentsForColumn(column.id).map((assessment, index) => (
-                          <AssessmentCard
-                            key={assessment.id}
-                            assessment={assessment}
-                            index={index}
-                          />
-                        ))}
-                        {provided.placeholder}
-                        
-                        {/* Empty State */}
-                        {getAssessmentsForColumn(column.id).length === 0 && (
-                          <div className="flex flex-col items-center justify-center h-32 text-slate-400 dark:text-slate-600">
-                            <FileCheck className="w-8 h-8 mb-2" />
-                            <p className="text-sm text-center">
-                              Nenhum assessment<br />nesta categoria
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
-              ))}
+          
+          {assessment.overall_score && (
+            <div className="flex items-center gap-1">
+              <span className="font-semibold">
+                {assessment.overall_score.toFixed(1)}
+              </span>
+              <span>/5.0</span>
             </div>
-          </DragDropContext>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Total Assessments
-                </p>
-                <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                  {assessments.length}
-                </p>
+const DroppableColumn: React.FC<DroppableColumnProps> = ({
+  column,
+  assessments,
+  stats,
+  onUpdate,
+  onView
+}) => {
+  const { setNodeRef } = useDroppable({ id: column.id });
+
+  return (
+    <div className="flex-1 min-w-80">
+      <Card className="h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`p-2 rounded-lg bg-gradient-to-r ${column.gradient} text-white`}>
+                <column.icon className="h-4 w-4" />
               </div>
-              <FileCheck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                  Concluídos
-                </p>
-                <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                  {assessments.filter(a => a.status === 'completed' || a.status === 'approved').length}
-                </p>
+                <CardTitle className={`text-sm font-semibold ${column.color}`}>
+                  {column.title}
+                </CardTitle>
+                <p className="text-xs text-gray-500">{column.description}</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950 dark:to-orange-950 border-yellow-200 dark:border-yellow-800">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
-                  Em Andamento
-                </p>
-                <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-                  {assessments.filter(a => a.status === 'sent' || a.status === 'in_progress').length}
-                </p>
+            
+            <div className="text-right">
+              <div className={`text-lg font-bold ${column.color}`}>
+                {assessments.length}
               </div>
-              <Clock className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+              <div className="text-xs text-gray-500">assessments</div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950 dark:to-pink-950 border-red-200 dark:border-red-800">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-red-900 dark:text-red-100">
-                  Vencidos
-                </p>
-                <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                  {assessments.filter(a => a.due_date && isOverdue(a.due_date)).length}
-                </p>
-              </div>
-              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          
+          {(stats.highPriority > 0 || stats.overdue > 0) && (
+            <div className="flex gap-2 text-xs">
+              {stats.highPriority > 0 && (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                  {stats.highPriority} urgente
+                </Badge>
+              )}
+              {stats.overdue > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                  {stats.overdue} vencido
+                </Badge>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ALEX Vendor Insights for Kanban */}
-      <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border border-purple-200 dark:border-purple-800">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-purple-900 dark:text-purple-100">
-            <Brain className="w-5 h-5" />
-            <span>ALEX VENDOR - Insights do Kanban</span>
-          </CardTitle>
-          <CardDescription className="text-purple-700 dark:text-purple-300">
-            Análises inteligentes baseadas no fluxo atual de assessments
-          </CardDescription>
+          )}
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Target className="w-4 h-4 text-green-500" />
-                <p className="text-sm text-purple-800 dark:text-purple-200">
-                  <strong>Fluxo Otimizado:</strong> 
-                  {assessments.filter(a => a.status === 'in_progress').length > 0 
-                    ? ` ${assessments.filter(a => a.status === 'in_progress').length} assessments em progresso estável`
-                    : ' Nenhum assessment em andamento no momento'
-                  }
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <p className="text-sm text-purple-800 dark:text-purple-200">
-                  <strong>Gargalos Identificados:</strong> 
-                  {assessments.filter(a => a.status === 'sent').length > 5
-                    ? ` Muitos assessments aguardando resposta (${assessments.filter(a => a.status === 'sent').length})`
-                    : ' Fluxo balanceado sem gargalos críticos'
-                  }
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-blue-500" />
-                <p className="text-sm text-purple-800 dark:text-purple-200">
-                  <strong>Automação Sugerida:</strong> Envio automático de lembretes para assessments vencidos
-                </p>
+        
+        <CardContent ref={setNodeRef} className="pt-0 pb-4 min-h-96 max-h-96 overflow-y-auto">
+          <SortableContext items={assessments.map(a => a.id)} strategy={verticalListSortingStrategy}>
+            {assessments.map((assessment) => (
+              <SortableAssessmentCard
+                key={assessment.id}
+                assessment={assessment}
+                onUpdate={onUpdate}
+                onView={onView}
+              />
+            ))}
+          </SortableContext>
+          
+          {assessments.length === 0 && (
+            <div className="flex items-center justify-center h-32 text-gray-500">
+              <div className="text-center">
+                <column.icon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum assessment</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-1">
-                  Próxima Ação Recomendada
-                </h4>
-                <p className="text-xs text-purple-800 dark:text-purple-200">
-                  {assessments.filter(a => isOverdue(a.due_date)).length > 0
-                    ? `Contactar fornecedores com assessments vencidos (${assessments.filter(a => isOverdue(a.due_date)).length})`
-                    : 'Revisar assessments completados pendentes de aprovação'
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default VendorKanbanView;
+export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
+  assessments,
+  searchTerm,
+  selectedFilter
+}) => {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<VendorAssessment | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const { toast } = useToast();
+  const { updateAssessment } = useVendorRiskManagement();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Filtrar assessments
+  const filteredAssessments = useMemo(() => {
+    return assessments.filter(assessment => {
+      const matchesSearch = searchTerm === '' || 
+        assessment.assessment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assessment.vendor_registry?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilter = selectedFilter === 'all' || 
+        assessment.status === selectedFilter ||
+        assessment.priority === selectedFilter ||
+        assessment.risk_level === selectedFilter;
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [assessments, searchTerm, selectedFilter]);
+
+  // Agrupar por status
+  const assessmentsByStatus = useMemo(() => {
+    const groups: Record<AssessmentStatus, VendorAssessment[]> = {
+      draft: [],
+      sent: [],
+      in_progress: [],
+      completed: [],
+      approved: [],
+      rejected: [],
+      expired: []
+    };
+
+    filteredAssessments.forEach(assessment => {
+      if (groups[assessment.status]) {
+        groups[assessment.status].push(assessment);
+      }
+    });
+
+    return groups;
+  }, [filteredAssessments]);
+
+  // Calcular estatísticas por coluna
+  const getColumnStats = (assessments: VendorAssessment[]) => {
+    const today = new Date();
+    return {
+      total: assessments.length,
+      highPriority: assessments.filter(a => a.priority === 'urgent' || a.priority === 'high').length,
+      overdue: assessments.filter(a => {
+        if (!a.due_date) return false;
+        return new Date(a.due_date) < today;
+      }).length
+    };
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Encontrar o assessment que está sendo movido
+    const activeAssessment = filteredAssessments.find(a => a.id === activeId);
+    if (!activeAssessment) return;
+
+    // Se mudou de coluna, atualizar status
+    if (overId !== activeAssessment.status) {
+      try {
+        await updateAssessment(activeId, { status: overId as AssessmentStatus });
+        toast({
+          title: 'Status atualizado',
+          description: `Assessment movido para ${KANBAN_COLUMNS.find(c => c.id === overId)?.title}`,
+        });
+      } catch (error) {
+        toast({
+          title: 'Erro ao atualizar',
+          description: 'Não foi possível mover o assessment.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleViewAssessment = (assessment: VendorAssessment) => {
+    setSelectedAssessment(assessment);
+    setShowDetailsDialog(true);
+  };
+
+  const handleUpdateAssessment = async (assessmentId: string, data: any) => {
+    try {
+      await updateAssessment(assessmentId, data);
+      toast({
+        title: 'Assessment atualizado',
+        description: 'As alterações foram salvas com sucesso.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro ao atualizar',
+        description: 'Não foi possível salvar as alterações.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-100">
+                <FileCheck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total</p>
+                <p className="text-2xl font-bold text-gray-900">{filteredAssessments.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Em Progresso</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {assessmentsByStatus.in_progress.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-100">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Aprovados</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {assessmentsByStatus.approved.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-100">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Atrasados</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {Object.values(assessmentsByStatus).flat().filter(a => {
+                    if (!a.due_date) return false;
+                    return new Date(a.due_date) < new Date();
+                  }).length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Kanban Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {KANBAN_COLUMNS.map((column) => (
+            <DroppableColumn
+              key={column.id}
+              column={column}
+              assessments={assessmentsByStatus[column.id]}
+              stats={getColumnStats(assessmentsByStatus[column.id])}
+              onUpdate={handleUpdateAssessment}
+              onView={handleViewAssessment}
+            />
+          ))}
+        </div>
+        
+        <DragOverlay>
+          {activeId ? (
+            <div className="rotate-3 scale-105 shadow-lg">
+              <Card className="mb-3 border-l-4 border-l-primary/30">
+                <CardContent className="p-4">
+                  <div className="font-semibold text-sm text-gray-900">
+                    {filteredAssessments.find(a => a.id === activeId)?.assessment_name}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+
+      {/* Assessment Details Dialog */}
+      {selectedAssessment && (
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedAssessment.assessment_name}</DialogTitle>
+              <DialogDescription>
+                {selectedAssessment.vendor_registry?.name}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Status:</span>
+                  <Badge className="ml-2">{selectedAssessment.status}</Badge>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Prioridade:</span>
+                  <Badge variant="outline" className="ml-2">{selectedAssessment.priority}</Badge>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Progresso:</span>
+                  <span className="ml-2">{selectedAssessment.progress_percentage}%</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Tipo:</span>
+                  <span className="ml-2">{selectedAssessment.assessment_type}</span>
+                </div>
+              </div>
+              
+              {selectedAssessment.due_date && (
+                <div className="text-sm">
+                  <span className="font-medium text-gray-600">Data limite:</span>
+                  <span className="ml-2">
+                    {format(new Date(selectedAssessment.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </span>
+                </div>
+              )}
+              
+              {selectedAssessment.overall_score && (
+                <div className="text-sm">
+                  <span className="font-medium text-gray-600">Score:</span>
+                  <span className="ml-2 font-semibold">{selectedAssessment.overall_score.toFixed(1)}/5.0</span>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+                Fechar
+              </Button>
+              <Button>
+                Editar Assessment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+};

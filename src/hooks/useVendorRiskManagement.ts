@@ -305,16 +305,17 @@ export const useVendorRiskManagement = () => {
   // ================================================
 
   const fetchVendors = useCallback(async (filters?: VendorFilters) => {
-    if (!user?.tenant_id) return;
+    if (!user?.tenantId && !user?.tenant_id) return;
     
     setLoading(true);
     resetError();
     
     try {
+      const tenantId = user.tenantId || user.tenant_id;
       let query = supabase
         .from('vendor_registry')
         .select('*')
-        .eq('tenant_id', user.tenant_id)
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -347,20 +348,21 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [user?.tenantId, user?.tenant_id, handleError, resetError]);
 
   const createVendor = useCallback(async (vendor: Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenant_id) return null;
+    if (!user?.tenantId && !user?.tenant_id) return null;
     
     setLoading(true);
     resetError();
     
     try {
-      const { data, error } = await supabase
-        .from('vendor_registry')
-        .insert({
-          ...vendor,
-          tenant_id: user.tenant_id,
+        const tenantId = user.tenantId || user.tenant_id;
+        const { data, error } = await supabase
+          .from('vendor_registry')
+          .insert({
+            ...vendor,
+            tenant_id: tenantId,
           created_by: user.id,
         })
         .select()

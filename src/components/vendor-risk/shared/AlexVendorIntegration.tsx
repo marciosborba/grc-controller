@@ -1,626 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Brain,
-  Zap,
-  Target,
-  AlertTriangle,
-  TrendingUp,
-  BarChart3,
-  Users,
-  FileCheck,
-  Shield,
-  Lightbulb,
-  MessageCircle,
-  Send,
-  Sparkles,
-  Star,
-  ArrowRight,
-  Info,
-  CheckCircle,
-  Clock,
-  X,
-  Minimize2,
-  Maximize2
-} from 'lucide-react';
-import { useAIChat } from '@/hooks/useAIChat';
+import { Brain, Zap, Target, AlertTriangle } from 'lucide-react';
 
-interface AlexVendorIntegrationProps {
-  isOpen: boolean;
-  onClose: () => void;
-  context?: {
-    activeTab?: string;
-    dashboardMetrics?: any;
-    riskDistribution?: any;
-    searchTerm?: string;
-    selectedFilter?: string;
-    vendorData?: any;
-    assessmentData?: any;
-  };
-}
-
-interface AlexInsight {
-  id: string;
-  type: 'recommendation' | 'alert' | 'optimization' | 'prediction' | 'analysis';
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  category: string;
-  actionable: boolean;
-  confidence: number;
-  impact: string;
-  relatedData?: any;
+export interface AlexVendorIntegrationProps {
+  currentView: string;
+  metrics?: any;
+  activeVendors: number;
 }
 
 export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
-  isOpen,
-  onClose,
-  context
+  currentView,
+  metrics,
+  activeVendors
 }) => {
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [activeInsightTab, setActiveInsightTab] = useState('insights');
-  const [chatInput, setChatInput] = useState('');
-  const [currentInsights, setCurrentInsights] = useState<AlexInsight[]>([]);
-
-  // Initialize AI chat with vendor context
-  const { messages, isLoading, sendMessage, initializeChat } = useAIChat({
-    type: 'vendor',
-    context: context
-  });
-
-  useEffect(() => {
-    if (isOpen) {
-      initializeChat();
-      generateContextualInsights();
-    }
-  }, [isOpen, initializeChat, context]);
-
-  // Generate contextual insights based on current context
-  const generateContextualInsights = () => {
-    const insights: AlexInsight[] = [];
-
-    // Dashboard-specific insights
-    if (context?.activeTab === 'dashboard' && context?.dashboardMetrics) {
-      const metrics = context.dashboardMetrics;
-      
-      if (metrics.overdue_assessments > 0) {
-        insights.push({
-          id: 'overdue-assessments',
-          type: 'alert',
-          title: 'Assessments em Atraso',
-          description: `${metrics.overdue_assessments} assessments estão vencidos e necessitam ação imediata.`,
-          priority: 'high',
-          category: 'Compliance',
-          actionable: true,
-          confidence: 95,
-          impact: 'Alto risco de não conformidade regulatória'
-        });
-      }
-
-      if (metrics.critical_vendors > 0) {
-        insights.push({
-          id: 'critical-vendors',
-          type: 'recommendation',
-          title: 'Fornecedores Críticos',
-          description: `${metrics.critical_vendors} fornecedores classificados como críticos requerem monitoramento intensivo.`,
-          priority: 'high',
-          category: 'Gestão de Riscos',
-          actionable: true,
-          confidence: 90,
-          impact: 'Mitigação de riscos operacionais críticos'
-        });
-      }
-
-      if (metrics.expiring_contracts > 0) {
-        insights.push({
-          id: 'expiring-contracts',
-          type: 'prediction',
-          title: 'Contratos Expirando',
-          description: `${metrics.expiring_contracts} contratos vencem nos próximos 90 dias. Planeje renovações ou substituições.`,
-          priority: 'medium',
-          category: 'Gestão Contratual',
-          actionable: true,
-          confidence: 100,
-          impact: 'Evitar interrupções de serviço'
-        });
-      }
-    }
-
-    // Risk distribution insights
-    if (context?.riskDistribution) {
-      const riskDist = context.riskDistribution;
-      const totalVendors = riskDist.low + riskDist.medium + riskDist.high + riskDist.critical;
-      const highRiskPercentage = ((riskDist.high + riskDist.critical) / totalVendors) * 100;
-
-      if (highRiskPercentage > 20) {
-        insights.push({
-          id: 'high-risk-concentration',
-          type: 'analysis',
-          title: 'Concentração de Alto Risco',
-          description: `${highRiskPercentage.toFixed(1)}% dos fornecedores são de alto/crítico risco. Considere diversificar o portfólio.`,
-          priority: 'medium',
-          category: 'Análise de Portfólio',
-          actionable: true,
-          confidence: 85,
-          impact: 'Redução do risco concentrado'
-        });
-      }
-
-      if (riskDist.critical > 3) {
-        insights.push({
-          id: 'too-many-critical',
-          type: 'alert',
-          title: 'Muitos Fornecedores Críticos',
-          description: `${riskDist.critical} fornecedores com risco crítico excedem o limite recomendado de 3.`,
-          priority: 'critical',
-          category: 'Gestão de Riscos',
-          actionable: true,
-          confidence: 95,
-          impact: 'Exposição excessiva a riscos críticos'
-        });
-      }
-    }
-
-    // General optimization insights
-    insights.push({
-      id: 'automation-opportunity',
-      type: 'optimization',
-      title: 'Oportunidade de Automação',
-      description: 'Detectei padrões que permitem automatizar 60% dos assessments de baixo risco.',
-      priority: 'medium',
-      category: 'Otimização',
-      actionable: true,
-      confidence: 78,
-      impact: 'Redução de 40% no tempo de processamento'
-    });
-
-    insights.push({
-      id: 'framework-recommendation',
-      type: 'recommendation',
-      title: 'Framework Personalizado',
-      description: 'Baseado no perfil dos seus fornecedores, posso criar um framework híbrido ISO 27001 + SOC 2.',
-      priority: 'low',
-      category: 'Metodologia',
-      actionable: true,
-      confidence: 82,
-      impact: 'Assessments 25% mais eficazes'
-    });
-
-    setCurrentInsights(insights);
-  };
-
-  // Handle chat submission
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || isLoading) return;
-
-    await sendMessage(chatInput);
-    setChatInput('');
-  };
-
-  // Get insight icon and color based on type and priority
-  const getInsightStyle = (insight: AlexInsight) => {
-    const baseClasses = "w-4 h-4";
-    
-    switch (insight.type) {
-      case 'recommendation':
-        return {
-          icon: <Lightbulb className={`${baseClasses} text-blue-600`} />,
-          bgColor: 'bg-blue-50 dark:bg-blue-950',
-          borderColor: 'border-blue-200 dark:border-blue-800',
-          textColor: 'text-blue-900 dark:text-blue-100'
-        };
-      case 'alert':
-        return {
-          icon: <AlertTriangle className={`${baseClasses} text-destructive`} />,
-          bgColor: 'bg-destructive/10',
-          borderColor: 'border-destructive/20',
-          textColor: 'text-destructive'
-        };
-      case 'optimization':
-        return {
-          icon: <Zap className={`${baseClasses} text-yellow-600`} />,
-          bgColor: 'bg-yellow-50 dark:bg-yellow-950',
-          borderColor: 'border-yellow-200 dark:border-yellow-800',
-          textColor: 'text-yellow-900 dark:text-yellow-100'
-        };
-      case 'prediction':
-        return {
-          icon: <TrendingUp className={`${baseClasses} text-purple-600`} />,
-          bgColor: 'bg-purple-50 dark:bg-purple-950',
-          borderColor: 'border-purple-200 dark:border-purple-800',
-          textColor: 'text-purple-900 dark:text-purple-100'
-        };
-      case 'analysis':
-        return {
-          icon: <BarChart3 className={`${baseClasses} text-green-600`} />,
-          bgColor: 'bg-green-500/10',
-          borderColor: 'border-green-500/20',
-          textColor: 'text-green-600'
-        };
+  const getContextualInsights = () => {
+    switch (currentView) {
+      case 'dashboard':
+        return [
+          'Identifiquei 3 fornecedores com contratos vencendo em 30 dias',
+          'Sugestão: Priorizar reavaliação de fornecedores críticos',
+          'Tendência: Aumento de 15% em assessments concluídos no mês'
+        ];
+      case 'vendors':
+        return [
+          'Recomendo categorizar fornecedores por impacto no negócio',
+          'Alerta: 2 fornecedores sem assessment nos últimos 12 meses',
+          'Oportunidade: Automatizar onboarding para fornecedores de baixo risco'
+        ];
+      case 'assessments':
+        return [
+          'Identificado padrão de atraso em assessments de categoria "Tecnologia"',
+          'Sugestão: Implementar lembretes automáticos 7 dias antes do prazo',
+          'Score médio de fornecedores: 3.2/5.0 - Dentro do esperado'
+        ];
+      case 'kanban':
+        return [
+          'Gargalo identificado na etapa "Em Progresso"',
+          'Recomendo redistribuir assessments entre analistas',
+          'Tempo médio por etapa: Rascunho (2d) → Aprovado (14d)'
+        ];
       default:
-        return {
-          icon: <Info className={`${baseClasses} text-muted-foreground`} />,
-          bgColor: 'bg-muted/10',
-          borderColor: 'border-muted/20',
-          textColor: 'text-muted-foreground'
-        };
+        return [
+          'ALEX VENDOR está monitorando continuamente seus fornecedores',
+          'Sistema preparado para análises avançadas de risco',
+          'IA ativa para otimização de processos'
+        ];
     }
   };
 
-  const getPriorityBadgeColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'high': return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
-      case 'medium': return 'bg-primary/10 text-primary border-primary/20';
-      case 'low': return 'bg-green-500/10 text-green-600 border-green-500/20';
-      default: return 'bg-muted/10 text-muted-foreground border-muted/20';
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'Crítica';
-      case 'high': return 'Alta';
-      case 'medium': return 'Média';
-      case 'low': return 'Baixa';
-      default: return priority;
-    }
-  };
+  const insights = getContextualInsights();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`
-        sm:max-w-[900px] max-h-[90vh] p-0 gap-0 
-        ${isMinimized ? 'sm:max-w-[400px] max-h-[200px]' : ''}
-        transition-all duration-300
-      `}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-white/20 rounded-full">
-              <Brain className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">ALEX VENDOR</h2>
-              <p className="text-sm opacity-90">Especialista em Gestão de Riscos de Fornecedores</p>
-            </div>
+    <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+            <Brain className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="text-white hover:bg-white/20"
-            >
-              {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onClose}
-              className="text-white hover:bg-white/20"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {!isMinimized && (
-          <>
-            {/* Context Banner */}
-            {context && (
-              <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm text-blue-900 dark:text-blue-100">
-                      Contexto: {context.activeTab === 'dashboard' ? 'Dashboard Executivo' :
-                                context.activeTab === 'table' ? 'Gestão de Fornecedores' :
-                                context.activeTab === 'kanban' ? 'Assessments Kanban' :
-                                context.activeTab === 'process' ? 'Processos e Workflows' : 'Sistema'}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-100">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    IA Ativada
-                  </Badge>
-                </div>
-              </div>
-            )}
-
-            {/* Main Content */}
-            <div className="flex-1 overflow-hidden">
-              <Tabs value={activeInsightTab} onValueChange={setActiveInsightTab} className="h-full">
-                <div className="border-b bg-muted/30 px-4">
-                  <TabsList className="grid w-full grid-cols-3 bg-transparent">
-                    <TabsTrigger value="insights" className="data-[state=active]:bg-background">
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      Insights
-                    </TabsTrigger>
-                    <TabsTrigger value="chat" className="data-[state=active]:bg-background">
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Chat IA
-                    </TabsTrigger>
-                    <TabsTrigger value="actions" className="data-[state=active]:bg-background">
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Ações
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-
-                {/* Insights Tab */}
-                <TabsContent value="insights" className="mt-0 h-[500px] p-0">
-                  <ScrollArea className="h-full p-4">
-                    <div className="space-y-4">
-                      {/* Summary */}
-                      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border border-blue-200 dark:border-blue-800">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                                Análise Inteligente Ativa
-                              </h3>
-                              <p className="text-sm text-blue-700 dark:text-blue-300">
-                                {currentInsights.length} insights identificados • {currentInsights.filter(i => i.actionable).length} ações recomendadas
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                                {Math.round(currentInsights.reduce((acc, i) => acc + i.confidence, 0) / currentInsights.length) || 0}%
-                              </div>
-                              <div className="text-xs text-blue-700 dark:text-blue-300">Confiança média</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Insights List */}
-                      <div className="space-y-3">
-                        {currentInsights.map((insight) => {
-                          const style = getInsightStyle(insight);
-                          
-                          return (
-                            <Card key={insight.id} className={`border ${style.borderColor} ${style.bgColor}`}>
-                              <CardContent className="p-4">
-                                <div className="space-y-3">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex items-start space-x-3 flex-1">
-                                      <div className="mt-1">
-                                        {style.icon}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center space-x-2 mb-2">
-                                          <h4 className={`font-semibold text-sm ${style.textColor}`}>
-                                            {insight.title}
-                                          </h4>
-                                          <Badge 
-                                            variant="outline" 
-                                            className={`text-xs ${getPriorityBadgeColor(insight.priority)}`}
-                                          >
-                                            {getPriorityText(insight.priority)}
-                                          </Badge>
-                                        </div>
-                                        <p className={`text-sm ${style.textColor} opacity-90 mb-2`}>
-                                          {insight.description}
-                                        </p>
-                                        <div className="flex items-center justify-between">
-                                          <div className="flex items-center space-x-4">
-                                            <span className={`text-xs ${style.textColor} opacity-75`}>
-                                              {insight.category}
-                                            </span>
-                                            <div className="flex items-center space-x-1">
-                                              <Star className={`w-3 h-3 ${style.textColor.replace('text-', 'fill-').replace('dark:text-', 'dark:fill-')} opacity-75`} />
-                                              <span className={`text-xs ${style.textColor} opacity-75`}>
-                                                {insight.confidence}%
-                                              </span>
-                                            </div>
-                                          </div>
-                                          {insight.actionable && (
-                                            <Button size="sm" variant="outline" className={`h-6 text-xs ${style.textColor} border-current`}>
-                                              Aplicar
-                                              <ArrowRight className="w-3 h-3 ml-1" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  {insight.impact && (
-                                    <div className={`p-2 rounded-md ${style.bgColor} border ${style.borderColor} opacity-75`}>
-                                      <div className="flex items-center space-x-2">
-                                        <Target className={`w-3 h-3 ${style.textColor.split(' ')[0]}`} />
-                                        <span className={`text-xs ${style.textColor} font-medium`}>
-                                          Impacto: {insight.impact}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-
-                      {currentInsights.length === 0 && (
-                        <Card className="border-dashed border-2 border-muted">
-                          <CardContent className="flex flex-col items-center justify-center py-8">
-                            <Brain className="w-12 h-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium mb-2">
-                              Analisando seus dados...
-                            </h3>
-                            <p className="text-muted-foreground text-center">
-                              ALEX VENDOR está processando suas informações para gerar insights personalizados.
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-
-                {/* Chat Tab */}
-                <TabsContent value="chat" className="mt-0 h-[500px] p-0 flex flex-col">
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`
-                              max-w-[80%] p-3 rounded-lg text-sm
-                              ${message.type === 'user'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-muted text-muted-foreground'
-                              }
-                            `}
-                          >
-                            {message.type === 'assistant' && (
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Brain className="w-4 h-4 text-blue-600" />
-                                <span className="text-xs font-semibold text-blue-600">ALEX VENDOR</span>
-                              </div>
-                            )}
-                            <p className="whitespace-pre-wrap">{message.content}</p>
-                          </div>
-                        </div>
-                      ))}
-                      {isLoading && (
-                        <div className="flex justify-start">
-                          <div className="bg-muted p-3 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                              <span className="text-sm text-muted-foreground">
-                                ALEX VENDOR está pensando...
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                  
-                  {/* Chat Input */}
-                  <div className="p-4 border-t bg-muted/30">
-                    <form onSubmit={handleChatSubmit} className="flex space-x-2">
-                      <Input
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Pergunte sobre riscos de fornecedores, assessments, frameworks..."
-                        disabled={isLoading}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="submit"
-                        size="sm"
-                        disabled={!chatInput.trim() || isLoading}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                      >
-                        <Send className="w-4 h-4" />
-                      </Button>
-                    </form>
-                  </div>
-                </TabsContent>
-
-                {/* Actions Tab */}
-                <TabsContent value="actions" className="mt-0 h-[500px] p-4">
-                  <ScrollArea className="h-full">
-                    <div className="space-y-4">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-sm font-medium">Ações Recomendadas</CardTitle>
-                          <CardDescription>
-                            Baseado na análise atual dos seus fornecedores
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          {currentInsights.filter(i => i.actionable).map((insight) => (
-                            <div key={insight.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div className="flex-1">
-                                <p className="font-medium text-sm">
-                                  {insight.title}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {insight.impact}
-                                </p>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Badge variant="outline" className={getPriorityBadgeColor(insight.priority)}>
-                                  {getPriorityText(insight.priority)}
-                                </Badge>
-                                <Button size="sm" variant="outline">
-                                  Executar
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-
-                          {currentInsights.filter(i => i.actionable).length === 0 && (
-                            <div className="text-center py-8">
-                              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                              <h3 className="font-medium mb-2">
-                                Tudo em ordem!
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                Não há ações críticas pendentes no momento.
-                              </p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </>
-        )}
-
-        {/* Minimized View */}
-        {isMinimized && (
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="animate-pulse w-2 h-2 bg-green-600 rounded-full"></div>
-                <span className="text-sm font-medium">
-                  ALEX VENDOR ativo
-                </span>
-              </div>
-              <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50">
-                {currentInsights.filter(i => i.priority === 'high' || i.priority === 'critical').length} alertas
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                ALEX VENDOR - Insights Contextuais
+              </span>
+              <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
+                IA Ativa
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Monitorando continuamente seus fornecedores e processos
-            </p>
+            <div className="space-y-1">
+              {insights.map((insight, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <div className="mt-1.5">
+                    {insight.includes('Alerta') || insight.includes('Gargalo') ? (
+                      <AlertTriangle className="h-3 w-3 text-amber-500" />
+                    ) : insight.includes('Sugestão') || insight.includes('Recomendo') ? (
+                      <Target className="h-3 w-3 text-green-500" />
+                    ) : insight.includes('Oportunidade') || insight.includes('Tendência') ? (
+                      <Zap className="h-3 w-3 text-purple-500" />
+                    ) : (
+                      <div className="w-3 h-3 rounded-full bg-blue-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                    {insight}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
-
-export default AlexVendorIntegration;

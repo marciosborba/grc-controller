@@ -254,7 +254,7 @@ export const RiskDocumentation: React.FC = () => {
               Arquitetura do Sistema
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-4">
-              O módulo de Risco Corporativo é construído com arquitetura modular e integrada, 
+              O módulo de Gestão de Riscos é construído com arquitetura modular e integrada, 
               permitindo máxima flexibilidade e escalabilidade.
             </p>
           </div>
@@ -1172,7 +1172,7 @@ export const RiskDocumentation: React.FC = () => {
         <div className="flex-1 min-w-0">
           <h1 className="text-lg sm:text-xl font-bold flex items-center space-x-1.5">
             <BookOpen className="h-5 w-5 text-primary flex-shrink-0" />
-            <span>Documentação - Módulo de Risco Corporativo</span>
+            <span>Documentação - Módulo de Gestão de Riscos</span>
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             Guia completo para utilização do sistema de gestão de riscos corporativos

@@ -157,12 +157,20 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
     const matchesFilter = selectedFilter === 'all' || 
       (selectedFilter === 'pending' && ['draft', 'sent'].includes(assessment.status)) ||
+      (selectedFilter === 'awaiting_response' && assessment.status === 'sent' && assessment.public_link_id && !assessment.responses) ||
       (selectedFilter === 'in_progress' && assessment.status === 'in_progress') ||
       (selectedFilter === 'completed' && assessment.status === 'completed') ||
       (selectedFilter === 'overdue' && new Date(assessment.due_date) < new Date() && !['completed', 'approved'].includes(assessment.status));
 
     return matchesSearch && matchesFilter;
   });
+  
+  // Fornecedores que receberam assessments mas ainda não responderam
+  const pendingVendorAssessments = filteredAssessments.filter(assessment => 
+    assessment.status === 'sent' && 
+    assessment.public_link_id && 
+    !assessment.responses
+  );
 
   // Generate public link for assessment
   const generatePublicLink = async (assessmentId: string) => {
@@ -241,11 +249,23 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   };
 
   // Get status badge
-  const getStatusBadge = (status: string, dueDate: string) => {
+  const getStatusBadge = (status: string, dueDate: string, assessment: VendorAssessment) => {
     const isOverdue = new Date(dueDate) < new Date() && !['completed', 'approved'].includes(status);
+    const isPendingResponse = status === 'sent' && assessment.public_link_id && !assessment.responses;
     
     if (isOverdue) {
       return <Badge variant="destructive">Atrasado</Badge>;
+    }
+    
+    if (isPendingResponse) {
+      return (
+        <div className="flex items-center space-x-1">
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+            Aguardando Resposta
+          </Badge>
+          <Clock className="h-3 w-3 text-orange-500" />
+        </div>
+      );
     }
 
     switch (status) {
@@ -349,6 +369,11 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             <div className="flex items-center space-x-2">
               <Brain className="h-5 w-5 text-primary" />
               <CardTitle>Assessments de Fornecedores</CardTitle>
+              {pendingVendorAssessments.length > 0 && (
+                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                  {pendingVendorAssessments.length} aguardando resposta
+                </Badge>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -364,6 +389,46 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         </CardHeader>
         
         <CardContent>
+          {/* Filtros */}
+          <div className="flex items-center justify-between mb-6 p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="filter">Filtrar por:</Label>
+                <Select value={selectedFilter} onValueChange={setSelectedFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Selecione um filtro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="pending">Pendentes</SelectItem>
+                    <SelectItem value="awaiting_response">Aguardando Resposta</SelectItem>
+                    <SelectItem value="in_progress">Em Andamento</SelectItem>
+                    <SelectItem value="completed">Concluídos</SelectItem>
+                    <SelectItem value="overdue">Atrasados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Label htmlFor="search">Buscar:</Label>
+                <Input
+                  id="search"
+                  placeholder="Nome do assessment ou fornecedor..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-64"
+                />
+              </div>
+            </div>
+            
+            {pendingVendorAssessments.length > 0 && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                <Clock className="h-3 w-3 mr-1" />
+                {pendingVendorAssessments.length} aguardando resposta do fornecedor
+              </Badge>
+            )}
+          </div>
+          
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -401,7 +466,16 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                   </TableRow>
                 ) : (
                   filteredAssessments.map((assessment) => (
-                    <TableRow key={assessment.id} className="hover:bg-muted/50">
+                    <TableRow 
+                      key={assessment.id} 
+                      className={`
+                        hover:bg-muted/50 transition-colors
+                        ${assessment.status === 'sent' && assessment.public_link_id && !assessment.responses 
+                          ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500' 
+                          : ''
+                        }
+                      `}
+                    >
                       <TableCell className="font-medium">
                         <div>
                           <div className="font-medium">{assessment.assessment_name}</div>
@@ -427,7 +501,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                       </TableCell>
                       
                       <TableCell>
-                        {getStatusBadge(assessment.status, assessment.due_date)}
+                        {getStatusBadge(assessment.status, assessment.due_date, assessment)}
                       </TableCell>
                       
                       <TableCell>

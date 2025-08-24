@@ -128,4 +128,3 @@ export interface RiskTemplateStats {
   popularTemplates: number;
   alexSuggestedTemplates: number;
 }
-"
