@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Plus,
   Edit,
@@ -21,7 +23,9 @@ import {
   Search,
   Filter,
   Download,
-  Upload
+  Upload,
+  Calendar as CalendarIcon,
+  Clock
 } from 'lucide-react';
 import {
   Dialog,
@@ -40,6 +44,10 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 // Tipos para o sistema de assessment
 export type AssessmentType = 'nist_csf' | 'iso_27001_27701' | 'proprietary';
@@ -87,13 +95,13 @@ export interface AssessmentTemplate {
 
 interface RiskAssessmentManagerProps {
   vendorId?: string;
-  onAssessmentComplete: (completed: boolean, score?: number) => void;
+  onAssessmentComplete: (completed: boolean, score?: number, assessmentData?: any) => void;
   onResponsesChange?: (responses: Record<string, unknown>) => void;
   onTemplateSelected?: (templateId: string, templateName: string) => void;
 }
 
 // Template NIST CSF 2.0 completo (90+ questões)
-const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
+export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
   name: 'NIST Cybersecurity Framework 2.0',
   type: 'nist_csf',
   description: 'Assessment baseado no NIST CSF 2.0 com todas as funções e categorias',
@@ -1508,7 +1516,7 @@ const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
 };
 
 // Template ISO 27001/27701 completo (90+ questões)
-const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
+export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
   name: 'ISO 27001:2022 & ISO 27701:2019 Assessment',
   type: 'iso_27001_27701',
   description: 'Assessment completo baseado nas normas ISO 27001:2022 e ISO 27701:2019',
@@ -2703,6 +2711,28 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
   const [responses, setResponses] = useState<Record<string, AssessmentResponse>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Verificar se há um template selecionado salvo no localStorage
+  useEffect(() => {
+    if (vendorId && availableTemplates.length > 0) {
+      const savedTemplate = localStorage.getItem(`vendor_${vendorId}_selected_template`);
+      if (savedTemplate) {
+        try {
+          const templateInfo = JSON.parse(savedTemplate);
+          console.log('Template selecionado recuperado do localStorage:', templateInfo);
+          setSelectedTemplateId(templateInfo.templateId);
+          
+          // Encontrar o template correspondente
+          const template = availableTemplates.find(t => t.id === templateInfo.templateId);
+          if (template) {
+            setSelectedTemplate(template);
+          }
+        } catch (error) {
+          console.error('Erro ao recuperar template selecionado:', error);
+        }
+      }
+    }
+  }, [vendorId, availableTemplates]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<AssessmentQuestion | null>(null);
   const [newQuestion, setNewQuestion] = useState<Partial<AssessmentQuestion>>({

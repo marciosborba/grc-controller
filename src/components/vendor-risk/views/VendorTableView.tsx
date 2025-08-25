@@ -26,7 +26,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Eye,
   FileCheck,
   AlertTriangle,
   Shield,
@@ -42,15 +41,20 @@ import {
   Download,
   Upload,
   Brain,
-  Zap
+  Zap,
+  Search
 } from 'lucide-react';
 import { useVendorRiskManagement, VendorRegistry, VendorFilters } from '@/hooks/useVendorRiskManagement';
+import { VendorOnboardingWorkflow } from '../workflows/VendorOnboardingWorkflow';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 interface VendorTableViewProps {
   searchTerm: string;
   selectedFilter: string;
+  loading?: boolean;
+  showFilters?: boolean;
 }
 
 interface VendorFormData {
@@ -73,7 +77,9 @@ interface VendorFormData {
 
 export const VendorTableView: React.FC<VendorTableViewProps> = ({
   searchTerm,
-  selectedFilter
+  selectedFilter,
+  loading: externalLoading,
+  showFilters
 }) => {
   const {
     vendors,
@@ -83,6 +89,8 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     deleteVendor,
     loading
   } = useVendorRiskManagement();
+  
+  const { toast } = useToast();
 
   // State management
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
@@ -93,7 +101,11 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingVendor, setEditingVendor] = useState<VendorRegistry | null>(null);
   const [viewingVendor, setViewingVendor] = useState<VendorRegistry | null>(null);
+  const [showOnboardingWorkflow, setShowOnboardingWorkflow] = useState(false);
+  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [expandedProcessDetails, setExpandedProcessDetails] = useState<string | null>(null);
   const [localFilters, setLocalFilters] = useState<VendorFilters>({});
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
   // Form state
   const [formData, setFormData] = useState<Partial<VendorFormData>>({
@@ -106,7 +118,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   // Load vendors on mount and when filters change
   useEffect(() => {
     const filters: VendorFilters = {
-      search: searchTerm,
+      search: localSearchTerm,
       ...localFilters
     };
 
@@ -122,7 +134,12 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     }
 
     fetchVendors(filters);
-  }, [searchTerm, selectedFilter, localFilters, fetchVendors]);
+  }, [localSearchTerm, selectedFilter, localFilters, fetchVendors]);
+
+  // Sync external searchTerm with local state
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
 
   // Sort vendors
   const sortedVendors = [...vendors].sort((a, b) => {
@@ -202,6 +219,12 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     setEditingVendor(vendor);
     setShowCreateDialog(true);
   };
+  
+  // Nova função para editar através do wizard completo
+  const handleEditWithWorkflow = (vendor: VendorRegistry) => {
+    setEditingVendorId(vendor.id);
+    setShowOnboardingWorkflow(true);
+  };
 
   const handleDelete = async (vendorId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este fornecedor?')) {
@@ -209,14 +232,89 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     }
   };
 
-  // Risk level styling
-  const getRiskLevelStyle = (riskScore?: number) => {
-    if (!riskScore) return 'text-gray-600 bg-gray-100';
+  // Badge styling functions with proper dark/light theme support
+  const getRiskLevelBadgeStyle = (riskScore?: number) => {
+    if (!riskScore) return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
     
-    if (riskScore >= 4.5) return 'text-red-700 bg-red-100 border-red-200';
-    if (riskScore >= 3.5) return 'text-orange-700 bg-orange-100 border-orange-200';
-    if (riskScore >= 2.5) return 'text-yellow-700 bg-yellow-100 border-yellow-200';
-    return 'text-green-700 bg-green-100 border-green-200';
+    if (riskScore >= 4.5) return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
+    if (riskScore >= 3.5) return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:text-white dark:border-orange-700';
+    if (riskScore >= 2.5) return 'bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:text-white dark:border-yellow-700';
+    return 'bg-green-500 text-white border-green-600 dark:bg-green-600 dark:text-white dark:border-green-700';
+  };
+
+  // Análise de status do processo de onboarding (Etapas 1-4)
+  const analyzeVendorProcessStatus = (vendor: VendorRegistry) => {
+    // Etapa 1: Dados Básicos
+    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id && 
+                             vendor.primary_contact_name && vendor.primary_contact_email);
+    
+    // Etapa 2: Due Diligence (baseado no progresso)
+    const step2Complete = vendor.onboarding_progress >= 40;
+    
+    // Etapa 3: Assessment (baseado no progresso e se tem score de risco)
+    const step3Complete = vendor.onboarding_progress >= 60 && vendor.risk_score !== undefined;
+    
+    // Etapa 4: Contrato (baseado no progresso)
+    const step4Complete = vendor.onboarding_progress >= 80;
+    
+    // Verificar se todas as etapas estão completas
+    const allStepsComplete = step1Complete && step2Complete && step3Complete && step4Complete;
+    
+    // Verificar se tem assessment respondido e planos de ação cumpridos
+    const hasAssessmentCompleted = vendor.last_assessment_date !== undefined;
+    const hasActionPlanCompleted = vendor.onboarding_status === 'completed';
+    
+    // Verificar prazos (simular verificação de prazo)
+    const now = new Date();
+    const assessmentDue = vendor.next_assessment_due ? new Date(vendor.next_assessment_due) : null;
+    const withinDeadline = assessmentDue ? now <= assessmentDue : true;
+    
+    // Lógica de status
+    if (allStepsComplete && hasAssessmentCompleted && hasActionPlanCompleted) {
+      return {
+        status: 'adequate',
+        label: 'Adequado',
+        description: 'Todas as etapas completas, assessment respondido e planos de ação cumpridos'
+      };
+    } else if (allStepsComplete && withinDeadline) {
+      return {
+        status: 'in_compliance',
+        label: 'Em Adequação',
+        description: 'Etapas completas, dentro do prazo para assessment ou plano de ação'
+      };
+    } else {
+      return {
+        status: 'inadequate',
+        label: 'Inadequado',
+        description: 'Etapas incompletas ou fora do prazo'
+      };
+    }
+  };
+
+  // Estilo do badge de status do processo
+  const getProcessStatusBadgeStyle = (status: string) => {
+    switch (status) {
+      case 'adequate': return 'bg-green-500 text-white border-green-600 dark:bg-green-600 dark:text-white dark:border-green-700';
+      case 'in_compliance': return 'bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:text-white dark:border-yellow-700';
+      case 'inadequate': return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
+      default: return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
+    }
+  };
+
+  // Detalhamento das etapas do processo
+  const getProcessStepsDetail = (vendor: VendorRegistry) => {
+    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id && 
+                             vendor.primary_contact_name && vendor.primary_contact_email);
+    const step2Complete = vendor.onboarding_progress >= 40;
+    const step3Complete = vendor.onboarding_progress >= 60 && vendor.risk_score !== undefined;
+    const step4Complete = vendor.onboarding_progress >= 80;
+    
+    return {
+      step1: { complete: step1Complete, label: 'Dados Básicos', progress: step1Complete ? 100 : 0 },
+      step2: { complete: step2Complete, label: 'Due Diligence', progress: Math.min(vendor.onboarding_progress, 40) * 2.5 },
+      step3: { complete: step3Complete, label: 'Assessment', progress: step3Complete ? 100 : Math.max(0, (vendor.onboarding_progress - 40) * 5) },
+      step4: { complete: step4Complete, label: 'Contrato', progress: step4Complete ? 100 : Math.max(0, (vendor.onboarding_progress - 60) * 5) }
+    };
   };
 
   const getRiskLevelText = (riskScore?: number) => {
@@ -228,13 +326,56 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     return 'Baixo';
   };
 
-  // Status styling
+  // Status badge styling with dark/light theme support
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-500 text-white border-green-600 dark:bg-green-600 dark:text-white dark:border-green-700';
+      case 'inactive': return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
+      case 'suspended': return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
+      case 'onboarding': return 'bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:text-white dark:border-blue-700';
+      case 'offboarding': return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:text-white dark:border-orange-700';
+      default: return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
+    }
+  };
+  
+  // Criticality badge styling with dark/light theme support
+  const getCriticalityBadgeStyle = (level: string) => {
+    switch (level) {
+      case 'critical': return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
+      case 'high': return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:text-white dark:border-orange-700';
+      case 'medium': return 'bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:text-white dark:border-yellow-700';
+      case 'low': return 'bg-green-500 text-white border-green-600 dark:bg-green-600 dark:text-white dark:border-green-700';
+      default: return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
+    }
+  };
+
+  // Vendor type badge styling
+  const getVendorTypeBadgeStyle = (type: string) => {
+    switch (type) {
+      case 'strategic': return 'bg-purple-500 text-white border-purple-600 dark:bg-purple-600 dark:text-white dark:border-purple-700';
+      case 'operational': return 'bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:text-white dark:border-blue-700';
+      case 'transactional': return 'bg-teal-500 text-white border-teal-600 dark:bg-teal-600 dark:text-white dark:border-teal-700';
+      case 'critical': return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
+      default: return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
+    }
+  };
+
+  // Legacy functions for compatibility
+  const getRiskLevelStyle = (riskScore?: number) => {
+    if (!riskScore) return 'text-gray-600 bg-gray-100';
+    
+    if (riskScore >= 4.5) return 'text-red-700 bg-red-100 border-red-200';
+    if (riskScore >= 3.5) return 'text-orange-700 bg-orange-100 border-orange-200';
+    if (riskScore >= 2.5) return 'text-yellow-700 bg-yellow-100 border-yellow-200';
+    return 'text-green-700 bg-green-100 border-green-200';
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'active': return 'text-green-700 bg-green-100 border-green-200';
       case 'inactive': return 'text-gray-700 bg-gray-100 border-gray-200';
       case 'suspended': return 'text-red-700 bg-red-100 border-red-200';
-      case 'onboarding': return 'text-blue-700 bg-blue-100 border-blue-200';
+      case 'onboarding': return 'text-purple-700 bg-purple-100 border-purple-200';
       case 'offboarding': return 'text-orange-700 bg-orange-100 border-orange-200';
       default: return 'text-gray-700 bg-gray-100 border-gray-200';
     }
@@ -272,101 +413,109 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header and Controls */}
-      <Card className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+    <div className="space-y-4">
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex gap-4 items-center">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Pesquisar fornecedores..."
+                  value={localSearchTerm}
+                  onChange={(e) => setLocalSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <Select
+              value={localFilters.status?.[0] || 'all'}
+              onValueChange={(value) => 
+                setLocalFilters(prev => ({
+                  ...prev,
+                  status: value === 'all' ? undefined : [value]
+                }))
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="active">Ativo</SelectItem>
+                <SelectItem value="inactive">Inativo</SelectItem>
+                <SelectItem value="onboarding">Onboarding</SelectItem>
+                <SelectItem value="suspended">Suspenso</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={localFilters.criticality_level?.[0] || 'all'}
+              onValueChange={(value) => 
+                setLocalFilters(prev => ({
+                  ...prev,
+                  criticality_level: value === 'all' ? undefined : [value]
+                }))
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Criticidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="critical">Crítica</SelectItem>
+                <SelectItem value="high">Alta</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="low">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={localFilters.vendor_type?.[0] || 'all'}
+              onValueChange={(value) => 
+                setLocalFilters(prev => ({
+                  ...prev,
+                  vendor_type: value === 'all' ? undefined : [value]
+                }))
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                <SelectItem value="strategic">Estratégico</SelectItem>
+                <SelectItem value="operational">Operacional</SelectItem>
+                <SelectItem value="transactional">Transacional</SelectItem>
+                <SelectItem value="critical">Crítico</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Novo Fornecedor
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vendor Table */}
+      <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-blue-600" />
+                <Users className="w-5 h-5 text-primary" />
                 <span>Fornecedores Registrados</span>
               </CardTitle>
               <CardDescription>
                 Gerencie seu catálogo completo de fornecedores e parceiros
               </CardDescription>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                size="sm"
-                onClick={() => setShowCreateDialog(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Fornecedor
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          {/* Filters and Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-            <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-1">
-              <Select
-                value={localFilters.status?.[0] || 'all'}
-                onValueChange={(value) => 
-                  setLocalFilters(prev => ({
-                    ...prev,
-                    status: value === 'all' ? undefined : [value]
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                  <SelectItem value="onboarding">Onboarding</SelectItem>
-                  <SelectItem value="suspended">Suspenso</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={localFilters.criticality_level?.[0] || 'all'}
-                onValueChange={(value) => 
-                  setLocalFilters(prev => ({
-                    ...prev,
-                    criticality_level: value === 'all' ? undefined : [value]
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Criticidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="critical">Crítica</SelectItem>
-                  <SelectItem value="high">Alta</SelectItem>
-                  <SelectItem value="medium">Média</SelectItem>
-                  <SelectItem value="low">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={localFilters.vendor_type?.[0] || 'all'}
-                onValueChange={(value) => 
-                  setLocalFilters(prev => ({
-                    ...prev,
-                    vendor_type: value === 'all' ? undefined : [value]
-                  }))
-                }
-              >
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Tipos</SelectItem>
-                  <SelectItem value="strategic">Estratégico</SelectItem>
-                  <SelectItem value="operational">Operacional</SelectItem>
-                  <SelectItem value="transactional">Transacional</SelectItem>
-                  <SelectItem value="critical">Crítico</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {selectedVendors.length > 0 && (
               <div className="flex items-center space-x-2">
                 <Badge variant="secondary">
@@ -379,243 +528,218 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               </div>
             )}
           </div>
-
-          {/* Table */}
-          <div className="border rounded-lg overflow-hidden bg-white dark:bg-slate-800">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 dark:bg-slate-900">
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Fornecedor</span>
-                        {sortBy === 'name' && (
-                          <span className="text-xs">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="w-full">
+            <Table className="w-full">
+              <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[25%]"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs font-medium">Fornecedor</span>
+                    {sortBy === 'name' && (
+                      <span className="text-xs">
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[12%]">Tipo</TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[12%]">Criticidade</TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[10%]">Status</TableHead>
+                <TableHead 
+                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[8%]"
+                  onClick={() => handleSort('risk_score')}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs font-medium">Risco</span>
+                    {sortBy === 'risk_score' && (
+                      <span className="text-xs">
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[12%]">Status do Processo</TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[10%]">Contrato</TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[10%]">Último Assessment</TableHead>
+                <TableHead className="text-xs font-medium p-3 w-[11%]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedVendors.map((vendor) => (
+                <TableRow key={vendor.id} className="h-12">
+                  <TableCell className="p-3">
+                    <Checkbox
+                      checked={selectedVendors.includes(vendor.id)}
+                      onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
+                      className="h-4 w-4"
+                    />
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[25%]">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                          <span className="text-xs font-medium text-white">
+                            {vendor.name.charAt(0).toUpperCase()}
                           </span>
-                        )}
+                        </div>
                       </div>
-                    </TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Criticidade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead 
-                      className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800"
-                      onClick={() => handleSort('risk_score')}
-                    >
-                      <div className="flex items-center space-x-1">
-                        <span>Risco</span>
-                        {sortBy === 'risk_score' && (
-                          <span className="text-xs">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {vendor.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {vendor.primary_contact_email || vendor.website?.replace(/^https?:\/\//, '') || ''}
+                        </p>
                       </div>
-                    </TableHead>
-                    <TableHead>Contrato</TableHead>
-                    <TableHead>Último Assessment</TableHead>
-                    <TableHead className="w-24">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedVendors.map((vendor) => (
-                    <TableRow key={vendor.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedVendors.includes(vendor.id)}
-                          onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
-                        />
-                      </TableCell>
-                      
-                      <TableCell className="min-w-0">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                              <span className="text-xs font-medium text-white">
-                                {vendor.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
-                              {vendor.name}
-                            </p>
-                            <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
-                              {vendor.website && (
-                                <div className="flex items-center space-x-1">
-                                  <Globe className="w-3 h-3" />
-                                  <span className="truncate max-w-[100px]">{vendor.website.replace(/^https?:\/\//, '')}</span>
-                                </div>
-                              )}
-                              {vendor.primary_contact_email && (
-                                <div className="flex items-center space-x-1">
-                                  <Mail className="w-3 h-3" />
-                                  <span className="truncate max-w-[120px]">{vendor.primary_contact_email}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {getVendorTypeText(vendor.vendor_type)}
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[12%]">
+                    <Badge className={`text-[10px] px-2 py-0.5 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
+                      {getVendorTypeText(vendor.vendor_type)}
+                    </Badge>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[12%]">
+                    <Badge className={`text-[10px] px-2 py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                      {getCriticalityText(vendor.criticality_level)}
+                    </Badge>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[10%]">
+                    <Badge className={`text-[10px] px-2 py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
+                      {getStatusText(vendor.status)}
+                    </Badge>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[8%]">
+                    <Badge className={`text-[10px] px-2 py-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
+                      {getRiskLevelText(vendor.risk_score)}
+                      {vendor.risk_score && (
+                        <span className="ml-1 opacity-75 text-[10px]">
+                          ({vendor.risk_score.toFixed(1)})
+                        </span>
+                      )}
+                    </Badge>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[12%]">
+                    {(() => {
+                      const processStatus = analyzeVendorProcessStatus(vendor);
+                      return (
+                        <Badge 
+                          className={`text-[10px] px-2 py-0.5 ${getProcessStatusBadgeStyle(processStatus.status)}`}
+                          title={processStatus.description}
+                        >
+                          {processStatus.label}
                         </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs ${
-                          vendor.criticality_level === 'critical' ? 'border-red-200 text-red-700 bg-red-50' :
-                          vendor.criticality_level === 'high' ? 'border-orange-200 text-orange-700 bg-orange-50' :
-                          vendor.criticality_level === 'medium' ? 'border-yellow-200 text-yellow-700 bg-yellow-50' :
-                          'border-green-200 text-green-700 bg-green-50'
-                        }`}>
-                          {getCriticalityText(vendor.criticality_level)}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs ${getStatusStyle(vendor.status)}`}>
-                          {getStatusText(vendor.status)}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs ${getRiskLevelStyle(vendor.risk_score)}`}>
-                          {getRiskLevelText(vendor.risk_score)}
-                          {vendor.risk_score && (
-                            <span className="ml-1 text-xs opacity-75">
-                              ({vendor.risk_score.toFixed(1)})
-                            </span>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="text-xs text-slate-600 dark:text-slate-400">
-                          <div className="flex items-center space-x-1">
-                            <DollarSign className="w-3 h-3" />
-                            <span>
-                              {new Intl.NumberFormat('pt-BR', { 
-                                style: 'currency', 
-                                currency: 'BRL',
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 0
-                              }).format(vendor.contract_value || 0)}
-                            </span>
-                          </div>
-                          {vendor.contract_end_date && (
-                            <div className="flex items-center space-x-1 mt-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>
-                                {format(new Date(vendor.contract_end_date), 'MMM/yyyy', { locale: ptBR })}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      
-                      <TableCell>
-                        {vendor.last_assessment_date ? (
-                          <div className="text-xs text-slate-600 dark:text-slate-400">
-                            <div>{format(new Date(vendor.last_assessment_date), 'dd/MM/yyyy', { locale: ptBR })}</div>
-                            <div className="flex items-center space-x-1 mt-1">
-                              {vendor.next_assessment_due && new Date(vendor.next_assessment_due) < new Date() ? (
-                                <Badge variant="destructive" className="text-xs px-1 py-0">
-                                  Vencido
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-xs px-1 py-0 border-green-200 text-green-700 bg-green-50">
-                                  OK
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-xs text-slate-500">
-                            Nunca avaliado
-                          </Badge>
-                        )}
-                      </TableCell>
-                      
-                      <TableCell>
-                        <div className="flex items-center space-x-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => setViewingVendor(vendor)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => handleEdit(vendor)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => handleDelete(vendor.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                      );
+                    })()}
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[10%]">
+                    <div className="text-xs text-muted-foreground">
+                      <span className="text-xs">
+                        {new Intl.NumberFormat('pt-BR', { 
+                          style: 'currency', 
+                          currency: 'BRL',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                          notation: 'compact'
+                        }).format(vendor.contract_value || 0)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell className="text-xs p-3 w-[10%]">
+                    {vendor.last_assessment_date ? (
+                      <div className="text-xs text-muted-foreground">
+                        <div className="text-xs">{format(new Date(vendor.last_assessment_date), 'dd/MM/yy', { locale: ptBR })}</div>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Nunca avaliado</span>
+                    )}
+                  </TableCell>
+                  
+                  <TableCell className="p-3 w-[11%]">
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleEditWithWorkflow(vendor)}
+                        title="Editar fornecedor"
+                        className="h-7 w-7 p-0 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => handleDelete(vendor.id)}
+                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                        title="Excluir fornecedor"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              </TableBody>
+            </Table>
           </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
-                <span>
-                  Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length} fornecedores
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Anterior
-                </Button>
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Próxima
-                </Button>
-              </div>
+          
+          {paginatedVendors.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhum fornecedor encontrado</p>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <span>
+              Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length} fornecedores
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -782,7 +906,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-to-r from-blue-600 to-purple-600"
+                className="bg-primary"
               >
                 {loading ? 'Salvando...' : editingVendor ? 'Atualizar' : 'Criar'}
               </Button>
@@ -797,7 +921,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
           <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center space-x-2">
-                <Eye className="w-5 h-5" />
+                <Building className="w-5 h-5" />
                 <span>{viewingVendor.name}</span>
               </DialogTitle>
               <DialogDescription>
@@ -827,7 +951,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                       href={viewingVendor.website} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline flex items-center space-x-1"
+                      className="text-sm text-primary hover:underline flex items-center space-x-1"
                     >
                       <Globe className="w-3 h-3" />
                       <span>{viewingVendor.website}</span>
@@ -928,7 +1052,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                     {viewingVendor.primary_contact_email && (
                       <div className="flex items-center space-x-2">
                         <Mail className="w-4 h-4 text-slate-500" />
-                        <a href={`mailto:${viewingVendor.primary_contact_email}`} className="text-sm text-blue-600 hover:underline">
+                        <a href={`mailto:${viewingVendor.primary_contact_email}`} className="text-sm text-primary hover:underline">
                           {viewingVendor.primary_contact_email}
                         </a>
                       </div>
@@ -971,7 +1095,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 </Button>
                 <Button
                   variant="outline"
-                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                  className="text-primary border-primary/30 hover:bg-primary/5"
                 >
                   <FileCheck className="w-4 h-4 mr-2" />
                   Criar Assessment
@@ -980,6 +1104,27 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
             </div>
           </DialogContent>
         </Dialog>
+      )}
+      
+      {/* Onboarding Workflow for Editing */}
+      {showOnboardingWorkflow && (
+        <VendorOnboardingWorkflow
+          vendorId={editingVendorId || undefined}
+          isOpen={showOnboardingWorkflow}
+          onClose={() => {
+            setShowOnboardingWorkflow(false);
+            setEditingVendorId(null);
+          }}
+          onComplete={(vendor) => {
+            setShowOnboardingWorkflow(false);
+            setEditingVendorId(null);
+            fetchVendors(); // Refresh the vendor list
+            toast({
+              title: 'Fornecedor atualizado',
+              description: `${vendor.name} foi atualizado com sucesso.`,
+            });
+          }}
+        />
       )}
     </div>
   );

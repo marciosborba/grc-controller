@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { EditableChecklistManager } from '../shared/EditableChecklistManager';
 import { RiskAssessmentManager } from '../shared/RiskAssessmentManager';
 import { ContractReviewManager } from '../shared/ContractReviewManager';
+import { useVendorRiskManagement } from '@/hooks/useVendorRiskManagement';
 import { 
   Scale,
   Settings,
@@ -566,6 +567,67 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
     return true;
   };
 
+  // Save current step data
+  const handleSaveCurrentStep = async () => {
+    const currentStepData = onboardingSteps[currentStep];
+    
+    // Validate current step if it's basic info
+    if (currentStepData?.id === 'basic_info' && !validateBasicInfo()) {
+      return;
+    }
+    
+    const saved = await saveVendorData();
+    if (saved) {
+      toast({
+        title: "Dados Salvos",
+        description: `Informações da etapa "${currentStepData?.title}" foram salvas com sucesso`,
+      });
+      
+      // Update step completion status
+      setOnboardingSteps(prev => prev.map(step => {
+        if (step.id === currentStepData?.id) {
+          return { ...step, completed: true };
+        }
+        return step;
+      }));
+    }
+  };
+
+  // Handle direct step navigation
+  const handleStepNavigation = async (targetStep: number) => {
+    // Se está tentando ir para a mesma etapa, não faz nada
+    if (targetStep === currentStep) {
+      return;
+    }
+
+    // Se está na etapa de informações básicas e tem dados não salvos, salva automaticamente
+    const currentStepData = onboardingSteps[currentStep];
+    if (currentStepData?.id === 'basic_info') {
+      // Verifica se há dados para salvar (pelo menos nome preenchido)
+      if (vendorData.name && vendorData.name.trim() !== '') {
+        if (validateBasicInfo()) {
+          await saveVendorData();
+        } else {
+          // Se a validação falhar, pergunta se quer continuar mesmo assim
+          const confirmNavigation = window.confirm(
+            'Existem campos obrigatórios não preenchidos na etapa atual. Deseja continuar mesmo assim? Os dados não serão salvos.'
+          );
+          if (!confirmNavigation) {
+            return;
+          }
+        }
+      }
+    }
+
+    // Navega para a etapa desejada
+    setCurrentStep(targetStep);
+    
+    toast({
+      title: "Navegação",
+      description: `Navegando para etapa: ${onboardingSteps[targetStep]?.title}`,
+    });
+  };
+
   // Complete onboarding
   const completeOnboarding = async () => {
     const savedVendor = await saveVendorData();
@@ -656,10 +718,13 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-blue-600" />
-            ALEX VENDOR - Onboarding de Fornecedor
+            ALEX VENDOR - {vendorId ? 'Edição de Fornecedor' : 'Onboarding de Fornecedor'}
           </DialogTitle>
           <DialogDescription>
-            Workflow inteligente para onboarding completo de fornecedores
+            {vendorId 
+              ? 'Edite todas as informações do fornecedor através do wizard completo de onboarding'
+              : 'Workflow inteligente para onboarding completo de fornecedores'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -690,34 +755,43 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
                   return (
                     <div key={step.id} className="flex-1">
                       <div className="flex flex-col items-center space-y-2">
-                        {/* Ícone da etapa */}
-                        <div className={`
-                          w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all
-                          ${step.completed 
-                            ? `bg-${color}-500 text-white shadow-md` 
-                            : index === currentStep 
-                              ? `bg-${color}-100 dark:bg-${color}-900/30 border-2 border-${color}-500 text-${color}-700 dark:text-${color}-300`
-                              : 'bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-                          }
-                        `}>
+                        {/* Ícone da etapa - Clicável */}
+                        <button
+                          onClick={() => handleStepNavigation(index)}
+                          className={`
+                            w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all
+                            hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500
+                            cursor-pointer
+                            ${step.completed 
+                              ? `bg-${color}-500 text-white shadow-md hover:bg-${color}-600` 
+                              : index === currentStep 
+                                ? `bg-${color}-100 dark:bg-${color}-900/30 border-2 border-${color}-500 text-${color}-700 dark:text-${color}-300 hover:bg-${color}-200 dark:hover:bg-${color}-900/50`
+                                : 'bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }
+                          `}
+                          title={`Ir para etapa: ${step.title}`}
+                        >
                           {step.completed ? (
                             <CheckCircle className="h-5 w-5" />
                           ) : (
                             <span>{index + 1}</span>
                           )}
-                        </div>
+                        </button>
                         
                         {/* Título da etapa */}
                         <div className="text-center">
                           <div className={`
-                            text-xs font-medium leading-tight max-w-20
+                            text-xs font-medium leading-tight max-w-20 cursor-pointer
                             ${step.completed 
-                              ? `text-${color}-600 dark:text-${color}-400` 
+                              ? `text-${color}-600 dark:text-${color}-400 hover:text-${color}-700 dark:hover:text-${color}-300` 
                               : index === currentStep 
                                 ? `text-${color}-700 dark:text-${color}-300 font-semibold`
-                                : 'text-gray-500 dark:text-gray-400'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                             }
-                          `}>
+                          `}
+                          onClick={() => handleStepNavigation(index)}
+                          title={`Ir para etapa: ${step.title}`}
+                          >
                             {step.title}
                           </div>
                           
@@ -762,6 +836,37 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
             </CardHeader>
             
             <CardContent>
+              {/* Informações sobre funcionalidades - apenas na primeira etapa */}
+              {currentStep === 0 && (
+                <div className="mb-6 space-y-3">
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Save className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Botão Salvar Disponível
+                      </span>
+                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      Você pode salvar as informações a qualquer momento usando o botão "Salvar" abaixo, 
+                      sem precisar completar todas as etapas do processo.
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        Navegação Direta
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Clique nos ícones numerados acima para navegar diretamente para qualquer etapa. 
+                      Os dados da etapa atual serão salvos automaticamente se válidos.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               {renderStepContent()}
             </CardContent>
           </Card>
@@ -777,8 +882,20 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
               Anterior
             </Button>
 
-            <div className="text-sm text-muted-foreground">
-              Etapa {currentStep + 1} de {onboardingSteps.length}
+            <div className="flex items-center gap-3">
+              {/* Botão Salvar - disponível em todas as etapas */}
+              <Button 
+                variant="outline" 
+                onClick={handleSaveCurrentStep}
+                className="flex items-center gap-2 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-950"
+              >
+                <Save className="h-4 w-4" />
+                Salvar
+              </Button>
+              
+              <div className="text-sm text-muted-foreground">
+                Etapa {currentStep + 1} de {onboardingSteps.length}
+              </div>
             </div>
 
             {currentStep < onboardingSteps.length - 1 ? (
@@ -854,8 +971,20 @@ const BasicInfoStep: React.FC<{
   };
   
   // Update vendor data
-  const updateVendorData = (field: keyof VendorRegistry, value: any) => {
-    setVendorData(prev => ({ ...prev, [field]: value }));
+  const updateVendorData = (field: keyof VendorRegistry | string, value: any) => {
+    if (field.includes('.')) {
+      // Handle nested fields like 'address.street'
+      const [parentField, childField] = field.split('.');
+      setVendorData(prev => ({
+        ...prev,
+        [parentField]: {
+          ...prev[parentField as keyof VendorRegistry],
+          [childField]: value
+        }
+      }));
+    } else {
+      setVendorData(prev => ({ ...prev, [field]: value }));
+    }
   };
   
   // Função específica para CNPJ com validação
@@ -1408,6 +1537,63 @@ const RiskAssessmentStep: React.FC<{
 }> = ({ vendorData, onAssessmentComplete }) => {
   console.log('RiskAssessmentStep renderizado:', { vendorData: vendorData.name });
   
+  const { createAssessment } = useVendorRiskManagement();
+  
+  const handleTemplateSelected = async (templateId: string, templateName: string) => {
+    try {
+      console.log('Template selecionado:', { templateId, templateName, vendorId: vendorData.id });
+      
+      // Buscar o framework real no banco de dados baseado no tipo
+      let frameworkId = templateId;
+      
+      // Se o templateId não for um UUID válido, buscar o framework correspondente
+      if (templateId === 'nist_csf_default' || templateId === 'iso_27001_27701_default') {
+        console.log('Template hardcoded detectado, salvando informações localmente');
+        
+        // Por enquanto, vamos salvar as informações do template selecionado no localStorage
+        // para que possam ser recuperadas quando necessário
+        const selectedTemplateInfo = {
+          templateId,
+          templateName,
+          vendorId: vendorData.id,
+          selectedAt: new Date().toISOString(),
+          selectedInOnboarding: true
+        };
+        
+        localStorage.setItem(`vendor_${vendorData.id}_selected_template`, JSON.stringify(selectedTemplateInfo));
+        console.log('Template selecionado salvo no localStorage:', selectedTemplateInfo);
+        
+        return; // Não criar assessment ainda, apenas salvar a seleção
+      }
+      
+      // Se for um UUID válido, criar o assessment normalmente
+      const assessmentData = {
+        vendor_id: vendorData.id,
+        framework_id: frameworkId,
+        assessment_name: `Assessment - ${vendorData.name}`,
+        assessment_type: 'initial' as const,
+        status: 'draft' as const,
+        priority: 'medium' as const,
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+        responses: {},
+        alex_analysis: {},
+        alex_recommendations: {},
+        evidence_attachments: [],
+        metadata: {
+          template_name: templateName,
+          selected_at: new Date().toISOString(),
+          selected_in_onboarding: true
+        }
+      };
+      
+      await createAssessment(assessmentData);
+      console.log('Assessment criado com sucesso no banco de dados');
+      
+    } catch (error) {
+      console.error('Erro ao salvar template selecionado:', error);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1426,6 +1612,7 @@ const RiskAssessmentStep: React.FC<{
       <RiskAssessmentManager 
         vendorId={vendorData.id}
         onAssessmentComplete={onAssessmentComplete}
+        onTemplateSelected={handleTemplateSelected}
       />
       
       {/* Instruções */}

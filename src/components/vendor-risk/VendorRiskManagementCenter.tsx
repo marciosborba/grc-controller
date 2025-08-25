@@ -25,7 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantTheme } from '@/hooks/useTenantTheme';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
-import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
+
 
 // Importar views
 import { VendorDashboardView } from './views/VendorDashboardView';
@@ -33,7 +33,7 @@ import { VendorTableView } from './views/VendorTableView';
 import { VendorKanbanView } from './views/VendorKanbanView';
 import { VendorProcessView } from './views/VendorProcessView';
 import { VendorAssessmentManager } from './views/VendorAssessmentManager';
-import { AlexVendorIntegration } from './shared/AlexVendorIntegration';
+
 import { VendorOnboardingWorkflow } from './workflows/VendorOnboardingWorkflow';
 import { VendorNotificationSystem } from './notifications/VendorNotificationSystem';
 
@@ -57,7 +57,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showAlexAssistant, setShowAlexAssistant] = useState(false);
+
   const [showOnboardingWorkflow, setShowOnboardingWorkflow] = useState(false);
   const [showNotificationSystem, setShowNotificationSystem] = useState(false);
 
@@ -81,13 +81,13 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
   // Inicializar dados
   useEffect(() => {
-    if (user?.tenantId) {
+    if (user?.tenantId || user?.tenant_id) {
       fetchVendors();
       fetchAssessments();
       fetchDashboardMetrics();
       fetchRiskDistribution();
     }
-  }, [user?.tenantId]);
+  }, [user?.tenantId, user?.tenant_id, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution]);
 
   const getQuickActions = (): QuickAction[] => {
     const highRiskVendors = dashboardMetrics?.critical_vendors || 0;
@@ -115,7 +115,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
       },
       {
         id: 'pending-assessments',
-        title: 'Assessments Pendentes',
+        title: 'Assessments',
         description: 'Revisar avaliações em andamento',
         icon: FileCheck,
         action: () => {
@@ -126,7 +126,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
       },
       {
         id: 'communication-center',
-        title: 'Central de Comunicação',
+        title: 'Comunicação',
         description: 'Gerenciar notificações e lembretes',
         icon: MessageSquare,
         action: () => setShowNotificationSystem(true),
@@ -191,7 +191,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {getQuickActions().map((action) => (
@@ -268,131 +268,113 @@ export const VendorRiskManagementCenter: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <Card className={viewConfig.cardStyle}>
-        <CardContent className="p-0">
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as VendorViewMode)}>
-            <div className="border-b border-border">
-              <div className="flex items-center justify-between p-4">
-                <TabsList className="grid w-fit grid-cols-5">
-                  <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </TabsTrigger>
-                  <TabsTrigger value="vendors" className="flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Fornecedores
-                  </TabsTrigger>
-                  <TabsTrigger value="assessments" className="flex items-center gap-2">
-                    <ClipboardCheck className="h-4 w-4" />
-                    Assessments
-                  </TabsTrigger>
-                  <TabsTrigger value="kanban" className="flex items-center gap-2">
-                    <Kanban className="h-4 w-4" />
-                    Kanban
-                  </TabsTrigger>
-                  <TabsTrigger value="process" className="flex items-center gap-2">
-                    <GitBranch className="h-4 w-4" />
-                    Processos
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="flex items-center gap-2">
-                  {(viewMode === 'vendors' || viewMode === 'assessments') && (
-                    <>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                          placeholder="Buscar..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10 w-64"
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowFilters(!showFilters)}
-                        className="gap-2"
-                      >
-                        <Filter className="h-4 w-4" />
-                        Filtros
-                      </Button>
-                    </>
-                  )}
-                </div>
+      <div className="w-full">
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as VendorViewMode)}>
+          <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex items-center justify-between p-4">
+              <TabsList className="grid w-fit grid-cols-5">
+                <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </TabsTrigger>
+                <TabsTrigger value="vendors" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Fornecedores
+                </TabsTrigger>
+                <TabsTrigger value="assessments" className="flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Assessments
+                </TabsTrigger>
+                <TabsTrigger value="kanban" className="flex items-center gap-2">
+                  <Kanban className="h-4 w-4" />
+                  Kanban
+                </TabsTrigger>
+                <TabsTrigger value="process" className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  Processos
+                </TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-2">
+                {(viewMode === 'vendors' || viewMode === 'assessments') && (
+                  <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Buscar..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-64"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="gap-2"
+                    >
+                      <Filter className="h-4 w-4" />
+                      Filtros
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Tab Contents */}
-            <div className="p-6">
-              <TabsContent value="dashboard" className="mt-0">
-                <VendorDashboardView
-                  metrics={dashboardMetrics}
-                  riskDistribution={riskDistribution}
-                  vendors={vendors}
-                  assessments={assessments}
-                  loading={loading}
-                />
-              </TabsContent>
+          {/* Tab Contents */}
+          <div className="py-6">
+            <TabsContent value="dashboard" className="mt-0 h-full">
+              <VendorDashboardView
+                metrics={dashboardMetrics}
+                riskDistribution={riskDistribution}
+                vendors={vendors}
+                assessments={assessments}
+                loading={loading}
+              />
+            </TabsContent>
 
-              <TabsContent value="vendors" className="mt-0">
-                <VendorTableView
-                  vendors={vendors}
-                  searchTerm={searchTerm}
-                  selectedFilter={selectedFilter}
-                  loading={loading}
-                  showFilters={showFilters}
-                />
-              </TabsContent>
+            <TabsContent value="vendors" className="mt-0 h-full">
+              <VendorTableView
+                vendors={vendors}
+                searchTerm={searchTerm}
+                selectedFilter={selectedFilter}
+                loading={loading}
+                showFilters={showFilters}
+              />
+            </TabsContent>
 
-              <TabsContent value="assessments" className="mt-0">
-                <VendorAssessmentManager
-                  assessments={assessments}
-                  vendors={vendors}
-                  searchTerm={searchTerm}
-                  selectedFilter={selectedFilter}
-                  loading={loading}
-                  showFilters={showFilters}
-                />
-              </TabsContent>
+            <TabsContent value="assessments" className="mt-0 h-full">
+              <VendorAssessmentManager
+                assessments={assessments}
+                vendors={vendors}
+                searchTerm={searchTerm}
+                selectedFilter={selectedFilter}
+                loading={loading}
+                showFilters={showFilters}
+              />
+            </TabsContent>
 
-              <TabsContent value="kanban" className="mt-0">
-                <VendorKanbanView
-                  assessments={assessments}
-                  searchTerm={searchTerm}
-                  selectedFilter={selectedFilter}
-                />
-              </TabsContent>
+            <TabsContent value="kanban" className="mt-0 h-full">
+              <VendorKanbanView
+                assessments={assessments}
+                searchTerm={searchTerm}
+                selectedFilter={selectedFilter}
+              />
+            </TabsContent>
 
-              <TabsContent value="process" className="mt-0">
-                <VendorProcessView
-                  vendors={vendors}
-                  assessments={assessments}
-                  loading={loading}
-                />
-              </TabsContent>
-            </div>
-          </Tabs>
-        </CardContent>
-      </Card>
+            <TabsContent value="process" className="mt-0 h-full">
+              <VendorProcessView
+                vendors={vendors}
+                assessments={assessments}
+                loading={loading}
+              />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
 
       {/* Modals */}
-      {showAlexAssistant && (
-        <ImprovedAIChatDialog
-          open={showAlexAssistant}
-          onOpenChange={setShowAlexAssistant}
-          title="ALEX VENDOR - Assistente IA"
-          description="Especialista em gestão de riscos de fornecedores"
-          initialContext={{
-            module: 'vendor-risk',
-            specialty: 'vendor_risk_management',
-            vendorCount: dashboardMetrics?.total_vendors || 0,
-            criticalVendors: dashboardMetrics?.critical_vendors || 0,
-            pendingAssessments: dashboardMetrics?.pending_assessments || 0
-          }}
-        />
-      )}
-
       {showOnboardingWorkflow && (
         <VendorOnboardingWorkflow
           isOpen={showOnboardingWorkflow}
@@ -417,12 +399,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         />
       )}
 
-      {/* Alex Vendor Integration */}
-      <AlexVendorIntegration
-        currentView={viewMode}
-        metrics={dashboardMetrics}
-        activeVendors={vendors?.length || 0}
-      />
+
     </div>
   );
 };
