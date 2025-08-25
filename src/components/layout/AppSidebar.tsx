@@ -199,16 +199,7 @@ export function AppSidebar() {
         <SidebarTrigger className="hover:bg-muted/50 p-1.5 sm:p-2 rounded-md" />
       </div>
 
-      {/* AI Assistant Banner - Responsivo */}
-      {!collapsed && <div className="mx-3 sm:mx-4 mt-3 sm:mt-4 mb-2 sm:mb-3 p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
-          <div className="flex items-center space-x-2 mb-1 sm:mb-2">
-            <Brain className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
-            <span className="text-xs sm:text-sm font-medium text-primary">Assistente IA</span>
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
-            Pronto para ajudar com análises e insights sobre seus dados de GRC
-          </p>
-        </div>}
+
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
         {navigationItems.map((group, groupIndex) => {

@@ -1,0 +1,41 @@
+/* SOLUÇÃO LIMPA - Card Theme Fix */
+/* Sem !important, usando especificidade CSS correta */
+
+/* 1. Base: Cards usam variáveis CSS */
+.card,
+[data-radix-card],
+[class*="rounded-lg border bg-card"] {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* 2. Hover: Usa cor do tema */
+.card:hover,
+[data-radix-card]:hover,
+[class*="rounded-lg border bg-card"]:hover {
+  background-color: hsl(var(--accent) / 0.1) !important;
+}
+
+/* 3. Override para classes específicas que quebram o tema */
+.hover\:bg-gray-50\/50:hover,
+.hover\:bg-gray-50:hover,
+.hover\:bg-muted\/50:hover,
+.hover\:bg-muted:hover {
+  background-color: hsl(var(--accent) / 0.1) !important;
+}
+
+.dark .hover\:bg-gray-800\/50:hover,
+.dark .hover\:bg-gray-800:hover,
+.dark .hover\:bg-muted\/50:hover,
+.dark .hover\:bg-muted:hover {
+  background-color: hsl(var(--accent) / 0.1) !important;
+}
+
+/* 4. Força aplicação das variáveis CSS em todos os cards */
+[class*="Card"],
+[class*="card"],
+div[class*="rounded-lg border"] {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}

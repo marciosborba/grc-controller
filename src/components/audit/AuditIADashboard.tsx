@@ -274,10 +274,7 @@ const AuditIADashboard: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
             <Eye className="h-8 w-8 text-primary" />
             <span>Audit IA</span>
-            <Badge variant="secondary" className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200">
-              <Brain className="h-3 w-3 mr-1" />
-              Alex Audit
-            </Badge>
+
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Gestão inteligente de auditorias com IA avançada e metodologias Big Four
@@ -300,32 +297,7 @@ const AuditIADashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Alex Audit Status */}
-      <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-purple-100">
-                <Bot className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-purple-900">Alex Audit AI Assistant</h3>
-                <p className="text-sm text-purple-700">
-                  {alexAuditActive ? 'Ativo e monitorando auditorias em tempo real' : 'Pausado'}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setAlexAuditActive(!alexAuditActive)}
-              className="text-purple-700 hover:bg-purple-100"
-            >
-              {alexAuditActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

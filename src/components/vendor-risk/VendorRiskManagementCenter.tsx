@@ -57,6 +57,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [showOnboardingWorkflow, setShowOnboardingWorkflow] = useState(false);
   const [showNotificationSystem, setShowNotificationSystem] = useState(false);
@@ -78,6 +79,45 @@ export const VendorRiskManagementCenter: React.FC = () => {
     fetchRiskDistribution,
     resetError
   } = useVendorRiskManagement();
+
+  // Detectar mudanças de tema
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
+
+    // Verificar tema inicial
+    checkTheme();
+
+    // Observer para mudanças na classe dark
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          checkTheme();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    // Escutar eventos de mudança de tema
+    const handleThemeChange = () => {
+      checkTheme();
+    };
+
+    window.addEventListener('themeChange', handleThemeChange);
+    window.addEventListener('storage', handleThemeChange);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('themeChange', handleThemeChange);
+      window.removeEventListener('storage', handleThemeChange);
+    };
+  }, []);
 
   // Inicializar dados
   useEffect(() => {
@@ -167,20 +207,22 @@ export const VendorRiskManagementCenter: React.FC = () => {
     }
   };
 
-  // Configurações de visualização baseadas no tema
-  const getViewConfig = () => {
-    const isDark = document.documentElement.classList.contains('dark');
-    return {
-      cardStyle: isDark 
-        ? 'bg-gray-800/50 border-gray-700 hover:bg-gray-800/70' 
-        : 'bg-white border-gray-200 hover:bg-gray-50',
-      textPrimary: isDark ? 'text-gray-100' : 'text-gray-900',
-      textSecondary: isDark ? 'text-gray-400' : 'text-gray-600',
-      textMuted: isDark ? 'text-gray-500' : 'text-gray-500'
-    };
+  // Função para obter o gradiente dinâmico
+  const getHoverGradient = () => {
+    if (isDarkMode) {
+      // Dark mode: usar gradientes visíveis
+      return {
+        base: `linear-gradient(to right, hsl(var(--muted) / 0.3), transparent)`,
+        hover: `linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)`
+      };
+    } else {
+      // Light mode: base transparente, hover muito sutil
+      return {
+        base: `transparent`,
+        hover: `linear-gradient(to right, hsl(var(--primary) / 0.05), transparent)`
+      };
+    }
   };
-
-  const viewConfig = getViewConfig();
 
   if (themeLoading) {
     return (
@@ -191,17 +233,24 @@ export const VendorRiskManagementCenter: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 vendor-risk-management">
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 quick-actions-grid">
           {getQuickActions().map((action) => (
             <Card
               key={action.id}
-              className={`
-                cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg
-                ${viewConfig.cardStyle} border-2 hover:border-primary/30
-                group relative overflow-hidden
-              `}
+              className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
+              style={{
+                backgroundColor: isDarkMode 
+                  ? 'hsl(215, 8%, 12%)' // Cor do card no dark mode
+                  : '#ffffff', // Cor branca no light mode
+                borderColor: isDarkMode
+                  ? 'hsl(215, 10%, 22%)' // Cor da borda no dark mode
+                  : 'hsl(214, 32%, 91%)', // Cor da borda no light mode
+                color: isDarkMode
+                  ? 'hsl(0, 0%, 100%)' // Texto branco no dark mode
+                  : 'hsl(225, 71%, 12%)' // Texto escuro no light mode
+              }}
               onClick={action.action}
             >
               <CardContent className="p-5">
@@ -221,10 +270,10 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   
                   {/* Título e descrição */}
                   <div className="space-y-1">
-                    <h3 className={`font-semibold text-sm ${viewConfig.textPrimary} group-hover:text-primary transition-colors`}>
+                    <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
                       {action.title}
                     </h3>
-                    <p className={`text-xs ${viewConfig.textMuted} leading-tight`}>
+                    <p className="text-xs text-muted-foreground leading-tight">
                       {action.description}
                     </p>
                   </div>
@@ -240,8 +289,13 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Efeito de hover */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                {/* Efeito de hover - CSS dinâmico */}
+                <div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: getHoverGradient().hover
+                  }}
+                />
               </CardContent>
             </Card>
           ))}
