@@ -128,6 +128,25 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
         return;
       }
 
+      // Security check - verify status is appropriate for public access
+      if (!['sent', 'in_progress'].includes(data.status)) {
+        toast({
+          title: "Assessment Não Disponível",
+          description: "Este assessment não está disponível para resposta pública.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Additional security - log access attempt for audit
+      console.log('Public assessment accessed:', {
+        assessmentId: data.id,
+        vendorId: data.vendor_id,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        ip: 'client-side' // Server would have real IP
+      });
+
       setAssessment(data);
       setResponses(data.responses || {});
 
@@ -176,34 +195,47 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
   };
 
-  // Save responses
+  // Save responses automatically
   const saveResponses = async () => {
     if (!assessment) return;
 
     try {
       setSaving(true);
 
+      const progress = calculateProgress();
+      const now = new Date().toISOString();
+
       const { error } = await supabase
         .from('vendor_assessments')
         .update({
           responses,
-          progress_percentage: calculateProgress(),
-          updated_at: new Date().toISOString()
+          progress_percentage: progress,
+          updated_at: now,
+          // Update status based on progress
+          status: progress === 100 ? 'ready_for_review' : 'in_progress'
         })
         .eq('id', assessment.id);
 
       if (error) throw error;
 
+      // Update local assessment object
+      setAssessment(prev => prev ? {
+        ...prev,
+        responses,
+        progress_percentage: progress,
+        updated_at: now
+      } : null);
+
       toast({
-        title: "Respostas Salvas",
-        description: "Suas respostas foram salvas automaticamente"
+        title: "✅ Respostas Salvas",
+        description: `Progresso: ${progress}% • Salvo automaticamente`
       });
 
     } catch (error) {
       console.error('Erro ao salvar respostas:', error);
       toast({
-        title: "Erro ao Salvar",
-        description: "Não foi possível salvar as respostas",
+        title: "❌ Erro ao Salvar",
+        description: "Não foi possível salvar as respostas. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -211,12 +243,60 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   };
 
-  // Submit assessment
+  // Auto-save when responses change
+  useEffect(() => {
+    if (Object.keys(responses).length > 0) {
+      const saveTimeout = setTimeout(() => {
+        saveResponses();
+      }, 2000); // Auto-save after 2 seconds of inactivity
+
+      return () => clearTimeout(saveTimeout);
+    }
+  }, [responses]);
+
+  // Submit assessment with confirmation
   const submitAssessment = async () => {
     if (!assessment) return;
 
+    // Final validation of all sections
+    const allQuestions = assessment.vendor_assessment_frameworks?.questions || [];
+    const requiredQuestions = allQuestions.filter(q => q.required);
+    const unansweredRequired = requiredQuestions.filter(q => 
+      !responses[q.id] || responses[q.id] === ''
+    );
+
+    if (unansweredRequired.length > 0) {
+      toast({
+        title: "❌ Assessment Incompleto",
+        description: `${unansweredRequired.length} pergunta(s) obrigatória(s) ainda não foram respondidas`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Tem certeza que deseja finalizar e enviar o assessment?\n\n` +
+      `✅ ${allQuestions.length} questões no total\n` +
+      `✅ ${Object.keys(responses).length} respostas preenchidas\n` +
+      `✅ 100% concluído\n\n` +
+      `Após o envio, você não poderá mais editar as respostas.`
+    );
+
+    if (!confirmed) return;
+
     try {
       setSubmitting(true);
+
+      // Generate submission summary
+      const submissionSummary = {
+        submitted_at: new Date().toISOString(),
+        total_questions: allQuestions.length,
+        answered_questions: Object.keys(responses).length,
+        completion_percentage: 100,
+        vendor_contact: assessment.vendor_registry?.primary_contact_name,
+        vendor_name: assessment.vendor_registry?.name
+      };
 
       const { error } = await supabase
         .from('vendor_assessments')
@@ -225,22 +305,32 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           progress_percentage: 100,
           status: 'completed',
           vendor_submitted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          submission_summary: submissionSummary
         })
         .eq('id', assessment.id);
 
       if (error) throw error;
 
+      // Update local state to show completion
+      setAssessment(prev => prev ? {
+        ...prev,
+        status: 'completed',
+        vendor_submitted_at: new Date().toISOString(),
+        progress_percentage: 100
+      } : null);
+
       toast({
-        title: "Assessment Concluído!",
-        description: "Obrigado por completar o assessment. Nossa equipe irá revisar e entrar em contato."
+        title: "🎉 Assessment Concluído com Sucesso!",
+        description: "Obrigado por completar o assessment. Nossa equipe irá revisar e entrar em contato em breve.",
+        duration: 6000
       });
 
     } catch (error) {
       console.error('Erro ao enviar assessment:', error);
       toast({
-        title: "Erro ao Enviar",
-        description: "Não foi possível finalizar o assessment",
+        title: "❌ Erro ao Enviar",
+        description: "Não foi possível finalizar o assessment. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -254,19 +344,53 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
     const currentQuestions = sections[currentSection].questions;
     const requiredQuestions = currentQuestions.filter(q => q.required);
+    const missingQuestions: string[] = [];
     
     for (const question of requiredQuestions) {
-      if (!responses[question.id] || responses[question.id] === '') {
-        toast({
-          title: "Campos Obrigatórios",
-          description: "Preencha todos os campos obrigatórios antes de continuar",
-          variant: "destructive"
-        });
-        return false;
+      const response = responses[question.id];
+      if (!response || response === '' || (typeof response === 'string' && response.trim() === '')) {
+        missingQuestions.push(question.question);
       }
     }
 
+    if (missingQuestions.length > 0) {
+      toast({
+        title: "⚠️ Campos Obrigatórios Não Preenchidos",
+        description: `${missingQuestions.length} campo(s) obrigatório(s) pendente(s)`,
+        variant: "destructive"
+      });
+      
+      // Scroll to first missing question
+      const firstMissingId = requiredQuestions.find(q => 
+        !responses[q.id] || responses[q.id] === ''
+      )?.id;
+      
+      if (firstMissingId) {
+        const element = document.getElementById(`question-${firstMissingId}`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      return false;
+    }
+
     return true;
+  };
+
+  // Check if a question is answered
+  const isQuestionAnswered = (questionId: string) => {
+    const response = responses[questionId];
+    return response !== undefined && response !== '' && response !== null;
+  };
+
+  // Get validation status for a question
+  const getQuestionValidationStatus = (question: Question) => {
+    const answered = isQuestionAnswered(question.id);
+    
+    if (question.required) {
+      return answered ? 'completed' : 'required';
+    }
+    
+    return answered ? 'completed' : 'optional';
   };
 
   // Next section
@@ -362,17 +486,78 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
       case 'file_upload':
         return (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">Clique para fazer upload ou arraste arquivos aqui</p>
-            <Input
-              type="file"
-              onChange={(e) => {
-                // Handle file upload logic here
-                console.log('File selected:', e.target.files?.[0]);
-              }}
-              className="mt-2"
-            />
+          <div className="space-y-3">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm text-gray-600 mb-2">Clique para fazer upload ou arraste arquivos aqui</p>
+              <p className="text-xs text-gray-500">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB)</p>
+              <Input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 10 * 1024 * 1024) {
+                      toast({
+                        title: "Arquivo muito grande",
+                        description: "O arquivo deve ter no máximo 10MB",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+                    
+                    // Simulate file upload and store file info
+                    const fileInfo = {
+                      name: file.name,
+                      size: file.size,
+                      type: file.type,
+                      uploadedAt: new Date().toISOString(),
+                      url: URL.createObjectURL(file) // For preview, in real scenario would be uploaded URL
+                    };
+                    
+                    setResponses(prev => ({ 
+                      ...prev, 
+                      [question.id]: JSON.stringify(fileInfo)
+                    }));
+                    
+                    toast({
+                      title: "Arquivo anexado",
+                      description: `${file.name} foi anexado com sucesso`
+                    });
+                  }
+                }}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                className="mt-3"
+              />
+            </div>
+            
+            {/* Show uploaded file info */}
+            {value && (() => {
+              try {
+                const fileInfo = JSON.parse(value);
+                return (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <FileCheck className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-sm font-medium">{fileInfo.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(fileInfo.size / 1024).toFixed(1)} KB • {new Date(fileInfo.uploadedAt).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setResponses(prev => ({ ...prev, [question.id]: '' }))}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                );
+              } catch {
+                return null;
+              }
+            })()}
           </div>
         );
 
@@ -430,6 +615,100 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
   const progress = calculateProgress();
   const currentSectionData = sections[currentSection];
+
+  // Show success page if assessment is completed
+  if (assessment?.status === 'completed' && assessment?.vendor_submitted_at) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full">
+          <CardHeader className="text-center">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            </div>
+            <CardTitle className="text-2xl text-green-900 mb-2">
+              🎉 Assessment Concluído com Sucesso!
+            </CardTitle>
+            <p className="text-green-700">
+              Obrigado por completar o assessment de segurança. Suas respostas foram enviadas com sucesso.
+            </p>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {assessment.vendor_assessment_frameworks?.questions?.length || 0}
+                </div>
+                <div className="text-sm text-green-700">Questões Respondidas</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">100%</div>
+                <div className="text-sm text-blue-700">Concluído</div>
+              </div>
+            </div>
+
+            {/* Submission Info */}
+            <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+              <div className="flex items-start space-x-3">
+                <Calendar className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-900">
+                    Enviado em: {new Date(assessment.vendor_submitted_at).toLocaleString('pt-BR')}
+                  </p>
+                  <p className="text-sm text-green-700 mt-1">
+                    Nossa equipe irá revisar suas respostas e entrará em contato em breve.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <User className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Informações de Contato</p>
+                  <p className="text-sm text-blue-700">
+                    Fornecedor: <strong>{assessment.vendor_registry?.name}</strong>
+                  </p>
+                  {assessment.vendor_registry?.primary_contact_name && (
+                    <p className="text-sm text-blue-700">
+                      Contato: <strong>{assessment.vendor_registry.primary_contact_name}</strong>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+              <Button
+                variant="outline"
+                onClick={() => window.print()}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Imprimir Comprovante
+              </Button>
+              <Button
+                onClick={() => window.location.href = 'mailto:suporte@empresa.com?subject=Dúvida sobre Assessment'}
+                className="flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                Entrar em Contato
+              </Button>
+            </div>
+
+            {/* Footer Info */}
+            <div className="text-center text-sm text-gray-500 border-t pt-4">
+              <p>Você receberá uma confirmação por e-mail e atualizações sobre o status da revisão.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -554,32 +833,66 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               </CardHeader>
               
               <CardContent className="space-y-6">
-                {currentSectionData?.questions.map((question, index) => (
-                  <div key={question.id} className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <Label className="text-base font-medium text-gray-900">
-                          {index + 1}. {question.question}
-                          {question.required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        {question.help_text && (
-                          <p className="text-sm text-gray-500 mt-1">{question.help_text}</p>
-                        )}
+                {currentSectionData?.questions.map((question, index) => {
+                  const validationStatus = getQuestionValidationStatus(question);
+                  
+                  return (
+                    <div 
+                      key={question.id} 
+                      id={`question-${question.id}`}
+                      className={`space-y-3 p-4 rounded-lg border transition-colors ${
+                        validationStatus === 'completed' ? 'border-green-200 bg-green-50/30' :
+                        validationStatus === 'required' ? 'border-red-200 bg-red-50/30' :
+                        'border-gray-200 bg-gray-50/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3 flex-1">
+                          {/* Status indicator */}
+                          <div className="flex-shrink-0 mt-1">
+                            {validationStatus === 'completed' ? (
+                              <CheckCircle className="h-5 w-5 text-green-600" />
+                            ) : validationStatus === 'required' ? (
+                              <AlertCircle className="h-5 w-5 text-red-500" />
+                            ) : (
+                              <Clock className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <Label className="text-base font-medium text-gray-900">
+                              {index + 1}. {question.question}
+                              {question.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            {question.help_text && (
+                              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                                <Info className="h-4 w-4" />
+                                {question.help_text}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2 ml-2">
+                          {question.weight && (
+                            <Badge variant="secondary" className="text-xs">
+                              Peso: {question.weight}
+                            </Badge>
+                          )}
+                          {validationStatus === 'completed' && (
+                            <Badge variant="outline" className="text-green-600 border-green-200">
+                              ✓ Respondida
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      {question.weight && (
-                        <Badge variant="secondary" className="ml-2">
-                          Peso: {question.weight}
-                        </Badge>
-                      )}
+                      
+                      <div className="ml-8">
+                        {renderQuestionInput(question)}
+                      </div>
                     </div>
-                    
-                    <div className="ml-4">
-                      {renderQuestionInput(question)}
-                    </div>
-                    
-                    <Separator />
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Auto-save indicator */}
                 {saving && (

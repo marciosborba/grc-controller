@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -57,7 +65,11 @@ import {
   Activity,
   Save,
   X,
-  FileText
+  FileText,
+  MoreHorizontal,
+  Mail,
+  ExternalLink,
+  Copy as CopyIcon
 } from 'lucide-react';
 
 interface VendorAssessment {
@@ -114,6 +126,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   const [selectedAssessment, setSelectedAssessment] = useState<VendorAssessment | null>(null);
   const [showNewAssessmentDialog, setShowNewAssessmentDialog] = useState(false);
   const [showPublicLinkDialog, setShowPublicLinkDialog] = useState(false);
+  const [showAssessmentDetails, setShowAssessmentDetails] = useState(false);
   const [publicLinkData, setPublicLinkData] = useState<{link: string; expiresAt: string} | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<VendorAssessment | null>(null);
@@ -122,6 +135,12 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   const [assessmentMetadata, setAssessmentMetadata] = useState<any>({});
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [questionEditForm, setQuestionEditForm] = useState<any>({});
+  const [progressUpdateTrigger, setProgressUpdateTrigger] = useState(0);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [selectedAssessmentForEmail, setSelectedAssessmentForEmail] = useState<VendorAssessment | null>(null);
+  const [emailForm, setEmailForm] = useState({ email: '', subject: '', message: '' });
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewAssessment, setPreviewAssessment] = useState<VendorAssessment | null>(null);
 
   // Load assessments from vendor registry
   const loadAssessments = async () => {
@@ -302,6 +321,15 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
   useEffect(() => {
     loadAssessments();
+    
+    // One-time table structure inspection for debugging
+    const runTableInspection = async () => {
+      await inspectTableStructure();
+    };
+    
+    if (user?.tenantId || user?.tenant_id) {
+      runTableInspection();
+    }
   }, [user?.tenantId, user?.tenant_id]);
   
   // Verificar periodicamente por novos assessments criados durante onboarding
@@ -333,7 +361,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
     const matchesFilter = currentSelectedFilter === 'all' || 
       (currentSelectedFilter === 'pending' && ['draft', 'sent'].includes(assessment.status)) ||
-      (currentSelectedFilter === 'awaiting_response' && assessment.status === 'sent' && assessment.public_link_id && !assessment.responses) ||
+      (currentSelectedFilter === 'awaiting_response' && assessment.status === 'sent' && assessment.public_link && !assessment.responses) ||
       (currentSelectedFilter === 'in_progress' && assessment.status === 'in_progress') ||
       (currentSelectedFilter === 'completed' && assessment.status === 'completed') ||
       (currentSelectedFilter === 'overdue' && new Date(assessment.due_date) < new Date() && !['completed', 'approved'].includes(assessment.status));
@@ -344,52 +372,30 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   // Fornecedores que receberam assessments mas ainda não responderam
   const pendingVendorAssessments = filteredAssessments.filter(assessment => 
     assessment.status === 'sent' && 
-    assessment.public_link_id && 
+    assessment.public_link && 
     !assessment.responses
   );
 
-  // Generate public link for assessment
-  const generatePublicLink = async (assessmentId: string) => {
-    try {
-      const publicLinkId = `${assessmentId}-${Date.now()}`;
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30); // Expires in 30 days
-
-      const { error } = await supabase
-        .from('vendor_assessments')
-        .update({
-          public_link: publicLinkId,
-          public_link_expires_at: expiresAt.toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', assessmentId);
-
-      if (error) throw error;
-
-      const publicLink = `${window.location.origin}/vendor-assessment/${publicLinkId}`;
+  // Open public link dialog
+  const openPublicLinkDialog = async (assessment: VendorAssessment) => {
+    // If link already exists and is not expired, show it
+    if (assessment.public_link && assessment.public_link_expires_at) {
+      const now = new Date();
+      const expiresAt = new Date(assessment.public_link_expires_at);
       
-      setPublicLinkData({
-        link: publicLink,
-        expiresAt: expiresAt.toISOString()
-      });
-
-      setShowPublicLinkDialog(true);
-      
-      toast({
-        title: "Link Público Gerado",
-        description: "O link foi criado com sucesso. Você pode copiá-lo e enviá-lo ao fornecedor."
-      });
-
-      await loadAssessments(); // Refresh data
-
-    } catch (error) {
-      console.error('Erro ao gerar link público:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível gerar o link público",
-        variant: "destructive"
-      });
+      if (expiresAt > now) {
+        const publicUrl = `${window.location.origin}/vendor-assessment/${assessment.public_link}`;
+        setPublicLinkData({
+          link: publicUrl,
+          expiresAt: assessment.public_link_expires_at
+        });
+        setShowPublicLinkDialog(true);
+        return;
+      }
     }
+
+    // Generate new link if doesn't exist or expired
+    await generatePublicLink(assessment);
   };
 
   // Copy link to clipboard
@@ -410,18 +416,129 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     }
   };
 
-  // Send assessment via email (placeholder for integration with notification system)
-  const sendAssessmentEmail = async (assessment: VendorAssessment) => {
+  // Open preview of public assessment page
+  const openPreviewDialog = async (assessment: VendorAssessment) => {
     if (!assessment.public_link) {
-      await generatePublicLink(assessment.id);
+      toast({
+        title: "Gerando link público...",
+        description: "Aguarde, estamos criando o link para preview",
+      });
+      const result = await generatePublicLink(assessment);
+      if (result) {
+        // Reload assessments to get updated data with public_link
+        await loadAssessments();
+        // Find the updated assessment
+        const updatedAssessment = assessments.find(a => a.id === assessment.id);
+        if (updatedAssessment?.public_link) {
+          setPreviewAssessment(updatedAssessment);
+          setShowPreviewDialog(true);
+        }
+      }
+      return;
+    }
+    
+    setPreviewAssessment(assessment);
+    setShowPreviewDialog(true);
+  };
+
+  // Open email dialog for sending assessment
+  const openEmailDialog = async (assessment: VendorAssessment) => {
+    // Ensure public link exists
+    if (!assessment.public_link) {
+      const result = await generatePublicLink(assessment);
+      if (result) {
+        // Reload assessments to get updated data
+        await loadAssessments();
+        // Find the updated assessment and try again
+        const updatedAssessment = assessments.find(a => a.id === assessment.id);
+        if (updatedAssessment?.public_link) {
+          setSelectedAssessmentForEmail(updatedAssessment);
+        }
+      }
       return;
     }
 
-    // This would integrate with the notification system
-    toast({
-      title: "Assessment Enviado",
-      description: `Assessment enviado para ${assessment.vendor_registry?.primary_contact_email || 'fornecedor'}`,
+    setSelectedAssessmentForEmail(assessment);
+    
+    // Pre-fill email form with default values
+    const defaultSubject = `Assessment de Segurança - ${assessment.assessment_name}`;
+    const publicUrl = `${window.location.origin}/vendor-assessment/${assessment.public_link}`;
+    const defaultMessage = `Olá,
+
+Você foi convidado(a) para responder um assessment de segurança.
+
+**Detalhes do Assessment:**
+• Nome: ${assessment.assessment_name}
+• Fornecedor: ${assessment.vendor_registry?.name}
+• Prazo: ${new Date(assessment.due_date).toLocaleDateString('pt-BR')}
+
+**Link para responder:**
+${publicUrl}
+
+Este link expira em 30 dias. Por favor, complete o assessment até a data limite.
+
+Caso tenha dúvidas, entre em contato conosco.
+
+Atenciosamente,
+Equipe de Compliance`;
+
+    setEmailForm({
+      email: assessment.vendor_registry?.primary_contact_email || '',
+      subject: defaultSubject,
+      message: defaultMessage
     });
+    
+    setShowEmailDialog(true);
+  };
+
+  // Send assessment via email
+  const sendAssessmentEmail = async () => {
+    if (!selectedAssessmentForEmail || !emailForm.email) {
+      toast({
+        title: "Erro",
+        description: "Email é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Here you would integrate with your email service
+      // For now, we'll simulate the email sending
+      console.log('Sending email:', {
+        to: emailForm.email,
+        subject: emailForm.subject,
+        message: emailForm.message,
+        assessment: selectedAssessmentForEmail
+      });
+
+      // Update vendor contact email if it was empty
+      if (!selectedAssessmentForEmail.vendor_registry?.primary_contact_email && emailForm.email) {
+        await supabase
+          .from('vendor_registry')
+          .update({ primary_contact_email: emailForm.email })
+          .eq('id', selectedAssessmentForEmail.vendor_id);
+      }
+
+      toast({
+        title: "✅ Assessment Enviado",
+        description: `Assessment enviado para ${emailForm.email}`,
+      });
+
+      setShowEmailDialog(false);
+      setEmailForm({ email: '', subject: '', message: '' });
+      
+      // Reload assessments to reflect any updates
+      await loadAssessments();
+
+    } catch (error) {
+      console.error('Erro ao enviar email:', error);
+      toast({
+        title: "❌ Erro ao Enviar",
+        description: "Não foi possível enviar o email. Tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Create formal assessment from localStorage template
@@ -497,6 +614,427 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       });
     }
   };
+
+  // Criar assessment formal a partir de um temporário
+  const createFormalAssessmentFromTemp = async (tempAssessment: VendorAssessment) => {
+    console.log('🔄 =========== CREATE FORMAL ASSESSMENT FROM TEMP START ===========');
+    try {
+      console.log('🔄 Step 1: Starting conversion...');
+      console.log('📋 Temporary Assessment ID:', tempAssessment.id);
+      console.log('📋 Vendor ID:', tempAssessment.vendor_id);
+      console.log('📋 Framework ID:', tempAssessment.framework_id);
+      
+      // Step 2: Resolve framework ID
+      console.log('🔄 Step 2: Resolving framework ID...');
+      let frameworkId = tempAssessment.framework_id;
+      console.log('🔍 Original Framework ID:', frameworkId);
+      
+      if (frameworkId === 'nist_csf_default' || frameworkId === 'iso_27001_27701_default') {
+        console.log('🔍 Detected template framework, trying different approach...');
+        
+        // Tentar buscar qualquer framework existente
+        try {
+          const { data: anyFramework } = await supabase
+            .from('vendor_assessment_frameworks')
+            .select('id')
+            .limit(1);
+            
+          if (anyFramework && anyFramework.length > 0) {
+            frameworkId = anyFramework[0].id;
+            console.log('✅ Found existing framework:', frameworkId);
+          } else {
+            console.log('⚠️ No frameworks found, skipping framework_id');
+            frameworkId = null;
+          }
+        } catch (error) {
+          console.log('⚠️ Framework search failed, skipping framework_id');
+          frameworkId = null;
+        }
+      }
+      
+      console.log('🔍 Final Framework ID:', frameworkId);
+      
+      // Step 3: Verify vendor exists and prepare assessment data
+      console.log('🔄 Step 3: Verifying vendor and preparing assessment data...');
+      
+      // Check if vendor exists
+      const { data: vendor, error: vendorError } = await supabase
+        .from('vendor_registry')
+        .select('id, name')
+        .eq('id', tempAssessment.vendor_id)
+        .single();
+        
+      console.log('🔍 Vendor Check Results:');
+      console.log('  Vendor Error:', vendorError);
+      console.log('  Vendor Data:', vendor);
+      
+      if (vendorError || !vendor) {
+        console.log('🚨 VENDOR NOT FOUND!');
+        throw new Error(`Fornecedor não encontrado: ${tempAssessment.vendor_id}`);
+      }
+      
+      // Prepare minimal assessment data with only essential columns
+      // Try without assessment_name first to isolate the column issue
+      const assessmentData: any = {
+        vendor_id: tempAssessment.vendor_id,
+        tenant_id: user?.tenantId || user?.tenant_id
+      };
+      
+      // Add framework_id only if we have a valid one
+      if (frameworkId) {
+        assessmentData.framework_id = frameworkId;
+        console.log('🔗 Added framework_id to data:', frameworkId);
+      }
+      
+      console.log('🔍 Using minimal essential fields only');
+      
+      console.log('📄 Assessment Data to Insert:', assessmentData);
+      
+      // Step 4: Insert into database
+      console.log('🔄 Step 4: Inserting assessment into database...');
+      
+      // Simplificar INSERT - sem JOINs complexos
+      const { data, error } = await supabase
+        .from('vendor_assessments')
+        .insert(assessmentData)
+        .select('*')
+        .single();
+        
+      console.log('📊 INSERT Results:');
+      console.log('  Error:', error);
+      console.log('  Data:', data);
+      
+      if (error) {
+        console.log('🚨 INSERT ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+        console.log('  Full Error Object:', error);
+        
+        toast({
+          title: "❌ Erro ao Criar Assessment",
+          description: `Não foi possível salvar o assessment: ${error.message}`,
+          variant: "destructive"
+        });
+        console.log('🔄 =========== CREATE FORMAL ASSESSMENT FAILED ===========');
+        return null;
+      }
+      
+      if (!data) {
+        console.log('🚨 NO DATA RETURNED FROM INSERT!');
+        toast({
+          title: "❌ Erro",
+          description: "Nenhum dado retornado após inserção",
+          variant: "destructive"
+        });
+        console.log('🔄 =========== CREATE FORMAL ASSESSMENT FAILED ===========');
+        return null;
+      }
+      
+      console.log('✅ Assessment formal criado com sucesso!');
+      console.log('📄 Created Assessment ID:', data.id);
+      console.log('📄 Full Created Data:', data);
+      
+      // Step 5: Cleanup and reload
+      console.log('🔄 Step 5: Cleaning up localStorage and reloading...');
+      
+      const tempKey = `vendor_${tempAssessment.vendor_id}_selected_template`;
+      console.log('🗑️ Removing localStorage key:', tempKey);
+      localStorage.removeItem(tempKey);
+      
+      console.log('🔄 Reloading assessments list...');
+      await loadAssessments();
+      
+      toast({
+        title: "✅ Assessment Criado",
+        description: "Assessment salvo com sucesso no banco de dados.",
+      });
+      
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT SUCCESS ===========');
+      return data;
+      
+    } catch (error) {
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT EXCEPTION ===========');
+      console.log('🚨 EXCEPTION CAUGHT:');
+      console.log('  Error Type:', typeof error);
+      console.log('  Error Message:', error?.message || error);
+      console.log('  Error Stack:', error?.stack);
+      console.log('  Full Error Object:', error);
+      
+      toast({
+        title: "❌ Erro",
+        description: `Erro interno ao criar assessment: ${error?.message || error}`,
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT END ===========');
+    }
+  };
+  
+  // Debug function with comprehensive logging
+  const debugVendorAssessments = async () => {
+    console.log('🔍 ======== DEBUG VENDOR_ASSESSMENTS TABLE ========');
+    console.log('🔍 Step 1: Testing basic table access...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('vendor_assessments')
+        .select('id, assessment_name, status, public_link, tenant_id, vendor_id')
+        .limit(5);
+      
+      console.log('🔍 Step 1 Results:');
+      console.log('  ❌ Error:', error);
+      console.log('  ✅ Data:', data);
+      console.log('  📊 Data count:', data?.length || 0);
+      
+      if (error) {
+        console.log('🚨 ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+      } else {
+        console.log('✅ Table access successful!');
+        data?.forEach((item, index) => {
+          console.log(`  📝 Record ${index + 1}:`, {
+            id: item.id,
+            name: item.assessment_name,
+            status: item.status,
+            hasPublicLink: !!item.public_link,
+            tenantId: item.tenant_id,
+            vendorId: item.vendor_id
+          });
+        });
+      }
+      
+    } catch (err) {
+      console.log('🚨 EXCEPTION in debugVendorAssessments:', err);
+    }
+    
+    console.log('🔍 ======== END DEBUG TABLE ACCESS ========');
+  };
+
+  // Debug authentication and user context
+  const debugUserContext = () => {
+    console.log('👤 ======== DEBUG USER CONTEXT ========');
+    console.log('👤 User object:', user);
+    console.log('👤 User ID:', user?.id);
+    console.log('👤 User Email:', user?.email);
+    console.log('👤 Tenant ID (new):', user?.tenantId);
+    console.log('👤 Tenant ID (old):', user?.tenant_id);
+    console.log('👤 User authenticated:', !!user?.id);
+    console.log('👤 Has tenant:', !!(user?.tenantId || user?.tenant_id));
+    console.log('👤 ======== END DEBUG USER CONTEXT ========');
+  };
+
+  // Gerar link público para o assessment com debug completo
+  const generatePublicLink = async (assessment: VendorAssessment) => {
+    console.log('🚀 =================== GENERATE PUBLIC LINK START ===================');
+    
+    try {
+      // Step 1: Debug user context
+      console.log('🚀 Step 1: Checking user context...');
+      debugUserContext();
+      
+      // Step 2: Debug assessment data
+      console.log('🚀 Step 2: Analyzing assessment data...');
+      console.log('📋 Assessment ID:', assessment.id);
+      console.log('📋 Assessment Name:', assessment.assessment_name);
+      console.log('📋 Assessment Status:', assessment.status);
+      console.log('📋 Assessment Type:', assessment.assessment_type);
+      console.log('📋 Vendor ID:', assessment.vendor_id);
+      console.log('📋 Framework ID:', assessment.framework_id);
+      console.log('📋 Current Public Link:', assessment.public_link);
+      console.log('📋 Public Link Expires:', assessment.public_link_expires_at);
+      console.log('📋 Full Assessment Object:', assessment);
+      
+      // Step 3: Check if temporary assessment
+      console.log('🚀 Step 3: Checking if assessment is temporary...');
+      const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
+      console.log('🔄 Is Temporary Assessment:', isTemporary);
+      
+      if (isTemporary) {
+        console.log('⚠️ TEMPORARY ASSESSMENT DETECTED - Converting to formal...');
+        
+        toast({
+          title: "Criando assessment...",
+          description: "Salvando assessment no banco antes de gerar o link público.",
+        });
+
+        const formalAssessment = await createFormalAssessmentFromTemp(assessment);
+        if (!formalAssessment) {
+          console.log('❌ Failed to create formal assessment');
+          return false;
+        }
+
+        console.log('✅ Formal assessment created, recursively calling generatePublicLink...');
+        return await generatePublicLink(formalAssessment);
+      }
+      
+      // Step 4: Debug table access and inspect structure
+      console.log('🚀 Step 4: Testing table access...');
+      await debugVendorAssessments();
+      
+      // Step 4.1: Inspect table structure
+      console.log('🚀 Step 4.1: Inspecting table structure...');
+      await inspectTableStructure();
+      
+      // Step 5: Generate secure public link
+      console.log('🚀 Step 5: Generating secure public link ID...');
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 15);
+      const secureHash = btoa(`${assessment.id}_${timestamp}_${randomStr}`).replace(/[+/=]/g, '');
+      const publicLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)}`;
+      
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // Expira em 30 dias
+
+      console.log('🔗 Generated Public Link ID:', publicLinkId);
+      console.log('📅 Expires At:', expiresAt.toISOString());
+
+      // Step 6: Verify assessment exists in database
+      console.log('🚀 Step 6: Verifying assessment exists in database...');
+      console.log('🔍 Searching for assessment ID:', assessment.id);
+      
+      const { data: existingAssessment, error: readError } = await supabase
+        .from('vendor_assessments')
+        .select('id, tenant_id, status, assessment_name, vendor_id')
+        .eq('id', assessment.id)
+        .single();
+
+      console.log('🔍 Read Query Results:');
+      console.log('  ❌ Read Error:', readError);
+      console.log('  ✅ Existing Assessment:', existingAssessment);
+
+      if (readError) {
+        console.log('🚨 READ ERROR DETAILS:');
+        console.log('  Code:', readError.code);
+        console.log('  Message:', readError.message);
+        console.log('  Details:', readError.details);
+        console.log('  Hint:', readError.hint);
+        throw new Error(`Não foi possível acessar o assessment: ${readError.message}`);
+      }
+
+      if (!existingAssessment) {
+        console.log('🚨 ASSESSMENT NOT FOUND in database!');
+        throw new Error('Assessment não encontrado no banco de dados');
+      }
+
+      console.log('✅ Assessment found in database:', existingAssessment);
+
+      // Step 7: Authentication and permission checks
+      console.log('🚀 Step 7: Validating user permissions...');
+      
+      if (!user?.id) {
+        console.log('🚨 USER NOT AUTHENTICATED!');
+        throw new Error('Usuário não autenticado');
+      }
+      console.log('✅ User is authenticated:', user.id);
+
+      const userTenantId = user?.tenantId || user?.tenant_id;
+      console.log('🏢 User Tenant ID:', userTenantId);
+      console.log('🏢 Assessment Tenant ID:', existingAssessment.tenant_id);
+      
+      if (existingAssessment.tenant_id !== userTenantId) {
+        console.log('🚨 TENANT MISMATCH! User does not own this assessment');
+        throw new Error('Você não tem permissão para acessar este assessment');
+      }
+      console.log('✅ Tenant validation passed');
+
+      // Step 8: Perform the update
+      console.log('🚀 Step 8: Updating assessment with public link...');
+      
+      const updateData = {
+        public_link: publicLinkId,
+        public_link_expires_at: expiresAt.toISOString(),
+        status: assessment.status === 'draft' ? 'sent' : assessment.status
+      };
+      
+      console.log('📝 Update Data:', updateData);
+      console.log('🎯 Update WHERE condition: id =', assessment.id);
+      
+      const { data, error } = await supabase
+        .from('vendor_assessments')
+        .update(updateData)
+        .eq('id', assessment.id)
+        .select('id, public_link, public_link_expires_at, status');
+
+      console.log('🔄 Update Query Results:');
+      console.log('  ❌ Update Error:', error);
+      console.log('  ✅ Updated Data:', data);
+      console.log('  📊 Data Length:', data?.length || 0);
+
+      if (error) {
+        console.log('🚨 UPDATE ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+        console.log('  Full Error Object:', error);
+        throw new Error(`Erro ao atualizar assessment: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        console.log('🚨 NO DATA RETURNED FROM UPDATE!');
+        console.log('This could indicate:');
+        console.log('  - RLS policy blocking the update');
+        console.log('  - Assessment ID does not exist');
+        console.log('  - User lacks permission');
+        throw new Error('Assessment não foi atualizado. Verifique suas permissões.');
+      }
+
+      console.log('✅ UPDATE SUCCESSFUL!');
+      console.log('📄 Updated Record:', data[0]);
+
+      // Step 9: Generate final URL and update UI
+      console.log('🚀 Step 9: Generating final public URL and updating UI...');
+      
+      const publicUrl = `${window.location.origin}/vendor-assessment/${publicLinkId}`;
+      console.log('🌐 Generated Public URL:', publicUrl);
+      
+      console.log('🎨 Setting public link data for dialog...');
+      setPublicLinkData({
+        link: publicUrl,
+        expiresAt: expiresAt.toISOString()
+      });
+      
+      console.log('📖 Opening public link dialog...');
+      setShowPublicLinkDialog(true);
+
+      // Step 10: Reload assessments and finalize
+      console.log('🚀 Step 10: Reloading assessments list...');
+      await loadAssessments();
+      console.log('✅ Assessments list reloaded');
+
+      console.log('🎉 Showing success toast...');
+      toast({
+        title: "✅ Link Público Gerado",
+        description: "O link foi gerado com sucesso e expira em 30 dias. Compartilhe com o fornecedor."
+      });
+
+      console.log('🚀 =================== GENERATE PUBLIC LINK SUCCESS ===================');
+      return true; // Success
+
+    } catch (error) {
+      console.log('🚀 =================== GENERATE PUBLIC LINK FAILED ===================');
+      console.log('🚨 FINAL ERROR CAUGHT:');
+      console.log('  Error Type:', typeof error);
+      console.log('  Error Message:', error?.message || error);
+      console.log('  Error Stack:', error?.stack);
+      console.log('  Full Error Object:', error);
+      
+      toast({
+        title: "❌ Erro",
+        description: `Não foi possível gerar o link público: ${error?.message || error}`,
+        variant: "destructive"
+      });
+      return false; // Failure
+    } finally {
+      console.log('🚀 =================== GENERATE PUBLIC LINK END ===================');
+    }
+  };
   
   // Open assessment editor
   const openAssessmentEditor = async (assessment: VendorAssessment) => {
@@ -511,55 +1049,95 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       
       // Carregar questões do framework ou template
       let questions = [];
+      let savedResponses = {};
+      let savedMetadata = {};
       
-      // Primeiro, tentar carregar do framework se existir
-      if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
-        questions = assessment.vendor_assessment_frameworks.questions;
-        console.log('Questões carregadas do framework:', questions.length, 'questões');
-      } 
-      // Segundo, tentar carregar baseado no framework_id
-      else if (assessment.framework_id) {
-        console.log('Carregando questões baseado no framework_id:', assessment.framework_id);
+      // Para assessments virtuais/pendentes, verificar se há dados salvos no localStorage
+      if (assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
+        const vendorId = assessment.vendor_id;
+        const dataStorageKey = `vendor_${vendorId}_assessment_data`;
+        const savedData = localStorage.getItem(dataStorageKey);
         
-        if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id.includes('nist')) {
-          questions = await loadNistCsfQuestions();
-          console.log('Questões NIST CSF carregadas:', questions.length);
-        } else if (assessment.framework_id === 'iso_27001_27701_default' || assessment.framework_id.includes('iso')) {
-          questions = await loadIsoQuestions();
-          console.log('Questões ISO carregadas:', questions.length);
-        } else {
-          questions = await loadDefaultQuestions();
-          console.log('Questões padrão carregadas (framework não reconhecido):', questions.length);
+        if (savedData) {
+          try {
+            const parsedData = JSON.parse(savedData);
+            console.log('Dados salvos encontrados no localStorage:', parsedData);
+            savedResponses = parsedData.responses || {};
+            savedMetadata = {
+              due_date: parsedData.due_date || assessment.due_date,
+              priority: parsedData.priority || assessment.priority,
+              status: parsedData.status || assessment.status,
+              progress_percentage: parsedData.progress_percentage || assessment.progress_percentage,
+              vendor_submitted_at: parsedData.vendor_submitted_at || assessment.vendor_submitted_at,
+              internal_review_status: parsedData.internal_review_status || assessment.internal_review_status,
+              reviewer_notes: parsedData.reviewer_notes || '',
+              overall_score: parsedData.overall_score || assessment.overall_score,
+              risk_level: parsedData.risk_level || assessment.risk_level
+            };
+            
+            // Se há questões salvas, usar elas
+            if (parsedData.questions && parsedData.questions.length > 0) {
+              questions = parsedData.questions;
+              console.log('Usando questões salvas do localStorage');
+            }
+          } catch (e) {
+            console.warn('Erro ao parsear dados salvos do localStorage:', e);
+          }
         }
       }
-      // Terceiro, tentar carregar baseado no template_name
-      else if (assessment.metadata?.template_name) {
-        console.log('Carregando questões baseado no template_name:', assessment.metadata.template_name);
-        
-        if (assessment.metadata.template_name.toLowerCase().includes('nist')) {
-          questions = await loadNistCsfQuestions();
-          console.log('Questões NIST CSF carregadas (por template):', questions.length);
-        } else if (assessment.metadata.template_name.toLowerCase().includes('iso')) {
-          questions = await loadIsoQuestions();
-          console.log('Questões ISO carregadas (por template):', questions.length);
-        } else {
-          questions = await loadDefaultQuestions();
-          console.log('Questões padrão carregadas (template não reconhecido):', questions.length);
+      
+      // Se ainda não temos questões, carregar baseado no framework
+      if (questions.length === 0) {
+        // Primeiro, tentar carregar do framework se existir
+        if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
+          questions = assessment.vendor_assessment_frameworks.questions;
+          console.log('Questões carregadas do framework:', questions.length, 'questões');
+        } 
+        // Segundo, tentar carregar baseado no framework_id
+        else if (assessment.framework_id) {
+          console.log('Carregando questões baseado no framework_id:', assessment.framework_id);
+          
+          if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id.includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('Questões NIST CSF carregadas:', questions.length);
+          } else if (assessment.framework_id === 'iso_27001_27701_default' || assessment.framework_id.includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('Questões ISO carregadas:', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('Questões padrão carregadas (framework não reconhecido):', questions.length);
+          }
         }
-      }
-      // Último recurso: carregar questões padrão
-      else {
-        console.log('Carregando questões padrão (fallback final)');
-        questions = await loadDefaultQuestions();
-        console.log('Questões padrão carregadas (fallback):', questions.length);
+        // Terceiro, tentar carregar baseado no template_name
+        else if (assessment.metadata?.template_name) {
+          console.log('Carregando questões baseado no template_name:', assessment.metadata.template_name);
+          
+          if (assessment.metadata.template_name.toLowerCase().includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('Questões NIST CSF carregadas (por template):', questions.length);
+          } else if (assessment.metadata.template_name.toLowerCase().includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('Questões ISO carregadas (por template):', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('Questões padrão carregadas (template não reconhecido):', questions.length);
+          }
+        }
+        // Último recurso: carregar questões padrão
+        else {
+          console.log('Carregando questões padrão (fallback final)');
+          questions = await loadDefaultQuestions();
+          console.log('Questões padrão carregadas (fallback):', questions.length);
+        }
       }
       
       console.log('Questões finais carregadas:', questions);
-      console.log('Respostas existentes:', assessment.responses);
+      console.log('Respostas existentes (assessment):', assessment.responses);
+      console.log('Respostas salvas (localStorage):', savedResponses);
       
-      setAssessmentQuestions(questions);
-      setAssessmentResponses(assessment.responses || {});
-      setAssessmentMetadata({
+      // Combinar respostas existentes com respostas salvas (localStorage tem precedência)
+      const finalResponses = { ...(assessment.responses || {}), ...savedResponses };
+      const finalMetadata = Object.keys(savedMetadata).length > 0 ? savedMetadata : {
         due_date: assessment.due_date,
         priority: assessment.priority,
         status: assessment.status,
@@ -569,6 +1147,16 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         reviewer_notes: assessment.reviewer_notes || '',
         overall_score: assessment.overall_score,
         risk_level: assessment.risk_level
+      };
+      
+      setAssessmentQuestions(questions);
+      setAssessmentResponses(finalResponses);
+      setAssessmentMetadata(finalMetadata);
+      
+      console.log('Estado final setado:', {
+        questions: questions.length,
+        responses: Object.keys(finalResponses).length,
+        metadata: finalMetadata
       });
       
       console.log('=== ABRINDO MODAL ===');
@@ -856,6 +1444,9 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       
       console.log('Fechando modal e recarregando assessments...');
       setShowEditDialog(false);
+      
+      // Disparar atualização da tabela
+      setProgressUpdateTrigger(prev => prev + 1);
       await loadAssessments();
       
       console.log('=== SALVAMENTO CONCLUÍDO ===');
@@ -911,6 +1502,48 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     console.log('=== FIM DEBUG SISTEMA ===\n');
   };
   
+  // Debug: Verificar estrutura da tabela vendor_assessments
+  const inspectTableStructure = async () => {
+    console.log('\n=== INSPECIONAR ESTRUTURA TABELA ===');
+    try {
+      // Consultar colunas da tabela vendor_assessments
+      const { data: columns, error: columnsError } = await supabase
+        .from('information_schema.columns')
+        .select('column_name, data_type, is_nullable')
+        .eq('table_name', 'vendor_assessments')
+        .eq('table_schema', 'public');
+
+      if (columnsError) {
+        console.error('❌ Erro ao consultar colunas:', columnsError);
+        
+        // Alternativa: tentar consultar a tabela diretamente
+        console.log('🔄 Tentando consulta alternativa...');
+        const { data: testData, error: testError } = await supabase
+          .from('vendor_assessments')
+          .select('*')
+          .limit(0);
+        
+        console.log('📊 Teste consulta vendor_assessments:', { testData, testError });
+      } else {
+        console.log('📋 Colunas encontradas na tabela vendor_assessments:');
+        const columnList = columns?.map((col, index) => 
+          `${index + 1}. ${col.column_name} (${col.data_type}) - ${col.is_nullable ? 'NULL' : 'NOT NULL'}`
+        ).join('\n   ');
+        console.log('   ' + columnList);
+        
+        // Also show in toast for visibility
+        toast({
+          title: "Estrutura da Tabela Inspecionada",
+          description: `Encontradas ${columns?.length} colunas na tabela vendor_assessments. Verifique o console para detalhes.`,
+          duration: 5000
+        });
+      }
+    } catch (error) {
+      console.error('💥 Erro na inspeção da tabela:', error);
+    }
+    console.log('=== FIM INSPEÇÃO TABELA ===\n');
+  };
+
   // Debug: Testar conectividade Supabase
   const testSupabaseConnection = async () => {
     console.log('\n=== TESTE CONECTIVIDADE SUPABASE ===');
@@ -1181,6 +1814,36 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         }
       };
       
+      // Salvar no localStorage para persistência imediata
+      if (editingAssessment) {
+        const vendorId = editingAssessment.vendor_id;
+        const storageKey = `vendor_${vendorId}_assessment_data`;
+        
+        // Obter dados existentes ou criar novos
+        const existingDataStr = localStorage.getItem(storageKey);
+        let existingData = {};
+        try {
+          existingData = existingDataStr ? JSON.parse(existingDataStr) : {};
+        } catch (e) {
+          console.warn('Erro ao parsear dados existentes:', e);
+        }
+        
+        const storageData = {
+          ...existingData,
+          responses: newResponses,
+          questions: assessmentQuestions,
+          ...assessmentMetadata,
+          lastUpdated: new Date().toISOString(),
+          assessmentId: editingAssessment.id
+        };
+        
+        localStorage.setItem(storageKey, JSON.stringify(storageData));
+        console.log('   - Resposta salva no localStorage:', storageKey);
+        
+        // Disparar atualização da tabela
+        setProgressUpdateTrigger(prev => prev + 1);
+      }
+      
       console.log('Estado novo:', newResponses[questionId]);
       console.log('Total respostas:', Object.keys(newResponses).length);
       console.log('=== FIM UPDATE RESPONSE ===\n');
@@ -1312,6 +1975,35 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           [questionId]: updatedResponse
         };
         
+        // Salvar no localStorage para persistência imediata
+        if (editingAssessment) {
+          const vendorId = editingAssessment.vendor_id;
+          const storageKey = `vendor_${vendorId}_assessment_data`;
+          
+          const existingDataStr = localStorage.getItem(storageKey);
+          let existingData = {};
+          try {
+            existingData = existingDataStr ? JSON.parse(existingDataStr) : {};
+          } catch (e) {
+            console.warn('Erro ao parsear dados existentes:', e);
+          }
+          
+          const storageData = {
+            ...existingData,
+            responses: newResponses,
+            questions: assessmentQuestions,
+            ...assessmentMetadata,
+            lastUpdated: new Date().toISOString(),
+            assessmentId: editingAssessment.id
+          };
+          
+          localStorage.setItem(storageKey, JSON.stringify(storageData));
+          console.log('Evidência salva no localStorage:', storageKey);
+          
+          // Disparar atualização da tabela
+          setProgressUpdateTrigger(prev => prev + 1);
+        }
+        
         console.log('Evidência adicionada, novas respostas:', newResponses);
         return newResponses;
       });
@@ -1376,6 +2068,57 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       progress: totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0
     };
   };
+  
+  // Calcular progresso real baseado nos dados do localStorage (memoizado)
+  const getActualProgress = useMemo(() => {
+    const progressCache = new Map<string, number>();
+    
+    return (assessment: VendorAssessment) => {
+      const cacheKey = `${assessment.id}-${progressUpdateTrigger}`;
+      
+      if (progressCache.has(cacheKey)) {
+        return progressCache.get(cacheKey)!;
+      }
+      
+      // Se é um assessment formal no banco, verificar se há dados mais recentes no localStorage
+      const vendorId = assessment.vendor_id;
+      const storageKey = `vendor_${vendorId}_assessment_data`;
+      const savedData = localStorage.getItem(storageKey);
+      
+      let progress = assessment.progress_percentage || 0;
+      
+      if (savedData) {
+        try {
+          const parsedData = JSON.parse(savedData);
+          
+          // Verificar se os dados são mais recentes que o assessment
+          const savedTime = new Date(parsedData.lastUpdated || 0);
+          const assessmentTime = new Date(assessment.updated_at || assessment.created_at || 0);
+          
+          // Se há dados salvos e são mais recentes, usar eles
+          if (savedTime > assessmentTime || assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
+            const responses = parsedData.responses || {};
+            const questions = parsedData.questions || [];
+            
+            if (questions.length > 0) {
+              const answeredQuestions = Object.keys(responses).filter(questionId => {
+                const response = responses[questionId];
+                return response && response.answer && response.answer.toString().trim() !== '';
+              }).length;
+              
+              progress = Math.round((answeredQuestions / questions.length) * 100);
+              console.log(`Progresso atualizado para ${assessment.assessment_name}: ${progress}% (${answeredQuestions}/${questions.length})`);
+            }
+          }
+        } catch (e) {
+          console.warn('Erro ao calcular progresso do localStorage:', e);
+        }
+      }
+      
+      progressCache.set(cacheKey, progress);
+      return progress;
+    };
+  }, [progressUpdateTrigger]);
 
   // Get status badge
   const getStatusBadge = (status: string, dueDate: string, assessment: VendorAssessment) => {
@@ -1592,7 +2335,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                       key={assessment.id} 
                       className={`
                         hover:bg-muted/50 transition-colors
-                        ${assessment.status === 'sent' && assessment.public_link_id && !assessment.responses 
+                        ${assessment.status === 'sent' && assessment.public_link && !assessment.responses 
                           ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500' 
                           : ''
                         }
@@ -1646,9 +2389,9 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                       
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Progress value={assessment.progress_percentage} className="w-12 h-2" />
+                          <Progress value={getActualProgress(assessment)} className="w-12 h-2" />
                           <span className="text-xs text-muted-foreground">
-                            {assessment.progress_percentage}%
+                            {getActualProgress(assessment)}%
                           </span>
                         </div>
                       </TableCell>
@@ -1660,62 +2403,82 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                       </TableCell>
                       
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Sempre mostrar botão de editar primeiro */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openAssessmentEditor(assessment)}
-                            title="Editar Assessment"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedAssessment(assessment)}
-                            title="Visualizar"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          
-                          {/* Mostrar botão criar apenas para assessments pendentes */}
-                          {assessment.metadata?.pending_creation && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => createFormalAssessment(assessment)}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              title="Criar Assessment Formal"
-                            >
-                              <Plus className="h-4 w-4" />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Abrir menu</span>
                             </Button>
-                          )}
-                          
-                          {/* Botões adicionais apenas para assessments não pendentes */}
-                          {!assessment.metadata?.pending_creation && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => generatePublicLink(assessment.id)}
-                                title="Gerar Link Público"
-                              >
-                                <Link className="h-4 w-4" />
-                              </Button>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => sendAssessmentEmail(assessment)}
-                                title="Enviar por Email"
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Clicou em editar:', assessment.id);
+                                openAssessmentEditor(assessment);
+                              }}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar Assessment
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Clicou em preview:', assessment.id);
+                                openPreviewDialog(assessment);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Assessment Preview
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Clicou em detalhes:', assessment.id);
+                                setSelectedAssessment(assessment);
+                                setShowAssessmentDetails(true);
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Visualizar Detalhes
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+                            
+                            {/* Ações de link público e email - sempre disponíveis para assessments reais */}
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Clicou em link público:', assessment.id);
+                                openPublicLinkDialog(assessment);
+                              }}
+                            >
+                              <Link className="h-4 w-4 mr-2" />
+                              Gerar/Ver Link Público
+                            </DropdownMenuItem>
+                            
+                            <DropdownMenuItem 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Clicou em enviar email:', assessment.id);
+                                openEmailDialog(assessment);
+                              }}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Enviar Assessment
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1777,6 +2540,209 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="sm:max-w-4xl h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ExternalLink className="h-5 w-5 text-primary" />
+              Preview da Página Pública
+            </DialogTitle>
+            <DialogDescription>
+              Visualização de como o fornecedor verá a página de assessment
+            </DialogDescription>
+          </DialogHeader>
+          
+          {previewAssessment && (
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`}
+                className="w-full h-full border rounded-lg"
+                title="Preview da Página Pública"
+              />
+            </div>
+          )}
+          
+          <div className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (previewAssessment?.public_link) {
+                  window.open(`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`, '_blank');
+                }
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Abrir em Nova Aba
+            </Button>
+            <Button onClick={() => setShowPreviewDialog(false)}>
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assessment Details Dialog */}
+      <Dialog open={showAssessmentDetails} onOpenChange={setShowAssessmentDetails}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Detalhes do Assessment
+            </DialogTitle>
+            <DialogDescription>
+              Informações detalhadas do assessment selecionado
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAssessment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Nome</Label>
+                  <p className="text-sm">{selectedAssessment.assessment_name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Tipo</Label>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {selectedAssessment.assessment_type.replace('_', ' ')}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <p className="text-sm">{getStatusBadge(selectedAssessment.status, selectedAssessment.due_date, selectedAssessment)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Prioridade</Label>
+                  <Badge variant="outline" className={`text-xs ${
+                    selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
+                    selectedAssessment.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                    selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                    'bg-green-50 text-green-700 border-green-200'
+                  }`}>
+                    {selectedAssessment.priority}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Fornecedor</Label>
+                  <p className="text-sm">{selectedAssessment.vendor_registry?.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Email Contato</Label>
+                  <p className="text-sm">{selectedAssessment.vendor_registry?.primary_contact_email || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Data de Vencimento</Label>
+                  <p className="text-sm">{new Date(selectedAssessment.due_date).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Progresso</Label>
+                  <div className="flex items-center space-x-2">
+                    <Progress value={getActualProgress(selectedAssessment)} className="w-20 h-2" />
+                    <span className="text-xs text-muted-foreground">
+                      {getActualProgress(selectedAssessment)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {selectedAssessment.overall_score && (
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Score Geral</Label>
+                  <p className="text-lg font-semibold text-primary">{selectedAssessment.overall_score.toFixed(1)}</p>
+                </div>
+              )}
+              
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Framework</Label>
+                <p className="text-sm">{selectedAssessment.vendor_assessment_frameworks?.name || selectedAssessment.metadata?.template_name}</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Enviar Assessment por Email
+            </DialogTitle>
+            <DialogDescription>
+              Envie o link do assessment diretamente para o fornecedor
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email do Destinatário *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="fornecedor@empresa.com"
+                value={emailForm.email}
+                onChange={(e) => setEmailForm(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="subject">Assunto</Label>
+              <Input
+                id="subject"
+                value={emailForm.subject}
+                onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="message">Mensagem</Label>
+              <Textarea
+                id="message"
+                rows={10}
+                value={emailForm.message}
+                onChange={(e) => setEmailForm(prev => ({ ...prev, message: e.target.value }))}
+                className="resize-none"
+              />
+            </div>
+            
+            {selectedAssessmentForEmail && (
+              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm">
+                  <div className="font-medium text-blue-900">
+                    Assessment: {selectedAssessmentForEmail.assessment_name}
+                  </div>
+                  <div className="text-blue-700">
+                    Fornecedor: {selectedAssessmentForEmail.vendor_registry?.name}
+                  </div>
+                  <div className="text-blue-700">
+                    Prazo: {new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowEmailDialog(false);
+                setEmailForm({ email: '', subject: '', message: '' });
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={sendAssessmentEmail} disabled={!emailForm.email.trim()}>
+              <Send className="h-4 w-4 mr-2" />
+              Enviar Email
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       

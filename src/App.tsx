@@ -71,6 +71,9 @@ const UserProfilePage = lazy(() => import("@/components/profile/UserProfilePage"
 const NotificationsPage = lazy(() => import("@/components/notifications/NotificationsPage").then(module => ({ default: module.NotificationsPage })));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 
+// Public vendor assessment
+const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
+
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
 const UserDebugInfo = lazy(() => import("@/components/admin/UserDebugInfo"));
@@ -171,6 +174,11 @@ const App = () => (
                 <Route path="/privacy-portal" element={
                   <Suspense fallback={<PageLoader />}>
                     <DataSubjectPortal />
+                  </Suspense>
+                } />
+                <Route path="/vendor-assessment/:publicLinkId" element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PublicVendorAssessmentPage />
                   </Suspense>
                 } />
                 
