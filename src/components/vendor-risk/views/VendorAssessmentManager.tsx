@@ -69,7 +69,15 @@ import {
   MoreHorizontal,
   Mail,
   ExternalLink,
-  Copy as CopyIcon
+  Copy as CopyIcon,
+  Building,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  AlertCircle as AlertCircleIcon,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 
 interface VendorAssessment {
@@ -141,6 +149,20 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   const [emailForm, setEmailForm] = useState({ email: '', subject: '', message: '' });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewAssessment, setPreviewAssessment] = useState<VendorAssessment | null>(null);
+  const [previewEmailData, setPreviewEmailData] = useState({
+    recipientEmail: '',
+    recipientName: '',
+    subject: '',
+    customMessage: '',
+    sendCopy: false,
+    autoReminder: true
+  });
+  const [previewEmailSending, setPreviewEmailSending] = useState(false);
+  const [previewEmailStatus, setPreviewEmailStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    details?: string;
+  } | null>(null);
 
   // Load assessments from vendor registry
   const loadAssessments = async () => {
@@ -322,14 +344,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   useEffect(() => {
     loadAssessments();
     
-    // One-time table structure inspection for debugging
-    const runTableInspection = async () => {
-      await inspectTableStructure();
-    };
-    
-    if (user?.tenantId || user?.tenant_id) {
-      runTableInspection();
-    }
+    // Removed debugging functions - preview should work now
   }, [user?.tenantId, user?.tenant_id]);
   
   // Verificar periodicamente por novos assessments criados durante onboarding
@@ -416,27 +431,695 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     }
   };
 
+  // Estado para o preview
+  const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
+  const [previewCurrentStep, setPreviewCurrentStep] = useState(0);
+  const [previewResponses, setPreviewResponses] = useState<Record<string, any>>({});
+  const [loadingPreviewQuestions, setLoadingPreviewQuestions] = useState(false);
+
+  // Carregar questões reais usando exatamente a mesma lógica do openAssessmentEditor
+  const loadPreviewQuestions = async (assessment: VendorAssessment) => {
+    console.log('🔍 PREVIEW: Loading questions for assessment:', assessment.id);
+    console.log('🔍 PREVIEW: Framework ID:', assessment.framework_id);
+    console.log('🔍 PREVIEW: Template name:', assessment.metadata?.template_name);
+    console.log('🔍 PREVIEW: Framework data:', assessment.vendor_assessment_frameworks);
+    setLoadingPreviewQuestions(true);
+    
+    try {
+      let questions = [];
+      let savedResponses = {};
+      
+      // REPLICAR EXATAMENTE A LÓGICA DO openAssessmentEditor
+      
+      // Para assessments virtuais/pendentes, verificar se há dados salvos no localStorage
+      if (assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
+        const vendorId = assessment.vendor_id;
+        const dataStorageKey = `vendor_${vendorId}_assessment_data`;
+        const savedData = localStorage.getItem(dataStorageKey);
+        
+        if (savedData) {
+          try {
+            const parsedData = JSON.parse(savedData);
+            console.log('🔍 PREVIEW: Dados salvos encontrados no localStorage:', parsedData);
+            savedResponses = parsedData.responses || {};
+            
+            // Se há questões salvas, usar elas
+            if (parsedData.questions && parsedData.questions.length > 0) {
+              questions = parsedData.questions;
+              console.log('🔍 PREVIEW: Usando questões salvas do localStorage:', questions.length);
+            }
+          } catch (e) {
+            console.warn('🔍 PREVIEW: Erro ao parsear dados salvos do localStorage:', e);
+          }
+        }
+      }
+      
+      // Se ainda não temos questões, carregar baseado no framework - MESMA LÓGICA
+      if (questions.length === 0) {
+        // Primeiro, tentar carregar do framework se existir
+        if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
+          questions = assessment.vendor_assessment_frameworks.questions;
+          console.log('🔍 PREVIEW: Questões carregadas do framework:', questions.length, 'questões');
+        } 
+        // Segundo, tentar carregar baseado no framework_id
+        else if (assessment.framework_id) {
+          console.log('🔍 PREVIEW: Carregando questões baseado no framework_id:', assessment.framework_id);
+          
+          if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id.includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('🔍 PREVIEW: Questões NIST CSF carregadas:', questions.length);
+          } else if (assessment.framework_id === 'iso_27001_27701_default' || assessment.framework_id.includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('🔍 PREVIEW: Questões ISO carregadas:', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('🔍 PREVIEW: Questões padrão carregadas (framework não reconhecido):', questions.length);
+          }
+        }
+        // Terceiro, tentar carregar baseado no template_name
+        else if (assessment.metadata?.template_name) {
+          console.log('🔍 PREVIEW: Carregando questões baseado no template_name:', assessment.metadata.template_name);
+          
+          if (assessment.metadata.template_name.toLowerCase().includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('🔍 PREVIEW: Questões NIST CSF carregadas (por template):', questions.length);
+          } else if (assessment.metadata.template_name.toLowerCase().includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('🔍 PREVIEW: Questões ISO carregadas (por template):', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('🔍 PREVIEW: Questões padrão carregadas (template não reconhecido):', questions.length);
+          }
+        }
+        // Último recurso: carregar questões padrão
+        else {
+          console.log('🔍 PREVIEW: Carregando questões padrão (fallback final)');
+          questions = await loadDefaultQuestions();
+          console.log('🔍 PREVIEW: Questões padrão carregadas (fallback):', questions.length);
+        }
+      }
+      
+      console.log('🔍 PREVIEW: Questões finais carregadas:', questions.length);
+      console.log('🔍 PREVIEW: Respostas existentes (assessment):', assessment.responses);
+      console.log('🔍 PREVIEW: Respostas salvas (localStorage):', savedResponses);
+      
+      // Combinar respostas existentes com respostas salvas (localStorage tem precedência) - MESMA LÓGICA
+      const finalResponses = { ...(assessment.responses || {}), ...savedResponses };
+      
+      // Se ainda não tem questões, usar questões de fallback mínimas
+      if (questions.length === 0) {
+        console.log('💡 PREVIEW: Using fallback questions...');
+        questions = [
+          {
+            id: 'SEC-001',
+            category: 'Segurança da Informação',
+            subcategory: 'Políticas e Procedimentos',
+            question: 'A organização possui políticas de segurança da informação documentadas, aprovadas e atualizadas?',
+            description: 'Verificar se existem políticas formais de segurança da informação que cubram todos os aspectos relevantes do negócio.',
+            type: 'multiple_choice',
+            options: [
+              'Sim, políticas completas e atualizadas (últimos 12 meses)',
+              'Sim, políticas básicas mas necessitam atualização',
+              'Políticas em desenvolvimento',
+              'Não possui políticas formais'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Políticas de segurança são fundamentais para estabelecer diretrizes organizacionais.'
+          },
+          {
+            id: 'SEC-002',
+            category: 'Controle de Acesso',
+            subcategory: 'Gestão de Identidade',
+            question: 'Como é realizada a gestão de contas de usuário e controle de acesso aos sistemas?',
+            description: 'Avaliar os processos de criação, modificação e desabilitação de contas de usuário.',
+            type: 'multiple_choice',
+            options: [
+              'Sistema centralizado com revisões regulares',
+              'Controle básico mas sem revisões sistemáticas', 
+              'Controle manual sem processo formal',
+              'Sem controle específico'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Controle de acesso adequado previne acessos não autorizados.'
+          },
+          {
+            id: 'SEC-003',
+            category: 'Gestão de Vulnerabilidades',
+            subcategory: 'Atualizações e Patches',
+            question: 'Qual a frequência e processo para aplicação de patches de segurança?',
+            description: 'Verificar como a organização gerencia e aplica correções de segurança.',
+            type: 'multiple_choice',
+            options: [
+              'Processo automatizado com aplicação imediata para críticos',
+              'Processo manual mas regular (mensal)',
+              'Aplicação ocasional conforme necessidade',
+              'Sem processo definido'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Patches regulares são essenciais para manter a segurança dos sistemas.'
+          },
+          {
+            id: 'SEC-004',
+            category: 'Backup e Recuperação',
+            subcategory: 'Continuidade do Negócio',
+            question: 'A organização possui estratégia de backup e plano de recuperação de desastres?',
+            description: 'Avaliar os procedimentos de backup e capacidade de recuperação em caso de incidentes.',
+            type: 'multiple_choice',
+            options: [
+              'Backup automatizado com testes regulares de recuperação',
+              'Backup regular mas testes ocasionais',
+              'Backup básico sem testes de recuperação',
+              'Sem estratégia formal de backup'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Backups e planos de recuperação são críticos para continuidade do negócio.'
+          },
+          {
+            id: 'SEC-005',
+            category: 'Treinamento e Conscientização',
+            subcategory: 'Capital Humano',
+            question: 'Os colaboradores recebem treinamentos regulares sobre segurança da informação?',
+            description: 'Verificar programas de conscientização e treinamento em segurança.',
+            type: 'multiple_choice',
+            options: [
+              'Treinamentos regulares e atualizados para todos',
+              'Treinamentos anuais básicos',
+              'Treinamentos ocasionais conforme demanda',
+              'Sem programa de treinamento formal'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Colaboradores conscientizados são a primeira linha de defesa.'
+          },
+          {
+            id: 'SEC-006',
+            category: 'Gestão de Incidentes',
+            subcategory: 'Resposta a Incidentes',
+            question: 'Existe um processo formal para detecção, resposta e recuperação de incidentes de segurança?',
+            description: 'Avaliar a capacidade de resposta a incidentes de segurança.',
+            type: 'multiple_choice',
+            options: [
+              'Processo formal com equipe dedicada e ferramentas',
+              'Processo básico com responsabilidades definidas',
+              'Resposta ad-hoc sem processo formal',
+              'Sem processo de gestão de incidentes'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Resposta rápida a incidentes minimiza danos e tempo de inatividade.'
+          },
+          {
+            id: 'SEC-007',
+            category: 'Conformidade e Auditoria',
+            subcategory: 'Governança',
+            question: 'A organização realiza auditorias internas ou externas de segurança?',
+            description: 'Verificar práticas de auditoria e conformidade com padrões.',
+            type: 'multiple_choice',
+            options: [
+              'Auditorias regulares internas e externas',
+              'Auditorias anuais internas',
+              'Auditorias ocasionais conforme necessidade',
+              'Sem processo de auditoria'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Auditorias garantem conformidade e identificam áreas de melhoria.'
+          },
+          {
+            id: 'SEC-008',
+            category: 'Proteção de Dados',
+            subcategory: 'Privacidade',
+            question: 'Como a organização protege dados pessoais e sensíveis conforme LGPD/GDPR?',
+            description: 'Avaliar conformidade com regulamentações de proteção de dados.',
+            type: 'text',
+            required: true,
+            weight: 5,
+            help_text: 'Descreva as medidas técnicas e organizacionais implementadas para proteção de dados pessoais.'
+          },
+          {
+            id: 'SEC-009',
+            category: 'Infraestrutura',
+            subcategory: 'Segurança Física',
+            question: 'Quais controles de segurança física estão implementados nos data centers ou instalações?',
+            description: 'Verificar medidas de proteção física dos ativos de TI.',
+            type: 'text',
+            required: true,
+            weight: 3,
+            help_text: 'Inclua controles de acesso físico, monitoramento, proteção ambiental, etc.'
+          },
+          {
+            id: 'SEC-010',
+            category: 'Monitoramento',
+            subcategory: 'Detecção de Ameaças',
+            question: 'A organização utiliza ferramentas de monitoramento contínuo e detecção de ameaças?',
+            description: 'Avaliar capacidades de monitoramento e detecção proativa.',
+            type: 'multiple_choice',
+            options: [
+              'SIEM/SOC com monitoramento 24x7',
+              'Ferramentas básicas de monitoramento',
+              'Monitoramento manual e reativo',
+              'Sem ferramentas de monitoramento específicas'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Monitoramento contínuo permite detecção precoce de ameaças.'
+          },
+          // Categoria: Criptografia e Proteção de Dados
+          {
+            id: 'SEC-011',
+            category: 'Criptografia',
+            subcategory: 'Proteção de Dados em Trânsito',
+            question: 'Todos os dados sensíveis são criptografados durante a transmissão?',
+            description: 'Verificar implementação de criptografia para dados em trânsito.',
+            type: 'multiple_choice',
+            options: [
+              'Sim, todos os dados com TLS/SSL forte',
+              'Maioria dos dados com criptografia básica',
+              'Apenas dados mais críticos',
+              'Sem criptografia sistemática'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Criptografia em trânsito protege dados contra interceptação.'
+          },
+          {
+            id: 'SEC-012',
+            category: 'Criptografia',
+            subcategory: 'Proteção de Dados em Repouso',
+            question: 'Os dados armazenados são adequadamente criptografados?',
+            description: 'Avaliar criptografia de dados em repouso.',
+            type: 'multiple_choice',
+            options: [
+              'Criptografia forte (AES-256) para todos dados sensíveis',
+              'Criptografia básica para dados críticos',
+              'Criptografia limitada apenas para alguns dados',
+              'Sem criptografia de dados em repouso'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Dados criptografados em repouso protegem contra acesso não autorizado.'
+          },
+          // Categoria: Gestão de Fornecedores
+          {
+            id: 'SEC-013',
+            category: 'Cadeia de Suprimentos',
+            subcategory: 'Avaliação de Fornecedores',
+            question: 'Como é realizada a avaliação de segurança dos fornecedores e terceiros?',
+            description: 'Verificar processos de due diligence de terceiros.',
+            type: 'multiple_choice',
+            options: [
+              'Avaliação rigorosa com questionários e auditorias',
+              'Avaliação básica com questionários padronizados',
+              'Avaliação informal conforme necessidade',
+              'Sem processo formal de avaliação'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Fornecedores podem representar riscos significativos à cadeia de suprimentos.'
+          },
+          {
+            id: 'SEC-014',
+            category: 'Cadeia de Suprimentos',
+            subcategory: 'Contratos e SLAs',
+            question: 'Os contratos incluem cláusulas específicas de segurança da informação?',
+            description: 'Avaliar requisitos contratuais de segurança com terceiros.',
+            type: 'multiple_choice',
+            options: [
+              'Sim, cláusulas detalhadas com SLAs de segurança',
+              'Cláusulas básicas de segurança',
+              'Algumas menções à segurança',
+              'Sem cláusulas específicas de segurança'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Contratos são fundamentais para estabelecer responsabilidades de segurança.'
+          },
+          // Categoria: Desenvolvimento Seguro
+          {
+            id: 'SEC-015',
+            category: 'Desenvolvimento Seguro',
+            subcategory: 'Ciclo de Vida Seguro',
+            question: 'A organização segue práticas de desenvolvimento seguro (SSDLC)?',
+            description: 'Verificar implementação de desenvolvimento seguro.',
+            type: 'multiple_choice',
+            options: [
+              'SSDLC completo com revisão de código e testes',
+              'Práticas básicas de desenvolvimento seguro',
+              'Algumas verificações de segurança',
+              'Sem práticas formais de desenvolvimento seguro'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Desenvolvimento seguro previne vulnerabilidades desde o início.'
+          },
+          {
+            id: 'SEC-016',
+            category: 'Desenvolvimento Seguro',
+            subcategory: 'Testes de Segurança',
+            question: 'São realizados testes de segurança nas aplicações?',
+            description: 'Avaliar testes de segurança em aplicações.',
+            type: 'multiple_choice',
+            options: [
+              'Testes automatizados e manuais regulares',
+              'Testes básicos durante desenvolvimento',
+              'Testes ocasionais antes de releases',
+              'Sem testes específicos de segurança'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Testes de segurança identificam vulnerabilidades antes da produção.'
+          },
+          // Categoria: Infraestrutura e Rede
+          {
+            id: 'SEC-017',
+            category: 'Infraestrutura',
+            subcategory: 'Segurança de Rede',
+            question: 'A rede possui segmentação adequada e firewalls configurados?',
+            description: 'Verificar arquitetura de segurança de rede.',
+            type: 'multiple_choice',
+            options: [
+              'Segmentação completa com firewalls e IDS/IPS',
+              'Segmentação básica com firewalls',
+              'Proteções mínimas de rede',
+              'Rede plana sem segmentação'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Segmentação de rede limita o impacto de possíveis breaches.'
+          },
+          {
+            id: 'SEC-018',
+            category: 'Infraestrutura',
+            subcategory: 'Gestão de Ativos',
+            question: 'Existe inventário completo e atualizado de todos os ativos de TI?',
+            description: 'Avaliar gestão e inventário de ativos.',
+            type: 'multiple_choice',
+            options: [
+              'Inventário automatizado e atualizado em tempo real',
+              'Inventário regular com atualizações manuais',
+              'Inventário básico com atualizações ocasionais',
+              'Sem inventário formal de ativos'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Conhecer todos os ativos é fundamental para protegê-los adequadamente.'
+          },
+          // Categoria: Cloud Security
+          {
+            id: 'SEC-019',
+            category: 'Segurança em Nuvem',
+            subcategory: 'Configuração Cloud',
+            question: 'Os recursos em nuvem seguem as melhores práticas de segurança?',
+            description: 'Verificar configurações de segurança em cloud.',
+            type: 'multiple_choice',
+            options: [
+              'Configurações seguindo frameworks como CIS/NIST',
+              'Configurações básicas de segurança',
+              'Configurações padrão com algumas customizações',
+              'Uso de configurações padrão sem hardening'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Configurações inadequadas são uma das principais causas de incidentes em cloud.'
+          },
+          {
+            id: 'SEC-020',
+            category: 'Segurança em Nuvem',
+            subcategory: 'Monitoramento Cloud',
+            question: 'Existe monitoramento específico para recursos em nuvem?',
+            description: 'Avaliar monitoramento e logging em cloud.',
+            type: 'multiple_choice',
+            options: [
+              'Monitoramento completo com CASB e Cloud Security Posture',
+              'Monitoramento básico nativo do provedor',
+              'Logs básicos sem análise proativa',
+              'Sem monitoramento específico para cloud'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Visibilidade em cloud é essencial para detectar ameaças e misconfigurations.'
+          },
+          // Categoria: Resposta a Incidentes
+          {
+            id: 'SEC-021',
+            category: 'Resposta a Incidentes',
+            subcategory: 'Plano de Resposta',
+            question: 'Existe um plano formal de resposta a incidentes de segurança?',
+            description: 'Verificar preparação para resposta a incidentes.',
+            type: 'multiple_choice',
+            options: [
+              'Plano detalhado testado regularmente',
+              'Plano básico com procedimentos definidos',
+              'Procedimentos informais de resposta',
+              'Sem plano formal de resposta'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Resposta rápida e eficaz minimiza impactos de incidentes.'
+          },
+          {
+            id: 'SEC-022',
+            category: 'Resposta a Incidentes',
+            subcategory: 'Comunicação de Incidentes',
+            question: 'Como é feita a comunicação durante incidentes de segurança?',
+            description: 'Avaliar processos de comunicação em incidentes.',
+            type: 'text',
+            required: true,
+            weight: 3,
+            help_text: 'Descreva os canais e processos de comunicação durante incidentes.'
+          },
+          // Categoria: Compliance e Regulamentações
+          {
+            id: 'SEC-023',
+            category: 'Compliance',
+            subcategory: 'Regulamentações',
+            question: 'A organização está em conformidade com regulamentações aplicáveis?',
+            description: 'Verificar aderência a regulamentações setoriais.',
+            type: 'multiple_choice',
+            options: [
+              'Conformidade total com auditorias regulares',
+              'Conformidade básica com lacunas identificadas',
+              'Conformidade parcial em implementação',
+              'Sem avaliação formal de conformidade'
+            ],
+            required: true,
+            weight: 5,
+            help_text: 'Não conformidade pode resultar em multas e sanções.'
+          },
+          {
+            id: 'SEC-024',
+            category: 'Compliance',
+            subcategory: 'Documentação',
+            question: 'Toda documentação de segurança está atualizada e acessível?',
+            description: 'Avaliar gestão da documentação de segurança.',
+            type: 'multiple_choice',
+            options: [
+              'Documentação completa e atualizada regularmente',
+              'Documentação básica com atualizações ocasionais',
+              'Documentação limitada e desatualizada',
+              'Documentação inexistente ou muito defasada'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Documentação atualizada é essencial para auditorias e operações.'
+          },
+          // Categoria: Recursos Humanos e Segurança
+          {
+            id: 'SEC-025',
+            category: 'Segurança de RH',
+            subcategory: 'Background Check',
+            question: 'São realizadas verificações de antecedentes para funcionários em posições críticas?',
+            description: 'Verificar processos de screening de pessoal.',
+            type: 'multiple_choice',
+            options: [
+              'Verificações rigorosas para todas posições críticas',
+              'Verificações básicas conforme função',
+              'Verificações ocasionais apenas',
+              'Sem processo formal de verificação'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Verificações de antecedentes reduzem riscos internos.'
+          },
+          {
+            id: 'SEC-026',
+            category: 'Segurança de RH',
+            subcategory: 'Desligamento',
+            question: 'Existe processo formal para desligamento de funcionários?',
+            description: 'Avaliar processos de offboarding de segurança.',
+            type: 'multiple_choice',
+            options: [
+              'Processo formal com revogação imediata de acessos',
+              'Processo básico com checklist de segurança',
+              'Processo informal sem padronização',
+              'Sem processo específico de segurança'
+            ],
+            required: true,
+            weight: 4,
+            help_text: 'Desligamentos mal gerenciados podem deixar acessos ativos.'
+          },
+          // Categoria: Métricas e KPIs de Segurança
+          {
+            id: 'SEC-027',
+            category: 'Métricas de Segurança',
+            subcategory: 'KPIs',
+            question: 'A organização monitora KPIs específicos de segurança?',
+            description: 'Verificar uso de métricas para gestão de segurança.',
+            type: 'multiple_choice',
+            options: [
+              'KPIs abrangentes com dashboard executivo',
+              'Métricas básicas reportadas regularmente',
+              'Algumas métricas coletadas ocasionalmente',
+              'Sem métricas formais de segurança'
+            ],
+            required: true,
+            weight: 3,
+            help_text: 'Métricas permitem gestão baseada em dados e melhoria contínua.'
+          },
+          // Questões Abertas para Detalhamento
+          {
+            id: 'SEC-028',
+            category: 'Governança',
+            subcategory: 'Estratégia de Segurança',
+            question: 'Descreva a estratégia geral de segurança da informação da organização:',
+            description: 'Forneça uma visão geral da abordagem estratégica para segurança.',
+            type: 'text',
+            required: true,
+            weight: 4,
+            help_text: 'Inclua objetivos, princípios e direcionamentos estratégicos principais.'
+          },
+          {
+            id: 'SEC-029',
+            category: 'Tecnologia',
+            subcategory: 'Ferramentas de Segurança',
+            question: 'Quais as principais ferramentas e tecnologias de segurança utilizadas?',
+            description: 'Liste e descreva as tecnologias de segurança implementadas.',
+            type: 'text',
+            required: true,
+            weight: 3,
+            help_text: 'Inclua antivírus, firewalls, SIEM, DLP, etc.'
+          },
+          {
+            id: 'SEC-030',
+            category: 'Processos',
+            subcategory: 'Melhoria Contínua',
+            question: 'Como a organização identifica e implementa melhorias no programa de segurança?',
+            description: 'Descreva processos de melhoria contínua em segurança.',
+            type: 'text',
+            required: true,
+            weight: 3,
+            help_text: 'Inclua revisões, lições aprendidas, benchmarking, etc.'
+          }
+        ];
+      }
+      
+      // Definir questões e respostas - EXATAMENTE como no openAssessmentEditor
+      setPreviewQuestions(questions);
+      setPreviewCurrentStep(0);
+      setPreviewResponses(finalResponses); // Usar respostas reais, não vazio!
+      console.log('📊 PREVIEW: Final questions count:', questions.length);
+      console.log('📊 PREVIEW: Final responses count:', Object.keys(finalResponses).length);
+      console.log('📊 PREVIEW: Estado final setado:', {
+        questions: questions.length,
+        responses: Object.keys(finalResponses).length
+      });
+      
+      console.log('📊 PREVIEW: Primeira questão de exemplo:', questions[0]?.question || 'Nenhuma questão');
+      console.log('📊 PREVIEW: Últimas 3 questões:', questions.slice(-3).map(q => q.question || q.id));
+      
+      console.log('=== COMPARAÇÃO PREVIEW vs EDITOR ===');
+      console.log('As questões do PREVIEW devem ser IDÊNTICAS às do EDITOR!');
+      
+    } catch (error) {
+      console.error('💥 Error loading preview questions:', error);
+      // Fallback para questões de exemplo em caso de erro
+      setPreviewQuestions([]);
+    } finally {
+      setLoadingPreviewQuestions(false);
+    }
+  };
+
   // Open preview of public assessment page
   const openPreviewDialog = async (assessment: VendorAssessment) => {
+    console.log('🔍 Opening preview for assessment:', assessment.id);
+    
+    // Verificar se é assessment temporário
+    const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
+    console.log('🔄 Is temporary assessment:', isTemporary);
+    
+    if (isTemporary) {
+      // Para assessments temporários, criar um link fictício para preview
+      console.log('💡 Creating temporary preview link...');
+      const tempPublicLink = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      
+      // Criar uma cópia do assessment com link temporário
+      const previewAssessment = {
+        ...assessment,
+        public_link: tempPublicLink,
+        public_link_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
+      };
+      
+      console.log('✅ Temporary preview link created:', tempPublicLink);
+      setPreviewAssessment(previewAssessment);
+      
+      // Carregar questões para o preview - MESMAS do editor
+      console.log('🔍 PREVIEW: Carregando questões para preview do assessment:', assessment.id);
+      await loadPreviewQuestions(assessment);
+      setShowPreviewDialog(true);
+      return;
+    }
+    
+    // Para assessments reais, verificar se já tem link público
     if (!assessment.public_link) {
       toast({
         title: "Gerando link público...",
         description: "Aguarde, estamos criando o link para preview",
       });
-      const result = await generatePublicLink(assessment);
-      if (result) {
-        // Reload assessments to get updated data with public_link
-        await loadAssessments();
-        // Find the updated assessment
-        const updatedAssessment = assessments.find(a => a.id === assessment.id);
-        if (updatedAssessment?.public_link) {
-          setPreviewAssessment(updatedAssessment);
-          setShowPreviewDialog(true);
+      
+      try {
+        const result = await generatePublicLink(assessment);
+        if (result) {
+          // Reload assessments to get updated data with public_link
+          await loadAssessments();
+          // Find the updated assessment
+          const updatedAssessment = assessments.find(a => a.id === assessment.id);
+          if (updatedAssessment?.public_link) {
+            console.log('✅ Public link generated successfully');
+            setPreviewAssessment(updatedAssessment);
+            setShowPreviewDialog(true);
+          } else {
+            console.log('❌ Failed to find updated assessment with public link');
+            toast({
+              title: "Erro",
+              description: "Não foi possível gerar o link público para preview",
+              variant: "destructive"
+            });
+          }
+        } else {
+          console.log('❌ generatePublicLink returned false');
+          toast({
+            title: "Erro", 
+            description: "Falha na geração do link público",
+            variant: "destructive"
+          });
         }
+      } catch (error) {
+        console.error('💥 Error generating public link for preview:', error);
+        toast({
+          title: "Erro",
+          description: `Erro ao gerar link público: ${error.message}`,
+          variant: "destructive"
+        });
       }
       return;
     }
     
+    // Assessment real com link público existente
+    console.log('✅ Using existing public link for preview');
     setPreviewAssessment(assessment);
     setShowPreviewDialog(true);
   };
@@ -900,7 +1583,7 @@ Equipe de Compliance`;
       
       const { data: existingAssessment, error: readError } = await supabase
         .from('vendor_assessments')
-        .select('id, tenant_id, status, assessment_name, vendor_id')
+        .select('id, tenant_id, status, vendor_id')
         .eq('id', assessment.id)
         .single();
 
@@ -1035,6 +1718,206 @@ Equipe de Compliance`;
       console.log('🚀 =================== GENERATE PUBLIC LINK END ===================');
     }
   };
+
+  // Função para enviar assessment por email diretamente do preview
+  const sendAssessmentEmailFromPreview = async () => {
+    if (!previewEmailData.recipientEmail) {
+      setPreviewEmailStatus({
+        type: 'error',
+        message: 'Email do fornecedor é obrigatório',
+        details: 'Por favor, informe o email do destinatário'
+      });
+      return;
+    }
+
+    if (!previewAssessment) {
+      setPreviewEmailStatus({
+        type: 'error',
+        message: 'Assessment não encontrado',
+        details: 'Erro interno: assessment não está carregado'
+      });
+      return;
+    }
+
+    setPreviewEmailSending(true);
+    setPreviewEmailStatus(null);
+
+    try {
+      // 1. Se for um assessment temporário, primeiro gerar o link público formal
+      let finalAssessment = previewAssessment;
+      let publicLink = previewAssessment.public_link;
+
+      if (!publicLink || publicLink.startsWith('temp-')) {
+        console.log('🔄 Generating public link before sending email...');
+        
+        // Gerar link público real
+        const success = await generatePublicLink(previewAssessment);
+        if (!success) {
+          throw new Error('Não foi possível gerar o link público para o assessment');
+        }
+
+        // Recarregar a lista para obter o assessment atualizado
+        await loadAssessments();
+        
+        // Encontrar o assessment atualizado
+        const updatedAssessment = assessments.find(a => a.id === previewAssessment.id);
+        if (!updatedAssessment?.public_link) {
+          throw new Error('Link público não foi gerado corretamente');
+        }
+
+        finalAssessment = updatedAssessment;
+        publicLink = updatedAssessment.public_link;
+        setPreviewAssessment(updatedAssessment);
+      }
+
+      const publicUrl = `${window.location.origin}/vendor-assessment/${publicLink}`;
+
+      // 2. Preparar dados do email
+      const emailData = {
+        to: previewEmailData.recipientEmail,
+        recipientName: previewEmailData.recipientName || '',
+        subject: previewEmailData.subject || `Assessment de Segurança - ${finalAssessment.vendor_registry?.name || 'Fornecedor'}`,
+        customMessage: previewEmailData.customMessage || '',
+        assessmentData: {
+          id: finalAssessment.id,
+          name: finalAssessment.assessment_name,
+          type: finalAssessment.assessment_type,
+          dueDate: finalAssessment.due_date,
+          questionsCount: previewQuestions.length,
+          vendorName: finalAssessment.vendor_registry?.name || 'Fornecedor',
+          publicUrl: publicUrl,
+          expiresAt: finalAssessment.public_link_expires_at
+        },
+        senderEmail: user?.email || 'Equipe GRC',
+        sendCopy: previewEmailData.sendCopy,
+        autoReminder: previewEmailData.autoReminder
+      };
+
+      console.log('📧 Sending email with data:', emailData);
+
+      // 3. Simular envio de email (em produção, integrar com serviço real)
+      await simulateEmailSending(emailData);
+
+      // 4. Atualizar status do assessment no banco
+      if (finalAssessment.status === 'draft') {
+        const { error: updateError } = await supabase
+          .from('vendor_assessments')
+          .update({ 
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            sent_to_email: previewEmailData.recipientEmail,
+            sent_to_name: previewEmailData.recipientName || null
+          })
+          .eq('id', finalAssessment.id);
+
+        if (updateError) {
+          console.warn('Erro ao atualizar status do assessment:', updateError);
+        }
+      }
+
+      // 5. Registrar log de envio
+      await logEmailSent({
+        assessmentId: finalAssessment.id,
+        recipientEmail: previewEmailData.recipientEmail,
+        recipientName: previewEmailData.recipientName,
+        subject: emailData.subject,
+        sentBy: user?.email,
+        sentAt: new Date().toISOString()
+      });
+
+      // 6. Sucesso
+      setPreviewEmailStatus({
+        type: 'success',
+        message: 'Email enviado com sucesso!',
+        details: `Assessment enviado para ${previewEmailData.recipientEmail}${previewEmailData.autoReminder ? '. Lembrete automático agendado para 7 dias.' : ''}`
+      });
+
+      // Recarregar assessments
+      await loadAssessments();
+
+      toast({
+        title: "✅ Email Enviado",
+        description: `Assessment enviado para ${previewEmailData.recipientEmail}`,
+      });
+
+      // Resetar dados do formulário
+      setPreviewEmailData(prev => ({
+        ...prev,
+        recipientEmail: '',
+        recipientName: '',
+        customMessage: ''
+      }));
+
+    } catch (error) {
+      console.error('Erro ao enviar email:', error);
+      
+      setPreviewEmailStatus({
+        type: 'error',
+        message: 'Erro ao enviar email',
+        details: error.message || 'Erro desconhecido ao enviar o assessment'
+      });
+
+      toast({
+        title: "❌ Erro",
+        description: `Não foi possível enviar o email: ${error.message}`,
+        variant: "destructive"
+      });
+
+    } finally {
+      setPreviewEmailSending(false);
+    }
+  };
+
+  // Função para simular envio de email (substituir por integração real)
+  const simulateEmailSending = async (emailData: any): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      // Simular delay de envio
+      setTimeout(() => {
+        // Simular falha ocasional para teste
+        if (Math.random() < 0.05) { // 5% de chance de falha
+          reject(new Error('Falha na conexão com o servidor de email'));
+          return;
+        }
+        
+        console.log('📧 Email simulado enviado:', {
+          to: emailData.to,
+          subject: emailData.subject,
+          assessment: emailData.assessmentData.name
+        });
+        
+        resolve();
+      }, 2000); // 2 segundos de delay
+    });
+  };
+
+  // Função para registrar log de envio de email
+  const logEmailSent = async (logData: {
+    assessmentId: string;
+    recipientEmail: string;
+    recipientName?: string;
+    subject: string;
+    sentBy?: string;
+    sentAt: string;
+  }): Promise<void> => {
+    try {
+      // Em produção, salvar em tabela de logs
+      console.log('📝 Email log:', logData);
+      
+      // Exemplo de estrutura para tabela de logs:
+      // await supabase.from('email_logs').insert([{
+      //   assessment_id: logData.assessmentId,
+      //   recipient_email: logData.recipientEmail,
+      //   recipient_name: logData.recipientName,
+      //   subject: logData.subject,
+      //   sent_by: logData.sentBy,
+      //   sent_at: logData.sentAt,
+      //   tenant_id: user?.tenantId || user?.tenant_id
+      // }]);
+      
+    } catch (error) {
+      console.error('Erro ao registrar log de email:', error);
+    }
+  };
   
   // Open assessment editor
   const openAssessmentEditor = async (assessment: VendorAssessment) => {
@@ -1153,13 +2036,16 @@ Equipe de Compliance`;
       setAssessmentResponses(finalResponses);
       setAssessmentMetadata(finalMetadata);
       
-      console.log('Estado final setado:', {
+      console.log('📊 EDITOR: Estado final setado:', {
         questions: questions.length,
         responses: Object.keys(finalResponses).length,
         metadata: finalMetadata
       });
       
-      console.log('=== ABRINDO MODAL ===');
+      console.log('📊 EDITOR: Primeira questão de exemplo:', questions[0]?.question || 'Nenhuma questão');
+      console.log('📊 EDITOR: Últimas 3 questões:', questions.slice(-3).map(q => q.question || q.id));
+      
+      console.log('=== ABRINDO MODAL EDITOR ===');
       setShowEditDialog(true);
       
     } catch (error) {
@@ -1502,6 +2388,54 @@ Equipe de Compliance`;
     console.log('=== FIM DEBUG SISTEMA ===\n');
   };
   
+  // Debug: Test minimal INSERT to isolate column issues
+  const testMinimalInsert = async () => {
+    console.log('\n=== TESTE INSERT MÍNIMO ===');
+    try {
+      const minimalData = {
+        vendor_id: '6302338c-9d89-4489-8bb1-8b6c002dda00', // Use a known vendor ID
+        tenant_id: user?.tenantId || user?.tenant_id
+      };
+      
+      console.log('📄 Dados mínimos para teste:', minimalData);
+      
+      const { data, error } = await supabase
+        .from('vendor_assessments')
+        .insert(minimalData)
+        .select('*')
+        .single();
+        
+      console.log('📊 Resultado INSERT Mínimo:');
+      console.log('  Error:', error);
+      console.log('  Data:', data);
+      
+      if (error) {
+        toast({
+          title: "Teste INSERT Mínimo",
+          description: `Erro: ${error.message}`,
+          variant: "destructive",
+          duration: 5000
+        });
+      } else {
+        toast({
+          title: "Teste INSERT Mínimo",
+          description: "INSERT mínimo funcionou! Problema não é com colunas básicas.",
+          duration: 5000
+        });
+        
+        // Clean up - delete the test record
+        await supabase
+          .from('vendor_assessments')
+          .delete()
+          .eq('id', data.id);
+      }
+      
+    } catch (error) {
+      console.error('💥 Erro no teste INSERT mínimo:', error);
+    }
+    console.log('=== FIM TESTE INSERT MÍNIMO ===\n');
+  };
+
   // Debug: Verificar estrutura da tabela vendor_assessments
   const inspectTableStructure = async () => {
     console.log('\n=== INSPECIONAR ESTRUTURA TABELA ===');
@@ -2540,46 +3474,900 @@ Equipe de Compliance`;
               </div>
             </div>
           )}
+
+          {/* Seção de Envio de Email Integrada ao Preview */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <span className="text-lg font-semibold text-foreground">Enviar Assessment por Email</span>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Formulário de Envio */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="preview-recipient-email" className="text-sm font-medium text-foreground">
+                    Email do Fornecedor *
+                  </Label>
+                  <Input
+                    id="preview-recipient-email"
+                    type="email"
+                    placeholder="fornecedor@empresa.com"
+                    className="mt-1"
+                    value={previewEmailData.recipientEmail || ''}
+                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="preview-recipient-name" className="text-sm font-medium text-foreground">
+                    Nome do Contato
+                  </Label>
+                  <Input
+                    id="preview-recipient-name"
+                    placeholder="Nome do responsável"
+                    className="mt-1"
+                    value={previewEmailData.recipientName || ''}
+                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientName: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="preview-email-subject" className="text-sm font-medium text-foreground">
+                    Assunto do Email
+                  </Label>
+                  <Input
+                    id="preview-email-subject"
+                    className="mt-1"
+                    value={previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
+                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="preview-email-message" className="text-sm font-medium text-foreground">
+                    Mensagem Personalizada (Opcional)
+                  </Label>
+                  <Textarea
+                    id="preview-email-message"
+                    placeholder="Adicione uma mensagem personalizada..."
+                    className="mt-1 min-h-20"
+                    value={previewEmailData.customMessage || ''}
+                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, customMessage: e.target.value }))}
+                  />
+                </div>
+                
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="preview-send-copy"
+                      checked={previewEmailData.sendCopy || false}
+                      onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, sendCopy: !!checked }))}
+                    />
+                    <Label htmlFor="preview-send-copy" className="text-sm text-foreground">
+                      Enviar cópia para mim
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="preview-auto-reminder"
+                      checked={previewEmailData.autoReminder !== false}
+                      onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, autoReminder: !!checked }))}
+                    />
+                    <Label htmlFor="preview-auto-reminder" className="text-sm text-foreground">
+                      Enviar lembrete automático em 7 dias
+                    </Label>
+                  </div>
+                </div>
+                
+                <Button
+                  onClick={() => sendAssessmentEmailFromPreview()}
+                  disabled={!previewEmailData.recipientEmail || previewEmailSending}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  size="lg"
+                >
+                  {previewEmailSending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Enviar Assessment
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Prévia do Email */}
+              <div className="bg-background border rounded-lg p-4 max-h-96 overflow-y-auto">
+                <div className="text-sm font-medium text-foreground mb-3 border-b pb-2">
+                  📧 Prévia do Email
+                </div>
+                
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="font-medium text-foreground">Para:</span>
+                    <span className="ml-2 text-muted-foreground">
+                      {previewEmailData.recipientEmail || 'fornecedor@empresa.com'}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <span className="font-medium text-foreground">Assunto:</span>
+                    <span className="ml-2 text-muted-foreground">
+                      {previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
+                    </span>
+                  </div>
+                  
+                  <div className="border-t pt-3">
+                    <div className="prose prose-sm max-w-none text-foreground">
+                      <p>
+                        Olá{previewEmailData.recipientName ? ` ${previewEmailData.recipientName}` : ''},
+                      </p>
+                      
+                      {previewEmailData.customMessage && (
+                        <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded border-l-4 border-l-blue-500 my-3">
+                          <div className="whitespace-pre-wrap text-sm text-foreground">
+                            {previewEmailData.customMessage}
+                          </div>
+                        </div>
+                      )}
+                      
+                      <p>
+                        Você foi convidado a responder nosso questionário de avaliação de segurança. 
+                        Este assessment é importante para garantirmos que nossos fornecedores atendam 
+                        aos padrões de segurança necessários.
+                      </p>
+                      
+                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border my-4">
+                        <div className="font-medium text-foreground mb-2">📋 Detalhes do Assessment:</div>
+                        <ul className="text-sm space-y-1 text-muted-foreground">
+                          <li><strong>Tipo:</strong> {previewAssessment?.assessment_type || 'Avaliação de Segurança'}</li>
+                          <li><strong>Prazo:</strong> {previewAssessment?.due_date ? new Date(previewAssessment.due_date).toLocaleDateString('pt-BR') : 'A definir'}</li>
+                          <li><strong>Questões:</strong> {previewQuestions.length} questões</li>
+                          <li><strong>Tempo estimado:</strong> 30-45 minutos</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800 my-4">
+                        <div className="font-medium text-green-800 dark:text-green-200 mb-2">
+                          🔗 Link para Responder:
+                        </div>
+                        <div className="font-mono text-xs bg-white dark:bg-gray-800 p-2 rounded border break-all text-blue-600">
+                          {previewAssessment?.public_link?.startsWith('temp-') || !previewAssessment?.public_link
+                            ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
+                            : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`
+                          }
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Instruções:</strong>
+                      </p>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Clique no link acima para acessar o questionário</li>
+                        <li>• Você pode salvar e continuar respondendo mais tarde</li>
+                        <li>• É possível anexar evidências a cada resposta</li>
+                        <li>• Em caso de dúvidas, entre em contato conosco</li>
+                      </ul>
+                      
+                      <p className="mt-4">
+                        Atenciosamente,<br/>
+                        <strong>{user?.email || 'Equipe GRC'}</strong>
+                      </p>
+                      
+                      <div className="text-xs text-muted-foreground mt-6 pt-3 border-t">
+                        Este link expira em 30 dias. Se você não conseguir acessar, entre em contato conosco.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Status de Envio */}
+            {previewEmailStatus && (
+              <div className={`mt-4 p-3 rounded-lg border ${
+                previewEmailStatus.type === 'success' 
+                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {previewEmailStatus.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <AlertCircleIcon className="h-5 w-5" />
+                  )}
+                  <span className="font-medium">{previewEmailStatus.message}</span>
+                </div>
+                {previewEmailStatus.details && (
+                  <div className="mt-2 text-sm opacity-80">
+                    {previewEmailStatus.details}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Preview Dialog */}
       <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="sm:max-w-4xl h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ExternalLink className="h-5 w-5 text-primary" />
-              Preview da Página Pública
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5 text-primary" />
+                Preview da Página Pública
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                Tela Cheia
+              </Badge>
             </DialogTitle>
-            <DialogDescription>
-              Visualização de como o fornecedor verá a página de assessment
+            <DialogDescription className="text-muted-foreground">
+              Visualização completa de como o fornecedor verá a página de assessment
             </DialogDescription>
           </DialogHeader>
           
           {previewAssessment && (
             <div className="flex-1 overflow-hidden">
-              <iframe
-                src={`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`}
-                className="w-full h-full border rounded-lg"
-                title="Preview da Página Pública"
-              />
+              {previewAssessment.public_link?.startsWith('temp-') ? (
+                // Preview rico e interativo para assessments temporários
+                <div className="w-full h-full bg-gradient-to-br from-background to-secondary/20 overflow-y-auto">
+                  {loadingPreviewQuestions ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary mx-auto"></div>
+                        <div>
+                          <p className="text-base font-medium text-foreground">Carregando questões do template...</p>
+                          <p className="text-sm text-muted-foreground">Buscando todas as questões disponíveis</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="max-w-7xl mx-auto p-8">
+                      {/* Header com branding */}
+                      <div className="text-center mb-10">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/15 dark:bg-primary/10 rounded-full mb-6">
+                          <Shield className="h-10 w-10 text-primary" />
+                        </div>
+                        <h1 className="text-4xl font-bold text-foreground mb-3">Assessment de Segurança</h1>
+                        <h2 className="text-2xl font-semibold text-primary mb-2">{previewAssessment.assessment_name}</h2>
+                        <p className="text-base text-muted-foreground mb-3">
+                          Framework: {previewAssessment.vendor_assessment_frameworks?.name || previewAssessment.metadata?.template_name || 'Template Padrão'}
+                        </p>
+                        
+                        {/* Link Público */}
+                        <div className="bg-secondary/30 border border-primary/20 rounded-lg p-4 mb-4 max-w-2xl mx-auto">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Link className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-medium text-foreground">Link Público para o Fornecedor:</span>
+                          </div>
+                          <div className="flex items-center gap-2 bg-background border rounded-lg p-2">
+                            <code className="flex-1 text-xs text-muted-foreground break-all">
+                              {previewAssessment.public_link?.startsWith('temp-') 
+                                ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
+                                : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`
+                              }
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const linkText = previewAssessment.public_link?.startsWith('temp-') 
+                                  ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
+                                  : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`;
+                                navigator.clipboard.writeText(linkText);
+                                toast({
+                                  title: "Link copiado!",
+                                  description: "O link foi copiado para a área de transferência.",
+                                  duration: 2000
+                                });
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <CopyIcon className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          {previewAssessment.public_link?.startsWith('temp-') && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              💡 O link definitivo será gerado quando o assessment for enviado ao fornecedor
+                            </p>
+                          )}
+                        </div>
+                        
+                        <Badge variant="outline" className="text-sm px-3 py-1">
+                          🔍 Modo Preview Interativo
+                        </Badge>
+                      </div>
+
+                      {/* Barra de Progresso Global */}
+                      <Card className="mb-8 shadow-md border-2 border-primary/20">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <Target className="h-6 w-6 text-primary" />
+                              <span className="text-lg font-semibold text-foreground">Progresso do Assessment</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {previewQuestions.length > 0 ? `${previewCurrentStep + 1} de ${previewQuestions.length}` : '0 questões'}
+                            </div>
+                          </div>
+                          <Progress 
+                            value={previewQuestions.length > 0 ? ((previewCurrentStep + 1) / previewQuestions.length) * 100 : 0} 
+                            className="h-4 mb-4" 
+                          />
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                            <div className="p-3 rounded-lg bg-secondary/50">
+                              <div className="text-2xl font-bold text-foreground">{previewQuestions.length}</div>
+                              <div className="text-sm text-muted-foreground">Total de Questões</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-green-100 dark:bg-green-900/30">
+                              <div className="text-2xl font-bold text-green-600">{Object.keys(previewResponses).length}</div>
+                              <div className="text-sm text-muted-foreground">Respondidas</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                              <div className="text-2xl font-bold text-orange-600">{previewQuestions.filter(q => q.required).length}</div>
+                              <div className="text-sm text-muted-foreground">Obrigatórias</div>
+                            </div>
+                            <div className="p-3 rounded-lg bg-primary/10">
+                              <div className="text-2xl font-bold text-primary">
+                                {previewQuestions.length > 0 ? Math.round(((previewCurrentStep + 1) / previewQuestions.length) * 100) : 0}%
+                              </div>
+                              <div className="text-sm text-muted-foreground">Completude</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Questão Atual */}
+                      {previewQuestions.length > 0 && (
+                        <Card className="mb-8 shadow-lg border-l-4 border-l-primary bg-card">
+                          <CardHeader className="pb-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <Badge variant="secondary" className="px-3 py-1">
+                                    {previewQuestions[previewCurrentStep]?.category}
+                                  </Badge>
+                                  {previewQuestions[previewCurrentStep]?.subcategory && (
+                                    <Badge variant="outline" className="px-2 py-1 text-xs">
+                                      {previewQuestions[previewCurrentStep]?.subcategory}
+                                    </Badge>
+                                  )}
+                                  {previewQuestions[previewCurrentStep]?.required && (
+                                    <Badge variant="destructive" className="px-2 py-1 text-xs">
+                                      ⚠️ Obrigatória
+                                    </Badge>
+                                  )}
+                                </div>
+                                <CardTitle className="text-xl text-foreground leading-relaxed">
+                                  {previewQuestions[previewCurrentStep]?.question}
+                                </CardTitle>
+                                {previewQuestions[previewCurrentStep]?.description && (
+                                  <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                                    {previewQuestions[previewCurrentStep]?.description}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 ml-6">
+                                <div className="text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
+                                  Peso: {previewQuestions[previewCurrentStep]?.weight || 1}
+                                </div>
+                                {previewQuestions[previewCurrentStep]?.help_text && (
+                                  <div className="group relative">
+                                    <HelpCircle className="h-5 w-5 text-muted-foreground hover:text-primary cursor-help transition-colors" />
+                                    <div className="absolute right-0 top-8 w-80 p-3 bg-popover border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all z-50">
+                                      <p className="text-sm text-popover-foreground">
+                                        {previewQuestions[previewCurrentStep]?.help_text}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {/* Renderização da questão baseada no tipo */}
+                            {previewQuestions[previewCurrentStep]?.type === 'multiple_choice' && previewQuestions[previewCurrentStep]?.options ? (
+                              <div className="space-y-4">
+                                {previewQuestions[previewCurrentStep].options.map((option: string, index: number) => (
+                                  <div 
+                                    key={index} 
+                                    className={`flex items-start space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
+                                      previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option 
+                                        ? 'border-primary bg-primary/5' 
+                                        : 'border-border'
+                                    }`}
+                                    onClick={() => setPreviewResponses(prev => ({
+                                      ...prev,
+                                      [previewQuestions[previewCurrentStep].id]: {
+                                        ...prev[previewQuestions[previewCurrentStep].id],
+                                        answer: option,
+                                        responded_at: new Date().toISOString()
+                                      }
+                                    }))}
+                                  >
+                                    <input 
+                                      type="radio" 
+                                      name={`question-${previewCurrentStep}`}
+                                      className="mt-1 h-5 w-5 text-primary"
+                                      onChange={() => {}}
+                                      checked={previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option}
+                                    />
+                                    <label className="text-sm text-foreground cursor-pointer flex-1 leading-relaxed">
+                                      {option}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : previewQuestions[previewCurrentStep]?.type === 'text' ? (
+                              <div className="space-y-4">
+                                <Textarea 
+                                  placeholder="Digite sua resposta aqui..."
+                                  className="min-h-32 resize-none text-foreground bg-background border-border"
+                                  value={previewResponses[previewQuestions[previewCurrentStep].id]?.answer || ''}
+                                  onChange={(e) => setPreviewResponses(prev => ({
+                                    ...prev,
+                                    [previewQuestions[previewCurrentStep].id]: {
+                                      ...prev[previewQuestions[previewCurrentStep].id],
+                                      answer: e.target.value,
+                                      responded_at: new Date().toISOString()
+                                    }
+                                  }))}
+                                />
+                                {previewQuestions[previewCurrentStep]?.help_text && (
+                                  <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border-l-4 border-l-primary/50">
+                                    💡 {previewQuestions[previewCurrentStep]?.help_text}
+                                  </div>
+                                )}
+                              </div>
+                            ) : previewQuestions[previewCurrentStep]?.type === 'scale' ? (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-center space-x-2 p-6 bg-secondary/20 rounded-lg border">
+                                  {Array.from({ length: previewQuestions[previewCurrentStep]?.scale_max || 5 }, (_, i) => i + 1).map((value) => (
+                                    <Button
+                                      key={value}
+                                      variant={previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value ? "default" : "outline"}
+                                      size="lg"
+                                      onClick={() => setPreviewResponses(prev => ({
+                                        ...prev,
+                                        [previewQuestions[previewCurrentStep].id]: {
+                                          ...prev[previewQuestions[previewCurrentStep].id],
+                                          answer: value,
+                                          responded_at: new Date().toISOString()
+                                        }
+                                      }))}
+                                      className="w-12 h-12 text-lg font-bold"
+                                    >
+                                      {value}
+                                    </Button>
+                                  ))}
+                                </div>
+                                {previewQuestions[previewCurrentStep]?.scale_labels && previewQuestions[previewCurrentStep].scale_labels.length > 0 && (
+                                  <div className="flex justify-between text-xs text-muted-foreground px-2">
+                                    <span>{previewQuestions[previewCurrentStep].scale_labels[0]}</span>
+                                    <span>{previewQuestions[previewCurrentStep].scale_labels[previewQuestions[previewCurrentStep].scale_labels.length - 1]}</span>
+                                  </div>
+                                )}
+                                {previewQuestions[previewCurrentStep]?.help_text && (
+                                  <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border-l-4 border-l-primary/50">
+                                    💡 {previewQuestions[previewCurrentStep]?.help_text}
+                                  </div>
+                                )}
+                              </div>
+                            ) : previewQuestions[previewCurrentStep]?.type === 'yes_no' ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {['yes', 'no'].map((option) => (
+                                    <div
+                                      key={option}
+                                      className={`flex items-center justify-center space-x-3 p-6 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
+                                        previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option
+                                          ? 'border-primary bg-primary/5'
+                                          : 'border-border'
+                                      }`}
+                                      onClick={() => setPreviewResponses(prev => ({
+                                        ...prev,
+                                        [previewQuestions[previewCurrentStep].id]: {
+                                          ...prev[previewQuestions[previewCurrentStep].id],
+                                          answer: option,
+                                          responded_at: new Date().toISOString()
+                                        }
+                                      }))}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`question-${previewCurrentStep}`}
+                                        className="h-5 w-5 text-primary"
+                                        onChange={() => {}}
+                                        checked={previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option}
+                                      />
+                                      <span className="text-lg font-medium text-foreground">
+                                        {option === 'yes' ? 'Sim' : 'Não'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                                {previewQuestions[previewCurrentStep]?.help_text && (
+                                  <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border-l-4 border-l-primary/50">
+                                    💡 {previewQuestions[previewCurrentStep]?.help_text}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-6 bg-secondary/30 border-2 border-dashed border-border rounded-lg">
+                                <p className="text-sm text-muted-foreground mb-4">
+                                  Questão de exemplo - tipo: {previewQuestions[previewCurrentStep]?.type || 'unknown'}
+                                </p>
+                                <Select>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Selecione uma opção..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="option1">Opção 1</SelectItem>
+                                    <SelectItem value="option2">Opção 2</SelectItem>
+                                    <SelectItem value="option3">Opção 3</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            
+                            {/* Seção de Evidências/Anexos */}
+                            <div className="mt-8 p-4 bg-secondary/20 rounded-lg border">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Upload className="h-5 w-5 text-primary" />
+                                <Label className="text-sm font-medium text-foreground">
+                                  Anexar Evidências (Opcional)
+                                </Label>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-4">
+                                Anexe documentos, capturas de tela ou outros arquivos que comprovem sua resposta
+                              </p>
+                              
+                              {/* Área de upload */}
+                              <div className="border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-6 text-center transition-colors">
+                                <input
+                                  type="file"
+                                  multiple
+                                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                                  onChange={(e) => {
+                                    const files = Array.from(e.target.files || []);
+                                    if (files.length > 0) {
+                                      setPreviewResponses(prev => ({
+                                        ...prev,
+                                        [previewQuestions[previewCurrentStep].id]: {
+                                          ...prev[previewQuestions[previewCurrentStep].id],
+                                          evidence: [
+                                            ...(prev[previewQuestions[previewCurrentStep].id]?.evidence || []),
+                                            ...files.map(file => ({
+                                              id: `evidence-${Date.now()}-${Math.random()}`,
+                                              fileName: file.name,
+                                              fileSize: file.size,
+                                              fileType: file.type,
+                                              uploadedAt: new Date().toISOString(),
+                                              file: file
+                                            }))
+                                          ]
+                                        }
+                                      }));
+                                    }
+                                  }}
+                                  className="hidden"
+                                  id={`file-upload-${previewCurrentStep}`}
+                                />
+                                <label htmlFor={`file-upload-${previewCurrentStep}`} className="cursor-pointer">
+                                  <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                  <p className="text-sm text-muted-foreground">
+                                    Clique para selecionar arquivos ou arraste e solte
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    PDF, DOC, TXT, IMG, ZIP - Máx. 10MB por arquivo
+                                  </p>
+                                </label>
+                              </div>
+                              
+                              {/* Lista de arquivos anexados */}
+                              {previewResponses[previewQuestions[previewCurrentStep]?.id]?.evidence && 
+                               previewResponses[previewQuestions[previewCurrentStep].id].evidence.length > 0 && (
+                                <div className="mt-4 space-y-2">
+                                  <Label className="text-sm font-medium text-foreground">
+                                    Arquivos Anexados:
+                                  </Label>
+                                  {previewResponses[previewQuestions[previewCurrentStep].id].evidence.map((evidence: any, index: number) => (
+                                    <div key={evidence.id || index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                      <div className="flex items-center space-x-3">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        <div>
+                                          <p className="text-sm font-medium text-foreground">{evidence.fileName}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {evidence.fileSize ? `${(evidence.fileSize / 1024).toFixed(1)} KB` : 'Tamanho desconhecido'}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setPreviewResponses(prev => ({
+                                            ...prev,
+                                            [previewQuestions[previewCurrentStep].id]: {
+                                              ...prev[previewQuestions[previewCurrentStep].id],
+                                              evidence: prev[previewQuestions[previewCurrentStep].id]?.evidence?.filter((_, i) => i !== index) || []
+                                            }
+                                          }));
+                                        }}
+                                        className="text-destructive hover:text-destructive/80"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Campo de justificativa */}
+                              <div className="mt-4">
+                                <Label className="text-sm font-medium text-foreground">
+                                  Comentários Adicionais (Opcional)
+                                </Label>
+                                <Textarea
+                                  placeholder="Adicione comentários ou justificativas para sua resposta..."
+                                  className="mt-2 min-h-20 text-foreground bg-background border-border"
+                                  value={previewResponses[previewQuestions[previewCurrentStep]?.id]?.justification || ''}
+                                  onChange={(e) => setPreviewResponses(prev => ({
+                                    ...prev,
+                                    [previewQuestions[previewCurrentStep].id]: {
+                                      ...prev[previewQuestions[previewCurrentStep].id],
+                                      justification: e.target.value
+                                    }
+                                  }))}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Navegação Avançada entre questões */}
+                            <div className="space-y-6 mt-8 pt-6 border-t border-border">
+                              {/* Navegação Sequencial */}
+                              <div className="flex items-center justify-between">
+                                <Button
+                                  variant="outline"
+                                  size="lg"
+                                  onClick={() => setPreviewCurrentStep(Math.max(0, previewCurrentStep - 1))}
+                                  disabled={previewCurrentStep === 0}
+                                  className="flex items-center gap-2 px-6"
+                                >
+                                  <ChevronLeft className="h-5 w-5" />
+                                  Anterior
+                                </Button>
+                                
+                                <div className="text-center">
+                                  <div className="text-lg font-semibold text-foreground">
+                                    Questão {previewCurrentStep + 1} de {previewQuestions.length}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    Categoria: {previewQuestions[previewCurrentStep]?.category}
+                                  </div>
+                                </div>
+
+                                <Button
+                                  variant="outline"
+                                  size="lg"
+                                  onClick={() => setPreviewCurrentStep(Math.min(previewQuestions.length - 1, previewCurrentStep + 1))}
+                                  disabled={previewCurrentStep >= previewQuestions.length - 1}
+                                  className="flex items-center gap-2 px-6"
+                                >
+                                  Próxima
+                                  <ChevronRight className="h-5 w-5" />
+                                </Button>
+                              </div>
+
+                              {/* Mini-mapa de Navegação */}
+                              <div className="flex items-center justify-center gap-1 flex-wrap max-w-4xl mx-auto p-4 bg-secondary/20 rounded-lg border">
+                                {previewQuestions.map((question, index) => (
+                                  <button
+                                    key={index}
+                                    onClick={() => setPreviewCurrentStep(index)}
+                                    className={`relative w-8 h-8 rounded-lg transition-all hover:scale-110 flex items-center justify-center text-xs font-medium ${
+                                      index === previewCurrentStep 
+                                        ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-md' 
+                                        : previewResponses[previewQuestions[index]?.id]?.answer 
+                                          ? 'bg-green-500 text-white hover:bg-green-600 shadow-sm' 
+                                          : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border'
+                                    }`}
+                                    title={`Questão ${index + 1}: ${question.question?.substring(0, 50)}...${previewResponses[question?.id]?.answer ? ' ✅ Respondida' : ''}`}
+                                  >
+                                    {index + 1}
+                                    {previewResponses[question?.id]?.answer && (
+                                      <CheckCircle className="absolute -top-1 -right-1 w-3 h-3 text-green-600 bg-white rounded-full" />
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Navegação por Categoria */}
+                              <div className="bg-secondary/10 rounded-lg p-4">
+                                <h4 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                                  <Target className="h-4 w-4 text-primary" />
+                                  Navegação Rápida por Categoria
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                  {Array.from(new Set(previewQuestions.map(q => q.category))).map((category, index) => {
+                                    const categoryQuestions = previewQuestions.filter(q => q.category === category);
+                                    const firstQuestionIndex = previewQuestions.findIndex(q => q.category === category);
+                                    const answeredInCategory = categoryQuestions.filter(q => previewResponses[q.id]?.answer).length;
+                                    const isCurrentCategory = previewQuestions[previewCurrentStep]?.category === category;
+                                    
+                                    return (
+                                      <Button
+                                        key={index}
+                                        variant={isCurrentCategory ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setPreviewCurrentStep(firstQuestionIndex)}
+                                        className={`text-xs h-auto p-2 flex flex-col items-start gap-1 ${
+                                          isCurrentCategory ? 'ring-2 ring-primary/30' : ''
+                                        }`}
+                                      >
+                                        <span className="font-medium truncate w-full text-left">{category}</span>
+                                        <span className="text-xs opacity-75">
+                                          {answeredInCategory}/{categoryQuestions.length} questões
+                                        </span>
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Saltos Rápidos */}
+                              <div className="flex items-center justify-center gap-4 text-sm">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setPreviewCurrentStep(0)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <ArrowLeft className="h-4 w-4" />
+                                  Primeira
+                                </Button>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Ir para próxima questão não respondida
+                                    const nextUnanswered = previewQuestions.findIndex((q, idx) => 
+                                      idx > previewCurrentStep && !previewResponses[q.id]
+                                    );
+                                    if (nextUnanswered !== -1) {
+                                      setPreviewCurrentStep(nextUnanswered);
+                                    }
+                                  }}
+                                  className="flex items-center gap-1"
+                                  disabled={!previewQuestions.some((q, idx) => idx > previewCurrentStep && !previewResponses[q.id])}
+                                >
+                                  <HelpCircle className="h-4 w-4" />
+                                  Próxima não respondida
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setPreviewCurrentStep(previewQuestions.length - 1)}
+                                  className="flex items-center gap-1"
+                                >
+                                  Última
+                                  <ArrowRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Resumo das Categorias */}
+                      {previewQuestions.length > 0 && (
+                        <Card className="mb-8 shadow-md">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-3 text-xl">
+                              <BarChart3 className="h-6 w-6 text-primary" />
+                              Categorias do Assessment
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {Array.from(new Set(previewQuestions.map(q => q.category))).map((category, index) => {
+                                const categoryQuestions = previewQuestions.filter(q => q.category === category);
+                                const answeredInCategory = categoryQuestions.filter(q => previewResponses[q.id]?.answer).length;
+                                const progressInCategory = (answeredInCategory / categoryQuestions.length) * 100;
+                                
+                                return (
+                                  <div key={index} className="p-4 border-2 border-border rounded-lg hover:border-primary/30 hover:bg-secondary/20 transition-all">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h4 className="font-semibold text-sm text-foreground">{category}</h4>
+                                      <Badge variant="outline" className="text-xs px-2 py-1">
+                                        {answeredInCategory}/{categoryQuestions.length}
+                                      </Badge>
+                                    </div>
+                                    <Progress value={progressInCategory} className="h-3 mb-2" />
+                                    <div className="text-xs text-muted-foreground text-center">
+                                      {Math.round(progressInCategory)}% completo
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Footer com informações */}
+                      <div className="text-center space-y-4 pt-8 pb-6 border-t border-border">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-2xl mx-auto">
+                          <div className="flex flex-col items-center gap-2 p-4 bg-secondary/30 rounded-lg">
+                            <FileCheck className="h-8 w-8 text-primary" />
+                            <div className="text-lg font-bold text-foreground">{previewQuestions.length}</div>
+                            <div className="text-sm text-muted-foreground">Questões Totais</div>
+                          </div>
+                          <div className="flex flex-col items-center gap-2 p-4 bg-secondary/30 rounded-lg">
+                            <Clock className="h-8 w-8 text-orange-500" />
+                            <div className="text-lg font-bold text-foreground">~{Math.ceil(previewQuestions.length * 1.5)} min</div>
+                            <div className="text-sm text-muted-foreground">Tempo Estimado</div>
+                          </div>
+                          <div className="flex flex-col items-center gap-2 p-4 bg-secondary/30 rounded-lg">
+                            <Brain className="h-8 w-8 text-green-500" />
+                            <div className="text-lg font-bold text-foreground">Interativo</div>
+                            <div className="text-sm text-muted-foreground">Preview Completo</div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                          Este preview permite navegar por todas as questões reais do template selecionado, 
+                          simulando a experiência completa do fornecedor.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Preview via iframe para assessments reais
+                <iframe
+                  src={`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`}
+                  className="w-full h-full border rounded-lg"
+                  title="Preview da Página Pública"
+                />
+              )}
             </div>
           )}
           
-          <div className="flex justify-between pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (previewAssessment?.public_link) {
-                  window.open(`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`, '_blank');
-                }
-              }}
+          <div className="flex justify-between items-center pt-6 px-6 pb-6 border-t border-border bg-secondary/20">
+            {previewAssessment?.public_link?.startsWith('temp-') ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full">
+                <Info className="h-4 w-4" />
+                Preview interativo disponível apenas neste modal
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  if (previewAssessment?.public_link) {
+                    window.open(`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`, '_blank');
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-5 w-5" />
+                Abrir em Nova Aba
+              </Button>
+            )}
+            <Button 
+              size="lg" 
+              onClick={() => setShowPreviewDialog(false)}
+              className="px-8"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Abrir em Nova Aba
-            </Button>
-            <Button onClick={() => setShowPreviewDialog(false)}>
-              Fechar
+              Fechar Preview
             </Button>
           </div>
         </DialogContent>

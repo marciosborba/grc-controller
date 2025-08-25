@@ -186,7 +186,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
     }
 
     try {
-      let updatedItems = [...(actionPlanItems || [])];
+      const updatedItems = [...(actionPlanItems || [])];
 
       if (editingIndex !== null) {
         // Atualizar item existente

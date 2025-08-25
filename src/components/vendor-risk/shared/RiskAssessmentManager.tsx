@@ -3959,7 +3959,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
           <Button
             onClick={() => {
               if (selectedTemplate) {
-                let updatedQuestions = [...selectedTemplate.questions];
+                const updatedQuestions = [...selectedTemplate.questions];
                 
                 if (isAddingQuestion) {
                   // Adicionar nova questão

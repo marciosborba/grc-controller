@@ -115,7 +115,7 @@ export class RiskLetterPDFGenerator {
   }
 
   private addHeader(companyInfo: CompanyInfo): number {
-    let currentY = this.margin;
+    const currentY = this.margin;
 
     // Cabeçalho com gradiente sutil
     this.doc.setFillColor(...this.primaryColor);

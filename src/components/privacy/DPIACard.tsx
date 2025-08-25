@@ -99,7 +99,7 @@ export function DPIACard({
   // Calculate completion percentage
   const getCompletionPercentage = () => {
     let completed = 0;
-    let total = 8; // Number of assessment criteria
+    const total = 8; // Number of assessment criteria
 
     if (dpia.involves_high_risk !== null) completed++;
     if (dpia.involves_sensitive_data !== null) completed++;
