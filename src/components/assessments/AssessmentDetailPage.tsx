@@ -140,7 +140,7 @@ const AssessmentDetailPage: React.FC = () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       
-      let updateData: any = { [field]: value, last_updated_by_user_id: userId };
+      const updateData: any = { [field]: value, last_updated_by_user_id: userId };
       
       // Auto-update status based on role and field
       if (userRole === 'respondent' && (field === 'respondent_maturity_level' || field === 'assessee_response' || field === 'respondent_comments')) {

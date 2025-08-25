@@ -954,7 +954,7 @@ const BasicInfoStep: React.FC<{
       sum += parseInt(numbers[i]) * weight;
       weight = weight === 2 ? 9 : weight - 1;
     }
-    let digit1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    const digit1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
     
     if (parseInt(numbers[12]) !== digit1) return false;
     
@@ -965,7 +965,7 @@ const BasicInfoStep: React.FC<{
       sum += parseInt(numbers[i]) * weight;
       weight = weight === 2 ? 9 : weight - 1;
     }
-    let digit2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    const digit2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
     
     return parseInt(numbers[13]) === digit2;
   };
@@ -1544,7 +1544,7 @@ const RiskAssessmentStep: React.FC<{
       console.log('Template selecionado:', { templateId, templateName, vendorId: vendorData.id });
       
       // Buscar o framework real no banco de dados baseado no tipo
-      let frameworkId = templateId;
+      const frameworkId = templateId;
       
       // Se o templateId não for um UUID válido, buscar o framework correspondente
       if (templateId === 'nist_csf_default' || templateId === 'iso_27001_27701_default') {

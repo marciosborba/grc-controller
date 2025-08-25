@@ -452,7 +452,7 @@ export const useRiskManagementOptimized = (config: RiskManagementConfig = {}) =>
   // Atualizar risco com merge inteligente
   const updateRiskMutation = useMutation({
     mutationFn: async ({ riskId, data }: { riskId: string; data: UpdateRiskRequest }) => {
-      let updateData: any = {};
+      const updateData: any = {};
 
       // Mapear campos de forma inteligente
       if (data.name) updateData.title = data.name;

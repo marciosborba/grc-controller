@@ -86,7 +86,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
 
   // Filtrar e ordenar riscos
   const processedRisks = useMemo(() => {
-    let filtered = risks.filter(risk => {
+    const filtered = risks.filter(risk => {
       // Busca por termo
       if (searchTerm) {
         const term = searchTerm.toLowerCase();

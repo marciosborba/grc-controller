@@ -151,7 +151,7 @@ export const SystemLogsSection = () => {
         log.user_id && !log.profiles
       ) || [];
       
-      let authUsersMap = new Map();
+      const authUsersMap = new Map();
       if (logsWithoutProfile.length > 0) {
         console.log('🔍 Buscando dados de usuários para', logsWithoutProfile.length, 'logs sem profile');
         
@@ -221,7 +221,7 @@ export const SystemLogsSection = () => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       // Para estatísticas totais, usar dados de todo o período se não for filtro específico
-      let totalLogsCount = count || 0;
+      const totalLogsCount = count || 0;
       let todayLogsData = processedLogs;
       let weekLogsData = processedLogs;
       

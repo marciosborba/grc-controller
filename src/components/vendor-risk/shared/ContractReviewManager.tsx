@@ -1021,7 +1021,7 @@ Retorne APENAS um JSON válido em português com esta estrutura exata:
     analysisPoints.filter(point => point.enabled).forEach(point => {
       maxScore += point.weight;
       let pointScore = 0;
-      let foundKeywords: string[] = [];
+      const foundKeywords: string[] = [];
       
       // Verificar palavras-chave
       point.keywords.forEach(keyword => {

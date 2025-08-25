@@ -408,7 +408,7 @@ export const useRiskManagement = () => {
 
       console.log('🚀 Inserindo no banco...');
       
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('risk_registrations')
         .insert([baseRiskData])
         .select()
@@ -450,7 +450,7 @@ export const useRiskManagement = () => {
   // Atualizar risco
   const updateRiskMutation = useMutation({
     mutationFn: async ({ riskId, data }: { riskId: string; data: UpdateRiskRequest }) => {
-      let updateData: any = {};
+      const updateData: any = {};
 
       if (data.name) updateData.risk_title = data.name;
       if (data.description) updateData.risk_description = data.description;
@@ -618,7 +618,7 @@ export const useRiskManagement = () => {
 
   const updateActivityMutation = useMutation({
     mutationFn: async ({ activityId, data }: { activityId: string; data: Partial<Activity> }) => {
-      let updateData: any = {};
+      const updateData: any = {};
       
       if (data.name) updateData.description = data.name;
       if (data.responsible) updateData.responsible_person = data.responsible;
@@ -678,7 +678,7 @@ export const useRiskManagement = () => {
     const description = supabaseRisk.risk_description || '';
     
     // Determinar status baseado no status do registro e current_step
-    let finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status, supabaseRisk.current_step);
+    const finalStatus = mapSupabaseStatusToRiskStatus(supabaseRisk.status, supabaseRisk.current_step);
     
     // Calcular riskScore baseado nos scores disponíveis
     const probability = supabaseRisk.likelihood_score || supabaseRisk.probability_score || 3;

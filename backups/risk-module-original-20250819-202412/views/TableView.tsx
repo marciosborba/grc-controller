@@ -83,7 +83,7 @@ export const TableView: React.FC<TableViewProps> = ({
 
   // Filtrar e ordenar riscos
   const processedRisks = useMemo(() => {
-    let filtered = risks.filter(risk => {
+    const filtered = risks.filter(risk => {
       // Busca por termo
       if (searchTerm) {
         const term = searchTerm.toLowerCase();

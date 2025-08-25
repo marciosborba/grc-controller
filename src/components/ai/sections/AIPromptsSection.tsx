@@ -329,7 +329,7 @@ export const AIPromptsSection: React.FC = () => {
 
   const savePrompt = async () => {
     try {
-      let promptData: any = {
+      const promptData: any = {
         ...promptForm,
         updated_at: new Date().toISOString()
       };
@@ -531,7 +531,7 @@ export const AIPromptsSection: React.FC = () => {
       // Preparar dados do template
       console.log('🛠️ Preparando dados do template...');
       
-      let templateData: any = {
+      const templateData: any = {
         name: templateForm.name?.trim(),
         category: templateForm.category,
         title: templateForm.title?.trim(),

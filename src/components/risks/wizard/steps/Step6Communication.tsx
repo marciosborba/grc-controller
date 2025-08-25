@@ -173,7 +173,7 @@ export const Step6Communication: React.FC<Step6Props> = ({
     }
 
     try {
-      let updatedStakeholders = [...(stakeholders || [])];
+      const updatedStakeholders = [...(stakeholders || [])];
 
       if (editingIndex !== null) {
         // Atualizar stakeholder existente

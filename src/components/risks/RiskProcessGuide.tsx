@@ -342,7 +342,7 @@ export const RiskProcessGuide: React.FC<RiskProcessGuideProps> = ({ onRiskCreate
       console.log('🔍 Debug fetchRisks - Tenant ID:', user?.tenant?.id);
       
       // Buscar riscos do tenant do usuário
-      let query = supabase
+      const query = supabase
         .from('risk_assessments')
         .select('*')
         .order('updated_at', { ascending: false });
