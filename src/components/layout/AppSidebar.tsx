@@ -71,13 +71,7 @@ const navigationItems = [{
       permissions: ['risk.read', 'all'],
       description: 'Gestão completa de riscos corporativos com ALEX RISK'
     },
-    {
-      title: 'Gestão de Riscos (Legado)',
-      url: '/risks-legacy',
-      icon: AlertTriangle,
-      permissions: ['risk.read', 'all'],
-      description: 'Módulo original de gestão de riscos'
-    },
+
     {
       title: 'Incidentes',
       url: '/incidents',

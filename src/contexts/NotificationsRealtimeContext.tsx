@@ -55,7 +55,15 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
   children, 
   baseUrl = '' 
 }) => {
-  const { user } = useAuth();
+  const authContext = useAuth();
+  
+  // Verificar se o AuthContext está disponível
+  if (!authContext) {
+    console.warn('NotificationsRealtimeProvider: AuthContext não disponível, renderizando children sem notificações em tempo real');
+    return <>{children}</>;
+  }
+  
+  const { user } = authContext;
   
   // Estado da conexão
   const [isConnected, setIsConnected] = useState(false);

@@ -267,7 +267,42 @@ export interface RiskFilters {
 
 export const useVendorRiskManagement = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const authContext = useAuth();
+  
+  // Verificar se o contexto está disponível
+  if (!authContext) {
+    console.warn('useVendorRiskManagement: AuthContext não disponível');
+    // Retornar valores padrão seguros
+    return {
+      vendors: [],
+      assessments: [],
+      risks: [],
+      actionPlans: [],
+      incidents: [],
+      frameworks: [],
+      dashboardMetrics: null,
+      riskDistribution: null,
+      loading: false,
+      error: null,
+      fetchVendors: () => Promise.resolve(),
+      createVendor: () => Promise.resolve(null),
+      updateVendor: () => Promise.resolve(null),
+      deleteVendor: () => Promise.resolve(false),
+      fetchAssessments: () => Promise.resolve(),
+      createAssessment: () => Promise.resolve(null),
+      updateAssessment: () => Promise.resolve(null),
+      sendAssessmentToVendor: () => Promise.resolve(null),
+      fetchRisks: () => Promise.resolve(),
+      createRisk: () => Promise.resolve(null),
+      updateRisk: () => Promise.resolve(null),
+      fetchDashboardMetrics: () => Promise.resolve(),
+      fetchRiskDistribution: () => Promise.resolve(),
+      fetchFrameworks: () => Promise.resolve(),
+      resetError: () => {}
+    };
+  }
+  
+  const { user } = authContext;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

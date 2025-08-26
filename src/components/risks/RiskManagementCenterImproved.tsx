@@ -212,14 +212,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
       badge: metrics?.pendingApprovals > 0 ? metrics.pendingApprovals : undefined
     },
     {
-      id: 'notifications',
-      title: 'Alertas',
-      description: 'Notificações ativas',
-      icon: Bell,
+      id: 'risk-letters',
+      title: 'Carta de Risco',
+      description: 'Riscos aceitos',
+      icon: FileText,
       color: 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700',
-      action: () => handleNotifications(),
+      action: () => handleRiskLetters(),
       category: 'integration',
-      badge: metrics?.overdueActivities > 0 ? metrics.overdueActivities : undefined
+      badge: metrics?.acceptedRisks > 0 ? metrics.acceptedRisks : undefined
     }
   ];
 
@@ -267,10 +267,11 @@ export const RiskManagementCenterImproved: React.FC = () => {
     });
   };
 
-  const handleNotifications = () => {
+  const handleRiskLetters = () => {
+    navigate('/risk-letters');
     toast({
-      title: '🔔 Central de Alertas',
-      description: 'Verificando notificações pendentes...',
+      title: '📄 Carta de Risco',
+      description: 'Redirecionando para gestão de cartas de risco...',
     });
   };
   
