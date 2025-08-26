@@ -450,6 +450,46 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     }
   };
 
+  const getTreatmentStrategyColor = (strategy: string) => {
+    switch (strategy?.toLowerCase()) {
+      case 'accept':
+      case 'aceitar':
+        return 'bg-red-500 text-white border-red-600';
+      case 'mitigate':
+      case 'mitigar':
+        return 'bg-yellow-500 text-white border-yellow-600';
+      case 'transfer':
+      case 'transferir':
+        return 'bg-blue-500 text-white border-blue-600';
+      case 'avoid':
+      case 'evitar':
+        return 'bg-green-500 text-white border-green-600';
+      default:
+        return 'bg-gray-500 text-white border-gray-600';
+    }
+  };
+
+  const translateTreatmentStrategy = (strategy: string): string => {
+    if (!strategy) return 'Não definido';
+    
+    const translations: Record<string, string> = {
+      'accept': 'Aceitar',
+      'mitigate': 'Mitigar', 
+      'transfer': 'Transferir',
+      'avoid': 'Evitar'
+    };
+    
+    const cleanStrategy = strategy.trim().toLowerCase();
+    
+    for (const [key, value] of Object.entries(translations)) {
+      if (key.toLowerCase() === cleanStrategy) {
+        return value;
+      }
+    }
+    
+    return strategy;
+  };
+
   const formatDate = (date?: Date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR');
@@ -602,7 +642,15 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             placeholder="Nome do risco"
                           />
                         ) : (
-                          <h3 className="font-semibold text-lg truncate">{risk.name}</h3>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {console.log('🔍 COMPONENTE - Risk:', { id: risk.id, name: risk.name, riskCode: risk.riskCode })}
+                            {risk.riskCode && (
+                              <Badge variant="secondary" className="text-xs font-mono bg-blue-100 text-blue-800 border-blue-300">
+                                {risk.riskCode}
+                              </Badge>
+                            )}
+                            <h3 className="font-semibold text-lg truncate">{risk.name}</h3>
+                          </div>
                         )}
                         
                         {overdue && (
@@ -653,6 +701,12 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                         <Badge variant="outline" className="text-xs">
                           Score: {risk.riskScore}
                         </Badge>
+
+                        {risk.treatmentType && (
+                          <Badge className={`${getTreatmentStrategyColor(risk.treatmentType)} text-xs`}>
+                            {translateTreatmentStrategy(risk.treatmentType)}
+                          </Badge>
+                        )}
                       </div>
 
                       {/* Informações básicas */}
@@ -1368,7 +1422,36 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 </Select>
                               ) : (
                                 <Badge variant="outline" className="text-sm">
-                                  {risk.treatmentType || 'Não definido'}
+                                  {(() => {
+                                    // Função de tradução para estratégias de tratamento
+                                    const translateTreatmentStrategy = (strategy: string): string => {
+                                      if (!strategy) return 'Não definido';
+                                      
+                                      const translations: Record<string, string> = {
+                                        'mitigate': 'Mitigar',
+                                        'transfer': 'Transferir', 
+                                        'avoid': 'Evitar',
+                                        'accept': 'Aceitar',
+                                        'Mitigar': 'Mitigar',
+                                        'Transferir': 'Transferir',
+                                        'Evitar': 'Evitar', 
+                                        'Aceitar': 'Aceitar'
+                                      };
+                                      
+                                      const cleanStrategy = strategy.trim().toLowerCase();
+                                      
+                                      for (const [key, value] of Object.entries(translations)) {
+                                        if (key.toLowerCase() === cleanStrategy) {
+                                          return value;
+                                        }
+                                      }
+                                      
+                                      return strategy;
+                                    };
+                                    
+                                    const result = translateTreatmentStrategy(risk.treatmentType || '');
+                                    return result;
+                                  })()}
                                 </Badge>
                               )}
                             </div>

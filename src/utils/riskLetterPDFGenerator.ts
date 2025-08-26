@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getTenantMatrixConfig, generateMatrixData, findRiskPositionInMatrix } from '@/utils/risk-analysis';
+import type { MatrixSize } from '@/types/risk-management';
 
 interface CompanyInfo {
   name: string;
@@ -35,6 +37,11 @@ interface RiskAcceptanceLetter {
   compensating_controls: string[];
   stakeholder_notifications: string[];
   status: string;
+  
+  // Campos para matriz de risco
+  probability_score?: number;
+  impact_score?: number;
+  tenant_id?: string;
   
   manager_approval_status?: string;
   manager_comments?: string;
@@ -444,14 +451,187 @@ export class RiskLetterPDFGenerator {
     return format(dateObj, 'dd/MM/yyyy', { locale: ptBR });
   }
 
+  private async addRiskMatrix(
+    letter: RiskAcceptanceLetter,
+    yPosition: number
+  ): Promise<number> {
+    // Verificar se temos dados suficientes para gerar a matriz
+    if (!letter.probability_score || !letter.impact_score) {
+      console.log('Dados insuficientes para gerar matriz de risco');
+      return yPosition;
+    }
+
+    try {
+      // Obter configuração da matriz da tenant
+      const matrixConfig = await getTenantMatrixConfig(letter.tenant_id);
+      console.log('Configuração da matriz obtida:', matrixConfig);
+
+      // Gerar dados da matriz
+      const matrixData = generateMatrixData(matrixConfig.type);
+      
+      // Encontrar posição do risco na matriz
+      const riskPosition = findRiskPositionInMatrix(
+        letter.probability_score,
+        letter.impact_score,
+        matrixConfig.type
+      );
+
+      const matrixSize = matrixConfig.type === '4x4' ? 4 : 5;
+      const cellSize = 15; // Tamanho de cada célula em mm
+      const matrixWidth = matrixSize * cellSize;
+      const matrixHeight = matrixSize * cellSize;
+      const startX = this.margin + 35; // Aumentado de 20 para 35 para dar mais espaço
+      const legendWidth = 60;
+      
+      // Verificar se precisa de nova página
+      if (yPosition + matrixHeight + 40 > this.getMaxContentY()) {
+        this.doc.addPage();
+        yPosition = this.margin;
+      }
+
+      // Título da seção
+      yPosition = this.addSection('MATRIZ DE RISCO', '', yPosition);
+      
+      // Calcular o nível de risco real baseado na posição na matriz
+      const realRiskLevel = matrixData[riskPosition.y][riskPosition.x].level;
+      
+      // Adicionar informações da matriz
+      this.doc.setFontSize(8);
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setTextColor(0, 0, 0);
+      this.doc.text(`Nível de Risco: ${realRiskLevel}`, this.margin, yPosition);
+      
+      yPosition += 8;
+
+      // Desenhar labels de impacto (eixo Y - lado esquerdo)
+      this.doc.setFontSize(6);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setTextColor(...this.darkGray);
+      
+      for (let i = 0; i < matrixSize; i++) {
+        const labelIndex = matrixSize - 1 - i; // Inverter para mostrar do maior para o menor
+        const label = matrixConfig.impact_labels[labelIndex] || `${labelIndex + 1}`;
+        const y = yPosition + (i * cellSize) + (cellSize / 2) + 1;
+        this.doc.text(label, startX - 2, y, { align: 'right' });
+      }
+
+      // Desenhar labels de probabilidade (eixo X - parte inferior)
+      for (let i = 0; i < matrixSize; i++) {
+        const label = matrixConfig.likelihood_labels?.[i] || `${i + 1}`;
+        const x = startX + (i * cellSize) + (cellSize / 2);
+        this.doc.text(label, x, yPosition + matrixHeight + 8, { align: 'center' });
+      }
+
+      // Desenhar a matriz
+      matrixData.forEach((row, rowIndex) => {
+        row.forEach((cell, colIndex) => {
+          const x = startX + (colIndex * cellSize);
+          const y = yPosition + (rowIndex * cellSize);
+          
+          // Cor de fundo baseada no nível de risco
+          const rgb = this.hexToRgb(cell.color);
+          this.doc.setFillColor(...rgb);
+          this.doc.rect(x, y, cellSize, cellSize, 'F');
+          
+          // Borda
+          this.doc.setDrawColor(255, 255, 255);
+          this.doc.setLineWidth(0.5);
+          this.doc.rect(x, y, cellSize, cellSize);
+          
+          // Valor da célula
+          this.doc.setFontSize(7);
+          this.doc.setFont('helvetica', 'bold');
+          this.doc.setTextColor(255, 255, 255);
+          const cellValue = cell.probability * cell.impact;
+          this.doc.text(cellValue.toString(), x + cellSize/2, y + cellSize/2 + 1, { align: 'center' });
+          
+          // Destacar a posição do risco atual
+          if (colIndex === riskPosition.x && rowIndex === riskPosition.y) {
+            // Círculo destacando a posição do risco
+            this.doc.setDrawColor(0, 0, 0);
+            this.doc.setLineWidth(2);
+            this.doc.circle(x + cellSize/2, y + cellSize/2, cellSize/3, 'S');
+          }
+        });
+      });
+
+      // Adicionar legenda
+      const legendX = startX + matrixWidth + 10;
+      let legendY = yPosition;
+      
+      this.doc.setFontSize(7);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setTextColor(0, 0, 0);
+      this.doc.text('LEGENDA:', legendX, legendY);
+      
+      legendY += 6;
+      
+      // Cores da legenda baseadas no tipo de matriz
+      const legendItems = matrixConfig.type === '5x5' ? [
+        { level: 'Muito Baixo', color: '#3b82f6' },
+        { level: 'Baixo', color: '#22c55e' },
+        { level: 'Médio', color: '#eab308' },
+        { level: 'Alto', color: '#f97316' },
+        { level: 'Muito Alto', color: '#ef4444' }
+      ] : [
+        { level: 'Baixo', color: '#22c55e' },
+        { level: 'Médio', color: '#eab308' },
+        { level: 'Alto', color: '#f97316' },
+        { level: 'Muito Alto', color: '#ef4444' }
+      ];
+      
+      legendItems.forEach((item, index) => {
+        const itemY = legendY + (index * 6);
+        
+        // Quadrado colorido
+        const rgb = this.hexToRgb(item.color);
+        this.doc.setFillColor(...rgb);
+        this.doc.rect(legendX, itemY - 2, 4, 4, 'F');
+        
+        // Texto
+        this.doc.setFontSize(6);
+        this.doc.setFont('helvetica', 'normal');
+        this.doc.setTextColor(0, 0, 0);
+        this.doc.text(item.level, legendX + 6, itemY + 1);
+      });
+
+      // Indicador visual já está na matriz (círculo preto)
+      
+      // Adicionar labels dos eixos
+      this.doc.setFontSize(8);
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setTextColor(...this.primaryColor);
+      
+      // Label do eixo Y (Impacto) - rotacionado
+      this.doc.text('IMPACTO', startX - 18, yPosition + matrixHeight/2, { angle: 90 });
+      
+      // Label do eixo X (Probabilidade)
+      this.doc.text('PROBABILIDADE', startX + matrixWidth/2, yPosition + matrixHeight + 15, { align: 'center' });
+
+      return yPosition + matrixHeight + 25;
+      
+    } catch (error) {
+      console.error('Erro ao gerar matriz de risco:', error);
+      // Em caso de erro, apenas adicionar uma nota
+      this.doc.setFontSize(8);
+      this.doc.setTextColor(255, 0, 0);
+      this.doc.text('Erro ao gerar matriz de risco. Verifique a configuração da tenant.', this.margin, yPosition);
+      return yPosition + 10;
+    }
+  }
+
   public async generateRiskAcceptanceLetter(
     companyInfo: CompanyInfo, 
     letter: RiskAcceptanceLetter, 
     riskData?: RiskData
   ): Promise<void> {
     try {
+      console.log('=== GERADOR DE PDF INICIADO ===');
       console.log('Iniciando geração do PDF...');
       console.log('Dados da empresa recebidos:', companyInfo);
+      console.log('Dados da carta recebidos:', letter);
+      console.log('jsPDF disponível:', typeof jsPDF);
+      console.log('Instância do documento:', this.doc);
       
       let currentY = this.addHeader(companyInfo);
       
@@ -485,6 +665,11 @@ export class RiskLetterPDFGenerator {
         `EXPOSIÇÃO FINANCEIRA: ${this.formatCurrency(letter.financial_exposure)}`,
         currentY
       );
+
+      // Adicionar Matriz de Risco (se dados disponíveis)
+      if (letter.probability_score && letter.impact_score) {
+        currentY = await this.addRiskMatrix(letter, currentY);
+      }
 
       // Seção 2: Justificativa de Negócio
       currentY = this.addSection(
@@ -580,9 +765,25 @@ export class RiskLetterPDFGenerator {
       console.log('PDF estruturado, iniciando download...');
       
       const fileName = `carta-aceitacao-risco-${letter.letter_number}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      this.doc.save(fileName);
+      console.log('Nome do arquivo:', fileName);
+      console.log('Chamando this.doc.save...');
       
-      console.log('PDF salvo com sucesso:', fileName);
+      // Verificar se o navegador permite downloads
+      if (typeof document === 'undefined') {
+        throw new Error('Documento não disponível (ambiente não é navegador)');
+      }
+      
+      // Tentar salvar o arquivo
+      try {
+        this.doc.save(fileName);
+      } catch (saveError) {
+        console.error('Erro específico ao salvar:', saveError);
+        throw new Error(`Erro ao salvar PDF: ${saveError instanceof Error ? saveError.message : 'Erro desconhecido no save'}`);
+      }
+      
+      console.log('=== PDF SALVO COM SUCESSO ===');
+      console.log('Arquivo:', fileName);
+      console.log('Processo de geração concluído');
       
     } catch (error) {
       console.error('Erro na geração do PDF:', error);

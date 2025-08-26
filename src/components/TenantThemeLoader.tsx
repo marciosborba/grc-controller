@@ -12,8 +12,13 @@ import { useAuth } from '@/contexts/AuthContext';
 export const TenantThemeLoader: React.FC = () => {
   const { user, isLoading } = useAuth();
   
-  // Só usar o hook se o usuário estiver logado
+  // Só usar o hook se o usuário estiver logado e auth não estiver carregando
   const shouldLoadTheme = user && !isLoading;
+  
+  // Não renderizar nada se auth ainda estiver carregando
+  if (isLoading) {
+    return null;
+  }
   
   // Usar o hook condicionalmente pode causar problemas
   // Então vamos sempre usar o hook, mas ele vai verificar internamente

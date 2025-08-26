@@ -41,7 +41,15 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const authContext = useAuth();
+  
+  // Verificar se o AuthContext está disponível
+  if (!authContext) {
+    console.warn('ThemeContextInner: AuthContext não disponível, renderizando children sem tema personalizado');
+    return <>{children}</>;
+  }
+  
+  const { user } = authContext;
   const { theme, setTheme, systemTheme, resolvedTheme } = useNextTheme();
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);

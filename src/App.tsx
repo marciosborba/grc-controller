@@ -18,9 +18,10 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
-const RiskManagementPageLegacy = lazy(() => import("@/components/risks/NewRiskManagementPage"));
+
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
+const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 const CompliancePage = lazy(() => import("@/components/compliance/CompliancePage"));
 // Audit IA Module - Comprehensive audit management with AI
@@ -157,9 +158,9 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TenantThemeLoader />
-        <NotificationsRealtimeProvider>
-          <ThemeProvider>
+        <ThemeProvider>
+          <TenantThemeLoader />
+          <NotificationsRealtimeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -200,11 +201,7 @@ const App = () => (
                       <RiskManagementHub />
                     </Suspense>
                   } />
-                  <Route path="risks-legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskManagementPageLegacy />
-                    </Suspense>
-                  } />
+
                   <Route path="risks/matrix" element={
                     <Suspense fallback={<PageLoader />}>
                       <RiskMatrixPage />
@@ -213,6 +210,11 @@ const App = () => (
                   <Route path="action-plans" element={
                     <Suspense fallback={<PageLoader />}>
                       <ActionPlansManagementPage />
+                    </Suspense>
+                  } />
+                  <Route path="risk-letters" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskAcceptanceManagement />
                     </Suspense>
                   } />
                   <Route path="compliance" element={
@@ -438,9 +440,9 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </TooltipProvider>
+            </TooltipProvider>
+          </NotificationsRealtimeProvider>
         </ThemeProvider>
-        </NotificationsRealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

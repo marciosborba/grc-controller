@@ -80,12 +80,85 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Funções utilitárias
   const getRiskLevelColor = (level: string) => {
     switch (level) {
+      case 'Crítico':
       case 'Muito Alto': return '#ef4444';
       case 'Alto': return '#f97316';
       case 'Médio': return '#eab308';
       case 'Baixo': return '#22c55e';
       case 'Muito Baixo': return '#64748b';
       default: return '#6b7280';
+    }
+  };
+
+  const getRiskLevelBadgeStyle = (level: string) => {
+    switch (level) {
+      case 'Crítico':
+      case 'Muito Alto': 
+        return {
+          backgroundColor: '#dc2626',
+          color: '#ffffff',
+          borderColor: '#dc2626',
+          borderWidth: '1px'
+        };
+      case 'Alto': 
+        return {
+          backgroundColor: '#ea580c',
+          color: '#ffffff',
+          borderColor: '#ea580c',
+          borderWidth: '1px'
+        };
+      case 'Médio': 
+        return {
+          backgroundColor: '#ca8a04',
+          color: '#ffffff',
+          borderColor: '#ca8a04',
+          borderWidth: '1px'
+        };
+      case 'Baixo': 
+        return {
+          backgroundColor: '#16a34a',
+          color: '#ffffff',
+          borderColor: '#16a34a',
+          borderWidth: '1px'
+        };
+      case 'Muito Baixo': 
+        return {
+          backgroundColor: '#64748b',
+          color: '#ffffff',
+          borderColor: '#64748b',
+          borderWidth: '1px'
+        };
+      default: 
+        return {
+          backgroundColor: '#6b7280',
+          color: '#ffffff',
+          borderColor: '#6b7280',
+          borderWidth: '1px'
+        };
+    }
+  };
+
+  const getRiskLevelIconBg = (level: string) => {
+    switch (level) {
+      case 'Crítico':
+      case 'Muito Alto': return 'bg-red-100 dark:bg-red-950/50';
+      case 'Alto': return 'bg-orange-100 dark:bg-orange-950/50';
+      case 'Médio': return 'bg-yellow-100 dark:bg-yellow-950/50';
+      case 'Baixo': return 'bg-green-100 dark:bg-green-950/50';
+      case 'Muito Baixo': return 'bg-slate-100 dark:bg-slate-950/50';
+      default: return 'bg-gray-100 dark:bg-gray-950/50';
+    }
+  };
+
+  const getRiskLevelIconColor = (level: string) => {
+    switch (level) {
+      case 'Crítico':
+      case 'Muito Alto': return 'text-red-600 dark:text-red-400';
+      case 'Alto': return 'text-orange-600 dark:text-orange-400';
+      case 'Médio': return 'text-yellow-600 dark:text-yellow-400';
+      case 'Baixo': return 'text-green-600 dark:text-green-400';
+      case 'Muito Baixo': return 'text-slate-600 dark:text-slate-400';
+      default: return 'text-gray-600 dark:text-gray-400';
     }
   };
 
@@ -197,11 +270,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
                       <Badge 
                         variant="outline" 
-                        className={`text-xs ${
-                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400' :
-                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400' :
-                          'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-400'
-                        }`}
+                        className="text-xs"
+                        style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>
@@ -316,18 +386,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {filteredRisks.slice(0, 10).map((risk) => (
               <div key={risk.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-4 flex-1 min-w-0">
-                  <div className={`p-2 rounded-lg ${
-                    risk.riskLevel === 'Muito Alto' ? 'bg-red-100 dark:bg-red-950/50' :
-                    risk.riskLevel === 'Alto' ? 'bg-orange-100 dark:bg-orange-950/50' :
-                    risk.riskLevel === 'Médio' ? 'bg-yellow-100 dark:bg-yellow-950/50' :
-                    'bg-green-100 dark:bg-green-950/50'
-                  }`}>
-                    <AlertTriangle className={`h-4 w-4 ${
-                      risk.riskLevel === 'Muito Alto' ? 'text-red-600 dark:text-red-400' :
-                      risk.riskLevel === 'Alto' ? 'text-orange-600 dark:text-orange-400' :
-                      risk.riskLevel === 'Médio' ? 'text-yellow-600 dark:text-yellow-400' :
-                      'text-green-600 dark:text-green-400'
-                    }`} />
+                  <div className={`p-2 rounded-lg ${getRiskLevelIconBg(risk.riskLevel)}`}>
+                    <AlertTriangle className={`h-4 w-4 ${getRiskLevelIconColor(risk.riskLevel)}`} />
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -335,12 +395,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <h4 className="font-medium truncate">{risk.name}</h4>
                       <Badge 
                         variant="outline" 
-                        className={`text-xs ${
-                          risk.riskLevel === 'Muito Alto' ? 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400' :
-                          risk.riskLevel === 'Alto' ? 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/50 dark:text-orange-400' :
-                          risk.riskLevel === 'Médio' ? 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-400' :
-                          'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/50 dark:text-green-400'
-                        }`}
+                        className="text-xs"
+                        style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>

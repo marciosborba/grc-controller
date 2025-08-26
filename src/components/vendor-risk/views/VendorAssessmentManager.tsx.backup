@@ -211,7 +211,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         .order('last_assessment_date', { ascending: false });
 
       if (assessmentError && vendorError) {
-        // Error loading assessments
+        console.error('Erro ao carregar assessments:', assessmentError, vendorError);
         toast({
           title: "Erro",
           description: "Não foi possível carregar os assessments",
@@ -283,7 +283,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
               }
             }
           } catch (error) {
-            // Error processing localStorage template
+            console.error('Erro ao processar template do localStorage:', error);
           }
         }
       }
@@ -335,7 +335,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
       setAssessments(combinedAssessments);
     } catch (error) {
-      // Unexpected error
+      console.error('Erro inesperado:', error);
     } finally {
       setLoading(false);
     }
@@ -422,7 +422,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         description: "O link foi copiado para a área de transferência"
       });
     } catch (error) {
-      // Error copying link
+      console.error('Erro ao copiar link:', error);
       toast({
         title: "Erro",
         description: "Não foi possível copiar o link",
@@ -439,10 +439,10 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
   // Carregar questões reais usando exatamente a mesma lógica do openAssessmentEditor
   const loadPreviewQuestions = async (assessment: VendorAssessment) => {
-    // Loading questions for assessment
-    // Framework ID: assessment.framework_id
-    // Template name: assessment.metadata?.template_name
-    // Framework data: assessment.vendor_assessment_frameworks
+    console.log('🔍 PREVIEW: Loading questions for assessment:', assessment.id);
+    console.log('🔍 PREVIEW: Framework ID:', assessment.framework_id);
+    console.log('🔍 PREVIEW: Template name:', assessment.metadata?.template_name);
+    console.log('🔍 PREVIEW: Framework data:', assessment.vendor_assessment_frameworks);
     setLoadingPreviewQuestions(true);
     
     try {
@@ -460,16 +460,16 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         if (savedData) {
           try {
             const parsedData = JSON.parse(savedData);
-            // Dados salvos encontrados no localStorage
+            console.log('🔍 PREVIEW: Dados salvos encontrados no localStorage:', parsedData);
             savedResponses = parsedData.responses || {};
             
             // Se há questões salvas, usar elas
             if (parsedData.questions && parsedData.questions.length > 0) {
               questions = parsedData.questions;
-              // Usando questões salvas do localStorage
+              console.log('🔍 PREVIEW: Usando questões salvas do localStorage:', questions.length);
             }
           } catch (e) {
-            // Erro ao parsear dados salvos do localStorage
+            console.warn('🔍 PREVIEW: Erro ao parsear dados salvos do localStorage:', e);
           }
         }
       }
@@ -479,39 +479,56 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         // Primeiro, tentar carregar do framework se existir
         if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
           questions = assessment.vendor_assessment_frameworks.questions;
-          // Questões carregadas do framework
+          console.log('🔍 PREVIEW: Questões carregadas do framework:', questions.length, 'questões');
         } 
         // Segundo, tentar carregar baseado no framework_id
         else if (assessment.framework_id) {
-          // Carregando questões baseado no framework_id
+          console.log('🔍 PREVIEW: Carregando questões baseado no framework_id:', assessment.framework_id);
           
-          // Use fallback questions for all frameworks
-          questions = [];
+          if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id.includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('🔍 PREVIEW: Questões NIST CSF carregadas:', questions.length);
+          } else if (assessment.framework_id === 'iso_27001_27701_default' || assessment.framework_id.includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('🔍 PREVIEW: Questões ISO carregadas:', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('🔍 PREVIEW: Questões padrão carregadas (framework não reconhecido):', questions.length);
+          }
         }
         // Terceiro, tentar carregar baseado no template_name
         else if (assessment.metadata?.template_name) {
-          // Carregando questões baseado no template_name
+          console.log('🔍 PREVIEW: Carregando questões baseado no template_name:', assessment.metadata.template_name);
           
-          // Use fallback questions for all templates
-          questions = [];
+          if (assessment.metadata.template_name.toLowerCase().includes('nist')) {
+            questions = await loadNistCsfQuestions();
+            console.log('🔍 PREVIEW: Questões NIST CSF carregadas (por template):', questions.length);
+          } else if (assessment.metadata.template_name.toLowerCase().includes('iso')) {
+            questions = await loadIsoQuestions();
+            console.log('🔍 PREVIEW: Questões ISO carregadas (por template):', questions.length);
+          } else {
+            questions = await loadDefaultQuestions();
+            console.log('🔍 PREVIEW: Questões padrão carregadas (template não reconhecido):', questions.length);
+          }
         }
         // Último recurso: carregar questões padrão
         else {
-          // Use fallback questions
-          questions = [];
+          console.log('🔍 PREVIEW: Carregando questões padrão (fallback final)');
+          questions = await loadDefaultQuestions();
+          console.log('🔍 PREVIEW: Questões padrão carregadas (fallback):', questions.length);
         }
       }
       
-      // Questões finais carregadas
-      // Respostas existentes (assessment)
-      // Respostas salvas (localStorage)
+      console.log('🔍 PREVIEW: Questões finais carregadas:', questions.length);
+      console.log('🔍 PREVIEW: Respostas existentes (assessment):', assessment.responses);
+      console.log('🔍 PREVIEW: Respostas salvas (localStorage):', savedResponses);
       
       // Combinar respostas existentes com respostas salvas (localStorage tem precedência) - MESMA LÓGICA
       const finalResponses = { ...(assessment.responses || {}), ...savedResponses };
       
       // Se ainda não tem questões, usar questões de fallback mínimas
       if (questions.length === 0) {
-        // Using fallback questions
+        console.log('💡 PREVIEW: Using fallback questions...');
         questions = [
           {
             id: 'SEC-001',
@@ -1004,18 +1021,21 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       setPreviewQuestions(questions);
       setPreviewCurrentStep(0);
       setPreviewResponses(finalResponses); // Usar respostas reais, não vazio!
-      // Final questions count
-      // Final responses count
-      // Estado final setado
+      console.log('📊 PREVIEW: Final questions count:', questions.length);
+      console.log('📊 PREVIEW: Final responses count:', Object.keys(finalResponses).length);
+      console.log('📊 PREVIEW: Estado final setado:', {
+        questions: questions.length,
+        responses: Object.keys(finalResponses).length
+      });
       
-      // Primeira questão de exemplo
-      // Últimas 3 questões
+      console.log('📊 PREVIEW: Primeira questão de exemplo:', questions[0]?.question || 'Nenhuma questão');
+      console.log('📊 PREVIEW: Últimas 3 questões:', questions.slice(-3).map(q => q.question || q.id));
       
-      // COMPARAÇÃO PREVIEW vs EDITOR
-      // As questões do PREVIEW devem ser IDÊNTICAS às do EDITOR!
+      console.log('=== COMPARAÇÃO PREVIEW vs EDITOR ===');
+      console.log('As questões do PREVIEW devem ser IDÊNTICAS às do EDITOR!');
       
     } catch (error) {
-      // Error loading preview questions
+      console.error('💥 Error loading preview questions:', error);
       // Fallback para questões de exemplo em caso de erro
       setPreviewQuestions([]);
     } finally {
@@ -1025,15 +1045,15 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
   // Open preview of public assessment page
   const openPreviewDialog = async (assessment: VendorAssessment) => {
-    // Opening preview for assessment
+    console.log('🔍 Opening preview for assessment:', assessment.id);
     
     // Verificar se é assessment temporário
     const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
-    // Is temporary assessment
+    console.log('🔄 Is temporary assessment:', isTemporary);
     
     if (isTemporary) {
       // Para assessments temporários, criar um link fictício para preview
-      // Creating temporary preview link
+      console.log('💡 Creating temporary preview link...');
       const tempPublicLink = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
       // Criar uma cópia do assessment com link temporário
@@ -1043,11 +1063,11 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         public_link_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
       };
       
-      // Temporary preview link created
+      console.log('✅ Temporary preview link created:', tempPublicLink);
       setPreviewAssessment(previewAssessment);
       
       // Carregar questões para o preview - MESMAS do editor
-      // Carregando questões para preview do assessment
+      console.log('🔍 PREVIEW: Carregando questões para preview do assessment:', assessment.id);
       await loadPreviewQuestions(assessment);
       setShowPreviewDialog(true);
       return;
@@ -1068,11 +1088,11 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           // Find the updated assessment
           const updatedAssessment = assessments.find(a => a.id === assessment.id);
           if (updatedAssessment?.public_link) {
-            // Public link generated successfully
+            console.log('✅ Public link generated successfully');
             setPreviewAssessment(updatedAssessment);
             setShowPreviewDialog(true);
           } else {
-            // Failed to find updated assessment with public link
+            console.log('❌ Failed to find updated assessment with public link');
             toast({
               title: "Erro",
               description: "Não foi possível gerar o link público para preview",
@@ -1080,15 +1100,15 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             });
           }
         } else {
-          // generatePublicLink returned false
+          console.log('❌ generatePublicLink returned false');
           toast({
-            title: "Erro ao Gerar Link", 
-            description: "Falha na geração do link público. Verifique suas permissões e tente novamente.",
+            title: "Erro", 
+            description: "Falha na geração do link público",
             variant: "destructive"
           });
         }
       } catch (error) {
-        // Error generating public link for preview
+        console.error('💥 Error generating public link for preview:', error);
         toast({
           title: "Erro",
           description: `Erro ao gerar link público: ${error.message}`,
@@ -1099,57 +1119,28 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     }
     
     // Assessment real com link público existente
-    // Using existing public link for preview
+    console.log('✅ Using existing public link for preview');
     setPreviewAssessment(assessment);
     setShowPreviewDialog(true);
   };
 
   // Open email dialog for sending assessment
   const openEmailDialog = async (assessment: VendorAssessment) => {
-    // Opening email dialog for assessment
-    
     // Ensure public link exists
     if (!assessment.public_link) {
-      // No public link found, generating one
-      try {
-        const result = await generatePublicLink(assessment);
-        if (result) {
-          // Reload assessments to get updated data
-          await loadAssessments();
-          // Find the updated assessment and try again
-          const updatedAssessment = assessments.find(a => a.id === assessment.id);
-          if (updatedAssessment?.public_link) {
-            // Public link generated, setting assessment for email
-            setSelectedAssessmentForEmail(updatedAssessment);
-            setShowEmailDialog(true);
-          } else {
-            // Failed to find updated assessment with public link
-            toast({
-              title: "Erro",
-              description: "Assessment foi atualizado mas link público não foi encontrado. Tente novamente.",
-              variant: "destructive"
-            });
-          }
-        } else {
-          // generatePublicLink returned false
-          toast({
-            title: "Erro ao Gerar Link", 
-            description: "Falha na geração do link público. Verifique suas permissões e tente novamente.",
-            variant: "destructive"
-          });
+      const result = await generatePublicLink(assessment);
+      if (result) {
+        // Reload assessments to get updated data
+        await loadAssessments();
+        // Find the updated assessment and try again
+        const updatedAssessment = assessments.find(a => a.id === assessment.id);
+        if (updatedAssessment?.public_link) {
+          setSelectedAssessmentForEmail(updatedAssessment);
         }
-      } catch (error) {
-        // Error in generatePublicLink
-        toast({
-          title: "Erro de Permissão", 
-          description: error.message || "Você não tem permissão para gerar links públicos para este assessment.",
-          variant: "destructive"
-        });
       }
       return;
     }
 
-    // Assessment has public link, proceeding to open modal
     setSelectedAssessmentForEmail(assessment);
     
     // Pre-fill email form with default values
@@ -1180,9 +1171,7 @@ Equipe de Compliance`;
       message: defaultMessage
     });
     
-    // Setting showEmailDialog to true
     setShowEmailDialog(true);
-    // Email dialog should now be open
   };
 
   // Send assessment via email
@@ -1199,7 +1188,12 @@ Equipe de Compliance`;
     try {
       // Here you would integrate with your email service
       // For now, we'll simulate the email sending
-      // Sending email simulation
+      console.log('Sending email:', {
+        to: emailForm.email,
+        subject: emailForm.subject,
+        message: emailForm.message,
+        assessment: selectedAssessmentForEmail
+      });
 
       // Update vendor contact email if it was empty
       if (!selectedAssessmentForEmail.vendor_registry?.primary_contact_email && emailForm.email) {
@@ -1221,7 +1215,7 @@ Equipe de Compliance`;
       await loadAssessments();
 
     } catch (error) {
-      // Error sending email
+      console.error('Erro ao enviar email:', error);
       toast({
         title: "❌ Erro ao Enviar",
         description: "Não foi possível enviar o email. Tente novamente.",
@@ -1295,7 +1289,7 @@ Equipe de Compliance`;
       await loadAssessments();
       
     } catch (error) {
-      // Error creating formal assessment
+      console.error('Erro ao criar assessment formal:', error);
       toast({
         title: "Erro",
         description: "Não foi possível criar o assessment formal",
@@ -1306,20 +1300,20 @@ Equipe de Compliance`;
 
   // Criar assessment formal a partir de um temporário
   const createFormalAssessmentFromTemp = async (tempAssessment: VendorAssessment) => {
-    // Creating formal assessment from temporary
+    console.log('🔄 =========== CREATE FORMAL ASSESSMENT FROM TEMP START ===========');
     try {
-      // Step 1: Starting conversion
-      // Temporary Assessment ID
-      // Vendor ID
-      // Framework ID
+      console.log('🔄 Step 1: Starting conversion...');
+      console.log('📋 Temporary Assessment ID:', tempAssessment.id);
+      console.log('📋 Vendor ID:', tempAssessment.vendor_id);
+      console.log('📋 Framework ID:', tempAssessment.framework_id);
       
       // Step 2: Resolve framework ID
-      // Step 2: Resolving framework ID
+      console.log('🔄 Step 2: Resolving framework ID...');
       let frameworkId = tempAssessment.framework_id;
-      // Original Framework ID
+      console.log('🔍 Original Framework ID:', frameworkId);
       
       if (frameworkId === 'nist_csf_default' || frameworkId === 'iso_27001_27701_default') {
-        // Detected template framework, trying different approach
+        console.log('🔍 Detected template framework, trying different approach...');
         
         // Tentar buscar qualquer framework existente
         try {
@@ -1330,21 +1324,21 @@ Equipe de Compliance`;
             
           if (anyFramework && anyFramework.length > 0) {
             frameworkId = anyFramework[0].id;
-            // Found existing framework
+            console.log('✅ Found existing framework:', frameworkId);
           } else {
-            // No frameworks found, skipping framework_id
+            console.log('⚠️ No frameworks found, skipping framework_id');
             frameworkId = null;
           }
         } catch (error) {
-          // Framework search failed, skipping framework_id
+          console.log('⚠️ Framework search failed, skipping framework_id');
           frameworkId = null;
         }
       }
       
-      // Final Framework ID
+      console.log('🔍 Final Framework ID:', frameworkId);
       
       // Step 3: Verify vendor exists and prepare assessment data
-      // Step 3: Verifying vendor and preparing assessment data
+      console.log('🔄 Step 3: Verifying vendor and preparing assessment data...');
       
       // Check if vendor exists
       const { data: vendor, error: vendorError } = await supabase
@@ -1353,172 +1347,86 @@ Equipe de Compliance`;
         .eq('id', tempAssessment.vendor_id)
         .single();
         
-      // Vendor Check Results:
-      // Vendor Error
-      // Vendor Data
+      console.log('🔍 Vendor Check Results:');
+      console.log('  Vendor Error:', vendorError);
+      console.log('  Vendor Data:', vendor);
       
       if (vendorError || !vendor) {
-        // VENDOR NOT FOUND!
+        console.log('🚨 VENDOR NOT FOUND!');
         throw new Error(`Fornecedor não encontrado: ${tempAssessment.vendor_id}`);
       }
       
-      // Prepare assessment data with all required fields
+      // Prepare minimal assessment data with only essential columns
+      // Try without assessment_name first to isolate the column issue
       const assessmentData: any = {
         vendor_id: tempAssessment.vendor_id,
-        tenant_id: user?.tenantId || user?.tenant_id,
-        assessment_name: tempAssessment.assessment_name || `Assessment - ${vendor.name}`,
-        assessment_type: tempAssessment.assessment_type || 'security',
-        status: 'draft',
-        due_date: tempAssessment.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-        created_by: user?.id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        tenant_id: user?.tenantId || user?.tenant_id
       };
       
       // Add framework_id only if we have a valid one
       if (frameworkId) {
         assessmentData.framework_id = frameworkId;
-        // Added framework_id to data
+        console.log('🔗 Added framework_id to data:', frameworkId);
       }
       
-      // Add other optional fields if they exist
-      if (tempAssessment.priority) {
-        assessmentData.priority = tempAssessment.priority;
-      }
+      console.log('🔍 Using minimal essential fields only');
       
-      // Using minimal essential fields only
-      
-      // Assessment Data to Insert
+      console.log('📄 Assessment Data to Insert:', assessmentData);
       
       // Step 4: Insert into database
-      // Step 4: Inserting assessment into database
-      // Current User Auth State
+      console.log('🔄 Step 4: Inserting assessment into database...');
       
-      // Test if we can access the table first
-      // Testing table access before insert
-      const { count, error: countError } = await supabase
-        .from('vendor_assessments')
-        .select('*', { count: 'exact', head: true });
-      
-      // Table access test:
-      // Count Error
-      // Count Result
-      
-      if (countError) {
-        // Cannot access vendor_assessments table
-        throw new Error(`Sem acesso à tabela vendor_assessments: ${countError.message}`);
-      }
-      
-      // Try the insert
-      // Attempting INSERT operation
-      
-      // SOLUÇÃO: Usar RPC (função no banco) para bypass RLS se necessário
-      // Trying RPC function for assessment creation
-      
-      let data, error;
-      
-      // Primeiro tentar INSERT direto
-      const directResult = await supabase
+      // Simplificar INSERT - sem JOINs complexos
+      const { data, error } = await supabase
         .from('vendor_assessments')
         .insert(assessmentData)
         .select('*')
         .single();
         
-      if (directResult.error && directResult.error.code === '42501') {
-        // Direct INSERT failed (42501), trying RPC bypass
-        
-        // Se falhar por permissão, usar RPC function que bypassa RLS
-        try {
-          const rpcResult = await supabase.rpc('create_vendor_assessment', {
-            p_vendor_id: assessmentData.vendor_id,
-            p_tenant_id: assessmentData.tenant_id,
-            p_assessment_name: assessmentData.assessment_name,
-            p_assessment_type: assessmentData.assessment_type,
-            p_status: assessmentData.status,
-            p_due_date: assessmentData.due_date,
-            p_created_by: assessmentData.created_by,
-            p_framework_id: assessmentData.framework_id,
-            p_priority: assessmentData.priority
-          });
-          
-          if (rpcResult.error) {
-            // RPC function also failed
-            // Se RPC falhar, tentar abordagem alternativa
-            throw new Error(`RPC failed: ${rpcResult.error.message}`);
-          } else {
-            // RPC function succeeded
-            // Buscar o assessment criado
-            const { data: createdData, error: fetchError } = await supabase
-              .from('vendor_assessments')
-              .select('*')
-              .eq('id', rpcResult.data)
-              .single();
-              
-            if (fetchError) {
-              // RPC created but fetch failed
-              data = { id: rpcResult.data, ...assessmentData };
-              error = null;
-            } else {
-              data = createdData;
-              error = null;
-            }
-          }
-        } catch (rpcError) {
-          // RPC approach failed, falling back to service role
-          
-          // Último recurso: notificar o usuário sobre o problema de permissões
-          throw new Error('Sem permissão para criar assessments. Contate o administrador do sistema para ajustar as políticas RLS da tabela vendor_assessments.');
-        }
-      } else {
-        // Direct INSERT succeeded
-        data = directResult.data;
-        error = directResult.error;
-      }
-        
-      // INSERT Results:
-      // Error
-      // Data
+      console.log('📊 INSERT Results:');
+      console.log('  Error:', error);
+      console.log('  Data:', data);
       
       if (error) {
-        // INSERT ERROR DETAILS:
-        // Code
-        // Message
-        // Details
-        // Hint
-        // Full Error Object
+        console.log('🚨 INSERT ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+        console.log('  Full Error Object:', error);
         
         toast({
           title: "❌ Erro ao Criar Assessment",
           description: `Não foi possível salvar o assessment: ${error.message}`,
           variant: "destructive"
         });
-        // CREATE FORMAL ASSESSMENT FAILED
+        console.log('🔄 =========== CREATE FORMAL ASSESSMENT FAILED ===========');
         return null;
       }
       
       if (!data) {
-        // NO DATA RETURNED FROM INSERT!
+        console.log('🚨 NO DATA RETURNED FROM INSERT!');
         toast({
           title: "❌ Erro",
           description: "Nenhum dado retornado após inserção",
           variant: "destructive"
         });
-        // CREATE FORMAL ASSESSMENT FAILED
+        console.log('🔄 =========== CREATE FORMAL ASSESSMENT FAILED ===========');
         return null;
       }
       
-      // Assessment formal criado com sucesso!
-      // Created Assessment ID
-      // Full Created Data
+      console.log('✅ Assessment formal criado com sucesso!');
+      console.log('📄 Created Assessment ID:', data.id);
+      console.log('📄 Full Created Data:', data);
       
       // Step 5: Cleanup and reload
-      // Step 5: Cleaning up localStorage and reloading
+      console.log('🔄 Step 5: Cleaning up localStorage and reloading...');
       
       const tempKey = `vendor_${tempAssessment.vendor_id}_selected_template`;
-      // Removing localStorage key
+      console.log('🗑️ Removing localStorage key:', tempKey);
       localStorage.removeItem(tempKey);
       
-      // Reloading assessments list
+      console.log('🔄 Reloading assessments list...');
       await loadAssessments();
       
       toast({
@@ -1526,16 +1434,16 @@ Equipe de Compliance`;
         description: "Assessment salvo com sucesso no banco de dados.",
       });
       
-      // CREATE FORMAL ASSESSMENT SUCCESS
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT SUCCESS ===========');
       return data;
       
     } catch (error) {
-      // CREATE FORMAL ASSESSMENT EXCEPTION
-      // EXCEPTION CAUGHT:
-      // Error Type
-      // Error Message
-      // Error Stack
-      // Full Error Object
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT EXCEPTION ===========');
+      console.log('🚨 EXCEPTION CAUGHT:');
+      console.log('  Error Type:', typeof error);
+      console.log('  Error Message:', error?.message || error);
+      console.log('  Error Stack:', error?.stack);
+      console.log('  Full Error Object:', error);
       
       toast({
         title: "❌ Erro",
@@ -1544,408 +1452,270 @@ Equipe de Compliance`;
       });
       return null;
     } finally {
-      // CREATE FORMAL ASSESSMENT END
+      console.log('🔄 =========== CREATE FORMAL ASSESSMENT END ===========');
     }
   };
   
-  // Debug function removed for production
-
-  // Debug function removed for production
-
-  // Verificar permissões do usuário
-  const checkUserPermissions = async () => {
-    console.log('🔐 ======== CHECKING USER PERMISSIONS ========');
+  // Debug function with comprehensive logging
+  const debugVendorAssessments = async () => {
+    console.log('🔍 ======== DEBUG VENDOR_ASSESSMENTS TABLE ========');
+    console.log('🔍 Step 1: Testing basic table access...');
     
     try {
-      if (!user?.id) {
-        console.error('❌ User not logged in');
-        toast({
-          title: "Erro de Autenticação",
-          description: "Usuário não está logado",
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      const userTenantId = user?.tenantId || user?.tenant_id;
-      if (!userTenantId) {
-        console.error('❌ User has no tenant ID');
-        toast({
-          title: "Erro de Tenant",
-          description: "Usuário não possui tenant ID válido",
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      console.log('👤 User ID:', user.id);
-      console.log('🏢 Tenant ID:', userTenantId);
-
-      // Testar acesso básico à tabela
-      console.log('🔍 Testing basic table access...');
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('vendor_assessments')
-        .select('id, tenant_id, status', { count: 'exact' })
-        .eq('tenant_id', userTenantId)
-        .limit(1);
-
-      console.log('📊 Permission test results:');
-      console.log('  Data:', data);
-      console.log('  Error:', error);
-      console.log('  Count:', count);
-
+        .select('id, assessment_name, status, public_link, tenant_id, vendor_id')
+        .limit(5);
+      
+      console.log('🔍 Step 1 Results:');
+      console.log('  ❌ Error:', error);
+      console.log('  ✅ Data:', data);
+      console.log('  📊 Data count:', data?.length || 0);
+      
       if (error) {
-        console.error('❌ Permission test failed:', error);
-        toast({
-          title: "Erro de Acesso",
-          description: `Sem acesso à tabela vendor_assessments: ${error.message}`,
-          variant: "destructive"
+        console.log('🚨 ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+      } else {
+        console.log('✅ Table access successful!');
+        data?.forEach((item, index) => {
+          console.log(`  📝 Record ${index + 1}:`, {
+            id: item.id,
+            name: item.assessment_name,
+            status: item.status,
+            hasPublicLink: !!item.public_link,
+            tenantId: item.tenant_id,
+            vendorId: item.vendor_id
+          });
         });
-        return false;
       }
-
-      console.log('✅ User has basic table access');
-      toast({
-        title: "Permissões Verificadas",
-        description: `Usuário tem acesso à tabela. Encontrados ${count || 0} assessments.`,
-      });
-      return true;
-
-    } catch (error) {
-      console.error('❌ Permission check failed:', error);
-      toast({
-        title: "Erro na Verificação",
-        description: `Falha ao verificar permissões: ${error.message}`,
-        variant: "destructive"
-      });
-      return false;
-    } finally {
-      console.log('🔐 ======== END PERMISSION CHECK ========');
+      
+    } catch (err) {
+      console.log('🚨 EXCEPTION in debugVendorAssessments:', err);
     }
+    
+    console.log('🔍 ======== END DEBUG TABLE ACCESS ========');
   };
 
-  // Debug completo para geração de link público
-  const debugPublicLinkGeneration = async (assessment?: VendorAssessment) => {
-    console.log('🐛 ======== COMPLETE PUBLIC LINK DEBUG ========');
-    
-    // Se não foi passado assessment, usar o primeiro disponível
-    const testAssessment = assessment || currentAssessments[0];
-    
-    if (!testAssessment) {
-      console.error('❌ No assessment available for testing');
-      toast({
-        title: "Erro de Debug",
-        description: "Nenhum assessment disponível para testar",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      console.log('🔍 STEP 1: Assessment Information');
-      console.log('  Assessment ID:', testAssessment.id);
-      console.log('  Assessment Name:', testAssessment.assessment_name);
-      console.log('  Assessment Status:', testAssessment.status);
-      console.log('  Assessment Tenant ID:', testAssessment.tenant_id);
-      console.log('  Vendor ID:', testAssessment.vendor_id);
-      console.log('  Current Public Link:', testAssessment.public_link);
-      console.log('  Is Temporary:', testAssessment.id.startsWith('pending-') || testAssessment.id.startsWith('vendor-'));
-
-      console.log('🔍 STEP 2: User Context');
-      console.log('  User ID:', user?.id);
-      console.log('  User Email:', user?.email);
-      console.log('  User Tenant ID (new):', user?.tenantId);
-      console.log('  User Tenant ID (old):', user?.tenant_id);
-      const userTenantId = user?.tenantId || user?.tenant_id;
-      console.log('  Effective Tenant ID:', userTenantId);
-
-      console.log('🔍 STEP 3: Tenant Match Check');
-      const tenantMatch = testAssessment.tenant_id === userTenantId;
-      console.log('  Assessment Tenant:', testAssessment.tenant_id);
-      console.log('  User Tenant:', userTenantId);
-      console.log('  Tenant Match:', tenantMatch);
-
-      if (!tenantMatch) {
-        console.error('❌ TENANT MISMATCH DETECTED');
-        toast({
-          title: "Erro de Tenant",
-          description: `Mismatch: Assessment(${testAssessment.tenant_id}) vs User(${userTenantId})`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('🔍 STEP 4: Database Read Test');
-      const { data: readData, error: readError } = await supabase
-        .from('vendor_assessments')
-        .select('id, tenant_id, status, vendor_id, created_by, public_link')
-        .eq('id', testAssessment.id)
-        .single();
-
-      console.log('  Read Query Result:');
-      console.log('    Data:', readData);
-      console.log('    Error:', readError);
-
-      if (readError) {
-        console.error('❌ READ ERROR:', readError);
-        toast({
-          title: "Erro de Leitura",
-          description: `Não conseguiu ler assessment: ${readError.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('🔍 STEP 5: Generate Test Link ID');
-      const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 15);
-      const secureHash = btoa(`${testAssessment.id}_${timestamp}_${randomStr}`).replace(/[+/=]/g, '');
-      const testLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)}`;
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-      
-      console.log('  Generated Link ID:', testLinkId);
-      console.log('  Expires At:', expiresAt.toISOString());
-
-      console.log('🔍 STEP 6: Database Write Test');
-      console.log('  Attempting update with:');
-      console.log('    WHERE id =', testAssessment.id);
-      console.log('    WHERE tenant_id =', userTenantId);
-      
-      const updateData = {
-        public_link: testLinkId,
-        public_link_expires_at: expiresAt.toISOString(),
-        status: testAssessment.status === 'draft' ? 'sent' : testAssessment.status,
-        updated_at: new Date().toISOString()
-      };
-      console.log('  Update Data:', updateData);
-
-      const { data: updateData_result, error: updateError, count } = await supabase
-        .from('vendor_assessments')
-        .update(updateData)
-        .eq('id', testAssessment.id)
-        .eq('tenant_id', userTenantId)
-        .select('id, public_link, public_link_expires_at, status');
-
-      console.log('  Update Query Result:');
-      console.log('    Data:', updateData_result);
-      console.log('    Error:', updateError);
-      console.log('    Count:', count);
-      console.log('    Data Length:', updateData_result?.length || 0);
-
-      if (updateError) {
-        console.error('❌ UPDATE ERROR DETAILS:');
-        console.log('    Code:', updateError.code);
-        console.log('    Message:', updateError.message);
-        console.log('    Details:', updateError.details);
-        console.log('    Hint:', updateError.hint);
-        console.log('    Full Error:', updateError);
-        
-        toast({
-          title: "Erro de Atualização",
-          description: `${updateError.code}: ${updateError.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!updateData_result || updateData_result.length === 0) {
-        console.error('❌ NO DATA RETURNED FROM UPDATE');
-        console.log('  This indicates:');
-        console.log('    - RLS policy blocking the update');
-        console.log('    - WHERE conditions not matching any rows');
-        console.log('    - User lacks specific permissions');
-        
-        // Teste adicional: verificar se o assessment ainda existe
-        console.log('🔍 STEP 6.1: Verify Assessment Still Exists');
-        const { data: verifyData, error: verifyError } = await supabase
-          .from('vendor_assessments')
-          .select('id, tenant_id, status')
-          .eq('id', testAssessment.id);
-          
-        console.log('  Verification Result:');
-        console.log('    Data:', verifyData);
-        console.log('    Error:', verifyError);
-        
-        toast({
-          title: "Erro: Nenhum Dado Retornado",
-          description: "Update executou mas não retornou dados (possível RLS block)",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ SUCCESS! Link generated successfully');
-      console.log('  Updated Assessment:', updateData_result[0]);
-      
-      toast({
-        title: "✅ Debug Concluído",
-        description: `Link gerado com sucesso: ${testLinkId.substring(0, 10)}...`,
-      });
-
-      // Reload assessments para ver a mudança
-      await loadAssessments();
-
-    } catch (error) {
-      console.error('❌ DEBUG FAILED:', error);
-      toast({
-        title: "Erro no Debug",
-        description: `Falha durante debug: ${error.message}`,
-        variant: "destructive"
-      });
-    } finally {
-      console.log('🐛 ======== END COMPLETE PUBLIC LINK DEBUG ========');
-    }
+  // Debug authentication and user context
+  const debugUserContext = () => {
+    console.log('👤 ======== DEBUG USER CONTEXT ========');
+    console.log('👤 User object:', user);
+    console.log('👤 User ID:', user?.id);
+    console.log('👤 User Email:', user?.email);
+    console.log('👤 Tenant ID (new):', user?.tenantId);
+    console.log('👤 Tenant ID (old):', user?.tenant_id);
+    console.log('👤 User authenticated:', !!user?.id);
+    console.log('👤 Has tenant:', !!(user?.tenantId || user?.tenant_id));
+    console.log('👤 ======== END DEBUG USER CONTEXT ========');
   };
 
-  // Gerar link público para o assessment (com debug integrado)
+  // Gerar link público para o assessment com debug completo
   const generatePublicLink = async (assessment: VendorAssessment) => {
-    console.log('🔗 ======== GENERATE PUBLIC LINK START ========');
-    console.log('🔗 Assessment ID:', assessment.id);
+    console.log('🚀 =================== GENERATE PUBLIC LINK START ===================');
     
     try {
-      // STEP 1: Validar contexto do usuário
-      console.log('🔍 STEP 1: User Authentication Check');
-      if (!user?.id) {
-        console.error('❌ User not authenticated');
-        throw new Error('Usuário não autenticado. Faça login novamente.');
-      }
-
-      const userTenantId = user?.tenantId || user?.tenant_id;
-      if (!userTenantId) {
-        console.error('❌ User has no tenant ID');
-        throw new Error('Usuário sem tenant ID válido');
-      }
-
-      console.log('👤 User ID:', user.id);
-      console.log('🏢 User Tenant ID:', userTenantId);
-      console.log('📋 Assessment Tenant ID:', assessment.tenant_id);
-
-      // STEP 2: Check if temporary assessment
-      console.log('🔍 STEP 2: Temporary Assessment Check');
+      // Step 1: Debug user context
+      console.log('🚀 Step 1: Checking user context...');
+      debugUserContext();
+      
+      // Step 2: Debug assessment data
+      console.log('🚀 Step 2: Analyzing assessment data...');
+      console.log('📋 Assessment ID:', assessment.id);
+      console.log('📋 Assessment Name:', assessment.assessment_name);
+      console.log('📋 Assessment Status:', assessment.status);
+      console.log('📋 Assessment Type:', assessment.assessment_type);
+      console.log('📋 Vendor ID:', assessment.vendor_id);
+      console.log('📋 Framework ID:', assessment.framework_id);
+      console.log('📋 Current Public Link:', assessment.public_link);
+      console.log('📋 Public Link Expires:', assessment.public_link_expires_at);
+      console.log('📋 Full Assessment Object:', assessment);
+      
+      // Step 3: Check if temporary assessment
+      console.log('🚀 Step 3: Checking if assessment is temporary...');
       const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
-      console.log('🔄 Is Temporary:', isTemporary);
+      console.log('🔄 Is Temporary Assessment:', isTemporary);
       
       if (isTemporary) {
-        console.log('🔄 Converting temporary assessment to formal...');
+        console.log('⚠️ TEMPORARY ASSESSMENT DETECTED - Converting to formal...');
+        
+        toast({
+          title: "Criando assessment...",
+          description: "Salvando assessment no banco antes de gerar o link público.",
+        });
+
         const formalAssessment = await createFormalAssessmentFromTemp(assessment);
         if (!formalAssessment) {
-          console.error('❌ Failed to create formal assessment');
-          throw new Error('Falha ao criar assessment formal');
+          console.log('❌ Failed to create formal assessment');
+          return false;
         }
-        console.log('✅ Formal assessment created, recursing...');
+
+        console.log('✅ Formal assessment created, recursively calling generatePublicLink...');
         return await generatePublicLink(formalAssessment);
       }
-
-      // STEP 3: Verify assessment exists and user has access
-      console.log('🔍 STEP 3: Database Read Check');
-      const { data: existingAssessment, error: readError } = await supabase
-        .from('vendor_assessments')
-        .select('id, tenant_id, status, vendor_id, created_by')
-        .eq('id', assessment.id)
-        .single();
-
-      console.log('📖 Read Result:', { data: existingAssessment, error: readError });
-
-      if (readError) {
-        console.error('❌ Read Error:', readError);
-        throw new Error(`Erro ao verificar assessment: ${readError.message} (${readError.code})`);
-      }
-
-      if (!existingAssessment) {
-        console.error('❌ Assessment not found in database');
-        throw new Error('Assessment não encontrado no banco de dados');
-      }
-
-      // STEP 4: Tenant validation
-      console.log('🔍 STEP 4: Tenant Validation');
-      const tenantMatch = existingAssessment.tenant_id === userTenantId;
-      console.log('🏢 Assessment Tenant:', existingAssessment.tenant_id);
-      console.log('🏢 User Tenant:', userTenantId);
-      console.log('✅ Tenant Match:', tenantMatch);
-
-      if (!tenantMatch) {
-        console.error('❌ Tenant mismatch detected');
-        throw new Error(`Tenant mismatch: Assessment(${existingAssessment.tenant_id}) vs User(${userTenantId})`);
-      }
-
-      // STEP 5: Generate secure public link
-      console.log('🔍 STEP 5: Link Generation');
+      
+      // Step 4: Debug table access and inspect structure
+      console.log('🚀 Step 4: Testing table access...');
+      await debugVendorAssessments();
+      
+      // Step 4.1: Inspect table structure
+      console.log('🚀 Step 4.1: Inspecting table structure...');
+      await inspectTableStructure();
+      
+      // Step 5: Generate secure public link
+      console.log('🚀 Step 5: Generating secure public link ID...');
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 15);
       const secureHash = btoa(`${assessment.id}_${timestamp}_${randomStr}`).replace(/[+/=]/g, '');
       const publicLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)}`;
+      
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setDate(expiresAt.getDate() + 30); // Expira em 30 dias
 
-      console.log('🔗 Generated Link ID:', publicLinkId);
+      console.log('🔗 Generated Public Link ID:', publicLinkId);
       console.log('📅 Expires At:', expiresAt.toISOString());
 
-      // STEP 6: Database update with double security
-      console.log('🔍 STEP 6: Database Update');
+      // Step 6: Verify assessment exists in database
+      console.log('🚀 Step 6: Verifying assessment exists in database...');
+      console.log('🔍 Searching for assessment ID:', assessment.id);
+      
+      const { data: existingAssessment, error: readError } = await supabase
+        .from('vendor_assessments')
+        .select('id, tenant_id, status, vendor_id')
+        .eq('id', assessment.id)
+        .single();
+
+      console.log('🔍 Read Query Results:');
+      console.log('  ❌ Read Error:', readError);
+      console.log('  ✅ Existing Assessment:', existingAssessment);
+
+      if (readError) {
+        console.log('🚨 READ ERROR DETAILS:');
+        console.log('  Code:', readError.code);
+        console.log('  Message:', readError.message);
+        console.log('  Details:', readError.details);
+        console.log('  Hint:', readError.hint);
+        throw new Error(`Não foi possível acessar o assessment: ${readError.message}`);
+      }
+
+      if (!existingAssessment) {
+        console.log('🚨 ASSESSMENT NOT FOUND in database!');
+        throw new Error('Assessment não encontrado no banco de dados');
+      }
+
+      console.log('✅ Assessment found in database:', existingAssessment);
+
+      // Step 7: Authentication and permission checks
+      console.log('🚀 Step 7: Validating user permissions...');
+      
+      if (!user?.id) {
+        console.log('🚨 USER NOT AUTHENTICATED!');
+        throw new Error('Usuário não autenticado');
+      }
+      console.log('✅ User is authenticated:', user.id);
+
+      const userTenantId = user?.tenantId || user?.tenant_id;
+      console.log('🏢 User Tenant ID:', userTenantId);
+      console.log('🏢 Assessment Tenant ID:', existingAssessment.tenant_id);
+      
+      if (existingAssessment.tenant_id !== userTenantId) {
+        console.log('🚨 TENANT MISMATCH! User does not own this assessment');
+        throw new Error('Você não tem permissão para acessar este assessment');
+      }
+      console.log('✅ Tenant validation passed');
+
+      // Step 8: Perform the update
+      console.log('🚀 Step 8: Updating assessment with public link...');
+      
       const updateData = {
         public_link: publicLinkId,
         public_link_expires_at: expiresAt.toISOString(),
-        status: assessment.status === 'draft' ? 'sent' : assessment.status,
-        updated_at: new Date().toISOString()
+        status: assessment.status === 'draft' ? 'sent' : assessment.status
       };
       
       console.log('📝 Update Data:', updateData);
-      console.log('🎯 WHERE Conditions: id =', assessment.id, ', tenant_id =', userTenantId);
-
-      const { data, error, count } = await supabase
+      console.log('🎯 Update WHERE condition: id =', assessment.id);
+      
+      const { data, error } = await supabase
         .from('vendor_assessments')
         .update(updateData)
         .eq('id', assessment.id)
-        .eq('tenant_id', userTenantId) // Double security
         .select('id, public_link, public_link_expires_at, status');
 
-      console.log('📊 Update Result:', { data, error, count, dataLength: data?.length });
+      console.log('🔄 Update Query Results:');
+      console.log('  ❌ Update Error:', error);
+      console.log('  ✅ Updated Data:', data);
+      console.log('  📊 Data Length:', data?.length || 0);
 
       if (error) {
-        console.error('❌ UPDATE ERROR:', error);
-        console.error('Error Details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
-        
-        // Specific error messages
-        if (error.code === '42501') {
-          throw new Error('Erro 42501: Permissão negada para modificar este assessment');
-        } else if (error.code === 'PGRST116') {
-          throw new Error('Erro PGRST116: Assessment não encontrado ou sem permissão');
-        } else {
-          throw new Error(`Erro ${error.code}: ${error.message}`);
-        }
+        console.log('🚨 UPDATE ERROR DETAILS:');
+        console.log('  Code:', error.code);
+        console.log('  Message:', error.message);
+        console.log('  Details:', error.details);
+        console.log('  Hint:', error.hint);
+        console.log('  Full Error Object:', error);
+        throw new Error(`Erro ao atualizar assessment: ${error.message}`);
       }
 
       if (!data || data.length === 0) {
-        console.error('❌ NO DATA RETURNED - RLS/Permission Issue');
-        console.log('🔍 Possible causes:');
-        console.log('  - RLS policy blocking update');
-        console.log('  - WHERE conditions not matching');
-        console.log('  - User lacks UPDATE permission');
-        throw new Error('Update executou mas não retornou dados. Possível bloqueio de RLS ou permissões.');
+        console.log('🚨 NO DATA RETURNED FROM UPDATE!');
+        console.log('This could indicate:');
+        console.log('  - RLS policy blocking the update');
+        console.log('  - Assessment ID does not exist');
+        console.log('  - User lacks permission');
+        throw new Error('Assessment não foi atualizado. Verifique suas permissões.');
       }
 
-      console.log('✅ PUBLIC LINK GENERATED SUCCESSFULLY!');
+      console.log('✅ UPDATE SUCCESSFUL!');
       console.log('📄 Updated Record:', data[0]);
-      console.log('🔗 ======== GENERATE PUBLIC LINK SUCCESS ========');
+
+      // Step 9: Generate final URL and update UI
+      console.log('🚀 Step 9: Generating final public URL and updating UI...');
       
-      return true;
+      const publicUrl = `${window.location.origin}/vendor-assessment/${publicLinkId}`;
+      console.log('🌐 Generated Public URL:', publicUrl);
+      
+      console.log('🎨 Setting public link data for dialog...');
+      setPublicLinkData({
+        link: publicUrl,
+        expiresAt: expiresAt.toISOString()
+      });
+      
+      console.log('📖 Opening public link dialog...');
+      setShowPublicLinkDialog(true);
+
+      // Step 10: Reload assessments and finalize
+      console.log('🚀 Step 10: Reloading assessments list...');
+      await loadAssessments();
+      console.log('✅ Assessments list reloaded');
+
+      console.log('🎉 Showing success toast...');
+      toast({
+        title: "✅ Link Público Gerado",
+        description: "O link foi gerado com sucesso e expira em 30 dias. Compartilhe com o fornecedor."
+      });
+
+      console.log('🚀 =================== GENERATE PUBLIC LINK SUCCESS ===================');
+      return true; // Success
 
     } catch (error) {
-      console.error('❌ GENERATE PUBLIC LINK FAILED:', error);
-      console.log('🔗 ======== GENERATE PUBLIC LINK END (FAILED) ========');
+      console.log('🚀 =================== GENERATE PUBLIC LINK FAILED ===================');
+      console.log('🚨 FINAL ERROR CAUGHT:');
+      console.log('  Error Type:', typeof error);
+      console.log('  Error Message:', error?.message || error);
+      console.log('  Error Stack:', error?.stack);
+      console.log('  Full Error Object:', error);
       
-      // Re-throw with message if available
-      if (error.message) {
-        throw error;
-      }
-      
-      throw new Error('Falha desconhecida na geração do link público');
+      toast({
+        title: "❌ Erro",
+        description: `Não foi possível gerar o link público: ${error?.message || error}`,
+        variant: "destructive"
+      });
+      return false; // Failure
+    } finally {
+      console.log('🚀 =================== GENERATE PUBLIC LINK END ===================');
     }
   };
 
@@ -3328,79 +3098,6 @@ Equipe de Compliance`;
 
   return (
     <div className="space-y-6">
-      {/* Debug Section (development only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2 w-full">
-            🐛 Debug Tools (Development Mode)
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={checkUserPermissions}
-            className="text-xs"
-          >
-            🔐 Verificar Permissões
-          </Button>
-
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => debugPublicLinkGeneration()}
-            className="text-xs bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
-          >
-            🐛 Debug Link Generation
-          </Button>
-          {currentAssessments.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => debugPublicLinkGeneration(currentAssessments[0])}
-              className="text-xs bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700"
-            >
-              🎯 Test First Assessment
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={async () => {
-              // Test direct formal assessment creation
-              const testAssessment = {
-                vendor_id: '6302338c-9d89-4489-8bb1-8b6c002dda00',
-                tenant_id: user?.tenantId || user?.tenant_id,
-                assessment_name: 'Test Direct Assessment',
-                assessment_type: 'security',
-                status: 'draft',
-                due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                created_by: user?.id
-              };
-              
-              console.log('🧪 Testing direct INSERT to vendor_assessments...');
-              console.log('Data:', testAssessment);
-              
-              const { data, error } = await supabase
-                .from('vendor_assessments')
-                .insert(testAssessment)
-                .select('*')
-                .single();
-                
-              console.log('Result:', { data, error });
-              
-              if (data) {
-                toast({ title: "✅ Sucesso", description: `Assessment criado: ${data.id}` });
-                await loadAssessments();
-              } else {
-                toast({ title: "❌ Erro", description: error?.message || 'Falha no teste', variant: "destructive" });
-              }
-            }}
-            className="text-xs bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700"
-          >
-            🧪 Test Direct Insert
-          </Button>
-        </div>
-      )}
-      
       {/* Header with Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -3776,224 +3473,8 @@ Equipe de Compliance`;
                 </p>
               </div>
             </div>
+          </>
           )}
-
-          {/* Seção de Envio de Email Integrada ao Preview */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6 mb-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-lg font-semibold text-foreground">Enviar Assessment por Email</span>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Formulário de Envio */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="preview-recipient-email" className="text-sm font-medium text-foreground">
-                    Email do Fornecedor *
-                  </Label>
-                  <Input
-                    id="preview-recipient-email"
-                    type="email"
-                    placeholder="fornecedor@empresa.com"
-                    className="mt-1"
-                    value={previewEmailData.recipientEmail || ''}
-                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientEmail: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="preview-recipient-name" className="text-sm font-medium text-foreground">
-                    Nome do Contato
-                  </Label>
-                  <Input
-                    id="preview-recipient-name"
-                    placeholder="Nome do responsável"
-                    className="mt-1"
-                    value={previewEmailData.recipientName || ''}
-                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientName: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="preview-email-subject" className="text-sm font-medium text-foreground">
-                    Assunto do Email
-                  </Label>
-                  <Input
-                    id="preview-email-subject"
-                    className="mt-1"
-                    value={previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
-                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, subject: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="preview-email-message" className="text-sm font-medium text-foreground">
-                    Mensagem Personalizada (Opcional)
-                  </Label>
-                  <Textarea
-                    id="preview-email-message"
-                    placeholder="Adicione uma mensagem personalizada..."
-                    className="mt-1 min-h-20"
-                    value={previewEmailData.customMessage || ''}
-                    onChange={(e) => setPreviewEmailData(prev => ({ ...prev, customMessage: e.target.value }))}
-                  />
-                </div>
-                
-                <div className="flex flex-col space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="preview-send-copy"
-                      checked={previewEmailData.sendCopy || false}
-                      onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, sendCopy: !!checked }))}
-                    />
-                    <Label htmlFor="preview-send-copy" className="text-sm text-foreground">
-                      Enviar cópia para mim
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="preview-auto-reminder"
-                      checked={previewEmailData.autoReminder !== false}
-                      onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, autoReminder: !!checked }))}
-                    />
-                    <Label htmlFor="preview-auto-reminder" className="text-sm text-foreground">
-                      Enviar lembrete automático em 7 dias
-                    </Label>
-                  </div>
-                </div>
-                
-                <Button
-                  onClick={() => sendAssessmentEmailFromPreview()}
-                  disabled={!previewEmailData.recipientEmail || previewEmailSending}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  size="lg"
-                >
-                  {previewEmailSending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Enviar Assessment
-                    </>
-                  )}
-                </Button>
-              </div>
-              
-              {/* Prévia do Email */}
-              <div className="bg-background border rounded-lg p-4 max-h-96 overflow-y-auto">
-                <div className="text-sm font-medium text-foreground mb-3 border-b pb-2">
-                  📧 Prévia do Email
-                </div>
-                
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <span className="font-medium text-foreground">Para:</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {previewEmailData.recipientEmail || 'fornecedor@empresa.com'}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <span className="font-medium text-foreground">Assunto:</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
-                    </span>
-                  </div>
-                  
-                  <div className="border-t pt-3">
-                    <div className="prose prose-sm max-w-none text-foreground">
-                      <p>
-                        Olá{previewEmailData.recipientName ? ` ${previewEmailData.recipientName}` : ''},
-                      </p>
-                      
-                      {previewEmailData.customMessage && (
-                        <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded border-l-4 border-l-blue-500 my-3">
-                          <div className="whitespace-pre-wrap text-sm text-foreground">
-                            {previewEmailData.customMessage}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <p>
-                        Você foi convidado a responder nosso questionário de avaliação de segurança. 
-                        Este assessment é importante para garantirmos que nossos fornecedores atendam 
-                        aos padrões de segurança necessários.
-                      </p>
-                      
-                      <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border my-4">
-                        <div className="font-medium text-foreground mb-2">📋 Detalhes do Assessment:</div>
-                        <ul className="text-sm space-y-1 text-muted-foreground">
-                          <li><strong>Tipo:</strong> {previewAssessment?.assessment_type || 'Avaliação de Segurança'}</li>
-                          <li><strong>Prazo:</strong> {previewAssessment?.due_date ? new Date(previewAssessment.due_date).toLocaleDateString('pt-BR') : 'A definir'}</li>
-                          <li><strong>Questões:</strong> {previewQuestions.length} questões</li>
-                          <li><strong>Tempo estimado:</strong> 30-45 minutos</li>
-                        </ul>
-                      </div>
-                      
-                      <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800 my-4">
-                        <div className="font-medium text-green-800 dark:text-green-200 mb-2">
-                          🔗 Link para Responder:
-                        </div>
-                        <div className="font-mono text-xs bg-white dark:bg-gray-800 p-2 rounded border break-all text-blue-600">
-                          {previewAssessment?.public_link?.startsWith('temp-') || !previewAssessment?.public_link
-                            ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
-                            : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`
-                          }
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground">
-                        <strong>Instruções:</strong>
-                      </p>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        <li>• Clique no link acima para acessar o questionário</li>
-                        <li>• Você pode salvar e continuar respondendo mais tarde</li>
-                        <li>• É possível anexar evidências a cada resposta</li>
-                        <li>• Em caso de dúvidas, entre em contato conosco</li>
-                      </ul>
-                      
-                      <p className="mt-4">
-                        Atenciosamente,<br/>
-                        <strong>{user?.email || 'Equipe GRC'}</strong>
-                      </p>
-                      
-                      <div className="text-xs text-muted-foreground mt-6 pt-3 border-t">
-                        Este link expira em 30 dias. Se você não conseguir acessar, entre em contato conosco.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Status de Envio */}
-            {previewEmailStatus && (
-              <div className={`mt-4 p-3 rounded-lg border ${
-                previewEmailStatus.type === 'success' 
-                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
-                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
-              }`}>
-                <div className="flex items-center gap-2">
-                  {previewEmailStatus.type === 'success' ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : (
-                    <AlertCircleIcon className="h-5 w-5" />
-                  )}
-                  <span className="font-medium">{previewEmailStatus.message}</span>
-                </div>
-                {previewEmailStatus.details && (
-                  <div className="mt-2 text-sm opacity-80">
-                    {previewEmailStatus.details}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -4016,11 +3497,203 @@ Equipe de Compliance`;
           </DialogHeader>
           
           {previewAssessment && (
+            <>
             <div className="flex-1 overflow-hidden">
-              {previewAssessment.public_link?.startsWith('temp-') ? (
-                // Preview rico e interativo para assessments temporários
-                <div className="w-full h-full bg-gradient-to-br from-background to-secondary/20 overflow-y-auto">
-                  {loadingPreviewQuestions ? (
+              {/* Seção de Envio de Email - Sempre visível */}
+              <div className="p-6 border-b border-border bg-background">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <span className="text-lg font-semibold text-foreground">Enviar Assessment por Email</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Formulário de Envio */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="preview-recipient-email" className="text-sm font-medium text-foreground">
+                          Email do Fornecedor *
+                        </Label>
+                        <Input
+                          id="preview-recipient-email"
+                          type="email"
+                          placeholder="fornecedor@empresa.com"
+                          className="mt-1"
+                          value={previewEmailData.recipientEmail || ''}
+                          onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientEmail: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="preview-recipient-name" className="text-sm font-medium text-foreground">
+                          Nome do Contato
+                        </Label>
+                        <Input
+                          id="preview-recipient-name"
+                          placeholder="Nome do responsável"
+                          className="mt-1"
+                          value={previewEmailData.recipientName || ''}
+                          onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientName: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="preview-email-subject" className="text-sm font-medium text-foreground">
+                          Assunto do Email
+                        </Label>
+                        <Input
+                          id="preview-email-subject"
+                          className="mt-1"
+                          value={previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
+                          onChange={(e) => setPreviewEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor="preview-email-message" className="text-sm font-medium text-foreground">
+                          Mensagem Personalizada (Opcional)
+                        </Label>
+                        <Textarea
+                          id="preview-email-message"
+                          placeholder="Adicione uma mensagem personalizada..."
+                          className="mt-1 min-h-16"
+                          value={previewEmailData.customMessage || ''}
+                          onChange={(e) => setPreviewEmailData(prev => ({ ...prev, customMessage: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="preview-send-copy"
+                            checked={previewEmailData.sendCopy || false}
+                            onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, sendCopy: !!checked }))}
+                          />
+                          <Label htmlFor="preview-send-copy" className="text-sm text-foreground">
+                            Enviar cópia para mim
+                          </Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="preview-auto-reminder"
+                            checked={previewEmailData.autoReminder !== false}
+                            onCheckedChange={(checked) => setPreviewEmailData(prev => ({ ...prev, autoReminder: !!checked }))}
+                          />
+                          <Label htmlFor="preview-auto-reminder" className="text-sm text-foreground">
+                            Enviar lembrete automático em 7 dias
+                          </Label>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={() => sendAssessmentEmailFromPreview()}
+                        disabled={!previewEmailData.recipientEmail || previewEmailSending}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        size="lg"
+                      >
+                        {previewEmailSending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Enviando...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Enviar Assessment
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Prévia do Email */}
+                    <div className="bg-background border rounded-lg p-4 max-h-80 overflow-y-auto">
+                      <div className="text-sm font-medium text-foreground mb-3 border-b pb-2">
+                        📧 Prévia do Email
+                      </div>
+                      
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <span className="font-medium text-foreground">Para:</span>
+                          <span className="ml-2 text-muted-foreground">
+                            {previewEmailData.recipientEmail || 'fornecedor@empresa.com'}
+                          </span>
+                        </div>
+                        
+                        <div>
+                          <span className="font-medium text-foreground">Assunto:</span>
+                          <span className="ml-2 text-muted-foreground">
+                            {previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
+                          </span>
+                        </div>
+                        
+                        <div className="border-t pt-3">
+                          <div className="prose prose-sm max-w-none text-foreground text-xs">
+                            <p>
+                              Olá{previewEmailData.recipientName ? ` ${previewEmailData.recipientName}` : ''},
+                            </p>
+                            
+                            {previewEmailData.customMessage && (
+                              <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded border-l-2 border-l-blue-500 my-2">
+                                <div className="whitespace-pre-wrap text-xs text-foreground">
+                                  {previewEmailData.customMessage}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <p className="text-xs">
+                              Você foi convidado a responder nosso questionário de avaliação de segurança.
+                            </p>
+                            
+                            <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded border my-2">
+                              <div className="font-medium text-green-800 dark:text-green-200 mb-1 text-xs">
+                                🔗 Link: 
+                              </div>
+                              <div className="font-mono text-xs bg-white dark:bg-gray-800 p-1 rounded border break-all text-blue-600">
+                                {previewAssessment?.public_link?.startsWith('temp-') || !previewAssessment?.public_link
+                                  ? `${window.location.origin}/vendor-assessment/[GERADO_AO_ENVIAR]`
+                                  : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`
+                                }
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs">
+                              Atenciosamente,<br/>
+                              <strong>{user?.email || 'Equipe GRC'}</strong>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Status de Envio */}
+                  {previewEmailStatus && (
+                    <div className={`mt-4 p-3 rounded-lg border ${
+                      previewEmailStatus.type === 'success' 
+                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+                        : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        {previewEmailStatus.type === 'success' ? (
+                          <CheckCircle className="h-5 w-5" />
+                        ) : (
+                          <AlertCircleIcon className="h-5 w-5" />
+                        )}
+                        <span className="font-medium">{previewEmailStatus.message}</span>
+                      </div>
+                      {previewEmailStatus.details && (
+                        <div className="mt-2 text-sm opacity-80">
+                          {previewEmailStatus.details}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="w-full h-full bg-gradient-to-br from-background to-secondary/20 overflow-y-auto">
+                {loadingPreviewQuestions ? (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center space-y-4">
                         <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary mx-auto"></div>
@@ -4175,16 +3848,6 @@ Equipe de Compliance`;
                           </CardHeader>
                           <CardContent>
                             {/* Renderização da questão baseada no tipo */}
-                            {(() => {
-                              const currentQuestion = previewQuestions[previewCurrentStep];
-                              console.log(`🐛 DEBUG - Questão ${previewCurrentStep + 1}:`, {
-                                id: currentQuestion?.id,
-                                type: currentQuestion?.type,
-                                options: currentQuestion?.options,
-                                totalOptions: currentQuestion?.options?.length
-                              });
-                              return null;
-                            })()}
                             {previewQuestions[previewCurrentStep]?.type === 'multiple_choice' && previewQuestions[previewCurrentStep]?.options ? (
                               <div className="space-y-4">
                                 {previewQuestions[previewCurrentStep].options.map((option: string, index: number) => (
@@ -4240,72 +3903,31 @@ Equipe de Compliance`;
                               </div>
                             ) : previewQuestions[previewCurrentStep]?.type === 'scale' ? (
                               <div className="space-y-4">
-                                {previewQuestions[previewCurrentStep]?.scale_labels && previewQuestions[previewCurrentStep].scale_labels.length > 0 ? (
-                                  // Se há labels específicos para cada opção da escala, renderizar como lista vertical
-                                  <div className="space-y-3">
-                                    {previewQuestions[previewCurrentStep].scale_labels.map((label: string, index: number) => {
-                                      const value = index + 1;
-                                      return (
-                                        <div 
-                                          key={value}
-                                          className={`flex items-center space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                            previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value 
-                                              ? 'border-primary bg-primary/5' 
-                                              : 'border-border'
-                                          }`}
-                                          onClick={() => setPreviewResponses(prev => ({
-                                            ...prev,
-                                            [previewQuestions[previewCurrentStep].id]: {
-                                              ...prev[previewQuestions[previewCurrentStep].id],
-                                              answer: value,
-                                              responded_at: new Date().toISOString()
-                                            }
-                                          }))}
-                                        >
-                                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm ${
-                                            previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value
-                                              ? 'border-primary bg-primary text-primary-foreground'
-                                              : 'border-border bg-background text-foreground'
-                                          }`}>
-                                            {value}
-                                          </div>
-                                          <label className="text-sm text-foreground cursor-pointer flex-1 leading-relaxed">
-                                            {label}
-                                          </label>
-                                        </div>
-                                      );
-                                    })}
+                                <div className="flex items-center justify-center space-x-2 p-6 bg-secondary/20 rounded-lg border">
+                                  {Array.from({ length: previewQuestions[previewCurrentStep]?.scale_max || 5 }, (_, i) => i + 1).map((value) => (
+                                    <Button
+                                      key={value}
+                                      variant={previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value ? "default" : "outline"}
+                                      size="lg"
+                                      onClick={() => setPreviewResponses(prev => ({
+                                        ...prev,
+                                        [previewQuestions[previewCurrentStep].id]: {
+                                          ...prev[previewQuestions[previewCurrentStep].id],
+                                          answer: value,
+                                          responded_at: new Date().toISOString()
+                                        }
+                                      }))}
+                                      className="w-12 h-12 text-lg font-bold"
+                                    >
+                                      {value}
+                                    </Button>
+                                  ))}
+                                </div>
+                                {previewQuestions[previewCurrentStep]?.scale_labels && previewQuestions[previewCurrentStep].scale_labels.length > 0 && (
+                                  <div className="flex justify-between text-xs text-muted-foreground px-2">
+                                    <span>{previewQuestions[previewCurrentStep].scale_labels[0]}</span>
+                                    <span>{previewQuestions[previewCurrentStep].scale_labels[previewQuestions[previewCurrentStep].scale_labels.length - 1]}</span>
                                   </div>
-                                ) : (
-                                  // Se não há labels específicos, usar renderização numérica horizontal
-                                  <>
-                                    <div className="flex items-center justify-center space-x-2 p-6 bg-secondary/20 rounded-lg border">
-                                      {Array.from({ length: previewQuestions[previewCurrentStep]?.scale_max || 5 }, (_, i) => i + 1).map((value) => (
-                                        <Button
-                                          key={value}
-                                          variant={previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value ? "default" : "outline"}
-                                          size="lg"
-                                          onClick={() => setPreviewResponses(prev => ({
-                                            ...prev,
-                                            [previewQuestions[previewCurrentStep].id]: {
-                                              ...prev[previewQuestions[previewCurrentStep].id],
-                                              answer: value,
-                                              responded_at: new Date().toISOString()
-                                            }
-                                          }))}
-                                          className="w-12 h-12 text-lg font-bold"
-                                        >
-                                          {value}
-                                        </Button>
-                                      ))}
-                                    </div>
-                                    {previewQuestions[previewCurrentStep]?.scale_min && previewQuestions[previewCurrentStep]?.scale_max && (
-                                      <div className="flex justify-between text-xs text-muted-foreground px-2">
-                                        <span>{previewQuestions[previewCurrentStep].scale_min} - Menor</span>
-                                        <span>{previewQuestions[previewCurrentStep].scale_max} - Maior</span>
-                                      </div>
-                                    )}
-                                  </>
                                 )}
                                 {previewQuestions[previewCurrentStep]?.help_text && (
                                   <div className="text-sm text-muted-foreground bg-secondary/30 p-3 rounded-lg border-l-4 border-l-primary/50">
@@ -4684,16 +4306,8 @@ Equipe de Compliance`;
                     </div>
                   )}
                 </div>
-              ) : (
-                // Preview via iframe para assessments reais
-                <iframe
-                  src={`${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`}
-                  className="w-full h-full border rounded-lg"
-                  title="Preview da Página Pública"
-                />
-              )}
+              </div>
             </div>
-          )}
           
           <div className="flex justify-between items-center pt-6 px-6 pb-6 border-t border-border bg-secondary/20">
             {previewAssessment?.public_link?.startsWith('temp-') ? (
@@ -4724,6 +4338,7 @@ Equipe de Compliance`;
               Fechar Preview
             </Button>
           </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -5324,59 +4939,28 @@ Equipe de Compliance`;
                               
                               {question.type === 'scale' && (
                                 <div>
-                                  <Label className="text-sm font-medium text-foreground">Avaliação:</Label>
-                                  <div className="mt-2">
-                                    {question.scale_labels && question.scale_labels.length > 0 ? (
-                                      // Se há labels específicos para cada opção da escala, renderizar como lista vertical
-                                      <div className="space-y-2">
-                                        {question.scale_labels.map((label: string, index: number) => {
-                                          const value = index + 1;
-                                          return (
-                                            <div 
-                                              key={value}
-                                              className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                                response?.answer == value 
-                                                  ? 'border-primary bg-primary/5' 
-                                                  : 'border-border'
-                                              }`}
-                                              onClick={() => updateQuestionResponse(question.id, value)}
-                                            >
-                                              <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-xs ${
-                                                response?.answer == value
-                                                  ? 'border-primary bg-primary text-primary-foreground'
-                                                  : 'border-border bg-background text-foreground'
-                                              }`}>
-                                                {value}
-                                              </div>
-                                              <label className="text-sm text-foreground cursor-pointer flex-1">
-                                                {label}
-                                              </label>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      // Se não há labels específicos, usar renderização numérica horizontal
-                                      <div className="space-y-2">
-                                        <div className="flex items-center space-x-2">
-                                          {Array.from({ length: question.scale_max || 5 }, (_, i) => i + 1).map((value) => (
-                                            <Button
-                                              key={value}
-                                              variant={response?.answer == value ? "default" : "outline"}
-                                              size="sm"
-                                              onClick={() => updateQuestionResponse(question.id, value)}
-                                              className="w-10 h-10"
-                                            >
-                                              {value}
-                                            </Button>
-                                          ))}
-                                        </div>
-                                        {question.scale_min && question.scale_max && (
-                                          <div className="flex justify-between text-xs text-muted-foreground">
-                                            <span>{question.scale_min} - Menor</span>
-                                            <span>{question.scale_max} - Maior</span>
-                                          </div>
-                                        )}
+                                  <Label className="text-sm font-medium text-foreground">Avaliação (1-{question.scale_max}):</Label>
+                                  <div className="mt-2 space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      {Array.from({ length: question.scale_max || 5 }, (_, i) => i + 1).map((value) => (
+                                        <Button
+                                          key={value}
+                                          variant={response?.answer == value ? "default" : "outline"}
+                                          size="sm"
+                                          onClick={() => updateQuestionResponse(question.id, value)}
+                                          className="w-10 h-10"
+                                        >
+                                          {value}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                    {question.scale_labels && (
+                                      <div className="text-xs text-muted-foreground">
+                                        {question.scale_labels.map((label, i) => (
+                                          <span key={i} className="mr-4">
+                                            {i + 1}: {label}
+                                          </span>
+                                        ))}
                                       </div>
                                     )}
                                   </div>

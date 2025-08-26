@@ -16,7 +16,21 @@ interface TenantThemeConfig {
 }
 
 export const useTenantTheme = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const authContext = useAuth();
+  
+  // Verificar se o contexto está disponível
+  if (!authContext) {
+    console.warn('useTenantTheme: AuthContext não disponível');
+    return {
+      tenantTheme: null,
+      loading: false,
+      loadTenantTheme: () => Promise.resolve(),
+      applyTenantColors: () => Promise.resolve(),
+      notifyThemeUpdate: () => {}
+    };
+  }
+  
+  const { user, isLoading: authLoading } = authContext;
   const [tenantTheme, setTenantTheme] = useState<TenantThemeConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
