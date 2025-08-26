@@ -26,6 +26,27 @@ import type {
 } from '@/types/risk-management';
 
 // ============================================================================
+// FUNÇÕES UTILITÁRIAS
+// ============================================================================
+
+// Função para normalizar estratégias de tratamento (converter PT -> EN para o banco)
+const normalizeTreatmentStrategy = (strategy: string): string => {
+  const normalizations: Record<string, string> = {
+    'Mitigar': 'mitigate',
+    'Transferir': 'transfer',
+    'Evitar': 'avoid', 
+    'Aceitar': 'accept',
+    // Também aceitar valores já normalizados
+    'mitigate': 'mitigate',
+    'transfer': 'transfer',
+    'avoid': 'avoid',
+    'accept': 'accept'
+  };
+  
+  return normalizations[strategy] || strategy;
+};
+
+// ============================================================================
 // HOOK PRINCIPAL PARA GESTÃO DE RISCOS
 // ============================================================================
 
@@ -196,12 +217,30 @@ export const useRiskManagement = () => {
         return true;
       });
 
+      // LOG TEMPORÁRIO: Verificar dados brutos do Supabase
+      console.log('🔍 DADOS BRUTOS DO SUPABASE:', validatedData.map(r => ({
+        id: r.id,
+        risk_title: r.risk_title,
+        risk_code: r.risk_code
+      })));
+
       // Transformar dados do Supabase para o formato da aplicação
-      return validatedData.map(transformSupabaseRiskToRisk);
+      const transformedRisks = validatedData.map(transformSupabaseRiskToRisk);
+      
+      // LOG TEMPORÁRIO: Verificar dados transformados
+      console.log('🔍 DADOS TRANSFORMADOS:', transformedRisks.map(r => ({
+        id: r.id,
+        name: r.name,
+        riskCode: r.riskCode
+      })));
+      
+      return transformedRisks;
     },
     enabled: !!user && !!userTenantId,
-    staleTime: 0, // Forçar refetch
-    cacheTime: 0  // Não cachear durante debug
+    staleTime: 0, // Forçar refetch para debug
+    gcTime: 0,    // Não cachear para debug
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Buscar métricas de risco (ISOLAMENTO POR TENANT)
@@ -515,6 +554,15 @@ export const useRiskManagement = () => {
 
       // Atualizar tipo de tratamento se fornecido
       if (data.treatmentType) {
+        // Normalizar o valor para inglês (formato usado no banco)
+        const normalizedTreatment = normalizeTreatmentStrategy(data.treatmentType);
+        
+        // Atualizar também na tabela risk_registrations
+        await supabase
+          .from('risk_registrations')
+          .update({ treatment_strategy: normalizedTreatment })
+          .eq('id', riskId);
+        
         // Verificar se já existe um plano de ação
         const { data: existingPlan, error: planQueryError } = await supabase
           .from('risk_action_plans')
@@ -530,7 +578,7 @@ export const useRiskManagement = () => {
           // Atualizar plano existente
           const { error: planError } = await supabase
             .from('risk_action_plans')
-            .update({ treatment_type: data.treatmentType })
+            .update({ treatment_type: normalizedTreatment })
             .eq('risk_id', riskId);
 
           if (planError) throw planError;
@@ -540,7 +588,7 @@ export const useRiskManagement = () => {
             .from('risk_action_plans')
             .insert([{
               risk_id: riskId,
-              treatment_type: data.treatmentType,
+              treatment_type: normalizedTreatment,
               created_by: user?.id
             }]);
 
@@ -687,6 +735,7 @@ export const useRiskManagement = () => {
     
     const transformedRisk = {
       id: supabaseRisk.id,
+      riskCode: supabaseRisk.risk_code,
       name: supabaseRisk.risk_title || 'Risco sem título',
       description: description,
       category: supabaseRisk.risk_category || 'Operacional',
@@ -717,21 +766,6 @@ export const useRiskManagement = () => {
       }
     };
     
-    console.log('🔄 transformSupabaseRiskToRisk (risk_registrations):', {
-      original: {
-        id: supabaseRisk.id,
-        risk_title: supabaseRisk.risk_title,
-        risk_level: supabaseRisk.risk_level,
-        status: supabaseRisk.status
-      },
-      transformed: {
-        id: transformedRisk.id,
-        name: transformedRisk.name,
-        riskLevel: transformedRisk.riskLevel,
-        riskScore: transformedRisk.riskScore,
-        status: transformedRisk.status
-      }
-    });
     
     return transformedRisk;
   };

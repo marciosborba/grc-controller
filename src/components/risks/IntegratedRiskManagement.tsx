@@ -31,6 +31,35 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+// Função para traduzir estratégias de tratamento
+const translateTreatmentStrategy = (strategy: string): string => {
+  if (!strategy) return 'Não definido';
+  
+  const translations: Record<string, string> = {
+    'mitigate': 'Mitigar',
+    'transfer': 'Transferir', 
+    'avoid': 'Evitar',
+    'accept': 'Aceitar',
+    'Mitigar': 'Mitigar',
+    'Transferir': 'Transferir',
+    'Evitar': 'Evitar', 
+    'Aceitar': 'Aceitar'
+  };
+  
+  // Limpar espaços e converter para lowercase para comparação
+  const cleanStrategy = strategy.trim().toLowerCase();
+  
+  // Procurar pela tradução
+  for (const [key, value] of Object.entries(translations)) {
+    if (key.toLowerCase() === cleanStrategy) {
+      return value;
+    }
+  }
+  
+  // Se não encontrar tradução, retornar o valor original
+  return strategy;
+};
+
 interface Risk {
   id: string;
   title: string;
@@ -579,7 +608,13 @@ export const IntegratedRiskManagement: React.FC = () => {
                         {actionPlans.map((plan) => (
                           <div key={plan.id} className="p-3 border rounded-lg">
                             <div className="flex items-center justify-between mb-2">
-                              <Badge variant="outline">{plan.treatment_type}</Badge>
+                              <Badge variant="outline">
+                                {(() => {
+                                  const result = translateTreatmentStrategy(plan.treatment_type);
+                                  console.log(`DEBUG BADGE: "${plan.treatment_type}" -> "${result}"`);
+                                  return result;
+                                })()}
+                              </Badge>
                               <span className="text-sm font-medium">
                                 {formatCurrency(plan.budget)}
                               </span>

@@ -69,6 +69,7 @@ export type CommunicationDecision = 'Aceitar' | 'Rejeitar' | 'Pendente';
 
 export interface Risk {
   id: string;
+  riskCode?: string; // ID sequencial no formato 001/08/25
   
   // Informações Básicas
   name: string;

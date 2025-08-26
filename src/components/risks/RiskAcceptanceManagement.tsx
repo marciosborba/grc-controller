@@ -61,18 +61,22 @@ import {
   FileCheck,
   BarChart3,
   Zap,
-  Globe
+  Globe,
+  Printer,
+  FileDown
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useRiskAcceptancePrint } from '@/hooks/useRiskAcceptancePrint';
 
 // Interfaces
 interface RiskAcceptance {
   id: string;
   risk_id: string;
+  riskCode?: string; // ID sequencial no formato 001082025
   risk_title: string;
   risk_description: string;
   risk_category: string;
@@ -141,6 +145,7 @@ const RiskAcceptanceManagement: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { printRiskAcceptancePDF, printRiskAcceptanceDOC, isGenerating } = useRiskAcceptancePrint();
 
   // Estados principais
   const [riskAcceptances, setRiskAcceptances] = useState<RiskAcceptance[]>([]);
@@ -217,31 +222,43 @@ const RiskAcceptanceManagement: React.FC = () => {
         return;
       }
 
-      // Para cada risco, buscar dados de aceitação, comunicações, aprovações e monitoramento
-      const acceptancesData: RiskAcceptance[] = [];
+        // Para cada risco, buscar dados de aceitação, comunicações, aprovações e monitoramento
+        const acceptancesData: RiskAcceptance[] = [];
 
-      for (const risk of risks) {
-        // Buscar dados de aceitação (simulado por enquanto)
-        const mockAcceptance: RiskAcceptance = {
-          id: `acceptance-${risk.id}`,
-          risk_id: risk.id,
-          risk_title: risk.risk_title,
-          risk_description: risk.risk_description || '',
-          risk_category: risk.risk_category,
-          risk_level: risk.risk_level,
-          risk_score: risk.risk_score || 0,
-          residual_risk_score: (risk.risk_score || 0) * 0.7, // 30% de redução após aceitação
-          acceptance_reason: 'Custo de mitigação superior ao impacto potencial',
-          accepted_by: 'João Silva',
-          accepted_by_role: 'Diretor de TI',
-          accepted_by_email: 'joao.silva@empresa.com',
-          acceptance_date: risk.created_at,
-          review_schedule: 'quarterly',
-          next_review_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active',
-          monitoring_frequency: 'Mensal',
-          created_at: risk.created_at,
-          updated_at: risk.updated_at,
+        for (const risk of risks) {
+          // Gerar riskCode sequencial simulado no formato correto
+          const riskIndex = risks.indexOf(risk) + 1;
+          const currentDate = new Date();
+          const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const year = currentDate.getFullYear();
+          const sequentialCode = `${String(riskIndex).padStart(3, '0')}${month}${year}`;
+          
+          // Buscar dados de aceitação (simulado por enquanto)
+          const mockAcceptance: RiskAcceptance = {
+            id: `acceptance-${risk.id}`,
+            risk_id: risk.id,
+            riskCode: risk.riskCode,
+            risk_title: risk.risk_title,
+            risk_description: risk.risk_description,
+            risk_category: risk.risk_category,
+            risk_level: risk.risk_level,
+            risk_score: risk.risk_score,
+            residual_risk_score: Math.round(risk.risk_score * 0.7), // 30% de redução
+            acceptance_reason: "Custo de mitigação superior ao impacto potencial",
+            accepted_by: "João Silva",
+            accepted_by_role: "Diretor de TI",
+            accepted_by_email: "joao.silva@empresa.com",
+            acceptance_date: risk.created_at,
+            review_schedule: "quarterly" as const,
+            next_review_date: format(addDays(new Date(), 90), 'yyyy-MM-dd'),
+            status: "active" as const,
+            monitoring_frequency: "Mensal",
+            created_at: risk.created_at,
+            updated_at: risk.updated_at,
+            
+            // Dados para matriz de risco - estimados de forma mais realista
+            probability_score: Math.min(4, Math.max(1, Math.ceil((risk.risk_score || 1) / 4))), // Estimar probabilidade (1-4)
+            impact_score: Math.min(4, Math.max(1, Math.ceil((risk.risk_score || 1) / 4))), // Estimar impacto (1-4)
           communications: [
             {
               id: `comm-${risk.id}-1`,
@@ -772,6 +789,10 @@ const RiskAcceptanceManagement: React.FC = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3">
+                        {/* Badge com ID do Risco - usando riskCode se disponível */}
+                        <Badge variant="secondary" className="text-xs font-mono bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700">
+                          {risk.riskCode || `ID-${risk.risk_id.substring(0, 8).toUpperCase()}`}
+                        </Badge>
                         <CardTitle className="text-lg truncate">{risk.risk_title}</CardTitle>
                         <Badge className={getRiskLevelColor(risk.risk_level)}>
                           {risk.risk_level}
@@ -866,6 +887,9 @@ const RiskAcceptanceManagement: React.FC = () => {
                           <span>{risk.monitoring_records.length}</span>
                         </div>
                       </div>
+                      
+
+                      
                       <Button
                         variant="ghost" 
                         size="sm"
@@ -885,7 +909,7 @@ const RiskAcceptanceManagement: React.FC = () => {
                   <CardContent className="pt-0">
                     <div className="border-t pt-4">
                       <Tabs defaultValue="communication" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                           <TabsTrigger value="communication" className="flex items-center gap-2">
                             <MessageSquare className="h-4 w-4" />
                             Comunicação
@@ -897,6 +921,10 @@ const RiskAcceptanceManagement: React.FC = () => {
                           <TabsTrigger value="monitoring" className="flex items-center gap-2">
                             <BarChart3 className="h-4 w-4" />
                             Monitoramento
+                          </TabsTrigger>
+                          <TabsTrigger value="risk-letter" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Carta de Risco
                           </TabsTrigger>
                         </TabsList>
 
@@ -1109,6 +1137,94 @@ const RiskAcceptanceManagement: React.FC = () => {
                               ))}
                             </div>
                           )}
+                        </TabsContent>
+
+                        <TabsContent value="risk-letter" className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-purple-500" />
+                              Carta de Aceitação de Risco
+                            </h4>
+                          </div>
+                          
+                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-6">
+                            <div className="text-center space-y-4">
+                              <div className="flex justify-center">
+                                <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full">
+                                  <FileText className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <h3 className="text-lg font-semibold text-foreground mb-2">
+                                  Gerar Carta de Aceitação de Risco
+                                </h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                  Documento formal para registro da decisão de aceitar este risco específico
+                                </p>
+                              </div>
+                              
+                              <div className="flex justify-center space-x-3">
+                                <Button
+                                  onClick={() => {
+                                    console.log('Botão Gerar PDF clicado!');
+                                    console.log('Dados do risco:', risk);
+                                    console.log('Estado isGenerating:', isGenerating);
+                                    printRiskAcceptancePDF(risk);
+                                  }}
+                                  disabled={isGenerating}
+                                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-6 py-2"
+                                >
+                                  {isGenerating ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                  ) : (
+                                    <FileDown className="h-4 w-4 mr-2" />
+                                  )}
+                                  Gerar PDF
+                                </Button>
+                                
+                                <Button
+                                  onClick={() => {
+                                    console.log('Botão Gerar DOC clicado!');
+                                    console.log('Dados do risco:', risk);
+                                    console.log('Estado isGenerating:', isGenerating);
+                                    printRiskAcceptanceDOC(risk);
+                                  }}
+                                  disabled={isGenerating}
+                                  variant="outline"
+                                  className="border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 px-6 py-2"
+                                >
+                                  {isGenerating ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                  ) : (
+                                    <FileText className="h-4 w-4 mr-2" />
+                                  )}
+                                  Gerar DOC
+                                </Button>
+                              </div>
+                              
+                              <div className="text-xs text-muted-foreground mt-4 space-y-1">
+                                <p><span className="font-medium">Documento Nº:</span> RA-{risk.riskCode || risk.risk_id.substring(0, 8).toUpperCase()}</p>
+                                <p><span className="font-medium">Risco:</span> {risk.risk_title}</p>
+                                <p><span className="font-medium">Aceito por:</span> {risk.accepted_by} ({risk.accepted_by_role})</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                            <div className="flex items-start space-x-3">
+                              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                              <div>
+                                <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">Informações Importantes</h4>
+                                <ul className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 space-y-1">
+                                  <li>• A carta será gerada com as informações atuais do risco</li>
+                                  <li>• O documento possui validade jurídica para auditoria</li>
+                                  <li>• Inclui dados da empresa e assinaturas digitais</li>
+                                  <li>• Formato PDF recomendado para arquivamento oficial</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
                         </TabsContent>
                       </Tabs>
                     </div>
