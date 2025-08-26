@@ -250,7 +250,7 @@ const RiskAcceptanceManagement: React.FC = () => {
             accepted_by_email: "joao.silva@empresa.com",
             acceptance_date: risk.created_at,
             review_schedule: "quarterly" as const,
-            next_review_date: format(addDays(new Date(), 90), 'yyyy-MM-dd'),
+            next_review_date: format(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
             status: "active" as const,
             monitoring_frequency: "Mensal",
             created_at: risk.created_at,
@@ -481,21 +481,53 @@ const RiskAcceptanceManagement: React.FC = () => {
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
-      case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200';
-      case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Baixo': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Crítico':
+      case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200 !bg-red-100 !text-red-800 !border-red-200';
+      case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200 !bg-orange-100 !text-orange-800 !border-orange-200';
+      case 'Médio': return 'bg-yellow-100 text-yellow-800 border-yellow-200 !bg-yellow-100 !text-yellow-800 !border-yellow-200';
+      case 'Baixo': return 'bg-green-100 text-green-800 border-green-200 !bg-green-100 !text-green-800 !border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200 !bg-gray-100 !text-gray-800 !border-gray-200';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 border-green-200';
-      case 'under_review': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'expired': return 'bg-red-100 text-red-800 border-red-200';
-      case 'renewed': return 'bg-purple-100 text-purple-800 border-purple-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'active': return 'bg-green-100 text-green-800 border-green-200 !bg-green-100 !text-green-800 !border-green-200';
+      case 'under_review': return 'bg-blue-100 text-blue-800 border-blue-200 !bg-blue-100 !text-blue-800 !border-blue-200';
+      case 'expired': return 'bg-red-100 text-red-800 border-red-200 !bg-red-100 !text-red-800 !border-red-200';
+      case 'renewed': return 'bg-purple-100 text-purple-800 border-purple-200 !bg-purple-100 !text-purple-800 !border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200 !bg-gray-100 !text-gray-800 !border-gray-200';
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'cyber security':
+      case 'segurança cibernética':
+        return 'bg-red-100 text-red-800 border-red-200 !bg-red-100 !text-red-800 !border-red-200';
+      case 'operational':
+      case 'operacional':
+        return 'bg-blue-100 text-blue-800 border-blue-200 !bg-blue-100 !text-blue-800 !border-blue-200';
+      case 'financial':
+      case 'financeiro':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200 !bg-emerald-100 !text-emerald-800 !border-emerald-200';
+      case 'compliance':
+      case 'conformidade':
+        return 'bg-purple-100 text-purple-800 border-purple-200 !bg-purple-100 !text-purple-800 !border-purple-200';
+      case 'strategic':
+      case 'estratégico':
+        return 'bg-orange-100 text-orange-800 border-orange-200 !bg-orange-100 !text-orange-800 !border-orange-200';
+      case 'legal':
+      case 'jurídico':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200 !bg-indigo-100 !text-indigo-800 !border-indigo-200';
+      case 'reputational':
+      case 'reputacional':
+        return 'bg-pink-100 text-pink-800 border-pink-200 !bg-pink-100 !text-pink-800 !border-pink-200';
+      case 'environmental':
+      case 'ambiental':
+        return 'bg-teal-100 text-teal-800 border-teal-200 !bg-teal-100 !text-teal-800 !border-teal-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200 !bg-gray-100 !text-gray-800 !border-gray-200';
     }
   };
 
@@ -576,12 +608,8 @@ const RiskAcceptanceManagement: React.FC = () => {
                 <Shield className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold flex items-center gap-2">
+                <h1 className="text-2xl lg:text-3xl font-bold">
                   Gestão de Riscos Aceitos
-                  <Badge variant="secondary" className="bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 border-purple-200">
-                    <Brain className="h-3 w-3 mr-1" />
-                    Alex Risk
-                  </Badge>
                 </h1>
                 <p className="text-muted-foreground text-sm lg:text-base">
                   Monitoramento inteligente e gestão completa de riscos aceitos com comunicação e aprovação
@@ -794,13 +822,70 @@ const RiskAcceptanceManagement: React.FC = () => {
                           {risk.riskCode || `ID-${risk.risk_id.substring(0, 8).toUpperCase()}`}
                         </Badge>
                         <CardTitle className="text-lg truncate">{risk.risk_title}</CardTitle>
-                        <Badge className={getRiskLevelColor(risk.risk_level)}>
+                        <Badge 
+                          className="border text-xs font-medium px-2 py-1"
+                          style={{
+                            backgroundColor: (() => {
+                              console.log('Risk level:', risk.risk_level);
+                              switch(risk.risk_level) {
+                                case 'Crítico':
+                                case 'Muito Alto': return '#dc2626';
+                                case 'Alto': return '#ea580c';
+                                case 'Médio': return '#ca8a04';
+                                case 'Baixo': return '#16a34a';
+                                default: return '#6b7280';
+                              }
+                            })(),
+                            color: '#ffffff',
+                            borderColor: (() => {
+                              switch(risk.risk_level) {
+                                case 'Crítico':
+                                case 'Muito Alto': return '#dc2626';
+                                case 'Alto': return '#ea580c';
+                                case 'Médio': return '#ca8a04';
+                                case 'Baixo': return '#16a34a';
+                                default: return '#6b7280';
+                              }
+                            })(),
+                            borderWidth: '1px'
+                          }}
+                        >
                           {risk.risk_level}
                         </Badge>
-                        <Badge variant="secondary">
+                        <Badge 
+                          className="border"
+                          style={{
+                            backgroundColor: risk.risk_category.toLowerCase().includes('cyber') || risk.risk_category.toLowerCase().includes('segurança') ? '#dc2626' :
+                                           risk.risk_category.toLowerCase().includes('operational') || risk.risk_category.toLowerCase().includes('operacional') ? '#2563eb' :
+                                           risk.risk_category.toLowerCase().includes('financial') || risk.risk_category.toLowerCase().includes('financeiro') ? '#059669' :
+                                           risk.risk_category.toLowerCase().includes('compliance') || risk.risk_category.toLowerCase().includes('conformidade') ? '#7c3aed' :
+                                           risk.risk_category.toLowerCase().includes('strategic') || risk.risk_category.toLowerCase().includes('estratégico') ? '#ea580c' : '#6b7280',
+                            color: '#ffffff',
+                            borderColor: risk.risk_category.toLowerCase().includes('cyber') || risk.risk_category.toLowerCase().includes('segurança') ? '#dc2626' :
+                                        risk.risk_category.toLowerCase().includes('operational') || risk.risk_category.toLowerCase().includes('operacional') ? '#2563eb' :
+                                        risk.risk_category.toLowerCase().includes('financial') || risk.risk_category.toLowerCase().includes('financeiro') ? '#059669' :
+                                        risk.risk_category.toLowerCase().includes('compliance') || risk.risk_category.toLowerCase().includes('conformidade') ? '#7c3aed' :
+                                        risk.risk_category.toLowerCase().includes('strategic') || risk.risk_category.toLowerCase().includes('estratégico') ? '#ea580c' : '#6b7280',
+                            borderWidth: '1px'
+                          }}
+                        >
                           {risk.risk_category}
                         </Badge>
-                        <Badge className={getStatusColor(risk.status)}>
+                        <Badge 
+                          className="border"
+                          style={{
+                            backgroundColor: risk.status === 'active' ? '#16a34a' :
+                                           risk.status === 'under_review' ? '#2563eb' :
+                                           risk.status === 'expired' ? '#dc2626' :
+                                           risk.status === 'renewed' ? '#7c3aed' : '#6b7280',
+                            color: '#ffffff',
+                            borderColor: risk.status === 'active' ? '#16a34a' :
+                                        risk.status === 'under_review' ? '#2563eb' :
+                                        risk.status === 'expired' ? '#dc2626' :
+                                        risk.status === 'renewed' ? '#7c3aed' : '#6b7280',
+                            borderWidth: '1px'
+                          }}
+                        >
                           {risk.status === 'active' ? 'Ativo' :
                            risk.status === 'under_review' ? 'Em Revisão' :
                            risk.status === 'expired' ? 'Expirado' : 'Renovado'}
@@ -961,12 +1046,18 @@ const RiskAcceptanceManagement: React.FC = () => {
                                         <div className="flex items-center gap-2 mb-2">
                                           <span className="font-medium">{comm.stakeholder_name}</span>
                                           <Badge variant="outline">{comm.stakeholder_role}</Badge>
-                                          <Badge className={
-                                            comm.status === 'responded' ? 'bg-green-100 text-green-800' :
-                                            comm.status === 'read' ? 'bg-blue-100 text-blue-800' :
-                                            comm.status === 'delivered' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-gray-100 text-gray-800'
-                                          }>
+                                          <Badge 
+                                            style={{
+                                              backgroundColor: comm.status === 'responded' ? '#16a34a' :
+                                                             comm.status === 'read' ? '#2563eb' :
+                                                             comm.status === 'delivered' ? '#ca8a04' : '#6b7280',
+                                              color: '#ffffff',
+                                              borderWidth: '1px',
+                                              borderColor: comm.status === 'responded' ? '#16a34a' :
+                                                          comm.status === 'read' ? '#2563eb' :
+                                                          comm.status === 'delivered' ? '#ca8a04' : '#6b7280'
+                                            }}
+                                          >
                                             {comm.status}
                                           </Badge>
                                         </div>
@@ -1023,12 +1114,18 @@ const RiskAcceptanceManagement: React.FC = () => {
                                         <div className="flex items-center gap-2 mb-2">
                                           <span className="font-medium">{approval.approver_name}</span>
                                           <Badge variant="outline">{approval.approver_role}</Badge>
-                                          <Badge className={
-                                            approval.approval_status === 'approved' ? 'bg-green-100 text-green-800' :
-                                            approval.approval_status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                            approval.approval_status === 'conditional' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-gray-100 text-gray-800'
-                                          }>
+                                          <Badge 
+                                            style={{
+                                              backgroundColor: approval.approval_status === 'approved' ? '#16a34a' :
+                                                             approval.approval_status === 'rejected' ? '#dc2626' :
+                                                             approval.approval_status === 'conditional' ? '#ca8a04' : '#6b7280',
+                                              color: '#ffffff',
+                                              borderWidth: '1px',
+                                              borderColor: approval.approval_status === 'approved' ? '#16a34a' :
+                                                          approval.approval_status === 'rejected' ? '#dc2626' :
+                                                          approval.approval_status === 'conditional' ? '#ca8a04' : '#6b7280'
+                                            }}
+                                          >
                                             {approval.approval_status}
                                           </Badge>
                                           <Badge variant="secondary">Nível {approval.approval_level}</Badge>
@@ -1096,11 +1193,16 @@ const RiskAcceptanceManagement: React.FC = () => {
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-3">
                                           <span className="font-medium">{monitoring.reviewer_name}</span>
-                                          <Badge className={
-                                            monitoring.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                            monitoring.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                            'bg-red-100 text-red-800'
-                                          }>
+                                          <Badge 
+                                            style={{
+                                              backgroundColor: monitoring.status === 'completed' ? '#16a34a' :
+                                                             monitoring.status === 'in_progress' ? '#2563eb' : '#dc2626',
+                                              color: '#ffffff',
+                                              borderWidth: '1px',
+                                              borderColor: monitoring.status === 'completed' ? '#16a34a' :
+                                                          monitoring.status === 'in_progress' ? '#2563eb' : '#dc2626'
+                                            }}
+                                          >
                                             {monitoring.status}
                                           </Badge>
                                         </div>

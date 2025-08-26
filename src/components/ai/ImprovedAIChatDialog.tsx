@@ -15,7 +15,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
@@ -407,23 +406,21 @@ export const ImprovedAIChatDialog: React.FC<AIChatDialogProps> = ({
                 <Sparkles className="h-3 w-3 mr-1" />
                 GLM 4.5
               </Badge>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsMaximized(!isMaximized)}
-                      className="h-8 w-8 p-0"
-                    >
-                      {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {isMaximized ? 'Minimizar' : 'Maximizar'}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsMaximized(!isMaximized)}
+                    className="h-8 w-8 p-0"
+                  >
+                    {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {isMaximized ? 'Minimizar' : 'Maximizar'}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </DialogHeader>
@@ -495,76 +492,68 @@ export const ImprovedAIChatDialog: React.FC<AIChatDialogProps> = ({
                       {/* Message Actions */}
                       {message.type === 'assistant' && !message.isTyping && (
                         <div className="flex items-center space-x-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyToClipboard(message.content)}
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Copiar</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(message.content)}
+                                className="h-7 w-7 p-0"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar</TooltipContent>
+                          </Tooltip>
                           
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => provideFeedback(message.id, 'positive')}
-                                  className={cn(
-                                    "h-7 w-7 p-0",
-                                    message.feedback === 'positive' && "bg-green-100 text-green-600"
-                                  )}
-                                >
-                                  <ThumbsUp className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Útil</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => provideFeedback(message.id, 'positive')}
+                                className={cn(
+                                  "h-7 w-7 p-0",
+                                  message.feedback === 'positive' && "bg-green-100 text-green-600"
+                                )}
+                              >
+                                <ThumbsUp className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Útil</TooltipContent>
+                          </Tooltip>
                           
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => provideFeedback(message.id, 'negative')}
-                                  className={cn(
-                                    "h-7 w-7 p-0",
-                                    message.feedback === 'negative' && "bg-red-100 text-red-600"
-                                  )}
-                                >
-                                  <ThumbsDown className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Não útil</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => provideFeedback(message.id, 'negative')}
+                                className={cn(
+                                  "h-7 w-7 p-0",
+                                  message.feedback === 'negative' && "bg-red-100 text-red-600"
+                                )}
+                              >
+                                <ThumbsDown className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Não útil</TooltipContent>
+                          </Tooltip>
                           
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => regenerateResponse(message.id)}
-                                  className="h-7 w-7 p-0"
-                                  disabled={isLoading}
-                                >
-                                  <RotateCcw className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Regenerar</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => regenerateResponse(message.id)}
+                                className="h-7 w-7 p-0"
+                                disabled={isLoading}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Regenerar</TooltipContent>
+                          </Tooltip>
                         </div>
                       )}
                     </div>
