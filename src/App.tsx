@@ -13,6 +13,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
 
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
@@ -59,7 +60,7 @@ const RATReport = lazy(() => import("@/components/privacy/RATReport").then(modul
 // Settings and admin
 const UserManagementPage = lazy(() => import("@/components/settings/UserManagementPage").then(module => ({ default: module.UserManagementPage })));
 const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPage").then(module => ({ default: module.ActivityLogsPage })));
-const GeneralSettingsPage = lazy(() => import("@/components/general-settings/GeneralSettingsPage").then(module => ({ default: module.GeneralSettingsPage })));
+// GeneralSettingsPage agora é importado diretamente acima
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
 const AIManagementPage = lazy(() => import("@/components/ai/AIManagementPage").then(module => ({ default: module.AIManagementPage })));
@@ -410,11 +411,7 @@ const App = () => (
                       <ActivityLogsPage />
                     </Suspense>
                   } />
-                  <Route path="settings/general" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <GeneralSettingsPage />
-                    </Suspense>
-                  } />
+                  <Route path="settings/general" element={<GeneralSettingsPage />} />
                   <Route path="admin/ai-management" element={
                     <PlatformAdminRoute>
                       <Suspense fallback={<PageLoader />}>

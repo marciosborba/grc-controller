@@ -86,7 +86,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { manualFixApplyTheme } from '@/utils/fixApplyTheme';
-import PDFColorSettings from '../PDFColorSettings';
 
 // Utilitários para conversão de cores
 const hslToHex = (hsl: string): string => {
@@ -576,11 +575,11 @@ const GlobalRulesSection: React.FC = () => {
     if (activeTheme && !activeTheme.is_native_theme) {
       console.log('Tema customizado detectado:', activeTheme.name);
       console.log('🎨 Aplicando tema automaticamente com preservação do dark mode');
-      applyThemeColors(activeTheme);
+      // applyThemeColors(activeTheme); // DESABILITADO
     } else if (activeTheme?.is_native_theme) {
       console.log('✅ Tema UI Nativa ativo - preservando cores CSS originais e dark mode nativo');
       // Para tema nativo, aplicar cores mas preservar dark mode
-      applyThemeColors(activeTheme);
+      // applyThemeColors(activeTheme); // DESABILITADO
     }
   }, [activeTheme]);
 
@@ -752,7 +751,7 @@ const GlobalRulesSection: React.FC = () => {
         if (timeSinceLastChange > 5000 || !lastThemeChange) {
           console.log('🎨 Aplicando tema automaticamente...');
           setTimeout(() => {
-            applyThemeColors(activeTheme);
+            // applyThemeColors(activeTheme); // DESABILITADO
           }, 100);
         } else {
           console.log('⏱️ Aguardando para evitar conflito (mudança recente)');
@@ -1074,749 +1073,46 @@ const GlobalRulesSection: React.FC = () => {
     }, 100);
   };
 
-
+  // ============================================================================
+  // FUNÇÕES PLACEHOLDER PARA TEMAS
+  // ============================================================================
   
-  const handleCreateTheme = () => {
-    setEditingTheme(null);
-    setThemeForm({
-      name: '',
-      display_name: '',
-      description: '',
-      is_dark_mode: false,
-      primary_color: '219 78% 26%',
-      primary_foreground: '210 40% 98%',
-      secondary_color: '210 20% 96%',
-      secondary_foreground: '225 71% 12%',
-      accent_color: '142 76% 36%',
-      accent_foreground: '210 40% 98%',
-      background_color: '0 0% 100%',
-      foreground_color: '225 71% 12%',
-      card_color: '0 0% 100%',
-      card_foreground: '225 71% 12%',
-      // Dark mode backgrounds
-      background_color_dark: '222 18% 4%',
-      foreground_color_dark: '0 0% 100%',
-      card_color_dark: '215 8% 12%',
-      card_foreground_dark: '0 0% 100%',
-      border_color: '214 32% 91%',
-      success_color: '142 76% 36%',
-      success_foreground: '210 40% 98%',
-      warning_color: '38 92% 50%',
-      warning_foreground: '225 71% 12%',
-      danger_color: '0 84% 60%',
-      danger_foreground: '210 40% 98%',
-      font_family: 'Inter',
-      font_size_base: 14,
-      border_radius: 8,
-      shadow_intensity: 0.1
-    });
-    setShowThemeDialog(true);
+  const handleExportTheme = (theme: ThemeConfig) => {
+    console.log('Exportando tema:', theme.name);
+    // TODO: Implementar exportação de tema
+    toast.success('Funcionalidade de exportação será implementada em breve');
+  };
+
+  const handleSaveTheme = () => {
+    console.log('Salvando tema...');
+    // TODO: Implementar salvamento de tema
+    toast.success('Funcionalidade de salvamento será implementada em breve');
+    setShowThemeDialog(false);
+  };
+
+  const handleApplyTheme = (theme: ThemeConfig) => {
+    console.log('Aplicando tema:', theme.name);
+    // TODO: Implementar aplicação de tema
+    toast.success('Funcionalidade de aplicação será implementada em breve');
   };
 
   const handleEditTheme = (theme: ThemeConfig) => {
+    console.log('Editando tema:', theme.name);
     setEditingTheme(theme);
-    setThemeForm({
-      name: theme.name,
-      display_name: theme.display_name,
-      description: theme.description || '',
-      is_dark_mode: theme.is_dark_mode,
-      primary_color: theme.primary_color,
-      primary_foreground: theme.primary_foreground,
-      secondary_color: theme.secondary_color,
-      secondary_foreground: theme.secondary_foreground,
-      accent_color: theme.accent_color,
-      accent_foreground: theme.accent_foreground,
-      background_color: theme.background_color,
-      foreground_color: theme.foreground_color,
-      card_color: theme.card_color,
-      card_foreground: theme.card_foreground,
-      // Dark mode colors
-      background_color_dark: theme.background_color_dark || '222 18% 4%',
-      foreground_color_dark: theme.foreground_color_dark || '0 0% 100%',
-      card_color_dark: theme.card_color_dark || '215 8% 12%',
-      card_foreground_dark: theme.card_foreground_dark || '0 0% 100%',
-      border_color: theme.border_color,
-      success_color: theme.success_color,
-      success_foreground: theme.success_foreground,
-      warning_color: theme.warning_color,
-      warning_foreground: theme.warning_foreground,
-      danger_color: theme.danger_color,
-      danger_foreground: theme.danger_foreground,
-      font_family: theme.font_family,
-      font_size_base: theme.font_size_base,
-      border_radius: theme.border_radius,
-      shadow_intensity: theme.shadow_intensity
-    });
     setShowThemeDialog(true);
   };
 
-  const handleSaveTheme = async () => {
-    try {
-      setIsLoading(true);
-      console.log('🎨 Iniciando salvamento de tema...');
-      console.log('📋 Dados do formulário:', {
-        name: themeForm.name,
-        display_name: themeForm.display_name,
-        editingTheme: editingTheme?.id
-      });
-      
-      // Validações básicas
-      if (!themeForm.name.trim()) {
-        console.error('❌ Validação falhou: Nome do tema é obrigatório');
-        toast.error('Nome do tema é obrigatório');
-        return;
-      }
-      
-      if (!themeForm.display_name.trim()) {
-        console.error('❌ Validação falhou: Nome de exibição é obrigatório');
-        toast.error('Nome de exibição é obrigatório');
-        return;
-      }
-      
-      // Validar formato HSL das cores principais
-      const hslRegex = /^\d+\.?\d*\s+\d+\.?\d*%\s+\d+\.?\d*%$/;
-      const coreColors = [
-        { field: 'primary_color', label: 'Cor Primária' },
-        { field: 'background_color', label: 'Background' },
-        { field: 'foreground_color', label: 'Texto Principal' }
-      ];
-      
-      for (const color of coreColors) {
-        const colorValue = themeForm[color.field] as string;
-        if (!colorValue || !hslRegex.test(colorValue)) {
-          console.error(`❌ Validação falhou: Formato inválido para ${color.label}:`, colorValue);
-          toast.error(`Formato inválido para ${color.label}. Use: H S% L% (ex: 219 78% 26%)`);
-          return;
-        }
-      }
-      
-      console.log('✅ Validações passaram');
-      
-      // Preparar dados para salvamento (sem campos inexistentes)
-      const themeData = {
-        name: themeForm.name.trim(),
-        display_name: themeForm.display_name.trim(),
-        description: themeForm.description.trim(),
-        is_dark_mode: themeForm.is_dark_mode,
-        
-        // Cores principais
-        primary_color: themeForm.primary_color,
-        primary_foreground: themeForm.primary_foreground,
-        primary_hover: themeForm.primary_hover,
-        primary_glow: themeForm.primary_glow,
-        secondary_color: themeForm.secondary_color,
-        secondary_foreground: themeForm.secondary_foreground,
-        accent_color: themeForm.accent_color,
-        accent_foreground: themeForm.accent_foreground,
-        
-        // Backgrounds e superfícies
-        background_color: themeForm.background_color,
-        foreground_color: themeForm.foreground_color,
-        card_color: themeForm.card_color,
-        card_foreground: themeForm.card_foreground,
-        // Dark mode backgrounds
-        background_color_dark: themeForm.background_color_dark,
-        foreground_color_dark: themeForm.foreground_color_dark,
-        card_color_dark: themeForm.card_color_dark,
-        card_foreground_dark: themeForm.card_foreground_dark,
-        border_color: themeForm.border_color,
-        input_color: themeForm.input_color,
-        ring_color: themeForm.ring_color,
-        muted_color: themeForm.muted_color,
-        muted_foreground: themeForm.muted_foreground,
-        // Dark mode muted colors
-        muted_color_dark: themeForm.muted_color_dark,
-        muted_foreground_dark: themeForm.muted_foreground_dark,
-        popover_color: themeForm.popover_color,
-        popover_foreground: themeForm.popover_foreground,
-        // Dark mode popover colors
-        popover_color_dark: themeForm.popover_color_dark,
-        popover_foreground_dark: themeForm.popover_foreground_dark,
-        
-        // Cores de estado
-        success_color: themeForm.success_color,
-        success_foreground: themeForm.success_foreground,
-        success_light: themeForm.success_light,
-        warning_color: themeForm.warning_color,
-        warning_foreground: themeForm.warning_foreground,
-        warning_light: themeForm.warning_light,
-        danger_color: themeForm.danger_color,
-        danger_foreground: themeForm.danger_foreground,
-        danger_light: themeForm.danger_light,
-        destructive_color: themeForm.destructive_color,
-        destructive_foreground: themeForm.destructive_foreground,
-        
-        // Cores de risco GRC
-        risk_critical: themeForm.risk_critical,
-        risk_high: themeForm.risk_high,
-        risk_medium: themeForm.risk_medium,
-        risk_low: themeForm.risk_low,
-        
-        // Cores do sidebar
-        sidebar_background: themeForm.sidebar_background,
-        sidebar_foreground: themeForm.sidebar_foreground,
-        sidebar_primary: themeForm.sidebar_primary,
-        sidebar_primary_foreground: themeForm.sidebar_primary_foreground,
-        sidebar_accent: themeForm.sidebar_accent,
-        sidebar_accent_foreground: themeForm.sidebar_accent_foreground,
-        sidebar_border: themeForm.sidebar_border,
-        sidebar_ring: themeForm.sidebar_ring,
-        
-        // Tipografia e layout
-        font_family: themeForm.font_family,
-        font_size_base: Math.max(12, Math.min(20, themeForm.font_size_base)),
-        border_radius: Math.max(0, Math.min(20, themeForm.border_radius)),
-        shadow_intensity: Math.max(0, Math.min(1, themeForm.shadow_intensity)),
-        
-        // Metadados
-        version: themeForm.version || '1.0',
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log('📝 Dados preparados para salvamento');
-      console.log('🔍 Verificando autenticação...');
-      
-      // Verificar se o usuário está autenticado
-      const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        console.error('❌ Erro de autenticação:', authError);
-        toast.error('Erro de autenticação. Faça login novamente.');
-        return;
-      }
-      
-      if (!currentUser) {
-        console.error('❌ Usuário não autenticado');
-        toast.error('Você precisa estar logado para salvar temas.');
-        return;
-      }
-      
-      console.log('✅ Usuário autenticado:', currentUser.email);
-      
-      if (editingTheme) {
-        console.log('🔄 Atualizando tema existente:', editingTheme.id);
-        
-        // Atualizar tema existente
-        const { data: updateResult, error: updateError } = await supabase
-          .from('global_ui_themes')
-          .update(themeData)
-          .eq('id', editingTheme.id)
-          .select();
-
-        if (updateError) {
-          console.error('❌ Erro na atualização:', updateError);
-          console.error('📋 Detalhes do erro:', JSON.stringify(updateError, null, 2));
-          
-          // Tratamento específico de erros
-          if (updateError.code === 'PGRST301') {
-            toast.error('Você não tem permissão para editar este tema.');
-          } else if (updateError.code === '23505') {
-            toast.error('Já existe um tema com este nome.');
-          } else {
-            toast.error(`Erro ao atualizar tema: ${updateError.message}`);
-          }
-          return;
-        }
-        
-        console.log('✅ Tema atualizado com sucesso:', updateResult);
-        toast.success(`Tema "${themeForm.display_name}" atualizado com sucesso!`);
-      } else {
-        console.log('➕ Criando novo tema');
-        
-        // Criar novo tema
-        const { data: createResult, error: createError } = await supabase
-          .from('global_ui_themes')
-          .insert({
-            ...themeData,
-            is_native_theme: false,
-            is_system_theme: false,
-            is_active: false,
-            created_by: currentUser.id
-          })
-          .select();
-
-        if (createError) {
-          console.error('❌ Erro na criação:', createError);
-          console.error('📋 Detalhes do erro:', JSON.stringify(createError, null, 2));
-          
-          // Tratamento específico de erros
-          if (createError.code === 'PGRST301') {
-            toast.error('Você não tem permissão para criar temas.');
-          } else if (createError.code === '23505') {
-            toast.error('Já existe um tema com este nome.');
-          } else {
-            toast.error(`Erro ao criar tema: ${createError.message}`);
-          }
-          return;
-        }
-        
-        console.log('✅ Tema criado com sucesso:', createResult);
-        toast.success(`Tema "${themeForm.display_name}" criado com sucesso!`);
-      }
-      
-      // Recarregar temas
-      console.log('🔄 Recarregando lista de temas...');
-      await loadThemes();
-      
-      // Fechar dialog
-      setShowThemeDialog(false);
-      setEditingTheme(null);
-      
-      console.log('🎉 Processo de salvamento concluído com sucesso!');
-      
-    } catch (error) {
-      console.error('❌ Erro geral no salvamento:', error);
-      console.error('📋 Stack trace:', error.stack);
-      
-      // Tratamento de erros gerais
-      if (error.message.includes('network')) {
-        toast.error('Erro de conexão. Verifique sua internet.');
-      } else if (error.message.includes('permission')) {
-        toast.error('Você não tem permissão para esta operação.');
-      } else {
-        toast.error('Erro inesperado ao salvar tema. Tente novamente.');
-      }
-    } finally {
-      setIsLoading(false);
-      console.log('🏁 Finalizando processo de salvamento');
-    }
+  const handleDuplicateTheme = (theme: ThemeConfig) => {
+    console.log('Duplicando tema:', theme.name);
+    // TODO: Implementar duplicação de tema
+    toast.success('Funcionalidade de duplicação será implementada em breve');
   };
 
-  const handleDeleteTheme = async (themeId: string, themeName: string) => {
-    if (confirm(`Tem certeza que deseja excluir o tema "${themeName}"? Esta ação irá limpar todas as configurações relacionadas e não pode ser desfeita.`)) {
-      try {
-        // 1. Primeiro, verificar se o tema existe e se não é um tema do sistema
-        const { data: themeData, error: themeError } = await supabase
-          .from('global_ui_themes')
-          .select('is_system_theme, name')
-          .eq('id', themeId)
-          .single();
 
-        if (themeError) {
-          throw new Error(`Erro ao verificar tema: ${themeError.message}`);
-        }
 
-        if (themeData.is_system_theme) {
-          toast.error('Não é possível excluir temas do sistema');
-          return;
-        }
 
-        // 2. Obter um tema alternativo para substituir as referências
-        const { data: alternativeTheme, error: altError } = await supabase
-          .from('global_ui_themes')
-          .select('id')
-          .neq('id', themeId)
-          .eq('is_system_theme', true)
-          .limit(1)
-          .single();
-
-        if (altError || !alternativeTheme) {
-          throw new Error('Não foi possível encontrar um tema alternativo para substituir as referências');
-        }
-
-        // 3. Atualizar referências em global_ui_settings
-        const { error: settingsError } = await supabase
-          .from('global_ui_settings')
-          .update({ active_theme_id: alternativeTheme.id })
-          .eq('active_theme_id', themeId);
-
-        if (settingsError) {
-          throw new Error(`Erro ao atualizar configurações: ${settingsError.message}`);
-        }
-
-        // 4. Limpar cache relacionado
-        const { error: cacheError } = await supabase
-          .from('ui_theme_cache')
-          .delete()
-          .eq('theme_id', themeId);
-
-        if (cacheError) {
-          console.warn('Aviso ao limpar cache:', cacheError.message);
-        }
-
-        // 5. Limpar componentes relacionados
-        const { error: componentError } = await supabase
-          .from('ui_component_themes')
-          .delete()
-          .eq('theme_id', themeId);
-
-        if (componentError) {
-          console.warn('Aviso ao limpar componentes:', componentError.message);
-        }
-
-        // 6. Limpar histórico relacionado (opcional - manter para auditoria)
-        const { error: historyError } = await supabase
-          .from('theme_change_history')
-          .delete()
-          .or(`previous_theme_id.eq.${themeId},new_theme_id.eq.${themeId}`);
-
-        if (historyError) {
-          console.warn('Aviso ao limpar histórico:', historyError.message);
-        }
-
-        // 7. Finalmente, excluir o tema
-        const { error: deleteError } = await supabase
-          .from('global_ui_themes')
-          .delete()
-          .eq('id', themeId);
-
-        if (deleteError) {
-          throw new Error(`Erro ao excluir tema: ${deleteError.message}`);
-        }
-
-        toast.success('Tema excluído com sucesso! Todas as referências foram atualizadas.');
-        await loadThemes();
-      } catch (error) {
-        console.error('Erro ao excluir tema:', error);
-        toast.error(`Erro ao excluir tema: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      }
-    }
-  };
-
-  const handleDuplicateTheme = async (theme: ThemeConfig) => {
-    try {
-      setIsLoading(true);
-      
-      // Gerar nome único para o tema duplicado
-      const baseName = theme.name.replace(/_copy_\d+$/, ''); // Remove sufixos existentes
-      const baseDisplayName = theme.display_name.replace(/ \(Cópia( \d+)?\)$/, ''); // Remove sufixos existentes
-      
-      // Verificar quantas cópias já existem
-      const { data: existingThemes, error: countError } = await supabase
-        .from('global_ui_themes')
-        .select('name, display_name')
-        .or(`name.like.${baseName}_copy_%,name.eq.${baseName}_copy`);
-
-      if (countError) throw countError;
-
-      const copyNumber = existingThemes ? existingThemes.length + 1 : 1;
-      const newName = `${baseName}_copy_${copyNumber}`;
-      const newDisplayName = `${baseDisplayName} (Cópia ${copyNumber})`;
-
-      // Criar tema duplicado
-      const { error } = await supabase
-        .from('global_ui_themes')
-        .insert({
-          name: newName,
-          display_name: newDisplayName,
-          description: `Cópia de: ${theme.description || theme.display_name}`,
-          is_native_theme: false, // Cópias nunca são nativas
-          is_system_theme: false, // Cópias nunca são de sistema
-          is_active: false, // Cópias começam inativas
-          is_dark_mode: theme.is_dark_mode,
-          
-          // Cores principais
-          primary_color: theme.primary_color,
-          primary_foreground: theme.primary_foreground,
-          primary_hover: theme.primary_hover || theme.primary_color,
-          primary_glow: theme.primary_glow || theme.primary_color,
-          
-          // Cores secundárias
-          secondary_color: theme.secondary_color,
-          secondary_foreground: theme.secondary_foreground,
-          
-          // Cores de destaque
-          accent_color: theme.accent_color,
-          accent_foreground: theme.accent_foreground,
-          
-          // Cores de fundo
-          background_color: theme.background_color,
-          foreground_color: theme.foreground_color,
-          card_color: theme.card_color,
-          card_foreground: theme.card_foreground,
-          
-          // Cores de interface
-          border_color: theme.border_color,
-          input_color: theme.input_color || theme.border_color,
-          ring_color: theme.ring_color || theme.primary_color,
-          muted_color: theme.muted_color || theme.secondary_color,
-          muted_foreground: theme.muted_foreground || theme.secondary_foreground,
-          popover_color: theme.popover_color || theme.card_color,
-          popover_foreground: theme.popover_foreground || theme.card_foreground,
-          
-          // Cores de estado
-          success_color: theme.success_color,
-          success_foreground: theme.success_foreground,
-          success_light: theme.success_light || theme.success_color,
-          warning_color: theme.warning_color,
-          warning_foreground: theme.warning_foreground,
-          warning_light: theme.warning_light || theme.warning_color,
-          danger_color: theme.danger_color,
-          danger_foreground: theme.danger_foreground,
-          danger_light: theme.danger_light || theme.danger_color,
-          destructive_color: theme.destructive_color || theme.danger_color,
-          destructive_foreground: theme.destructive_foreground || theme.danger_foreground,
-          
-          // Cores de risco
-          risk_critical: theme.risk_critical || theme.danger_color,
-          risk_high: theme.risk_high || '24 95% 53%',
-          risk_medium: theme.risk_medium || theme.warning_color,
-          risk_low: theme.risk_low || theme.success_color,
-          
-          // Cores do sidebar
-          sidebar_background: theme.sidebar_background || theme.background_color,
-          sidebar_foreground: theme.sidebar_foreground || theme.foreground_color,
-          sidebar_primary: theme.sidebar_primary || theme.primary_color,
-          sidebar_primary_foreground: theme.sidebar_primary_foreground || theme.primary_foreground,
-          sidebar_accent: theme.sidebar_accent || theme.secondary_color,
-          sidebar_accent_foreground: theme.sidebar_accent_foreground || theme.secondary_foreground,
-          sidebar_border: theme.sidebar_border || theme.border_color,
-          sidebar_ring: theme.sidebar_ring || theme.primary_color,
-          
-          // Configurações de layout
-          font_family: theme.font_family || 'Inter',
-          font_size_base: theme.font_size_base || 14,
-          border_radius: theme.border_radius || 8,
-          shadow_intensity: theme.shadow_intensity || 0.1,
-          
-          // Metadados
-          created_by: user?.id
-        });
-
-      if (error) throw error;
-      
-      toast.success(`Tema "${newDisplayName}" criado com sucesso!`);
-      await loadThemes();
-    } catch (error) {
-      console.error('Erro ao duplicar tema:', error);
-      toast.error('Erro ao duplicar tema');
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
-  const handleApplyTheme = async (theme: ThemeConfig) => {
-    try {
-      setIsLoading(true);
-      
-      console.log('🎨 Aplicando tema:', theme.display_name || theme.name);
-      console.log('📋 Detalhes do tema:', {
-        id: theme.id,
-        isNative: theme.is_native_theme,
-        isDarkMode: theme.is_dark_mode,
-        currentSystemDarkMode: document.documentElement.classList.contains('dark')
-      });
-      
-      // Para o tema nativo, preservar as cores originais sem alterar modo escuro/claro
-      if (theme.is_native_theme) {
-        console.log('🏠 Aplicando tema nativo - preservando cores originais');
-        
-        // Aplicar tema no banco de dados
-        console.log('💾 Aplicando tema nativo no banco de dados:', {
-          theme_uuid: theme.id,
-          theme_name: theme.display_name || theme.name,
-          tenant_uuid: null
-        });
-        
-        const { data: applyResult, error } = await supabase.rpc('apply_theme', {
-          theme_uuid: theme.id,
-          tenant_uuid: null
-        });
-        
-        console.log('📊 Resultado da aplicação do tema nativo:', { data: applyResult, error });
-        
-        if (error) {
-          console.error('❌ Erro ao aplicar tema nativo no banco:', error);
-          throw error;
-        }
-        
-        // Marcar timestamp da aplicação do tema
-        window.localStorage.setItem('lastThemeChangeTime', Date.now().toString());
-        console.log('🕰️ Marcando timestamp da aplicação do tema nativo:', Date.now());
-        
-        // Para tema nativo, aplicar cores mas respeitar modo dark/light atual do sistema
-        applyThemeColors(theme);
-        
-        toast.success('Tema UI Nativa aplicado com sucesso!');
-      } else {
-        console.log('🎭 Aplicando tema customizado');
-        
-        try {
-          // Para temas customizados, implementar hierarquia de preferências
-          let shouldApplyThemeDarkMode = document.documentElement.classList.contains('dark'); // padrão: manter atual
-          
-          try {
-            // 1. Verificar preferências do usuário
-            const { data: userProfile, error: profileError } = await supabase
-              .from('profiles')
-              .select('notification_preferences')
-              .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-              .single();
-            
-            if (profileError) {
-              console.warn('⚠️ Erro ao buscar preferências do usuário:', profileError);
-            } else {
-              console.log('👤 Perfil do usuário:', userProfile?.notification_preferences);
-              
-              // Verificar preferência de tema do usuário em notification_preferences
-              const userThemePreference = userProfile?.notification_preferences?.theme;
-              
-              if (userThemePreference && ['dark', 'light'].includes(userThemePreference)) {
-                // Usuário tem preferência específica
-                shouldApplyThemeDarkMode = userThemePreference === 'dark';
-                console.log('🎯 Usando preferência do usuário:', shouldApplyThemeDarkMode ? 'dark' : 'light');
-              } else {
-                // 2. Verificar configurações globais se usuário não tem preferência
-                const { data: globalSettings, error: globalError } = await supabase
-                  .from('global_ui_settings')
-                  .select('*')
-                  .is('tenant_id', null)
-                  .single();
-                
-                if (globalError) {
-                  console.warn('⚠️ Erro ao buscar configurações globais:', globalError);
-                } else {
-                  console.log('🌐 Configurações globais:', globalSettings);
-                  
-                  if (globalSettings?.default_dark_mode !== null && globalSettings?.default_dark_mode !== undefined) {
-                    // Usar configuração global
-                    shouldApplyThemeDarkMode = globalSettings.default_dark_mode;
-                    console.log('🌍 Usando configuração global:', shouldApplyThemeDarkMode ? 'dark' : 'light');
-                  } else {
-                    console.log('💻 Mantendo modo atual do sistema:', shouldApplyThemeDarkMode ? 'dark' : 'light');
-                  }
-                }
-              }
-            }
-          } catch (prefError) {
-            console.warn('⚠️ Erro ao processar preferências, usando modo atual:', prefError);
-            shouldApplyThemeDarkMode = document.documentElement.classList.contains('dark');
-          }
-          
-          // Aplicar tema no banco de dados
-          console.log('💾 Aplicando tema no banco de dados:', {
-            theme_uuid: theme.id,
-            theme_name: theme.display_name || theme.name,
-            tenant_uuid: null
-          });
-          
-          const { data: applyResult, error } = await supabase.rpc('apply_theme', {
-            theme_uuid: theme.id,
-            tenant_uuid: null
-          });
-          
-          console.log('📊 Resultado da aplicação no banco:', { data: applyResult, error });
-          
-          // Verificar se o tema foi realmente marcado como ativo
-          setTimeout(async () => {
-            console.log('🔍 Verificando se tema foi marcado como ativo...');
-            const { data: checkTheme, error: checkError } = await supabase
-              .from('global_ui_themes')
-              .select('id, name, display_name, is_active')
-              .eq('id', theme.id)
-              .single();
-            
-            console.log('📊 Tema após aplicação:', { data: checkTheme, error: checkError });
-            
-            // Verificar todos os temas ativos
-            const { data: allActiveThemes, error: allError } = await supabase
-              .from('global_ui_themes')
-              .select('id, name, display_name, is_active')
-              .eq('is_active', true);
-            
-            console.log('📊 Todos os temas ativos:', { data: allActiveThemes, error: allError });
-            
-            // Se o tema não foi marcado como ativo, forçar a atualização
-            if (checkTheme && !checkTheme.is_active) {
-              console.log('⚠️ Tema não foi marcado como ativo, forçando atualização...');
-              
-              // Desativar todos os temas primeiro
-              await supabase
-                .from('global_ui_themes')
-                .update({ is_active: false })
-                .neq('id', '00000000-0000-0000-0000-000000000000');
-              
-              // Ativar o tema desejado
-              const { error: forceError } = await supabase
-                .from('global_ui_themes')
-                .update({ is_active: true })
-                .eq('id', theme.id);
-              
-              if (forceError) {
-                console.error('❌ Erro ao forçar ativação do tema:', forceError);
-              } else {
-                console.log('✅ Tema forçado como ativo com sucesso');
-              }
-            }
-          }, 500);
-          
-          if (error) {
-            console.error('❌ Erro na função apply_theme:', error);
-            throw error;
-          }
-          
-          // Aplicar modo dark/light baseado na hierarquia
-          if (shouldApplyThemeDarkMode) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
-          }
-          
-          // Marcar timestamp da aplicação do tema
-          window.localStorage.setItem('lastThemeChangeTime', Date.now().toString());
-          console.log('🕰️ Marcando timestamp da aplicação do tema:', Date.now());
-          
-          // Aplicar cores do tema
-          applyThemeColors(theme);
-          
-          toast.success(`Tema "${theme.display_name || theme.name}" aplicado com sucesso!`);
-        } catch (customThemeError) {
-          console.error('Erro específico no tema customizado:', customThemeError);
-          
-          // Fallback: aplicar tema sem hierarquia de preferências
-          console.log('🔄 Aplicando tema no modo fallback:', {
-            theme_uuid: theme.id,
-            theme_name: theme.display_name || theme.name
-          });
-          
-          const { data: fallbackResult, error } = await supabase.rpc('apply_theme', {
-            theme_uuid: theme.id,
-            tenant_uuid: null
-          });
-          
-          console.log('📊 Resultado do fallback:', { data: fallbackResult, error });
-          
-          if (error) {
-            console.error('❌ Erro no fallback apply_theme:', error);
-            throw error;
-          }
-          
-          applyThemeColors(theme);
-          toast.success(`Tema "${theme.display_name || theme.name}" aplicado (modo simplificado)!`);
-        }
-      }
-
-      // Atualizar estado local
-      console.log('🔄 Atualizando estado local...');
-      setActiveTheme(theme);
-      setThemes(prev => prev.map(t => ({ ...t, is_active: t.id === theme.id })));
-      
-      // Forçar recarregamento dos temas para garantir sincronização
-      setTimeout(async () => {
-        console.log('🔄 Recarregando temas para confirmar aplicação...');
-        await loadThemes();
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Erro ao aplicar tema:', error);
-      toast.error('Erro ao aplicar tema');
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
-  const handleExportTheme = (theme: ThemeConfig) => {
-    const dataStr = JSON.stringify(theme, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `theme-${theme.name.toLowerCase().replace(/\s+/g, '-')}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    toast.success('Tema exportado com sucesso!');
-  };
 
   // ============================================================================
   // RENDERIZAÇÃO DOS COMPONENTES
@@ -1867,14 +1163,10 @@ const GlobalRulesSection: React.FC = () => {
       </Alert>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="roles" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Roles & Permissões
-          </TabsTrigger>
-          <TabsTrigger value="themes" className="flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Temas & Cores
           </TabsTrigger>
           <TabsTrigger value="fonts" className="flex items-center gap-2">
             <Type className="h-4 w-4" />
@@ -1973,630 +1265,6 @@ const GlobalRulesSection: React.FC = () => {
           </div>
         </TabsContent>
 
-        {/* ============================================================================ */}
-        {/* TAB: TEMAS & CORES */}
-        {/* ============================================================================ */}
-        <TabsContent value="themes" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Configuração de Temas da Plataforma</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure temas globais e específicos por tenant. Como admin da plataforma, você controla todas as cores e aparência.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Importar Tema
-              </Button>
-              <Button onClick={handleCreateTheme}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Tema
-              </Button>
-            </div>
-          </div>
-
-          {/* Tenant Selection for Theme Configuration */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                Configuração por Tenant
-              </CardTitle>
-              <CardDescription className="text-blue-700 dark:text-blue-300">
-                Como admin da plataforma, você pode configurar temas específicos para cada tenant ou usar o tema global.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Selecionar Tenant</Label>
-                  <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um tenant ou use global" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="global">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          Tema Global (Todos os Tenants)
-                        </div>
-                      </SelectItem>
-                      {availableTenants.map(tenant => (
-                        <SelectItem key={tenant.id} value={tenant.id}>
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            {tenant.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Status da Configuração</Label>
-                  <div className="flex items-center gap-2">
-                    {selectedTenant === 'global' ? (
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">
-                        <Globe className="h-3 w-3 mr-1" />
-                        Configuração Global
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                        <Building className="h-3 w-3 mr-1" />
-                        Tenant Específico
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedTenant === 'global' 
-                      ? 'Mudanças afetarão todos os tenants sem tema específico'
-                      : 'Mudanças afetarão apenas este tenant'
-                    }
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Preview do Tema Ativo */}
-          {activeTheme && (
-            <Card className="border-2 border-primary/20">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Tema Ativo: {activeTheme.display_name || activeTheme.name}
-                  {activeTheme.is_native_theme && (
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                      <Star className="h-3 w-3 mr-1" />
-                      UI Nativa
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  {activeTheme.description || 'Este é o tema atualmente aplicado em toda a plataforma'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Seção: Cores Principais */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Palette className="h-4 w-4 text-primary" />
-                    <h4 className="font-semibold">Paleta de Cores Principal</h4>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Primária</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.primary_color})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.primary_color}</span>
-                          <span className="text-[10px] text-muted-foreground">HSL</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Secundária</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.secondary_color})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.secondary_color}</span>
-                          <span className="text-[10px] text-muted-foreground">HSL</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Destaque</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.accent_color})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.accent_color}</span>
-                          <span className="text-[10px] text-muted-foreground">HSL</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Sucesso</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.success_color || '142 76% 36%'})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.success_color || '142 76% 36%'}</span>
-                          <span className="text-[10px] text-muted-foreground">HSL</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Cores de Status */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                    <h4 className="font-semibold">Cores de Status & Risco</h4>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Crítico</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded border-2"
-                          style={{ backgroundColor: `hsl(${activeTheme.risk_critical || '0 84% 60%'})` }}
-                        />
-                        <span className="text-xs font-mono">{activeTheme.risk_critical || '0 84% 60%'}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Alto</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded border-2"
-                          style={{ backgroundColor: `hsl(${activeTheme.risk_high || '24 95% 53%'})` }}
-                        />
-                        <span className="text-xs font-mono">{activeTheme.risk_high || '24 95% 53%'}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Médio</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded border-2"
-                          style={{ backgroundColor: `hsl(${activeTheme.risk_medium || '38 92% 50%'})` }}
-                        />
-                        <span className="text-xs font-mono">{activeTheme.risk_medium || '38 92% 50%'}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Baixo</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-8 h-8 rounded border-2"
-                          style={{ backgroundColor: `hsl(${activeTheme.risk_low || '142 76% 36%'})` }}
-                        />
-                        <span className="text-xs font-mono">{activeTheme.risk_low || '142 76% 36%'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Backgrounds e Superfícies */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-blue-500" />
-                    <h4 className="font-semibold">Backgrounds & Superfícies</h4>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Background Principal</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.background_color})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.background_color}</span>
-                          <span className="text-[10px] text-muted-foreground">Body</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Cards</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.card_color})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.card_color}</span>
-                          <span className="text-[10px] text-muted-foreground">Cards</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Sidebar</Label>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                          style={{ backgroundColor: `hsl(${activeTheme.sidebar_background || '0 0% 98%'})` }}
-                        />
-                        <div className="flex-1">
-                          <span className="text-xs font-mono block">{activeTheme.sidebar_background || '0 0% 98%'}</span>
-                          <span className="text-[10px] text-muted-foreground">Navigation</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Bordas e Contornos */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 rounded border-current"></div>
-                    <h4 className="font-semibold">Bordas e Contornos</h4>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Light Mode */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-sm flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-yellow-400 border border-yellow-600"></div>
-                        Light Mode
-                      </h5>
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Bordas Gerais</Label>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded border-2"
-                              style={{ 
-                                backgroundColor: `hsl(${activeTheme.background_color})`,
-                                borderColor: `hsl(${activeTheme.border_color})` 
-                              }}
-                            />
-                            <div className="flex-1">
-                              <span className="text-xs font-mono block">{activeTheme.border_color}</span>
-                              <span className="text-[10px] text-muted-foreground">Elements</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Inputs</Label>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded border"
-                              style={{ 
-                                backgroundColor: `hsl(${activeTheme.background_color})`,
-                                borderColor: `hsl(${activeTheme.input_color || activeTheme.border_color})` 
-                              }}
-                            />
-                            <div className="flex-1">
-                              <span className="text-xs font-mono block">{activeTheme.input_color || activeTheme.border_color}</span>
-                              <span className="text-[10px] text-muted-foreground">Forms</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Dark Mode */}
-                    <div className="space-y-3">
-                      <h5 className="font-medium text-sm flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-gray-700 border border-gray-500"></div>
-                        Dark Mode
-                      </h5>
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Bordas Gerais</Label>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded border-2"
-                              style={{ 
-                                backgroundColor: 'hsl(215 8% 12%)',
-                                borderColor: `hsl(${activeTheme.border_color_dark || '215 10% 22%'})` 
-                              }}
-                            />
-                            <div className="flex-1">
-                              <span className="text-xs font-mono block">{activeTheme.border_color_dark || '215 10% 22%'}</span>
-                              <span className="text-[10px] text-muted-foreground">Elements</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs font-medium">Inputs</Label>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-8 h-8 rounded border"
-                              style={{ 
-                                backgroundColor: 'hsl(215 12% 16%)',
-                                borderColor: `hsl(${activeTheme.input_color_dark || '215 10% 22%'})` 
-                              }}
-                            />
-                            <div className="flex-1">
-                              <span className="text-xs font-mono block">{activeTheme.input_color_dark || '215 10% 22%'}</span>
-                              <span className="text-[10px] text-muted-foreground">Forms</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Tipografia e Layout */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Type className="h-4 w-4 text-purple-500" />
-                    <h4 className="font-semibold">Tipografia & Layout</h4>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Família da Fonte</Label>
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm font-medium" style={{ fontFamily: activeTheme.font_family || 'Inter' }}>
-                          {activeTheme.font_family || 'Inter'}
-                        </span>
-                        <p className="text-xs text-muted-foreground mt-1" style={{ fontFamily: activeTheme.font_family || 'Inter' }}>
-                          Exemplo de texto da aplicação
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Border Radius</Label>
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-8 h-8 bg-primary/20 border-2 border-primary/50"
-                            style={{ borderRadius: `${activeTheme.border_radius || 8}px` }}
-                          />
-                          <span className="text-sm font-mono">{activeTheme.border_radius || 8}px</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium">Tamanho Base</Label>
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm font-mono">{activeTheme.font_size_base || 14}px</span>
-                        <p className="text-xs text-muted-foreground mt-1">Texto padrão</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Seção: Modo Dark */}
-                {activeTheme.is_native_theme && (
-                  <div className="space-y-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-900 dark:to-blue-950 rounded-lg border">
-                    <div className="flex items-center gap-2">
-                      <Monitor className="h-4 w-4 text-indigo-500" />
-                      <h4 className="font-semibold">Modo Escuro Automático</h4>
-                      <Badge variant="outline" className="text-xs">
-                        Suporte Nativo
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">Background (Dark)</Label>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                            style={{ backgroundColor: 'hsl(222 14% 7%)' }}
-                          />
-                          <div className="flex-1">
-                            <span className="text-xs font-mono block">222 14% 7%</span>
-                            <span className="text-[10px] text-muted-foreground">Dark Body</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs font-medium">Cards (Dark)</Label>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-10 h-10 rounded-lg border-2 shadow-sm"
-                            style={{ backgroundColor: 'hsl(215 8% 12%)' }}
-                          />
-                          <div className="flex-1">
-                            <span className="text-xs font-mono block">215 8% 12%</span>
-                            <span className="text-[10px] text-muted-foreground">Dark Cards</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Seção: Ações */}
-                <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleExportTheme(activeTheme)}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Exportar Tema
-                  </Button>
-                  {activeTheme.is_native_theme && (
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => setEditingTheme(activeTheme)}
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                      Customizar
-                    </Button>
-                  )}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <Label className="text-sm">Versão:</Label>
-                    <Badge variant="secondary" className="text-xs">
-                      v{activeTheme.version || '1.0'}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Configuração de PDF para Tema UI Nativa */}
-          {activeTheme?.is_native_theme && (
-            <PDFColorSettings isNativeTheme={true} />
-          )}
-
-          {loadingThemes && (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span>Carregando temas...</span>
-            </div>
-          )}
-
-          {/* Lista de Temas */}
-          {!loadingThemes && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {themes.map((theme) => (
-                <Card key={theme.id} className={cn(
-                  "relative group hover:shadow-lg transition-shadow",
-                  theme.is_active && "ring-2 ring-green-600",
-                  theme.is_native_theme && "border-green-600/30 bg-green-600/5"
-                )}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">{theme.display_name || theme.name}</CardTitle>
-                        {theme.is_native_theme && (
-                          <Badge variant="outline" className="bg-green-600/10 text-green-600 border-green-600/30">
-                            <Star className="h-3 w-3 mr-1" />
-                            Nativa
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {theme.is_active && theme.is_native_theme ? (
-                          <Badge className="text-xs bg-green-600 text-white hover:bg-green-700">
-                            <Check className="h-3 w-3 mr-1" />
-                            Ativo
-                          </Badge>
-                        ) : theme.is_active && (
-                          <Badge className="text-xs bg-primary">
-                            <Check className="h-3 w-3 mr-1" />
-                            Ativo
-                          </Badge>
-                        )}
-                        {theme.is_dark_mode && (
-                          <Badge variant="outline" className="text-xs">
-                            Escuro
-                          </Badge>
-                        )}
-                        {theme.is_system_theme && (
-                          <Badge variant="outline" className="text-xs">
-                            Sistema
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {theme.description && (
-                      <p className="text-xs text-muted-foreground mt-1">{theme.description}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {/* Paleta de Cores */}
-                    <div className="flex gap-1">
-                      {[
-                        theme.primary_color,
-                        theme.secondary_color,
-                        theme.accent_color,
-                        theme.success_color,
-                        theme.warning_color,
-                        theme.danger_color
-                      ].map((color, index) => (
-                        <div
-                          key={index}
-                          className="w-6 h-6 rounded border"
-                          style={{ backgroundColor: `hsl(${color})` }}
-                        />
-                      ))}
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground">
-                      Fonte: {theme.font_family} • Tamanho: {theme.font_size_base}px • Raio: {theme.border_radius}px
-                    </div>
-                    
-                    <div className="flex items-center gap-1">
-                      {!theme.is_active && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleApplyTheme(theme)}
-                          className={cn(
-                            "flex-1",
-                            theme.is_native_theme && "bg-green-600 hover:bg-green-700 text-white"
-                          )}
-                          disabled={isLoading}
-                        >
-                          <Brush className="h-3 w-3 mr-1" />
-                          Aplicar
-                        </Button>
-                      )}
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleEditTheme(theme)}
-                        title="Editar tema"
-                        className={theme.is_native_theme ? "text-green-600 hover:text-green-700 hover:border-green-300" : ""}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDuplicateTheme(theme)}
-                        disabled={isLoading}
-                        title="Duplicar tema"
-                        className={theme.is_native_theme ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-blue-600 hover:text-blue-700 hover:border-blue-300"}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleExportTheme(theme)}
-                        title="Exportar tema"
-                        className={theme.is_native_theme ? "text-green-600 hover:text-green-700 hover:border-green-300" : ""}
-                      >
-                        <Download className="h-3 w-3" />
-                      </Button>
-                      {!theme.is_system_theme && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDeleteTheme(theme.id, theme.display_name || theme.name)}
-                          className="text-red-600 hover:text-red-700 hover:border-red-300"
-                          title="Excluir tema"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {themes.length === 0 && (
-                <div className="col-span-2 text-center py-8 text-muted-foreground">
-                  <Palette className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum tema encontrado</p>
-                </div>
-              )}
-            </div>
-          )}
-        </TabsContent>
 
         {/* ============================================================================ */}
         {/* TAB: FONTES */}
@@ -2606,90 +1274,107 @@ const GlobalRulesSection: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold">Gerenciamento de Fontes</h3>
               <p className="text-sm text-muted-foreground">
-                Configure as fontes utilizadas na interface da plataforma
+                Configure fontes personalizadas para a plataforma
               </p>
             </div>
-            <Button onClick={() => setShowFontDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Fonte
+            <Button onClick={() => setShowFontDialog(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Fonte
             </Button>
           </div>
 
-          {loadingFonts && (
+          {loadingFonts ? (
             <div className="flex items-center justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-              <span>Carregando fontes...</span>
+              <RefreshCw className="h-6 w-6 animate-spin" />
+              <span className="ml-2">Carregando fontes...</span>
             </div>
-          )}
-
-          {!loadingFonts && (
+          ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {fonts.map((font) => (
-              <Card key={font.id} className={cn(
-                "relative group hover:shadow-lg transition-shadow",
-                font.is_active && "ring-2 ring-primary"
-              )}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base" style={{ fontFamily: font.family }}>
-                      {font.display_name || font.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
+                <Card key={font.id} className="relative group hover:shadow-lg transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Type className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-base" style={{ fontFamily: font.family }}>
+                            {font.display_name}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">{font.family}</p>
+                        </div>
+                      </div>
                       {font.is_active && (
-                        <Badge className="text-xs">
-                          <Check className="h-3 w-3 mr-1" />
+                        <Badge variant="default" className="text-xs">
                           Ativa
                         </Badge>
                       )}
-                      {font.is_system_font && (
-                        <Badge variant="outline" className="text-xs">
-                          Sistema
-                        </Badge>
-                      )}
-                      {font.is_google_font && (
-                        <Badge variant="outline" className="text-xs">
-                          Google
-                        </Badge>
-                      )}
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    <p className="text-sm" style={{ fontFamily: font.family }}>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm" style={{ fontFamily: font.family }}>
                       The quick brown fox jumps over the lazy dog
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Família: {font.family}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {(font.font_weights || font.weights || []).map((weight) => (
-                        <Badge key={weight} variant="outline" className="text-xs">
-                          {weight}
-                        </Badge>
-                      ))}
                     </div>
-                  </div>
-                  
-                  {!font.is_active && (
-                    <Button size="sm" className="w-full">
-                      <Type className="h-3 w-3 mr-1" />
-                      Ativar Fonte
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                    
+                    <div>
+                      <p className="text-xs font-medium mb-2">Pesos disponíveis:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {font.font_weights.slice(0, 4).map((weight) => (
+                          <Badge key={weight} variant="secondary" className="text-xs">
+                            {weight}
+                          </Badge>
+                        ))}
+                        {font.font_weights.length > 4 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{font.font_weights.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 pt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                      >
+                        <Edit className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      {!font.is_system_font && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
-              
-              {fonts.length === 0 && (
-                <div className="col-span-3 text-center py-8 text-muted-foreground">
-                  <Type className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhuma fonte encontrada</p>
-                </div>
-              )}
             </div>
           )}
         </TabsContent>
+
+
+
+
+
+          {loadingThemes && (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+              <span>Carregando temas...</span>
+            </div>
+          )}
+
+
+
+        {/* ============================================================================ */}
+        {/* TAB: FONTES */}
+        {/* ============================================================================ */}
 
         {/* ============================================================================ */}
         {/* TAB: CONFIGURAÇÕES DA PLATAFORMA */}

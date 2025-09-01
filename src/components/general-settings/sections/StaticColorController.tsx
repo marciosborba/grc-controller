@@ -16,7 +16,8 @@ import {
   Info,
   RefreshCw,
   Shield,
-  Menu
+  Menu,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import type { ColorValue, ColorPalette, ColorCategory } from '@/types/colors';
+import PDFColorSettings from '../PDFColorSettings';
 import { ColorPreviewDemo } from './ColorPreviewDemo';
 import { ColorPersistenceDemo } from './ColorPersistenceDemo';
 import { useStaticColorManager } from '@/hooks/useStaticColorManager';
@@ -742,7 +744,7 @@ export const StaticColorController: React.FC = () => {
 
       {/* Color Editor */}
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-7 w-full">
           {colorCategories.map(category => {
             const Icon = category.icon;
             return (
@@ -752,6 +754,10 @@ export const StaticColorController: React.FC = () => {
               </TabsTrigger>
             );
           })}
+          <TabsTrigger value="pdf">
+            <FileText className="h-4 w-4 mr-1" />
+            PDF
+          </TabsTrigger>
           <TabsTrigger value="preview">
             <Eye className="h-4 w-4 mr-1" />
             Preview
@@ -876,6 +882,24 @@ export const StaticColorController: React.FC = () => {
             </TabsContent>
           );
         })}
+
+        {/* PDF Configuration Tab */}
+        <TabsContent value="pdf">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Configuração de PDF de Regras Globais
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Configure a cor primária usada nos PDFs gerados pelo sistema
+              </p>
+            </CardHeader>
+            <CardContent>
+              <PDFColorSettings isNativeTheme={true} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Preview Tab */}
         <TabsContent value="preview">
