@@ -482,7 +482,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     )}
                     
                     {/* Efeito de hover - gradiente dinâmico */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                    <div className="absolute inset-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md" style={{
                       background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
                     }} />
                   </Button>
@@ -518,7 +518,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     )}
                     
                     {/* Efeito de hover - gradiente dinâmico */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                    <div className="absolute inset-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md" style={{
                       background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
                     }} />
                   </Button>

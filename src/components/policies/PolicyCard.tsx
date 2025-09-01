@@ -396,11 +396,17 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
   };
 
   return (
-    <Card className={`rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer ${isExpanded ? 'shadow-lg border-primary/30' : 'hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border'}`}>
+    <Card className={cn(
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden hover:bg-red-100",
+      isExpanded 
+        ? "shadow-lg border-primary/30" 
+        : "border-border"
+    )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3" title={isExpanded ? "Clique para recolher" : "Clique para expandir"}>
-            <div className="flex items-center justify-between gap-4">
+        <div className="group">
+          <CollapsibleTrigger asChild>
+            <CardHeader className="pb-3 relative z-10 cursor-pointer" title={isExpanded ? "Clique para recolher" : "Clique para expandir"}>
+            <div className="flex items-center justify-between gap-4 relative z-10">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {isExpanded ? 
@@ -453,9 +459,10 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
             </div>
           </CardHeader>
         </CollapsibleTrigger>
+        </div>
 
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs */}
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">

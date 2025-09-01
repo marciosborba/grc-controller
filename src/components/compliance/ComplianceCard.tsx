@@ -202,8 +202,15 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-4">
+          <CardHeader className="pb-3 relative z-10 group/header">
+            {/* Hover Effect Gradient for Header */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+              style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+              }}
+            />
+            <div className="flex items-center justify-between gap-4 relative z-10">
               {/* Left Section - Info */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {isExpanded ? 
@@ -271,7 +278,7 @@ const ComplianceCard: React.FC<ComplianceCardProps> = ({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs */}
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">

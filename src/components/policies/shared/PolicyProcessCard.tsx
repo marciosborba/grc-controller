@@ -183,7 +183,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
     <Card className={`w-full transition-all duration-200 hover:shadow-md rounded-[5px] ${className}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardHeader className="cursor-pointer hover:bg-gradient-to-r hover:from-primary/20 hover:to-transparent transition-all duration-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3 min-w-0 flex-1">
                 <div className="flex-shrink-0">

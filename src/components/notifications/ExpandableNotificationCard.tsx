@@ -152,8 +152,15 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer">
-            <div className="flex items-center justify-between gap-4">
+          <CardHeader className="pb-3 cursor-pointer relative z-10 group/header">
+            {/* Hover Effect Gradient for Header */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+              style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+              }}
+            />
+            <div className="flex items-center justify-between gap-4 relative z-10">
               {/* Left Section - Checkbox e Info */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -271,7 +278,7 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs */}
               <div className="flex flex-wrap gap-1 bg-muted/50 p-1 rounded-lg border overflow-x-auto">

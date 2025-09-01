@@ -269,15 +269,22 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
 
   return (
     <Card className={cn(
-      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer relative",
       isExpanded 
         ? "shadow-lg border-primary/30" 
         : "hover:bg-muted/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-4">
+          <CardHeader className="pb-3 relative z-10 group/header">
+            {/* Hover Effect Gradient for Header */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+              style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+              }}
+            />
+            <div className="flex items-center justify-between gap-4 relative z-10">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {isExpanded ? 
@@ -333,7 +340,7 @@ const AssessmentCard: React.FC<AssessmentCardProps> = ({
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs */}
               <div className="flex space-x-1 bg-muted p-1 rounded-lg">

@@ -451,7 +451,7 @@ const AuditIADashboard: React.FC = () => {
                   {audits.slice(0, 3).map((audit) => (
                     <div
                       key={audit.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-gradient-to-r hover:from-primary/20 hover:to-transparent cursor-pointer transition-all duration-300"
                       onClick={() => handleAuditClick(audit.id)}
                     >
                       <div className="flex-1 min-w-0">

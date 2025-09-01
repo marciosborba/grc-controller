@@ -744,7 +744,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
             <Card key={template.id} className="w-full hover:shadow-lg transition-all duration-200">
               <Collapsible open={isExpanded} onOpenChange={() => toggleCardExpansion(template.id)}>
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardHeader className="cursor-pointer hover:bg-gradient-to-r hover:from-primary/20 hover:to-transparent transition-all duration-300">
                     <div className="flex flex-col lg:flex-row lg:items-start gap-4">
                       <div className="flex items-start space-x-4 flex-1 min-w-0">
                         {/* Indicador de Nível de Risco */}
