@@ -428,11 +428,21 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     variant="outline"
                     className="h-auto p-6 flex flex-col items-center space-y-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden border-2"
                     onClick={action.action}
+                    style={{ 
+                      position: 'relative',
+                      background: 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
-                    <div className={['p-4 rounded-xl', action.color, 'text-white shadow-lg'].join(' ')}>
+                    <div className={['p-4 rounded-xl', action.color, 'text-white shadow-lg relative z-10'].join(' ')}>
                       <Icon className="h-6 w-6" />
                     </div>
-                    <div className="text-center">
+                    <div className="text-center relative z-10">
                       <p className="font-semibold text-sm group-hover:text-primary transition-colors">{action.title}</p>
                       <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
                     </div>
@@ -445,10 +455,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                       </Badge>
                     )}
                     
-                    {/* Efeito de hover - gradiente dinâmico */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
-                    }} />
+
                   </Button>
                 );
               })}
@@ -467,6 +474,16 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     variant="outline"
                     className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
                     onClick={action.action}
+                    style={{ 
+                      position: 'relative',
+                      background: 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     <div className={['p-3 rounded-lg', action.color, 'text-white'].join(' ')}>
                       <Icon className="h-4 w-4" />
@@ -481,10 +498,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                       </Badge>
                     )}
                     
-                    {/* Efeito de hover - gradiente dinâmico */}
-                    <div className="absolute inset-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md" style={{
-                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
-                    }} />
+
                   </Button>
                 );
               })}
@@ -503,6 +517,16 @@ export const RiskManagementCenterImproved: React.FC = () => {
                     variant="outline"
                     className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
                     onClick={action.action}
+                    style={{ 
+                      position: 'relative',
+                      background: 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     <div className={['p-3 rounded-lg', action.color, 'text-white'].join(' ')}>
                       <Icon className="h-4 w-4" />
@@ -517,10 +541,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                       </Badge>
                     )}
                     
-                    {/* Efeito de hover - gradiente dinâmico */}
-                    <div className="absolute inset-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md" style={{
-                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
-                    }} />
+
                   </Button>
                 );
               })}
