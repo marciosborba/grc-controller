@@ -290,10 +290,32 @@ const AuditIADashboard: React.FC = () => {
             <Brain className="h-4 w-4" />
             <span>Alex Audit</span>
           </Button>
-          <Button onClick={handleCreateAudit}>
-            <Plus className="h-4 w-4 mr-2" />
+          <button
+            onClick={handleCreateAudit}
+            style={{
+              backgroundColor: 'hsl(198 87% 50%)', // Azul primary-text
+              color: 'white',
+              border: '1px solid hsl(198 87% 50%)',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <Plus className="h-4 w-4" />
             Nova Auditoria
-          </Button>
+          </button>
         </div>
       </div>
 

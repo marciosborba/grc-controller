@@ -247,25 +247,6 @@ export function AppSidebar() {
         })}
       </SidebarContent>
 
-      {/* User Info - Responsivo */}
-      {!collapsed && user && <div className="mt-auto px-3 sm:px-4 py-3 sm:py-4 border-t border-border">
-          <div 
-            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 sm:p-2 transition-colors"
-            onClick={handleProfileClick}
-            title="Ir para configurações de perfil"
-          >
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs sm:text-sm font-medium text-primary">
-                {user.name ? getUserInitials(user.name) : 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-foreground truncate">
-                {getUserDisplayName(user.name, user.email)}
-              </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{user.jobTitle}</p>
-            </div>
-          </div>
-        </div>}
+
     </Sidebar>;
 }

@@ -426,14 +426,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-6 flex flex-col items-center space-y-3 hover:shadow-lg transition-all relative border-2 hover:border-primary/20"
+                    className="h-auto p-6 flex flex-col items-center space-y-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden border-2"
                     onClick={action.action}
                   >
                     <div className={['p-4 rounded-xl', action.color, 'text-white shadow-lg'].join(' ')}>
                       <Icon className="h-6 w-6" />
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-sm">{action.title}</p>
+                      <p className="font-semibold text-sm group-hover:text-primary transition-colors">{action.title}</p>
                       <p className="text-xs text-muted-foreground mt-1">{action.description}</p>
                     </div>
                     {action.badge && (
@@ -444,6 +444,11 @@ export const RiskManagementCenterImproved: React.FC = () => {
                         {action.badge}
                       </Badge>
                     )}
+                    
+                    {/* Efeito de hover - gradiente dinâmico */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+                    }} />
                   </Button>
                 );
               })}
@@ -460,14 +465,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:shadow-md transition-all relative"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
                     onClick={action.action}
                   >
                     <div className={['p-3 rounded-lg', action.color, 'text-white'].join(' ')}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="text-center">
-                      <p className="font-medium text-xs">{action.title}</p>
+                      <p className="font-medium text-xs group-hover:text-primary transition-colors">{action.title}</p>
                       <p className="text-xs text-muted-foreground">{action.description}</p>
                     </div>
                     {action.badge && (
@@ -475,6 +480,11 @@ export const RiskManagementCenterImproved: React.FC = () => {
                         {action.badge}
                       </Badge>
                     )}
+                    
+                    {/* Efeito de hover - gradiente dinâmico */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+                    }} />
                   </Button>
                 );
               })}
@@ -491,14 +501,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:shadow-md transition-all relative"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
                     onClick={action.action}
                   >
                     <div className={['p-3 rounded-lg', action.color, 'text-white'].join(' ')}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="text-center">
-                      <p className="font-medium text-xs">{action.title}</p>
+                      <p className="font-medium text-xs group-hover:text-primary transition-colors">{action.title}</p>
                       <p className="text-xs text-muted-foreground">{action.description}</p>
                     </div>
                     {action.badge && (
@@ -506,6 +516,11 @@ export const RiskManagementCenterImproved: React.FC = () => {
                         {action.badge}
                       </Badge>
                     )}
+                    
+                    {/* Efeito de hover - gradiente dinâmico */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                      background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+                    }} />
                   </Button>
                 );
               })}

@@ -739,20 +739,39 @@ const ExecutiveReportButton: React.FC<ExecutiveReportButtonProps> = ({
   };
 
   return (
-    <Button 
+    <button
       onClick={handleGenerateReport}
       disabled={loading}
-      size={size}
-      variant={variant}
       className={className}
+      style={{
+        backgroundColor: loading ? '#94a3b8' : 'hsl(198 87% 50%)', // Azul primary-text ou cinza quando loading
+        color: 'white',
+        border: `1px solid ${loading ? '#94a3b8' : 'hsl(198 87% 50%)'}`,
+        padding: size === 'sm' ? '6px 12px' : size === 'lg' ? '12px 24px' : '8px 16px',
+        borderRadius: '6px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        cursor: loading ? 'not-allowed' : 'pointer',
+        fontSize: '14px',
+        fontWeight: '500',
+        transition: 'all 0.2s ease',
+        opacity: loading ? 0.7 : 1
+      }}
+      onMouseEnter={(e) => {
+        if (!loading) e.currentTarget.style.opacity = '0.9';
+      }}
+      onMouseLeave={(e) => {
+        if (!loading) e.currentTarget.style.opacity = '1';
+      }}
     >
       {loading ? (
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
-        <FileDown className="h-4 w-4 mr-2" />
+        <FileDown className="h-4 w-4" />
       )}
       {loading ? 'Gerando...' : 'Relatório Executivo'}
-    </Button>
+    </button>
   );
 };
 

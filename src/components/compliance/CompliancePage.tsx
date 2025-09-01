@@ -353,13 +353,37 @@ const CompliancePage = () => {
           </p>
         </div>
         
+        <button
+          onClick={() => {
+            resetForm();
+            setIsDialogOpen(true);
+          }}
+          style={{
+            backgroundColor: 'hsl(198 87% 50%)', // Azul primary-text
+            color: 'white',
+            border: '1px solid hsl(198 87% 50%)',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          <Plus className="w-4 h-4" />
+          Nova Avaliação
+        </button>
+        
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Avaliação
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>

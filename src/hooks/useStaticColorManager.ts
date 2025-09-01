@@ -94,23 +94,11 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
   //   console.log('ℹ️ Sistema de aplicação automática de cores desabilitado');
   // }, [defaultPalette]);
   
-  // Verificar se há cores aplicadas sem aplicá-las automaticamente
-  useEffect(() => {
-    const hasStoredColors = localStorage.getItem('grc-user-colors');
-    if (hasStoredColors) {
-      console.log('💾 Cores armazenadas detectadas no localStorage, mas NÃO aplicadas automaticamente');
-      console.log('Para aplicar as cores, use o botão "Aplicar Cores" na interface');
-      
-      // Apenas detectar, mas NÃO aplicar
-      setPendingColorsDetected(true);
-      
-      // Mostrar aviso discreto
-      toast.info('💾 Cores personalizadas detectadas', {
-        description: 'Clique em "Aplicar Cores" se desejar usá-las.',
-        duration: 3000
-      });
-    }
-  }, [defaultPalette]);
+  // SISTEMA DE DETECÇÃO AUTOMÁTICA DESABILITADO
+  // useEffect(() => {
+  //   // Sistema removido para evitar aplicação automática de cores
+  //   console.log('ℹ️ Sistema de detecção automática de cores desabilitado');
+  // }, [defaultPalette]);
 
   // Force extreme colors for testing
   const forceExtremeColors = useCallback(() => {

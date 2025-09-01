@@ -469,7 +469,9 @@ export const UserProfilePage: React.FC = () => {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
             <Crown className="h-3 w-3 mr-1" />
-            {user?.role || 'Usuário'}
+            {user?.isPlatformAdmin ? 'Administrador da Plataforma' : 
+             user?.isAdmin ? 'Administrador' : 
+             user?.role || 'Usuário'}
           </Badge>
           {profile.last_login_at && (
             <Badge variant="secondary">

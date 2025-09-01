@@ -34,7 +34,6 @@ import type { ColorValue, ColorPalette, ColorCategory } from '@/types/colors';
 import { ColorPreviewDemo } from './ColorPreviewDemo';
 import { ColorPersistenceDemo } from './ColorPersistenceDemo';
 import { useStaticColorManager } from '@/hooks/useStaticColorManager';
-import { applyColorsToFile, colorPresets, applyColorPreset } from '@/utils/directFileColorApplicator';
 
 // Paleta padrão (cores atuais preservadas)
 const defaultPalette: ColorPalette = {
@@ -491,8 +490,36 @@ const colorCategories: ColorCategory[] = [
 export const StaticColorController: React.FC = () => {
   const [activeMode, setActiveMode] = useState<'light' | 'dark'>('light');
   const [activeCategory, setActiveCategory] = useState('core');
+  const [previewRefresh, setPreviewRefresh] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
+  // Detectar tema atual do sistema
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setActiveMode(isDark ? 'dark' : 'light');
+    };
+    
+    // Verificar tema inicial
+    checkTheme();
+    
+    // Observer para mudanças na classe dark
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          checkTheme();
+        }
+      });
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+  
   // Use the new color manager hook
   const {
     palette,
@@ -518,10 +545,60 @@ export const StaticColorController: React.FC = () => {
     setShowCSSModal
   } = useStaticColorManager(defaultPalette);
 
+  // Debug: Monitorar mudanças na paleta
+  useEffect(() => {
+    console.log('🔍 PALETA MUDOU:', palette?.light?.primary?.hex);
+    console.log('🔍 Cor primária atual:', palette?.light?.primary);
+  }, [palette]);
+  
+  // Forçar atualização do preview quando cores mudarem
+  useEffect(() => {
+    setPreviewRefresh(prev => prev + 1);
+  }, [palette, activeMode]);
+
+  // Aplicar cores do modo ativo apenas quando explicitamente solicitado
+  // Removido useEffect automático que estava causando mudanças indesejadas
+  
+  // Função para alternar modo de configuração
+  const setConfigurationMode = (mode: 'light' | 'dark') => {
+    // Apenas alternar o tema visual (light/dark) sem modificar cores
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Apenas atualizar o estado do modo ativo
+    setActiveMode(mode);
+    
+    // Toast informativo
+    toast.success(`🎨 Modo ${mode === 'dark' ? 'Dark' : 'Light'} selecionado`, {
+      description: `Agora você pode configurar as cores para o modo ${mode}. Use os seletores abaixo.`
+    });
+  };
+
   // Handle color update
   const handleColorUpdate = useCallback((colorKey: string, newHex: string) => {
     updateColor(colorKey, newHex, activeMode);
   }, [updateColor, activeMode]);
+
+  // Função para obter a cor real aplicada na aplicação
+  const getRealAppliedColor = useCallback((colorKey: string) => {
+    const computedValue = getComputedStyle(document.documentElement)
+      .getPropertyValue(`--${colorKey}`)
+      .trim();
+    
+    if (computedValue) {
+      // Se é HSL, converter para hex para exibição
+      if (computedValue.includes(' ')) {
+        // É HSL (ex: "173 88% 58%")
+        return `hsl(${computedValue})`;
+      }
+    }
+    
+    // Fallback para a cor da paleta
+    return palette[activeMode][colorKey]?.hex || '#000000';
+  }, [palette, activeMode, previewRefresh]);
 
   // Handle file import
   const handleImportClick = useCallback(() => {
@@ -586,12 +663,12 @@ export const StaticColorController: React.FC = () => {
           <div className="flex flex-wrap items-center gap-4">
             {/* Mode Toggle */}
             <div className="flex items-center gap-2">
-              <Label>Modo:</Label>
+              <Label>Configurar Modo:</Label>
               <div className="flex rounded-lg border p-1">
                 <Button
                   variant={activeMode === 'light' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setActiveMode('light')}
+                  onClick={() => setConfigurationMode('light')}
                   className="rounded-md"
                 >
                   <Sun className="h-4 w-4 mr-1" />
@@ -600,23 +677,13 @@ export const StaticColorController: React.FC = () => {
                 <Button
                   variant={activeMode === 'dark' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setActiveMode('dark')}
+                  onClick={() => setConfigurationMode('dark')}
                   className="rounded-md"
                 >
                   <Moon className="h-4 w-4 mr-1" />
                   Dark
                 </Button>
               </div>
-            </div>
-
-            {/* Preview Toggle */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="preview-mode">Preview em Tempo Real:</Label>
-              <Switch
-                id="preview-mode"
-                checked={previewMode}
-                onCheckedChange={togglePreview}
-              />
             </div>
 
             <Separator orientation="vertical" className="h-8" />
@@ -636,7 +703,7 @@ export const StaticColorController: React.FC = () => {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {isApplying ? 'Aplicando...' : (hasChanges ? '🎨 Aplicar Cores Agora' : 'Reaplicar Cores')}
+              {isApplying ? 'Aplicando...' : 'Aplicar Cores'}
             </Button>
             
             {hasChanges && (
@@ -644,50 +711,12 @@ export const StaticColorController: React.FC = () => {
                 ⚡ Aplicação instantânea na interface
               </div>
             )}
-
-            <Button
-              onClick={() => {
-                console.log('🧪 BOTÃO TESTE DIRETO CLICADO!');
-                testColorApplication();
-              }}
-              variant="secondary"
-              className="gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              🧪 Teste
-            </Button>
-
-            <Button
-              onClick={() => {
-                console.log('🎨 BOTÃO CORES EXTREMAS CLICADO!');
-                forceExtremeColors();
-              }}
-              variant="outline"
-              className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
-            >
-              <Brush className="h-4 w-4" />
-              🎨 Cores Extremas
-            </Button>
-
-            <Button
-              onClick={resetToDefault}
-              variant="outline"
-              className="gap-2"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset Padrão
-            </Button>
-
-            {pendingColorsDetected && (
-              <Button
-                onClick={clearPendingChanges}
-                variant="outline"
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Limpar Alterações
-              </Button>
-            )}
+            
+            {/* Indicador do modo ativo */}
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              {activeMode === 'dark' ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
+              Configurando: <strong>{activeMode === 'dark' ? 'Dark Mode' : 'Light Mode'}</strong>
+            </div>
 
             <Button
               onClick={exportPalette}
@@ -706,66 +735,8 @@ export const StaticColorController: React.FC = () => {
               <Upload className="h-4 w-4" />
               Import
             </Button>
-            
-            <Separator orientation="vertical" className="h-8" />
-            
-            <Button
-              onClick={async () => {
-                const result = await applyColorsToFile(palette);
-                if (result.success) {
-                  toast.success('📁 ' + result.message);
-                } else {
-                  toast.error('❌ ' + result.message);
-                }
-              }}
-              variant="outline"
-              className="gap-2 border-green-500 text-green-600 hover:bg-green-50"
-            >
-              <Download className="h-4 w-4" />
-              💾 Baixar CSS
-            </Button>
 
           </div>
-        </CardContent>
-      </Card>
-      
-      {/* Color Presets */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" />
-            🎨 Presets de Cores Rápidos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {Object.entries(colorPresets).map(([key, preset]) => (
-              <Button
-                key={key}
-                variant="outline"
-                className="h-auto p-3 flex flex-col items-center gap-2 hover:scale-105 transition-transform"
-                onClick={() => {
-                  // Apply preset to current palette
-                  handleColorUpdate('primary', preset.primary);
-                  toast.success(`🎨 Preset "${preset.name}" aplicado!`, {
-                    description: 'Clique em "Aplicar Cores" para ver na interface.'
-                  });
-                }}
-              >
-                <div 
-                  className="w-8 h-8 rounded-full border-2 border-border"
-                  style={{ backgroundColor: preset.primary }}
-                />
-                <div className="text-center">
-                  <div className="text-xs font-medium">{preset.name}</div>
-                  <div className="text-xs text-muted-foreground">{preset.primary}</div>
-                </div>
-              </Button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            💡 Clique em um preset para aplicar a cor primária, depois clique em "Aplicar Cores" para ver na interface.
-          </p>
         </CardContent>
       </Card>
 
@@ -817,50 +788,38 @@ export const StaticColorController: React.FC = () => {
                             </div>
                             
                             <div className="flex items-center gap-3">
-                              {/* Color Preview */}
-                              <div
-                                className="w-12 h-12 rounded-lg border-2 border-border flex-shrink-0"
-                                style={{ backgroundColor: color.hex }}
-                                title={`Preview: ${color.hex}`}
-                              />
+                              {/* Color Preview - Agora clicável como seletor */}
+                              <div className="relative">
+                                <div
+                                  className="w-12 h-12 rounded-lg border-2 border-border flex-shrink-0 cursor-pointer hover:border-primary transition-colors"
+                                  style={{ 
+                                    backgroundColor: getRealAppliedColor(colorKey)
+                                  }}
+                                  title={`Clique para alterar cor | Atual: ${getRealAppliedColor(colorKey)} | CSS: var(--${colorKey})`}
+                                  onClick={() => {
+                                    // Criar input temporário para seleção de cor
+                                    const colorInput = document.createElement('input');
+                                    colorInput.type = 'color';
+                                    colorInput.value = color.hex;
+                                    colorInput.style.position = 'absolute';
+                                    colorInput.style.opacity = '0';
+                                    colorInput.style.pointerEvents = 'none';
+                                    
+                                    colorInput.addEventListener('change', (e) => {
+                                      const newColor = (e.target as HTMLInputElement).value;
+                                      console.log('🎨 COR SELECIONADA:', newColor);
+                                      handleColorUpdate(colorKey, newColor);
+                                      document.body.removeChild(colorInput);
+                                    });
+                                    
+                                    document.body.appendChild(colorInput);
+                                    colorInput.click();
+                                  }}
+                                />
+                              </div>
                               
-                              {/* Color Input - SELETOR CUSTOMIZADO */}
+                              {/* Color Input - CAMPOS DE TEXTO */}
                               <div className="flex-1 space-y-2">
-                                <div className="flex gap-2">
-                                  {/* Seletor de cor nativo */}
-                                  <Input
-                                    type="color"
-                                    value={color.hex}
-                                    onChange={(e) => {
-                                      console.log('🎨 SELETOR NATIVO:', e.target.value);
-                                      handleColorUpdate(colorKey, e.target.value);
-                                    }}
-                                    className="h-8 w-16 p-1 border-0"
-                                  />
-                                  
-                                  {/* Botões de cores rápidas */}
-                                  <div className="flex gap-1">
-                                    {[
-                                      { name: 'Vermelho', color: '#ff0000' },
-                                      { name: 'Verde', color: '#00ff00' },
-                                      { name: 'Azul', color: '#0000ff' },
-                                      { name: 'Roxo', color: '#8b5cf6' },
-                                      { name: 'Laranja', color: '#ff8800' }
-                                    ].map(({ name, color: quickColor }) => (
-                                      <button
-                                        key={name}
-                                        type="button"
-                                        onClick={() => {
-                                          console.log(`🎨 BOTÃO RÁPIDO ${name}:`, quickColor);
-                                          handleColorUpdate(colorKey, quickColor);
-                                        }}
-                                        className="w-6 h-6 rounded border-2 border-gray-300 hover:border-gray-500 transition-colors"
-                                        style={{ backgroundColor: quickColor }}
-                                        title={`Aplicar ${name}`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
                                 <div className="grid grid-cols-2 gap-2 text-xs">
                                   <Input
                                     value={color.hex}

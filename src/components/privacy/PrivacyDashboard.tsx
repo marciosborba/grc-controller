@@ -375,7 +375,7 @@ export function PrivacyDashboard() {
         <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Funcionalidades</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {quickActions.map((action, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer group" onClick={action.action}>
+            <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden" onClick={action.action}>
               <CardHeader className="p-3 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div className={`p-1.5 sm:p-2 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
@@ -388,9 +388,14 @@ export function PrivacyDashboard() {
                     <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                 </div>
-                <CardTitle className="text-sm sm:text-base leading-tight">{action.title}</CardTitle>
+                <CardTitle className="text-sm sm:text-base leading-tight group-hover:text-primary transition-colors">{action.title}</CardTitle>
                 <CardDescription className="text-xs sm:text-sm leading-tight">{action.description}</CardDescription>
               </CardHeader>
+              
+              {/* Efeito de hover - gradiente dinâmico */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+              }} />
             </Card>
           ))}
         </div>
