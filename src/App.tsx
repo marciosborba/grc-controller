@@ -7,7 +7,6 @@ import { lazy, Suspense } from "react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
-import { TenantThemeLoader } from "@/components/TenantThemeLoader";
 // Critical imports (always loaded)
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
@@ -159,7 +158,6 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider>
-          <TenantThemeLoader />
           <NotificationsRealtimeProvider>
             <TooltipProvider>
               <Toaster />

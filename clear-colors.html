@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Limpar Cores do LocalStorage</title>
+</head>
+<body>
+    <h1>Limpeza de Cores do LocalStorage</h1>
+    <p>Este script limpa todas as cores armazenadas no localStorage.</p>
+    <button onclick="clearColors()">Limpar Cores</button>
+    <div id="result"></div>
+
+    <script>
+        function clearColors() {
+            const colorKeys = [
+                'grc-pending-colors',
+                'grc-applied-colors', 
+                'grc-user-colors',
+                'grc-color-backup',
+                'tenant-theme-applied',
+                'lastThemeChangeTime'
+            ];
+
+            let clearedCount = 0;
+            const results = [];
+
+            colorKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    results.push(`✅ Removido: ${key}`);
+                    clearedCount++;
+                } else {
+                    results.push(`ℹ️ Não encontrado: ${key}`);
+                }
+            });
+
+            // Remover qualquer elemento <style> injetado dinamicamente
+            const dynamicStyles = document.querySelectorAll('style[id*="color"], style[id*="dynamic"], style[id*="theme"], style[id*="grc"]');
+            dynamicStyles.forEach(style => {
+                style.remove();
+                results.push(`✅ Removido elemento <style>: ${style.id}`);
+            });
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <h2>Resultado da Limpeza:</h2>
+                <p><strong>${clearedCount} itens removidos do localStorage.</strong></p>
+                <ul>
+                    ${results.map(result => `<li>${result}</li>`).join('')}
+                </ul>
+                <p><strong>🔄 Agora recarregue a aplicação principal para ver as cores atualizadas!</strong></p>
+            `;
+        }
+    </script>
+</body>
+</html>

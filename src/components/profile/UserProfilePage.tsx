@@ -61,7 +61,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/utils/securityLogger';
-import { useThemeContext } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
 interface UserProfile {
@@ -91,7 +91,7 @@ interface UserActivity {
 export const UserProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { preferences, setPreferences, savePreferences, saving: themeSaving, theme, setTheme } = useThemeContext();
+  const { theme, setTheme } = useTheme();
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<UserActivity[]>([]);
@@ -99,6 +99,27 @@ export const UserProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
+  
+  // Preferences state (moved from simplified ThemeContext)
+  const [preferences, setPreferences] = useState({
+    theme: 'system',
+    language: 'pt',
+    colorPalette: {
+      primary: '#3b82f6',
+      secondary: '#7e22ce',
+      tertiary: '#be185d'
+    },
+    notifications: {
+      email: true,
+      push: true,
+      security: true,
+      updates: true
+    },
+    privacy: {
+      showEmail: false,
+      showActivity: true
+    }
+  });
   
   // Form states
   const [formData, setFormData] = useState({

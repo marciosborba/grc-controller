@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useTenantTheme } from '@/hooks/useTenantTheme';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 
 
@@ -65,7 +64,6 @@ export const VendorRiskManagementCenter: React.FC = () => {
   // Hooks
   const { user } = useAuth();
   const { toast } = useToast();
-  const { tenantTheme, loading: themeLoading } = useTenantTheme();
   const {
     vendors,
     assessments,

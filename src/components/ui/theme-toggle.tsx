@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Monitor, Moon, Sun } from "lucide-react"
-import { useThemeContext } from "@/contexts/ThemeContext"
+import { useTheme } from "@/contexts/ThemeContext"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -11,27 +11,11 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function ThemeToggle() {
-  const { theme, setTheme, savePreferences, saving } = useThemeContext()
+  const { theme, setTheme } = useTheme()
 
-  const handleThemeChange = async (newTheme: string) => {
-    console.log('🎨 ThemeToggle: Mudando tema para:', newTheme)
-    console.log('🎨 ThemeToggle: Tema atual:', theme)
-    console.log('🎨 ThemeToggle: Classes do HTML antes:', document.documentElement.classList.toString())
-    
+  const handleThemeChange = (newTheme: string) => {
+    console.log('🎨 ThemeToggle: Sistema estático - mudando tema para:', newTheme)
     setTheme(newTheme)
-    
-    // Verificar se a mudança foi aplicada
-    setTimeout(() => {
-      console.log('🎨 ThemeToggle: Classes do HTML depois:', document.documentElement.classList.toString())
-      console.log('🎨 ThemeToggle: Background atual:', getComputedStyle(document.documentElement).getPropertyValue('--background'))
-    }, 100)
-    
-    // Auto save theme preference
-    try {
-      await savePreferences()
-    } catch (error) {
-      console.error('Error saving theme preference:', error)
-    }
   }
 
   return (
@@ -40,7 +24,6 @@ export function ThemeToggle() {
         <Button 
           variant="outline" 
           size="icon" 
-          disabled={saving}
           className="h-9 w-9"
         >
           {theme === 'light' && <Sun className="h-[1.2rem] w-[1.2rem]" />}

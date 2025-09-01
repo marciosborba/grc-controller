@@ -17,7 +17,8 @@ import {
   Database,
   Key,
   Globe,
-  Crown
+  Crown,
+  Palette
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +35,7 @@ import WebhooksSection from './sections/WebhooksSection';
 import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
 import GlobalRulesSection from './sections/GlobalRulesSection';
+import { StaticColorController } from './sections/StaticColorController';
 import DocumentationModal from './DocumentationModal';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
 import { useAuth } from '@/contexts/AuthContext';
@@ -190,14 +192,20 @@ export const GeneralSettingsPage = () => {
         <TabsList className={cn(
           "grid w-full",
           (user?.isPlatformAdmin || user?.role === 'admin') 
-            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8" 
-            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-7"
+            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-9" 
+            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8"
         )}>
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
           {(user?.isPlatformAdmin || user?.role === 'admin') && (
             <TabsTrigger value="global-rules" className="text-xs sm:text-sm flex items-center gap-1">
               <Crown className="h-3 w-3" />
               Regras Globais
+            </TabsTrigger>
+          )}
+          {(user?.isPlatformAdmin || user?.role === 'admin') && (
+            <TabsTrigger value="static-colors" className="text-xs sm:text-sm flex items-center gap-1">
+              <Palette className="h-3 w-3" />
+              Cores Estáticas
             </TabsTrigger>
           )}
           <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
@@ -290,6 +298,13 @@ export const GeneralSettingsPage = () => {
         {(user?.isPlatformAdmin || user?.role === 'admin') && (
           <TabsContent value="global-rules">
             <GlobalRulesSection />
+          </TabsContent>
+        )}
+
+        {/* Static Colors Tab - Only for Platform Admins or System Admins */}
+        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+          <TabsContent value="static-colors">
+            <StaticColorController />
           </TabsContent>
         )}
 

@@ -1,4 +1,325 @@
-/* Controller GRC - Static Design System */
+// File manager for updating static colors directly in the CSS file
+import type { ColorPalette } from '@/types/colors';
+
+const STATIC_COLORS_FILE_PATH = '/src/styles/static-colors.css';
+
+// Generate complete CSS content for BOTH files (static-colors.css + index.css fallbacks)
+export const generateCompleteStaticCSS = (palette: ColorPalette): { staticColorsCSS: string; indexCSSFallbacks: string } => {
+  const lightColors = Object.entries(palette.light)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+    
+  const darkColors = Object.entries(palette.dark)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+
+  const staticColorsCSS = `/* ============================================================================ */
+/* SISTEMA DE CORES ESTÁTICO - GRC CONTROLLER */
+/* ============================================================================ */
+/* Arquivo gerado automaticamente pelo Static Color Controller */
+/* Última atualização: ${new Date().toLocaleString('pt-BR')} */
+
+/* CORES ESTÁTICAS - SEM @layer utilities para evitar conflitos com Tailwind */
+  /* ========================================================================== */
+  /* LIGHT MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  :root {
+${lightColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* DARK MODE - CORES PRINCIPAIS */  
+  /* ========================================================================== */
+  .dark {
+${darkColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* ========================================================================== */
+  /* TAILWIND UTILITY CLASSES */
+  /* ========================================================================== */
+  
+  /* Background utilities */
+  .bg-background { background-color: hsl(var(--background)) !important; }
+  .bg-foreground { background-color: hsl(var(--foreground)) !important; }
+  .bg-card { background-color: hsl(var(--card)) !important; }
+  .bg-card-foreground { background-color: hsl(var(--card-foreground)) !important; }
+  .bg-popover { background-color: hsl(var(--popover)) !important; }
+  .bg-popover-foreground { background-color: hsl(var(--popover-foreground)) !important; }
+  .bg-primary { background-color: hsl(var(--primary)) !important; }
+  .bg-primary-foreground { background-color: hsl(var(--primary-foreground)) !important; }
+  .bg-secondary { background-color: hsl(var(--secondary)) !important; }
+  .bg-secondary-foreground { background-color: hsl(var(--secondary-foreground)) !important; }
+  .bg-muted { background-color: hsl(var(--muted)) !important; }
+  .bg-muted-foreground { background-color: hsl(var(--muted-foreground)) !important; }
+  .bg-accent { background-color: hsl(var(--accent)) !important; }
+  .bg-accent-foreground { background-color: hsl(var(--accent-foreground)) !important; }
+  .bg-destructive { background-color: hsl(var(--destructive)) !important; }
+  .bg-destructive-foreground { background-color: hsl(var(--destructive-foreground)) !important; }
+  .bg-border { background-color: hsl(var(--border)) !important; }
+  .bg-input { background-color: hsl(var(--input)) !important; }
+  .bg-ring { background-color: hsl(var(--ring)) !important; }
+
+  /* Text color utilities */
+  .text-background { color: hsl(var(--background)) !important; }
+  .text-foreground { color: hsl(var(--foreground)) !important; }
+  .text-card { color: hsl(var(--card)) !important; }
+  .text-card-foreground { color: hsl(var(--card-foreground)) !important; }
+  .text-popover { color: hsl(var(--popover)) !important; }
+  .text-popover-foreground { color: hsl(var(--popover-foreground)) !important; }
+  .text-primary { color: hsl(var(--primary)) !important; }
+  .text-primary-foreground { color: hsl(var(--primary-foreground)) !important; }
+  .text-primary-text { color: hsl(var(--primary-text)) !important; }
+  .text-secondary { color: hsl(var(--secondary)) !important; }
+  .text-secondary-foreground { color: hsl(var(--secondary-foreground)) !important; }
+  .text-muted { color: hsl(var(--muted)) !important; }
+  .text-muted-foreground { color: hsl(var(--muted-foreground)) !important; }
+  .text-accent { color: hsl(var(--accent)) !important; }
+  .text-accent-foreground { color: hsl(var(--accent-foreground)) !important; }
+  .text-destructive { color: hsl(var(--destructive)) !important; }
+  .text-destructive-foreground { color: hsl(var(--destructive-foreground)) !important; }
+
+  /* Border utilities */
+  .border { border-color: hsl(var(--border)) !important; }
+  .border-background { border-color: hsl(var(--background)) !important; }
+  .border-foreground { border-color: hsl(var(--foreground)) !important; }
+  .border-card { border-color: hsl(var(--card)) !important; }
+  .border-card-foreground { border-color: hsl(var(--card-foreground)) !important; }
+  .border-popover { border-color: hsl(var(--popover)) !important; }
+  .border-popover-foreground { border-color: hsl(var(--popover-foreground)) !important; }
+  .border-primary { border-color: hsl(var(--primary)) !important; }
+  .border-primary-foreground { border-color: hsl(var(--primary-foreground)) !important; }
+  .border-secondary { border-color: hsl(var(--secondary)) !important; }
+  .border-secondary-foreground { border-color: hsl(var(--secondary-foreground)) !important; }
+  .border-muted { border-color: hsl(var(--muted)) !important; }
+  .border-muted-foreground { border-color: hsl(var(--muted-foreground)) !important; }
+  .border-accent { border-color: hsl(var(--accent)) !important; }
+  .border-accent-foreground { border-color: hsl(var(--accent-foreground)) !important; }
+  .border-destructive { border-color: hsl(var(--destructive)) !important; }
+  .border-destructive-foreground { border-color: hsl(var(--destructive-foreground)) !important; }
+  .border-input { border-color: hsl(var(--input)) !important; }
+
+  /* ========================================================================== */
+  /* COMPONENT SPECIFIC STYLES */
+  /* ========================================================================== */
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões */
+  button {
+    border-color: hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Estados de risco GRC */
+  .risk-critical, [data-risk="critical"] {
+    background-color: hsl(var(--risk-critical));
+    color: hsl(var(--danger-foreground));
+  }
+
+  .risk-high, [data-risk="high"] {
+    background-color: hsl(var(--risk-high));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-medium, [data-risk="medium"] {
+    background-color: hsl(var(--risk-medium));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-low, [data-risk="low"] {
+    background-color: hsl(var(--risk-low));
+    color: hsl(var(--success-foreground));
+  }
+
+  /* Estados funcionais */
+  .status-success, [data-status="success"] {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+
+  .status-warning, [data-status="warning"] {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .status-danger, [data-status="danger"] {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+  /* Popover and dropdowns */
+  .popover, [data-radix-popper-content-wrapper] {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+}`;
+
+  // Gerar arquivo index.css COMPLETO com fallbacks atualizados
+  const primaryColor = palette.light.primary?.hsl || '173 88% 58%';
+  const primaryHover = palette.light['primary-hover']?.hsl || '173 88% 54%';
+  const primaryGlow = palette.light['primary-glow']?.hsl || '173 95% 78%';
+  
+  const indexCSSComplete = `/* Controller GRC - Static Design System */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
 
 @tailwind base;
@@ -9,9 +330,9 @@
 @layer base {
   :root {
     /* FALLBACKS - Menor prioridade que static-colors.css */
-    --primary: 283 44% 43%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
     --primary-foreground: 0 0% 100%;
     --primary-text: 225 71% 12%;
     --secondary: 210 40% 98%;
@@ -35,9 +356,9 @@
   
   .dark {
     /* FALLBACKS DARK - Menor prioridade que static-colors.css */
-    --primary: 283 44% 43%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
     --primary-foreground: 0 0% 0%;
     --primary-text: 0 0% 100%;
     --secondary: 215 8% 12%;
@@ -431,24 +752,24 @@
   }
 
   /* Override shadcn/ui sidebar accent colors */
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
   [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
     background-color: transparent !important;
   }
 
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
   .dark [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
     background-color: transparent !important;
   }
 
   /* Very specific override for any background on menu buttons */
-  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
+  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
     background-color: transparent !important;
   }
 
-  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
+  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
     background-color: transparent !important;
   }
 
@@ -467,8 +788,8 @@
 
   /* Force override all Tailwind bg classes */
   [data-sidebar="menu-button"].bg-sidebar-accent,
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
   [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
   [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
     background-color: transparent !important;
@@ -476,8 +797,8 @@
   }
 
   .dark [data-sidebar="menu-button"].bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  .dark [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  .dark [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
   .dark [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
   .dark [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
     background-color: transparent !important;
@@ -1024,4 +1345,140 @@
   50% {
     box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.6);
   }
-}
+}`;
+
+  return {
+    staticColorsCSS,
+    indexCSSFallbacks: indexCSSComplete
+  };
+};
+
+// Create a mock API endpoint simulation for development
+// In a real implementation, this would call a backend API
+export const writeStaticColorsFile = async (palette: ColorPalette): Promise<boolean> => {
+  try {
+    const cssContent = generateCompleteStaticCSS(palette);
+    
+    // For development: Use localStorage to persist the changes temporarily
+    // and provide instructions for manual file update
+    localStorage.setItem('grc-pending-colors', JSON.stringify({
+      palette,
+      cssContent,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In production, this would be replaced with:
+    // const response = await fetch('/api/update-colors', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ cssContent, filePath: STATIC_COLORS_FILE_PATH })
+    // });
+    // return response.ok;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to write colors file:', error);
+    return false;
+  }
+};
+
+// Load pending colors from localStorage and apply them
+export const loadPendingColors = (): { palette: ColorPalette; cssContent: string } | null => {
+  try {
+    const pending = localStorage.getItem('grc-pending-colors');
+    if (pending) {
+      return JSON.parse(pending);
+    }
+  } catch (error) {
+    console.error('Failed to load pending colors:', error);
+  }
+  return null;
+};
+
+// Apply CSS content to a <style> element for immediate effect
+export const injectCSS = (cssContent: string, id = 'dynamic-colors') => {
+  // Remove existing dynamic styles
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
+  }
+
+  // Create and inject new style element with highest priority
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = cssContent;
+  
+  // Insert at the beginning of head for highest priority
+  document.head.insertBefore(style, document.head.firstChild);
+};
+
+// Remove injected CSS
+export const removeInjectedCSS = (id = 'dynamic-colors') => {
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
+  }
+};
+
+// Check if there are pending color changes
+export const hasPendingColors = (): boolean => {
+  return !!localStorage.getItem('grc-pending-colors');
+};
+
+// Clear pending colors
+export const clearPendingColors = () => {
+  localStorage.removeItem('grc-pending-colors');
+};
+
+// Download file with instructions
+export const downloadWithInstructions = (palette: ColorPalette) => {
+  const cssContent = generateCompleteStaticCSS(palette);
+  
+  const instructionsContent = `# INSTRUÇÕES PARA APLICAR AS CORES
+
+## Arquivo Gerado
+- static-colors.css - Substitua o arquivo em src/styles/static-colors.css
+
+## Como aplicar:
+1. Faça backup do arquivo atual src/styles/static-colors.css
+2. Substitua o arquivo pela versão baixada
+3. Reinicie o servidor de desenvolvimento (npm run dev)
+4. As cores serão aplicadas automaticamente
+
+## Verificação:
+- ✅ Recarregue a página para confirmar as mudanças
+- ✅ Teste tanto light mode quanto dark mode
+- ✅ Verifique se todos os componentes estão usando as novas cores
+
+Última atualização: ${new Date().toLocaleString('pt-BR')}
+`;
+
+  // Create zip-like download with both files
+  const blob1 = new Blob([cssContent], { type: 'text/css' });
+  const blob2 = new Blob([instructionsContent], { type: 'text/plain' });
+  
+  // Download CSS file
+  const url1 = URL.createObjectURL(blob1);
+  const a1 = document.createElement('a');
+  a1.href = url1;
+  a1.download = 'static-colors.css';
+  document.body.appendChild(a1);
+  a1.click();
+  document.body.removeChild(a1);
+  URL.revokeObjectURL(url1);
+
+  // Download instructions
+  setTimeout(() => {
+    const url2 = URL.createObjectURL(blob2);
+    const a2 = document.createElement('a');
+    a2.href = url2;
+    a2.download = 'INSTRUÇÕES.txt';
+    document.body.appendChild(a2);
+    a2.click();
+    document.body.removeChild(a2);
+    URL.revokeObjectURL(url2);
+  }, 500);
+};

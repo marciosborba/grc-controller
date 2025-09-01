@@ -477,10 +477,10 @@ const GlobalRulesSection: React.FC = () => {
     description: '',
     is_dark_mode: false,
     // Cores principais
-    primary_color: '173 88% 58%',
+    primary_color: '220 100% 50%',
     primary_foreground: '210 40% 98%',
-    primary_hover: '173 88% 54%',
-    primary_glow: '173 95% 78%',
+    primary_hover: '220 100% 45%',
+    primary_glow: '220 100% 75%',
     secondary_color: '272 64% 47%',
     secondary_foreground: '210 40% 98%',
     accent_color: '335 56% 42%',
@@ -594,10 +594,10 @@ const GlobalRulesSection: React.FC = () => {
         description: editingTheme.description || '',
         is_dark_mode: editingTheme.is_dark_mode || false,
         // Cores principais
-        primary_color: editingTheme.primary_color || '173 88% 58%',
+        primary_color: editingTheme.primary_color || '220 100% 50%',
         primary_foreground: editingTheme.primary_foreground || '210 40% 98%',
-        primary_hover: editingTheme.primary_hover || '173 88% 54%',
-        primary_glow: editingTheme.primary_glow || '173 95% 78%',
+        primary_hover: editingTheme.primary_hover || '220 100% 45%',
+        primary_glow: editingTheme.primary_glow || '220 100% 75%',
         secondary_color: editingTheme.secondary_color || '272 64% 47%',
         secondary_foreground: editingTheme.secondary_foreground || '210 40% 98%',
         accent_color: editingTheme.accent_color || '335 56% 42%',
@@ -1382,20 +1382,92 @@ const GlobalRulesSection: React.FC = () => {
   };
 
   const handleDeleteTheme = async (themeId: string, themeName: string) => {
-    if (confirm(`Tem certeza que deseja excluir o tema "${themeName}"?`)) {
+    if (confirm(`Tem certeza que deseja excluir o tema "${themeName}"? Esta ação irá limpar todas as configurações relacionadas e não pode ser desfeita.`)) {
       try {
-        const { error } = await supabase
+        // 1. Primeiro, verificar se o tema existe e se não é um tema do sistema
+        const { data: themeData, error: themeError } = await supabase
+          .from('global_ui_themes')
+          .select('is_system_theme, name')
+          .eq('id', themeId)
+          .single();
+
+        if (themeError) {
+          throw new Error(`Erro ao verificar tema: ${themeError.message}`);
+        }
+
+        if (themeData.is_system_theme) {
+          toast.error('Não é possível excluir temas do sistema');
+          return;
+        }
+
+        // 2. Obter um tema alternativo para substituir as referências
+        const { data: alternativeTheme, error: altError } = await supabase
+          .from('global_ui_themes')
+          .select('id')
+          .neq('id', themeId)
+          .eq('is_system_theme', true)
+          .limit(1)
+          .single();
+
+        if (altError || !alternativeTheme) {
+          throw new Error('Não foi possível encontrar um tema alternativo para substituir as referências');
+        }
+
+        // 3. Atualizar referências em global_ui_settings
+        const { error: settingsError } = await supabase
+          .from('global_ui_settings')
+          .update({ active_theme_id: alternativeTheme.id })
+          .eq('active_theme_id', themeId);
+
+        if (settingsError) {
+          throw new Error(`Erro ao atualizar configurações: ${settingsError.message}`);
+        }
+
+        // 4. Limpar cache relacionado
+        const { error: cacheError } = await supabase
+          .from('ui_theme_cache')
+          .delete()
+          .eq('theme_id', themeId);
+
+        if (cacheError) {
+          console.warn('Aviso ao limpar cache:', cacheError.message);
+        }
+
+        // 5. Limpar componentes relacionados
+        const { error: componentError } = await supabase
+          .from('ui_component_themes')
+          .delete()
+          .eq('theme_id', themeId);
+
+        if (componentError) {
+          console.warn('Aviso ao limpar componentes:', componentError.message);
+        }
+
+        // 6. Limpar histórico relacionado (opcional - manter para auditoria)
+        const { error: historyError } = await supabase
+          .from('theme_change_history')
+          .delete()
+          .or(`previous_theme_id.eq.${themeId},new_theme_id.eq.${themeId}`);
+
+        if (historyError) {
+          console.warn('Aviso ao limpar histórico:', historyError.message);
+        }
+
+        // 7. Finalmente, excluir o tema
+        const { error: deleteError } = await supabase
           .from('global_ui_themes')
           .delete()
           .eq('id', themeId);
 
-        if (error) throw error;
+        if (deleteError) {
+          throw new Error(`Erro ao excluir tema: ${deleteError.message}`);
+        }
 
-        toast.success('Tema excluído com sucesso!');
+        toast.success('Tema excluído com sucesso! Todas as referências foram atualizadas.');
         await loadThemes();
       } catch (error) {
         console.error('Erro ao excluir tema:', error);
-        toast.error('Erro ao excluir tema');
+        toast.error(`Erro ao excluir tema: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       }
     }
   };
@@ -3328,7 +3400,7 @@ const GlobalRulesSection: React.FC = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div 
                               className="w-3 h-3 rounded"
-                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '173 88% 58%'})` }}
+                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '220 100% 50%'})` }}
                             ></div>
                             <span 
                               className="text-sm font-medium"
@@ -3366,7 +3438,7 @@ const GlobalRulesSection: React.FC = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div 
                               className="w-3 h-3 rounded"
-                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '173 88% 58%'})` }}
+                              style={{ backgroundColor: `hsl(${themeForm.primary_color || '220 100% 50%'})` }}
                             ></div>
                             <span className="text-sm font-medium text-white">
                               Exemplo de Card

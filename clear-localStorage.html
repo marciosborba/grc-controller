@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Limpar localStorage - GRC Controller</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button { 
+            background: #ef4444; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #dc2626; }
+        .success { color: #22c55e; font-weight: bold; }
+        .info { background: #f0f9ff; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .warning { background: #fef3c7; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpeza de localStorage - GRC Controller</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Atenção:</strong> Esta ferramenta remove dados de cores dinâmicas que podem estar interferindo com o sistema estático.
+        </div>
+
+        <h3>🔍 Status Atual:</h3>
+        <div id="status"></div>
+
+        <h3>🛠️ Ações de Limpeza:</h3>
+        <button onclick="clearColorData()">🗑️ Limpar Dados de Cores</button>
+        <button onclick="clearThemeData()">🎨 Limpar Dados de Temas</button>
+        <button onclick="clearAllGRCData()">💥 Limpar Todos os Dados GRC</button>
+        <button onclick="clearAllLocalStorage()">🔥 Limpar TODO localStorage</button>
+
+        <h3>📊 Dados Encontrados:</h3>
+        <div id="data-found"></div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function updateStatus() {
+            const statusDiv = document.getElementById('status');
+            const dataDiv = document.getElementById('data-found');
+            
+            // Verificar dados relacionados a cores
+            const colorKeys = [];
+            const themeKeys = [];
+            const grcKeys = [];
+            const allKeys = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                allKeys.push(key);
+                
+                if (key.includes('color') || key.includes('Color')) {
+                    colorKeys.push(key);
+                }
+                if (key.includes('theme') || key.includes('Theme')) {
+                    themeKeys.push(key);
+                }
+                if (key.includes('grc') || key.includes('GRC') || key.includes('lastThemeChangeTime')) {
+                    grcKeys.push(key);
+                }
+            }
+            
+            statusDiv.innerHTML = `
+                <div class="info">
+                    <strong>📈 Estatísticas:</strong><br>
+                    • Total de chaves: ${allKeys.length}<br>
+                    • Chaves relacionadas a cores: ${colorKeys.length}<br>
+                    • Chaves relacionadas a temas: ${themeKeys.length}<br>
+                    • Chaves relacionadas ao GRC: ${grcKeys.length}
+                </div>
+            `;
+            
+            let dataHtml = '<pre>';
+            if (colorKeys.length > 0) {
+                dataHtml += '🎨 CORES:\\n' + colorKeys.map(k => `  ${k}: ${localStorage.getItem(k)?.substring(0, 100)}...`).join('\\n') + '\\n\\n';
+            }
+            if (themeKeys.length > 0) {
+                dataHtml += '🎭 TEMAS:\\n' + themeKeys.map(k => `  ${k}: ${localStorage.getItem(k)?.substring(0, 100)}...`).join('\\n') + '\\n\\n';
+            }
+            if (grcKeys.length > 0) {
+                dataHtml += '🏢 GRC:\\n' + grcKeys.map(k => `  ${k}: ${localStorage.getItem(k)?.substring(0, 100)}...`).join('\\n') + '\\n\\n';
+            }
+            dataHtml += '</pre>';
+            
+            dataDiv.innerHTML = dataHtml;
+        }
+
+        function clearColorData() {
+            const colorKeys = [];
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('color') || key.includes('Color') || key.includes('grc-user-colors'))) {
+                    colorKeys.push(key);
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            showResult(`✅ Removidas ${colorKeys.length} chaves relacionadas a cores: ${colorKeys.join(', ')}`);
+            updateStatus();
+        }
+
+        function clearThemeData() {
+            const themeKeys = [];
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('theme') || key.includes('Theme') || key.includes('lastThemeChangeTime'))) {
+                    themeKeys.push(key);
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            showResult(`✅ Removidas ${themeKeys.length} chaves relacionadas a temas: ${themeKeys.join(', ')}`);
+            updateStatus();
+        }
+
+        function clearAllGRCData() {
+            const grcKeys = [];
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (
+                    key.includes('grc') || 
+                    key.includes('GRC') || 
+                    key.includes('color') || 
+                    key.includes('Color') || 
+                    key.includes('theme') || 
+                    key.includes('Theme') ||
+                    key.includes('lastThemeChangeTime')
+                )) {
+                    grcKeys.push(key);
+                    localStorage.removeItem(key);
+                }
+            }
+            
+            showResult(`✅ Removidas ${grcKeys.length} chaves relacionadas ao GRC: ${grcKeys.join(', ')}`);
+            updateStatus();
+        }
+
+        function clearAllLocalStorage() {
+            const count = localStorage.length;
+            localStorage.clear();
+            showResult(`💥 TODO localStorage limpo! Removidas ${count} chaves.`);
+            updateStatus();
+        }
+
+        function showResult(message) {
+            document.getElementById('result').innerHTML = `<div class="success">${message}</div>`;
+            setTimeout(() => {
+                document.getElementById('result').innerHTML = '';
+            }, 5000);
+        }
+
+        // Atualizar status na inicialização
+        updateStatus();
+        
+        // Atualizar a cada 2 segundos
+        setInterval(updateStatus, 2000);
+    </script>
+</body>
+</html>

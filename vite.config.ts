@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { colorUpdaterPlugin } from "./vite-color-plugin.js";
 // import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
@@ -11,6 +12,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    mode === 'development' && colorUpdaterPlugin(),
     // Disable lovable-tagger to improve rendering
     // mode === 'development' &&
     // componentTagger(),
