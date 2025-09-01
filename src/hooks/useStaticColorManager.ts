@@ -87,6 +87,75 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
   const [indexCSSCode, setIndexCSSCode] = useState('');
   const [activeTab, setActiveTab] = useState('static-colors');
 
+  // SISTEMA DE LIMPEZA AUTOMÁTICA - Garantir cores padrão ao entrar na página
+  useEffect(() => {
+    console.log('🧹 LIMPEZA AUTOMÁTICA: Garantindo cores padrão ao entrar na página');
+    
+    // Limpar qualquer interferência de localStorage
+    const colorKeys = [
+      'grc-user-colors',
+      'grc-pending-colors', 
+      'grc-applied-colors',
+      'grc-color-backup',
+      'tenant-theme-applied',
+      'lastThemeChangeTime',
+      'grc-temp-colors'
+    ];
+    
+    let removedKeys = 0;
+    colorKeys.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        removedKeys++;
+        console.log(`🗑️ Removido localStorage: ${key}`);
+      }
+    });
+    
+    // Limpar estilos dinâmicos que podem estar interferindo
+    const interferingStyles = document.querySelectorAll(
+      '#grc-user-colors, #grc-temp-colors, #dynamic-colors, #preview-colors, #grc-dynamic-preview, #grc-force-fallback, #EXTREME-FORCE-COLORS, style[data-theme], style[id*="color"]'
+    );
+    
+    let removedStyles = 0;
+    interferingStyles.forEach(el => {
+      console.log(`🗑️ Removendo estilo interferente: ${el.id || el.className || 'unnamed'}`);
+      el.remove();
+      removedStyles++;
+    });
+    
+    // Limpar variáveis CSS inline que podem estar forçadas
+    const cssVars = [
+      'primary', 'primary-hover', 'primary-glow', 'primary-foreground', 'primary-text',
+      'background', 'foreground', 'card', 'card-foreground', 'border', 
+      'muted', 'muted-foreground', 'secondary', 'secondary-foreground'
+    ];
+    
+    let removedVars = 0;
+    cssVars.forEach(varName => {
+      if (document.documentElement.style.getPropertyValue(`--${varName}`)) {
+        document.documentElement.style.removeProperty(`--${varName}`);
+        removedVars++;
+        console.log(`🗑️ Removida variável CSS inline: --${varName}`);
+      }
+    });
+    
+    // Resetar paleta para padrão
+    setPalette(defaultPalette);
+    setHasChanges(false);
+    setPendingColorsDetected(false);
+    setPreviewMode(false);
+    
+    console.log(`✅ LIMPEZA CONCLUÍDA: ${removedKeys} localStorage + ${removedStyles} estilos + ${removedVars} variáveis CSS removidos`);
+    console.log('🎨 Cores padrão restauradas - Primary:', defaultPalette.light.primary.hex);
+    
+    // Forçar re-render para garantir que as cores padrão sejam aplicadas
+    setTimeout(() => {
+      document.documentElement.offsetHeight;
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+    
+  }, [defaultPalette]);
+
   // SISTEMA DE APLICAÇÃO AUTOMÁTICA DESABILITADO
   // useEffect(() => {
   //   // Sistema de aplicação automática de cores removido
