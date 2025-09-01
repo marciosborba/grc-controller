@@ -744,9 +744,9 @@ const ExecutiveReportButton: React.FC<ExecutiveReportButtonProps> = ({
       disabled={loading}
       className={className}
       style={{
-        backgroundColor: loading ? '#94a3b8' : 'hsl(198 87% 50%)', // Azul primary-text ou cinza quando loading
-        color: 'white',
-        border: `1px solid ${loading ? '#94a3b8' : 'hsl(198 87% 50%)'}`,
+        backgroundColor: loading ? '#94a3b8' : 'hsl(var(--primary))', // Usa variável CSS primary ou cinza quando loading
+        color: 'white', // Texto branco para melhor contraste
+        border: `1px solid ${loading ? '#94a3b8' : 'hsl(var(--primary))'}`,
         padding: size === 'sm' ? '6px 12px' : size === 'lg' ? '12px 24px' : '8px 16px',
         borderRadius: '6px',
         display: 'inline-flex',

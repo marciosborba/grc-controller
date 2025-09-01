@@ -426,9 +426,9 @@ const EthicsChannelPage = () => {
               setIsDialogOpen(true);
             }}
             style={{
-              backgroundColor: 'hsl(198 87% 50%)', // Azul primary-text
-              color: 'white',
-              border: '1px solid hsl(198 87% 50%)',
+              backgroundColor: 'hsl(var(--primary))', // Usa variável CSS primary
+              color: 'white', // Texto branco para melhor contraste
+              border: '1px solid hsl(var(--primary))',
               padding: '8px 16px',
               borderRadius: '6px',
               display: 'inline-flex',

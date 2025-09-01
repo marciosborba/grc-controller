@@ -9,7 +9,7 @@
 @layer base {
   :root {
     /* FALLBACKS - Menor prioridade que static-colors.css */
-    --primary: 198 87% 50%;
+    --primary: 25 100% 45%;
     --primary-hover: 173 88% 54%;
     --primary-glow: 173 95% 78%;
     --primary-foreground: 0 0% 100%;
@@ -35,7 +35,7 @@
   
   .dark {
     /* FALLBACKS DARK - Menor prioridade que static-colors.css */
-    --primary: 198 87% 50%;
+    --primary: 25 100% 45%;
     --primary-hover: 173 88% 54%;
     --primary-glow: 173 95% 78%;
     --primary-foreground: 0 0% 0%;
