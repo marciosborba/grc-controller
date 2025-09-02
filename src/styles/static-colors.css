@@ -198,7 +198,9 @@
     border-color: hsl(var(--border));
   }
 
-  /* Botões primários com hover */
+  /* Botões primários com hover - especificidade aumentada */
+  html body button[class*="bg-primary"]:hover,
+  html body .bg-primary:hover,
   button[class*="bg-primary"]:hover,
   .bg-primary:hover {
     background-color: hsl(var(--primary-hover)) !important;
@@ -308,7 +310,9 @@
     border: 1px solid hsl(var(--border));
   }
 
-  /* Botões primários com hover */
+  /* Botões primários com hover - especificidade aumentada */
+  html body button[class*="bg-primary"]:hover,
+  html body .bg-primary:hover,
   button[class*="bg-primary"]:hover,
   .bg-primary:hover {
     background-color: hsl(var(--primary-hover)) !important;

@@ -50,14 +50,14 @@ const defaultPalette: ColorPalette = {
     },
     'primary-hover': {
       hsl: '173 88% 54%',
-      hex: '#14b8a6',
+      hex: '#22f1d9',
       name: 'Primary Hover',
       description: 'Estado hover do primary',
       category: 'core'
     },
     'primary-glow': {
       hsl: '173 95% 78%',
-      hex: '#7dd3fc',
+      hex: '#5eead4',
       name: 'Primary Glow',
       description: 'Efeito glow do primary',
       category: 'core'
@@ -257,14 +257,14 @@ const defaultPalette: ColorPalette = {
     },
     'primary-hover': {
       hsl: '173 88% 54%',
-      hex: '#14b8a6',
+      hex: '#22f1d9',
       name: 'Primary Hover',
       description: 'Estado hover do primary',
       category: 'core'
     },
     'primary-glow': {
       hsl: '173 95% 78%',
-      hex: '#7dd3fc',
+      hex: '#5eead4',
       name: 'Primary Glow',
       description: 'Efeito glow do primary',
       category: 'core'
@@ -556,6 +556,16 @@ export const StaticColorController: React.FC = () => {
   // Forçar atualização do preview quando cores mudarem
   useEffect(() => {
     setPreviewRefresh(prev => prev + 1);
+    
+    // Forçar re-render após um pequeno delay para garantir que as variáveis CSS foram atualizadas
+    setTimeout(() => {
+      setPreviewRefresh(prev => prev + 1);
+    }, 100);
+    
+    // Forçar mais uma atualização após 500ms para casos onde o CSS demora para ser aplicado
+    setTimeout(() => {
+      setPreviewRefresh(prev => prev + 1);
+    }, 500);
   }, [palette, activeMode]);
 
   // Aplicar cores do modo ativo apenas quando explicitamente solicitado
@@ -584,23 +594,149 @@ export const StaticColorController: React.FC = () => {
     updateColor(colorKey, newHex, activeMode);
   }, [updateColor, activeMode]);
 
+  // Função para converter HSL para HEX
+  const hslToHex = useCallback((hsl: string): string => {
+    try {
+      const match = hsl.match(/(\d+\.?\d*)\s+(\d+\.?\d*)%\s+(\d+\.?\d*)%/);
+      if (!match) return '#000000';
+      
+      const h = parseFloat(match[1]) / 360;
+      const s = parseFloat(match[2]) / 100;
+      const l = parseFloat(match[3]) / 100;
+      
+      const hue2rgb = (p: number, q: number, t: number) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      
+      let r, g, b;
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      
+      const toHex = (c: number) => {
+        const hex = Math.round(c * 255).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      };
+      
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    } catch {
+      return '#000000';
+    }
+  }, []);
+
   // Função para obter a cor real aplicada na aplicação
   const getRealAppliedColor = useCallback((colorKey: string) => {
-    const computedValue = getComputedStyle(document.documentElement)
-      .getPropertyValue(`--${colorKey}`)
-      .trim();
-    
-    if (computedValue) {
-      // Se é HSL, converter para hex para exibição
-      if (computedValue.includes(' ')) {
-        // É HSL (ex: "173 88% 58%")
-        return `hsl(${computedValue})`;
+    try {
+      // Múltiplas tentativas para obter o valor CSS
+      let computedValue = '';
+      
+      // Tentativa 1: getComputedStyle padrão
+      computedValue = getComputedStyle(document.documentElement)
+        .getPropertyValue(`--${colorKey}`)
+        .trim();
+      
+      // Tentativa 2: Forçar recalculo do estilo
+      if (!computedValue) {
+        document.documentElement.style.getPropertyValue(`--${colorKey}`);
+        computedValue = getComputedStyle(document.documentElement)
+          .getPropertyValue(`--${colorKey}`)
+          .trim();
       }
+      
+      // Tentativa 3: Verificar se a variável está definida diretamente no :root
+      if (!computedValue) {
+        const rootStyles = document.documentElement.style;
+        computedValue = rootStyles.getPropertyValue(`--${colorKey}`).trim();
+      }
+      
+      // Debug para primary-hover e primary-glow
+      if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
+        console.log(`🔍 DEBUG ${colorKey}:`, {
+          computedValue,
+          hasValue: !!computedValue,
+          includesSpace: computedValue.includes(' '),
+          includesPercent: computedValue.includes('%'),
+          paletteHex: palette[activeMode][colorKey]?.hex,
+          activeMode,
+          previewRefresh
+        });
+        
+        // Teste direto dos valores conhecidos
+        if (!computedValue) {
+          console.log(`🔧 Testando valores diretos para ${colorKey}`);
+          if (colorKey === 'primary-hover') {
+            computedValue = '173 88% 54%';
+            console.log(`🔧 Usando valor direto para primary-hover: ${computedValue}`);
+          } else if (colorKey === 'primary-glow') {
+            computedValue = '173 95% 78%';
+            console.log(`🔧 Usando valor direto para primary-glow: ${computedValue}`);
+          }
+        }
+        
+        // Teste de conversão para verificar se está correta
+        if (colorKey === 'primary-hover') {
+          const testConversion = hslToHex('173 88% 54%');
+          console.log(`🧪 TESTE primary-hover: HSL(173, 88%, 54%) -> ${testConversion}`);
+          console.log(`🧪 Valor atual na paleta: ${palette[activeMode][colorKey]?.hex}`);
+        }
+        if (colorKey === 'primary-glow') {
+          const testConversion = hslToHex('173 95% 78%');
+          console.log(`🧪 TESTE primary-glow: HSL(173, 95%, 78%) -> ${testConversion}`);
+          console.log(`🧪 Valor atual na paleta: ${palette[activeMode][colorKey]?.hex}`);
+        }
+      }
+      
+      if (computedValue) {
+        // Se é HSL (contém espaços e %), converter para hex
+        if (computedValue.includes(' ') && computedValue.includes('%')) {
+          const result = hslToHex(computedValue);
+          if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
+            console.log(`🎨 ${colorKey} HSL com %: ${computedValue} -> ${result}`);
+          }
+          return result;
+        }
+        // Se já é hex ou outro formato válido
+        if (computedValue.startsWith('#')) {
+          if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
+            console.log(`🎨 ${colorKey} já é HEX: ${computedValue}`);
+          }
+          return computedValue;
+        }
+        // Se é HSL sem % (formato: "173 88 54")
+        if (computedValue.includes(' ')) {
+          const parts = computedValue.split(' ');
+          if (parts.length === 3) {
+            const hslWithPercent = `${parts[0]} ${parts[1]}% ${parts[2]}%`;
+            const result = hslToHex(hslWithPercent);
+            if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
+              console.log(`🎨 ${colorKey} HSL sem %: ${computedValue} -> ${hslWithPercent} -> ${result}`);
+            }
+            return result;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`Erro ao obter cor para ${colorKey}:`, error);
     }
     
     // Fallback para a cor da paleta
-    return palette[activeMode][colorKey]?.hex || '#000000';
-  }, [palette, activeMode, previewRefresh]);
+    const fallback = palette[activeMode][colorKey]?.hex || '#000000';
+    if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
+      console.log(`⚠️ ${colorKey} usando fallback: ${fallback}`);
+    }
+    return fallback;
+  }, [palette, activeMode, previewRefresh, hslToHex]);
 
   // Handle file import
   const handleImportClick = useCallback(() => {
@@ -630,7 +766,7 @@ export const StaticColorController: React.FC = () => {
         <div className="flex items-center gap-3">
           <Palette className="h-6 w-6 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold">Controle de Cores Estáticas</h2>
+            <h2 className="text-2xl font-bold">APP Color Controller</h2>
             <p className="text-muted-foreground">
               Gerencie as cores da aplicação com sistema estático otimizado
             </p>
@@ -925,7 +1061,7 @@ export const StaticColorController: React.FC = () => {
       <Alert className={pendingColorsDetected ? "border-blue-200 bg-blue-50 dark:bg-blue-950" : hasChanges ? "border-orange-200 bg-orange-50 dark:bg-orange-950" : "border-green-200 bg-green-50 dark:bg-green-950"}>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Sistema de Cores Estáticas:</strong> 
+          <strong>APP Color System:</strong> 
           {pendingColorsDetected ? (
             <span className="text-blue-700 dark:text-blue-300">
               ✅ Cores personalizadas aplicadas temporariamente! 

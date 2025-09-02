@@ -205,7 +205,7 @@ export const GeneralSettingsPage = () => {
           {(user?.isPlatformAdmin || user?.role === 'admin') && (
             <TabsTrigger value="static-colors" className="text-xs sm:text-sm flex items-center gap-1">
               <Palette className="h-3 w-3" />
-              Cores Estáticas
+              APP Color
             </TabsTrigger>
           )}
           <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
