@@ -59,8 +59,10 @@ import {
 } from 'recharts';
 
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationsOptimized } from '@/hooks/useNotificationsOptimized';
 import { useNotificationsRealtime } from '@/contexts/NotificationsRealtimeContext';
 import { NotificationModule, NotificationPriority } from '@/types/notifications';
+import { QuickMetrics } from '@/components/notifications/shared/QuickMetrics';
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -182,7 +184,20 @@ export const NotificationsDashboard: React.FC = () => {
   const { stats, loading } = useNotifications();
   const { isConnected, messagesReceived } = useNotificationsRealtime();
   
-  const [analytics, setAnalytics] = useState<NotificationAnalytics>(mockAnalytics);
+  // Hook otimizado para dados de notificações
+  const {
+    notifications,
+    metrics,
+    analytics: optimizedAnalytics,
+    isLoadingNotifications,
+    isLoadingMetrics,
+    isLoadingAnalytics,
+    isLoadingCritical,
+    markAsRead,
+    markAllAsRead,
+    refreshNotifications
+  } = useNotificationsOptimized();
+  
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [selectedModule, setSelectedModule] = useState<string>('all');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -200,63 +215,8 @@ export const NotificationsDashboard: React.FC = () => {
     info: '#06b6d4'
   };
 
-  // Métricas principais
-  const mainMetrics = [
-    {
-      title: 'Total de Notificações',
-      value: analytics.totalNotifications.toLocaleString(),
-      change: '+12.5%',
-      trend: 'up',
-      icon: Bell,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Não Lidas',
-      value: analytics.unreadCount.toString(),
-      change: '-8.3%',
-      trend: 'down',
-      icon: Eye,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
-    },
-    {
-      title: 'Taxa de Resposta',
-      value: `${analytics.responseRate}%`,
-      change: '+3.2%',
-      trend: 'up',
-      icon: Target,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      title: 'Tempo Médio de Resposta',
-      value: `${analytics.avgResponseTime}h`,
-      change: '-15.7%',
-      trend: 'down',
-      icon: Clock,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      title: 'Críticas Pendentes',
-      value: analytics.criticalCount.toString(),
-      change: '+2',
-      trend: 'up',
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50'
-    },
-    {
-      title: 'Em Tempo Real',
-      value: messagesReceived.toString(),
-      change: isConnected ? 'Conectado' : 'Desconectado',
-      trend: isConnected ? 'up' : 'down',
-      icon: Activity,
-      color: isConnected ? 'text-green-600' : 'text-red-600',
-      bgColor: isConnected ? 'bg-green-50' : 'bg-red-50'
-    }
-  ];
+  // Usar analytics otimizado ou fallback para mock
+  const currentAnalytics = optimizedAnalytics || mockAnalytics;
 
   return (
     <div className="space-y-6 p-6">
@@ -287,46 +247,15 @@ export const NotificationsDashboard: React.FC = () => {
             Exportar
           </Button>
 
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={refreshNotifications}>
             <RefreshCw className="h-4 w-4 mr-1" />
             Atualizar
           </Button>
         </div>
       </div>
 
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {mainMetrics.map((metric, index) => {
-          const Icon = metric.icon;
-          return (
-            <Card key={index} className="relative overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className={cn('p-2 rounded-lg', metric.bgColor)}>
-                    <Icon className={cn('h-4 w-4', metric.color)} />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold">{metric.value}</p>
-                    <div className="flex items-center gap-1 text-xs">
-                      {metric.trend === 'up' ? (
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-500" />
-                      )}
-                      <span className={cn(
-                        metric.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      )}>
-                        {metric.change}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">{metric.title}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Métricas Principais Otimizadas */}
+      <QuickMetrics metrics={metrics} isLoading={isLoadingCritical} />
 
       {/* Gráficos e Analytics */}
       <Tabs defaultValue="trends" className="space-y-4">
@@ -353,7 +282,7 @@ export const NotificationsDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={analytics.trendsData}>
+                  <AreaChart data={currentAnalytics.trendsData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
@@ -436,14 +365,14 @@ export const NotificationsDashboard: React.FC = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <RechartsPieChart>
                     <Pie
-                      data={analytics.moduleDistribution}
+                      data={currentAnalytics.moduleDistribution}
                       cx="50%"
                       cy="50%"
                       outerRadius={80}
                       dataKey="count"
                       nameKey="module"
                     >
-                      {analytics.moduleDistribution.map((entry, index) => (
+                      {currentAnalytics.moduleDistribution.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={Object.values(colors)[index % Object.values(colors).length]} />
                       ))}
                     </Pie>
@@ -466,7 +395,7 @@ export const NotificationsDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics.priorityDistribution.map((item, index) => (
+                  {currentAnalytics.priorityDistribution.map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div 
@@ -480,7 +409,7 @@ export const NotificationsDashboard: React.FC = () => {
                           {item.count} notificações
                         </span>
                         <Progress 
-                          value={(item.count / analytics.totalNotifications) * 100} 
+                          value={(item.count / currentAnalytics.totalNotifications) * 100} 
                           className="w-20"
                         />
                       </div>
@@ -506,7 +435,7 @@ export const NotificationsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {analytics.channelPerformance.map((channel, index) => (
+                {currentAnalytics.channelPerformance.map((channel, index) => (
                   <div key={index} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
@@ -570,7 +499,7 @@ export const NotificationsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {analytics.userEngagement.map((user, index) => (
+                {currentAnalytics.userEngagement.map((user, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">

@@ -52,9 +52,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Cache simples para roles e permissões
-const roleCache = new Map<string, { roles: string[], permissions: string[], timestamp: number }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+// Cache otimizado para roles e permissões
+const roleCache = new Map<string, { roles: string[], permissions: string[], timestamp: number, profile?: any }>();
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutos (aumentado para melhor performance)
 
 // Funções utilitárias simples
 const sanitizeInput = (input: string): string => {
@@ -89,11 +89,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   }, []);
 
-  const setCachedRoles = useCallback((userId: string, roles: string[], permissions: string[]) => {
+  const setCachedRoles = useCallback((userId: string, roles: string[], permissions: string[], profile?: any) => {
     roleCache.set(userId, {
       roles,
       permissions,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      profile
     });
   }, []);
 
@@ -145,10 +146,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const buildUserObject = useCallback(async (supabaseUser: User): Promise<AuthUser> => {
     console.log('[AUTH] Construindo objeto do usuário:', supabaseUser.id);
     
+    // Verificar cache primeiro para otimização completa
+    const cached = getCachedRoles(supabaseUser.id);
+    if (cached) {
+      console.log(`[AUTH] Usuário em cache completo encontrado para ${supabaseUser.id}`);
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        name: cached.profile?.full_name || supabaseUser.email || '',
+        jobTitle: cached.profile?.job_title || '',
+        tenantId: cached.profile?.tenant_id || '46b1c048-85a1-423b-96fc-776007c8de1f',
+        tenant: cached.profile?.tenant,
+        roles: cached.roles,
+        permissions: cached.permissions,
+        isPlatformAdmin: cached.roles.includes('platform_admin')
+      };
+    }
+    
     try {
-      // Query básica com timeout
+      // Queries otimizadas com timeout menor
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na consulta do usuário')), 5000)
+        setTimeout(() => reject(new Error('Timeout na consulta do usuário')), 3000)
       );
       
       const queryPromise = Promise.all([
@@ -159,14 +177,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .maybeSingle(),
         supabase
           .from('platform_admins')
-          .select('role, permissions')
+          .select('role')
           .eq('user_id', supabaseUser.id)
           .maybeSingle(),
         supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', supabaseUser.id)
-          .limit(10)
+          .limit(5)
       ]);
 
       const [profileResult, platformAdminResult, userRolesResult] = await Promise.race([
@@ -214,7 +232,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isPlatformAdmin
       };
 
-      console.log(`[AUTH] Usuário criado:`, {
+      // Cache o perfil completo para próximas consultas
+      setCachedRoles(supabaseUser.id, roles, permissions, { ...profile, tenant });
+
+      console.log(`[AUTH] Usuário criado e cacheado:`, {
         name: authUser.name,
         email: authUser.email,
         isPlatformAdmin: authUser.isPlatformAdmin,

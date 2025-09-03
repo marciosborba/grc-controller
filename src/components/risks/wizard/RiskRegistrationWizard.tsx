@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 // Importar os steps
 import { Step1Identification } from './steps/Step1Identification';

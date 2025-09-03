@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useTenantManagement } from '@/hooks/useTenantManagement';
 import { toast } from 'sonner';
 import {

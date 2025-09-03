@@ -13,7 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 import { useNotifications } from '@/hooks/useNotifications';
 

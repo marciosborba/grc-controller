@@ -14,7 +14,7 @@ import { AlertCircle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, Shie
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AIChatAssistant } from '@/components/ai/AIChatAssistant';

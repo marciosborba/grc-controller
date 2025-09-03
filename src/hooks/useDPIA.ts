@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { DPIAAssessment } from '@/types/privacy-management';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 export interface DPIAFilters {
   status?: string;

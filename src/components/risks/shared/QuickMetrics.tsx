@@ -29,29 +29,6 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     risksByStatus: metrics?.risksByStatus
   });
   
-  // Mostrar skeleton apenas se estiver carregando inicial
-  if (isLoading && !metrics) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {Array.from({ length: 6 }).map((_, index) => {
-          return (
-            <Card key={index}>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                  <div className="flex-1">
-                    <div className="w-16 h-3 bg-gray-200 dark:bg-gray-800 rounded animate-pulse mb-1" />
-                    <div className="w-8 h-5 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    );
-  }
-  
   // Se não tiver métricas, criar métricas padrão
   const defaultMetrics: RiskMetrics = {
     totalRisks: 0,
@@ -152,6 +129,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {metricsData.map((metric) => {
         const Icon = metric.icon;
+        const showSkeleton = isLoading && !metrics && (metric.id === 'atrasados');
         
         return (
           <Card key={metric.id} className="hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-gray-900/20 transition-shadow">
@@ -164,16 +142,20 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
                   <p className="text-xs font-medium text-muted-foreground truncate">
                     {metric.title}
                   </p>
-                  <p className="text-lg font-bold truncate text-foreground">
-                    {metric.isText ? metric.value : metric.value.toLocaleString()}
-                  </p>
+                  {showSkeleton ? (
+                    <div className="w-8 h-6 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+                  ) : (
+                    <p className="text-lg font-bold truncate text-foreground">
+                      {metric.isText ? metric.value : metric.value.toLocaleString()}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground truncate">
                     {metric.description}
                   </p>
                 </div>
               </div>
               
-              {(metric.id === 'muito-alto' || metric.id === 'atrasados') && metric.value > 0 && (
+              {!showSkeleton && (metric.id === 'muito-alto' || metric.id === 'atrasados') && metric.value > 0 && (
                 <div className="mt-2">
                   <Badge variant="destructive" className="text-xs bg-red-100 text-red-800 dark:bg-red-950 dark:bg-opacity-50 dark:text-red-400">
                     Requer Atenção
@@ -181,7 +163,7 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
                 </div>
               )}
               
-              {metric.id === 'em-tratamento' && metric.value > 0 && (
+              {!showSkeleton && metric.id === 'em-tratamento' && metric.value > 0 && (
                 <div className="mt-2">
                   <Badge variant="default" className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-950 dark:bg-opacity-50 dark:text-blue-400">
                     Progresso Ativo

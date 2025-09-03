@@ -4,7 +4,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useDropdownStore } from '@/stores/dropdownStore';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { DropdownStore, AddItemRequest, ExtensibleDropdownItem } from '@/types/extensible-dropdowns';
 
 // Hook genérico para qualquer tipo de dropdown

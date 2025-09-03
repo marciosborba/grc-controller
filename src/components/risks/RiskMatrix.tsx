@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Target } from 'lucide-react';
 import type { MatrixSize, RiskLevel } from '@/types/risk-management';
 import { generateMatrixData, findRiskPositionInMatrix, getTenantMatrixConfig } from '@/utils/risk-analysis';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 interface RiskMatrixProps {
   probabilityScore: number;

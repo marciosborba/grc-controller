@@ -71,7 +71,7 @@ import {
   Gauge,
   AlertTriangle
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useIncidentManagement } from '@/hooks/useIncidentManagement';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

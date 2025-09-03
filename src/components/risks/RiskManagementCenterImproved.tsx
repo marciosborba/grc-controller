@@ -46,33 +46,45 @@ import {
   Award,
   Globe
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskFilters } from '@/hooks/useRiskFilters';
 import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 
-// Importar views melhoradas
+import { Suspense, lazy } from 'react';
+
+// Componente de loading otimizado para views
+const ViewLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px] bg-background rounded-lg border">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-primary"></div>
+      <p className="text-sm text-muted-foreground animate-pulse">Carregando view...</p>
+    </div>
+  </div>
+);
+
+// Temporariamente voltar aos imports síncronos para resolver erro crítico
 import { DashboardView } from './views/DashboardView';
 import { TableView } from './views/TableView';
 import { ExpandableCardsView } from './views/ExpandableCardsView';
 import { KanbanView } from './views/KanbanView';
 import { ProcessView } from './views/ProcessView';
+import { RiskMatrixView } from './views/RiskMatrixView';
 import { AlexRiskTest } from './AlexRiskTest';
 import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
-import { RiskMatrixView } from './views/RiskMatrixView';
-import { RiskFilters } from './shared/RiskFilters';
-import { QuickMetrics } from './shared/QuickMetrics';
-import { AlexRiskIntegration } from './shared/AlexRiskIntegration';
 import { RiskDocumentation } from './RiskDocumentation';
 import { NotificationPanel } from './NotificationPanel';
-
-// Novos componentes integrados
 import { RiskLibraryIntegrated } from './shared/RiskLibraryIntegrated';
 import { CommunicationCenterIntegrated } from './shared/CommunicationCenterIntegrated';
 import { ApprovalWorkflowIntegrated } from './shared/ApprovalWorkflowIntegrated';
 import { GuidedRiskCreation } from './GuidedRiskCreation';
 import { RiskRegistrationWizard } from './wizard/RiskRegistrationWizard';
+
+// Componentes pequenos podem continuar como import estático
+import { RiskFilters } from './shared/RiskFilters';
+import { QuickMetrics } from './shared/QuickMetrics';
+import { AlexRiskIntegration } from './shared/AlexRiskIntegration';
 
 // Tipos
 export type ViewMode = 'dashboard' | 'table' | 'kanban' | 'process' | 'matrix' | 'documentation' | 'library' | 'communications' | 'approvals';
@@ -326,16 +338,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
     );
   }
 
-  if (isLoadingRisks && !risks.length) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando centro de gestão de riscos...</p>
-        </div>
-      </div>
-    );
-  }
+  // Remove o loading blocking - mostra a UI imediatamente
+  // O loading será individual por componente
 
   return (
     <div className="space-y-6 p-6">
@@ -698,72 +702,72 @@ export const RiskManagementCenterImproved: React.FC = () => {
           </Card>
 
           {/* Views Dinâmicas */}
-          {viewMode === 'dashboard' && (
-            <DashboardView 
-              risks={risks} 
-              metrics={metrics} 
-              searchTerm={searchTerm}
-              filters={filters}
-            />
-          )}
-          
-          {viewMode === 'table' && (
-            <ExpandableCardsView 
-              risks={risks} 
-              searchTerm={searchTerm}
-              filters={filters}
-              onUpdate={updateRisk}
-              onDelete={deleteRisk}
-            />
-          )}
-          
-          {viewMode === 'kanban' && (
-            <KanbanView 
-              risks={risks} 
-              searchTerm={searchTerm}
-              filters={filters}
-              onUpdate={updateRisk}
-              onDelete={deleteRisk}
-            />
-          )}
-          
-          {viewMode === 'matrix' && (
-            <div style={{ 
-              width: '100%',
-              minHeight: '100px',
-              overflow: 'visible'
-            }}>
-              <RiskMatrixView 
+            {viewMode === 'dashboard' && (
+              <DashboardView 
                 risks={risks} 
+                metrics={metrics} 
                 searchTerm={searchTerm}
                 filters={filters}
               />
-            </div>
-          )}
+            )}
+            
+            {viewMode === 'table' && (
+              <ExpandableCardsView 
+                risks={risks} 
+                searchTerm={searchTerm}
+                filters={filters}
+                onUpdate={updateRisk}
+                onDelete={deleteRisk}
+              />
+            )}
+            
+            {viewMode === 'kanban' && (
+              <KanbanView 
+                risks={risks} 
+                searchTerm={searchTerm}
+                filters={filters}
+                onUpdate={updateRisk}
+                onDelete={deleteRisk}
+              />
+            )}
+            
+            {viewMode === 'matrix' && (
+              <div style={{ 
+                width: '100%',
+                minHeight: '100px',
+                overflow: 'visible'
+              }}>
+                <RiskMatrixView 
+                  risks={risks} 
+                  searchTerm={searchTerm}
+                  filters={filters}
+                />
+              </div>
+            )}
 
-          {viewMode === 'communications' && (
-            <CommunicationCenterIntegrated 
-              risks={risks}
-              onSendMessage={(message) => {
-                toast({
-                  title: '📨 Mensagem Enviada',
-                  description: 'Comunicação registrada com sucesso',
-                });
-              }}
-            />
-          )}
+            {viewMode === 'communications' && (
+              <CommunicationCenterIntegrated 
+                risks={risks}
+                onSendMessage={(message) => {
+                  toast({
+                    title: '📨 Mensagem Enviada',
+                    description: 'Comunicação registrada com sucesso',
+                  });
+                }}
+              />
+            )}
 
-          {viewMode === 'approvals' && (
-            <ApprovalWorkflowIntegrated 
-              risks={risks}
-              onApprove={(riskId) => {
-                toast({
-                  title: '✅ Risco Aprovado',
-                  description: 'Aprovação registrada no workflow',
-                });
-              }}
-            />
-          )}
+            {viewMode === 'approvals' && (
+              <ApprovalWorkflowIntegrated 
+                risks={risks}
+                onApprove={(riskId) => {
+                  toast({
+                    title: '✅ Risco Aprovado',
+                    description: 'Aprovação registrada no workflow',
+                  });
+                }}
+              />
+            )}
         </div>
       </div>
 

@@ -22,7 +22,7 @@ import {
   Download
 } from 'lucide-react';
 import { useUserManagement } from '@/hooks/useUserManagement';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { UserStatsCards } from './UserStatsCards';
 import { CreateUserDialog } from './CreateUserDialog';
 import { EditUserDialog } from './EditUserDialog';

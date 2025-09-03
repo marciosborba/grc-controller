@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useAIProviders } from '@/hooks/useAIProviders';
 
 // Tipos para análise contratual

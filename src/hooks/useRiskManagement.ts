@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 import { 
   useTenantSecurity,
@@ -237,138 +237,96 @@ export const useRiskManagement = () => {
       return transformedRisks;
     },
     enabled: !!user && !!userTenantId,
-    staleTime: 0, // Forçar refetch para debug
-    gcTime: 0,    // Não cachear para debug
-    refetchOnMount: true,
-    refetchOnWindowFocus: true
+    staleTime: 5 * 60 * 1000, // 5 minutos de cache
+    gcTime: 10 * 60 * 1000,   // 10 minutos na memória
+    refetchOnMount: false,    // Não refetch automático
+    refetchOnWindowFocus: false // Não refetch no foco
   });
 
-  // Buscar métricas de risco (ISOLAMENTO POR TENANT)
-  console.log('🔍 useRiskManagement: Configurando query de métricas', { userTenantId, user: !!user });
-  
+  // Query otimizada para métricas críticas - apenas dados essenciais
   const {
     data: metrics,
     isLoading: isLoadingMetrics
   } = useQuery({
-    queryKey: ['risk-metrics', userTenantId],
+    queryKey: ['risk-metrics-fast', userTenantId],
     queryFn: async (): Promise<RiskMetrics> => {
-      console.log('🔍 useRiskManagement: Executando queryFn de métricas', { userTenantId });
-      
       if (!userTenantId) {
-        console.error('❌ useRiskManagement: userTenantId não encontrado');
         throw new Error('Acesso negado: tenant não identificado');
       }
-      
-      // Verificar se há dados na tabela (sem filtro de tenant)
-      const { data: allData, count } = await supabase
-        .from('risk_registrations')
-        .select('*', { count: 'exact', head: true });
-      
-      console.log('🔍 Total de registros na tabela risk_registrations:', count);
-      
-      // Log para debug se não há dados
-      if (count === 0) {
-        console.log('⚠️ Nenhum dado encontrado na tabela risk_registrations');
-      } else {
-        console.log('✅ Encontrados', count, 'registros na tabela');
-      }
 
-      // Usar os mesmos dados da query principal de riscos
+      // Query otimizada - apenas campos necessários para métricas
       const { data: riskData, error } = await supabase
         .from('risk_registrations')
-        .select('*')
-        .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
-
-      console.log('🔍 Query de métricas executada:', {
-        userTenantId,
-        dataCount: riskData?.length || 0,
-        error: error?.message,
-        sampleData: riskData?.slice(0, 3)
-      });
+        .select('id, risk_level, status, current_step, created_at')
+        .eq('tenant_id', userTenantId);
 
       if (error) {
-        console.error('❌ Erro na query de métricas:', error);
         throw error;
       }
 
-      const now = new Date();
       const rawRisks = riskData || [];
       
-      // Transformar os dados da mesma forma que na query principal
-      const risks = rawRisks.map(transformSupabaseRiskToRisk);
+      // Cálculo otimizado das métricas sem transformação completa
+      const risksByLevel: Record<RiskLevel, number> = {
+        'Muito Alto': 0,
+        'Alto': 0,
+        'Médio': 0,
+        'Baixo': 0,
+        'Muito Baixo': 0
+      };
 
-      // Calcular métricas
-      console.log('📊 useRiskManagement: Calculando métricas para', risks.length, 'riscos');
-      console.log('📊 Dados dos riscos para métricas:', risks.map(r => ({
-        id: r.id,
-        name: r.name,
-        riskLevel: r.riskLevel,
-        status: r.status
-      })));
-      
-      const risksByLevel = risks.reduce((acc, risk) => {
-        // Usar o riskLevel já transformado
-        let levelForMetrics = risk.riskLevel;
-        
-        console.log('🔍 Processando risco:', {
-          name: risk.name,
-          riskLevel: risk.riskLevel,
-          status: risk.status
-        });
-        
-        // Para as métricas do dashboard, consolidar 'Crítico' em 'Muito Alto'
-        if (levelForMetrics === 'Crítico') {
-          levelForMetrics = 'Muito Alto';
-        }
-        
-        acc[levelForMetrics as RiskLevel] = (acc[levelForMetrics as RiskLevel] || 0) + 1;
-        return acc;
-      }, {} as Record<RiskLevel, number>);
-      
-      console.log('📊 Métricas por nível calculadas:', risksByLevel);
+      const risksByStatus: Record<RiskStatus, number> = {
+        'Identificado': 0,
+        'Avaliado': 0,
+        'Em Tratamento': 0,
+        'Monitorado': 0,
+        'Fechado': 0,
+        'Reaberto': 0
+      };
 
-      const risksByStatus = risks.reduce((acc, risk) => {
-        // Usar o status já transformado
-        acc[risk.status] = (acc[risk.status] || 0) + 1;
-        return acc;
-      }, {} as Record<RiskStatus, number>);
-      
-      console.log('📊 Métricas por status calculadas:', risksByStatus);
+      rawRisks.forEach(risk => {
+        // Mapear nível do risco
+        let level = mapRiskLevel(risk.risk_level);
+        if (level === 'Crítico') level = 'Muito Alto'; // Consolidar para métricas
+        risksByLevel[level as RiskLevel] = (risksByLevel[level as RiskLevel] || 0) + 1;
 
-      // Calcular atividades em atraso (ISOLAMENTO POR TENANT)
-      // Verificar se a tabela risk_action_activities existe
+        // Mapear status do risco
+        const status = mapSupabaseStatusToRiskStatus(risk.status, risk.current_step);
+        risksByStatus[status] = (risksByStatus[status] || 0) + 1;
+      });
+
+      // Query separada para atividades atrasadas (não-crítica)
       let overdueActivities = 0;
       try {
+        const now = new Date();
         const { data: activities } = await supabase
           .from('risk_action_activities')
-          .select('deadline, status')
+          .select('id', { count: 'exact', head: true })
           .lt('deadline', now.toISOString())
           .neq('status', 'Concluído')
           .neq('status', 'Cancelado');
         
         overdueActivities = activities?.length || 0;
       } catch (error) {
-        // Tabela pode não existir ainda
-        console.warn('Tabela risk_action_activities não encontrada:', error);
+        // Ignorar erro se tabela não existir
         overdueActivities = 0;
       }
 
-      const metricsResult = {
-        totalRisks: risks.length,
+      return {
+        totalRisks: rawRisks.length,
         risksByLevel,
-        risksByCategory: {} as any, // TODO: implementar quando tivermos category
+        risksByCategory: {},
         risksByStatus,
         overdueActivities,
         riskTrend: 'Estável',
-        averageResolutionTime: 0 // TODO: calcular baseado em histórico
+        averageResolutionTime: 0
       };
-      
-      console.log('✅ useRiskManagement: Métricas calculadas com sucesso:', metricsResult);
-      return metricsResult;
     },
     enabled: !!user && !!userTenantId,
-    staleTime: 0, // Forçar refetch
-    cacheTime: 0  // Não cachear durante debug
+    staleTime: 1 * 60 * 1000, // 1 minuto para métricas críticas
+    gcTime: 5 * 60 * 1000,    // 5 minutos na memória
+    refetchOnMount: false,
+    refetchOnWindowFocus: false
   });
   
   // Log de estado após declaração de TODAS as variáveis

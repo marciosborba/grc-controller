@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Consent, ConsentStatus, CollectionMethod } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 export interface ConsentFilters {
   status?: ConsentStatus;

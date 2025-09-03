@@ -38,7 +38,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
 
 interface ActionPlan {

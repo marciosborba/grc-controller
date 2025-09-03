@@ -21,7 +21,7 @@ import {
   MessageSquare,
   BarChart3
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 

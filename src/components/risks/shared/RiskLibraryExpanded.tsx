@@ -59,7 +59,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { RiskTemplateService } from '@/services/riskTemplateService';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 // Usar interface do banco de dados
 type RiskTemplate = DBRiskTemplate;

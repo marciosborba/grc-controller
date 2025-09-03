@@ -46,7 +46,7 @@ import { SimpleExtensibleSelect } from '@/components/ui/simple-extensible-select
 import { useDepartmentOptions, useJobTitleOptions } from '@/hooks/useExtensibleDropdowns';
 import type { ExtendedUser, UpdateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 const updateUserSchema = z.object({
   full_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),

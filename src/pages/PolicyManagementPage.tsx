@@ -1,6 +1,6 @@
 import React from 'react';
 import { PolicyManagementHub } from '@/components/policies/PolicyManagementHub';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { Navigate } from 'react-router-dom';
 
 const PolicyManagementPage: React.FC = () => {

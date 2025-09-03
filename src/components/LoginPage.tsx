@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { Shield, AlertCircle, UserPlus, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useSecureInput, validationRules } from '@/hooks/useSecureInput';
 import { logSuspiciousActivity } from '@/utils/securityLogger';

@@ -16,7 +16,8 @@ import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltra
 import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
+// Lazy import for GeneralSettingsPage to reduce initial bundle size
+const GeneralSettingsPage = lazy(() => import("@/components/general-settings/GeneralSettingsPage").then(module => ({ default: module.GeneralSettingsPage })));
 
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
@@ -91,20 +92,21 @@ const PageLoader = () => (
   </div>
 );
 
-// Configure React Query with secure defaults
+// Configure React Query with optimized defaults for faster startup
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3,
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: 1, // Reduzido para startup mais rápido
+      retryDelay: 500, // Delay menor
+      staleTime: 2 * 60 * 1000, // 2 minutes (reduzido)
+      gcTime: 5 * 60 * 1000, // 5 minutes (reduzido)
       refetchOnWindowFocus: false,
-      refetchOnReconnect: true
+      refetchOnReconnect: false, // Desabilitado para startup
+      refetchOnMount: false // Desabilitado globalmente
     },
     mutations: {
-      retry: 1,
-      retryDelay: 1000
+      retry: 0, // Sem retry para mutations no startup
+      retryDelay: 200
     }
   }
 });
@@ -429,7 +431,11 @@ const App = () => (
                       <ActivityLogsPage />
                     </Suspense>
                   } />
-                  <Route path="settings/general" element={<GeneralSettingsPage />} />
+                  <Route path="settings/general" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <GeneralSettingsPage />
+                    </Suspense>
+                  } />
                   <Route path="admin/ai-management" element={
                     <PlatformAdminRoute>
                       <Suspense fallback={<PageLoader />}>

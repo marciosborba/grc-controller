@@ -4,7 +4,7 @@
 // Sistema completo de notificações em tempo real usando Server-Sent Events (SSE)
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { 
   Notification as AppNotification,
   CreateNotificationPayload,

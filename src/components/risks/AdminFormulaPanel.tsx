@@ -27,7 +27,7 @@ import {
   Lock
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 
 interface Methodology {

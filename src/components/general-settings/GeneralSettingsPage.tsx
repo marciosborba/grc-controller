@@ -39,7 +39,7 @@ import { StaticColorController } from './sections/StaticColorController';
 import DocumentationModal from './DocumentationModal';
 import CryptoFieldMappingConfig from '../admin/CryptoFieldMappingConfig';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { cn } from '@/lib/utils';
 import type { IntegrationStatus as IntegrationStatusType } from '@/types/general-settings';
 

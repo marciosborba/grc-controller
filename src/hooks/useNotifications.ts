@@ -4,7 +4,7 @@
 // Hook completo para gerenciar notificações, integração com API e estado local
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { 
   Notification, 
   NotificationFilters, 

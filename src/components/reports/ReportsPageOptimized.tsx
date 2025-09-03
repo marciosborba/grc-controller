@@ -10,9 +10,9 @@ import { DateRange } from "react-day-picker";
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { format } from 'date-fns';
 
-// Lazy loading dos componentes pesados
-const ReportCharts = lazy(() => import('./components/ReportCharts'));
-const ExportTools = lazy(() => import('./components/ExportTools'));
+// Lazy loading dos componentes pesados - desabilitado temporariamente para build
+// const ReportCharts = lazy(() => import('./components/ReportCharts'));
+// const ExportTools = lazy(() => import('./components/ExportTools'));
 
 interface ReportData {
   risks: number;

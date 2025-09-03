@@ -29,7 +29,7 @@ import { SimpleExtensibleSelect } from '@/components/ui/simple-extensible-select
 import { useDepartmentOptions, useJobTitleOptions } from '@/hooks/useExtensibleDropdowns';
 import type { CreateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import {
   Select,
   SelectContent,

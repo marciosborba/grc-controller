@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RiskLetterPDFGenerator } from '@/utils/riskLetterPDFGenerator';
 import { RiskLetterDOCGenerator } from '@/utils/riskLetterDOCGenerator';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CompanyInfo {

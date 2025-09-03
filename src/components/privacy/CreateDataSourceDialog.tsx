@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 import { DataDiscoverySourceForm, DataDiscoverySourceType, ScanFrequency } from '@/types/privacy-management';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreateDataSourceDialogProps {

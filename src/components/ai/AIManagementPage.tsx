@@ -18,7 +18,7 @@ import {
   Globe,
   Shield as ShieldIcon
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { Navigate } from 'react-router-dom';
 import { AIConfigurationSection } from './sections/AIConfigurationSection';
 import { AIProvidersSection } from './sections/AIProvidersSection';

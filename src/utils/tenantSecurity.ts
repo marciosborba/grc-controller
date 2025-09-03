@@ -4,7 +4,7 @@
 // Utilitários para validação e segurança multi-tenant
 
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 export interface TenantValidationResult {
   isValid: boolean;

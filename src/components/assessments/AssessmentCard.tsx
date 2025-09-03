@@ -70,7 +70,7 @@ import {
   Target,
   BarChart3
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useAssessmentManagement } from '@/hooks/useAssessmentManagement';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

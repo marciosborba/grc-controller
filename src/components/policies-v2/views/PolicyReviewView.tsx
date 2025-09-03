@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 
 import type { 

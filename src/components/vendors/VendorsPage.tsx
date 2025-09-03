@@ -3,7 +3,7 @@ import { Building } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { VendorRiskManagementCenter } from '@/components/vendor-risk/VendorRiskManagementCenter';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 /**
  * VendorsPage - Página principal do módulo de fornecedores

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { tenantCrypto, type TenantKeyInfo, type EncryptionPurpose } from '@/utils/tenantCrypto';
 import { toast } from 'sonner';
 import {

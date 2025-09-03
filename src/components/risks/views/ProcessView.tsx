@@ -37,7 +37,7 @@ import {
   Settings
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import type { Risk, CreateRiskRequest, RiskCategory, TreatmentType } from '@/types/risk-management';
 import { RISK_CATEGORIES, TREATMENT_TYPES } from '@/types/risk-management';

@@ -46,7 +46,7 @@ import {
   Clock,
   XCircle,
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { 

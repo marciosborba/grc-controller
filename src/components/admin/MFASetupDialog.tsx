@@ -40,7 +40,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useMFA } from '@/hooks/useMFA';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 
 const verificationSchema = z.object({

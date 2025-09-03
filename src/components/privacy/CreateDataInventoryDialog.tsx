@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 import { DataInventoryForm, DataCategory, DataType, SensitivityLevel, DataOrigin } from '@/types/privacy-management';
 import { DATA_CATEGORIES, SENSITIVITY_LEVELS } from '@/types/privacy-management';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CreateDataInventoryDialogProps {

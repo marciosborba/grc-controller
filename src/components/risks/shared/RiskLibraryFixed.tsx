@@ -51,7 +51,7 @@ import { RiskTemplateService } from '@/services/riskTemplateService';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 type RiskTemplate = DBRiskTemplate;
 

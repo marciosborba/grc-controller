@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { RiskRegistrationData } from './wizard/RiskRegistrationWizard';
 import { RiskLibraryFixed } from './shared/RiskLibraryFixed';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';

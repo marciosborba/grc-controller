@@ -78,7 +78,7 @@ import {
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskPDF } from '@/hooks/useRiskPDF';
 import { toast } from 'sonner';

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 
 import type { PolicyV2, PolicyApproval } from '@/types/policy-management-v2';
 

@@ -41,6 +41,8 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuditManagement } from '@/hooks/useAuditManagement';
+import { QuickMetrics } from '@/components/audit/shared/QuickMetrics';
 
 interface AuditKPI {
   title: string;
@@ -84,107 +86,26 @@ const AuditIADashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [audits, setAudits] = useState<Audit[]>([]);
-  const [kpis, setKPIs] = useState<AuditKPI[]>([]);
   const [alexSessions, setAlexSessions] = useState<AlexAuditSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [alexAuditActive, setAlexAuditActive] = useState(true);
+  
+  // Hook otimizado para dados de auditoria
+  const {
+    audits,
+    metrics,
+    kpis,
+    isLoadingAudits,
+    isLoadingMetrics,
+    isLoadingKPIs,
+    auditsError,
+    filterAudits
+  } = useAuditManagement();
 
-  // Mock data for demonstration
+  // Mock data apenas para sessões Alex (dados de auditoria vêm do hook)
   useEffect(() => {
-    const loadDashboardData = async () => {
-      setIsLoading(true);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock KPIs
-      setKPIs([
-        {
-          title: 'Auditorias Ativas',
-          value: 24,
-          change: '+12%',
-          trend: 'up',
-          icon: Activity,
-          color: 'text-blue-600'
-        },
-        {
-          title: 'Achados Críticos',
-          value: 8,
-          change: '-25%',
-          trend: 'down',
-          icon: AlertTriangle,
-          color: 'text-red-600'
-        },
-        {
-          title: 'Taxa de Conclusão',
-          value: '87%',
-          change: '+5%',
-          trend: 'up',
-          icon: CheckCircle,
-          color: 'text-green-600'
-        },
-        {
-          title: 'Automação IA',
-          value: '92%',
-          change: '+18%',
-          trend: 'up',
-          icon: Brain,
-          color: 'text-purple-600'
-        }
-      ]);
-
-      // Mock audits
-      setAudits([
-        {
-          id: '1',
-          title: 'Auditoria de Controles Internos SOX',
-          audit_number: 'AUD-2025-0001',
-          audit_type: 'Financial Audit',
-          status: 'Fieldwork',
-          priority: 'High',
-          current_phase: 'Control Testing',
-          lead_auditor: 'Ana Silva',
-          planned_start_date: '2025-01-15',
-          planned_end_date: '2025-03-15',
-          progress: 65,
-          ai_risk_score: 7.2,
-          findings_count: 3,
-          overdue: false
-        },
-        {
-          id: '2',
-          title: 'Auditoria de Segurança Cibernética',
-          audit_number: 'AUD-2025-0002',
-          audit_type: 'IT Audit',
-          status: 'Planning',
-          priority: 'Critical',
-          current_phase: 'Risk Assessment',
-          lead_auditor: 'Carlos Mendes',
-          planned_start_date: '2025-02-01',
-          planned_end_date: '2025-04-01',
-          progress: 25,
-          ai_risk_score: 8.5,
-          findings_count: 0,
-          overdue: false
-        },
-        {
-          id: '3',
-          title: 'Auditoria LGPD e Privacidade',
-          audit_number: 'AUD-2025-0003',
-          audit_type: 'Compliance Audit',
-          status: 'Review',
-          priority: 'Medium',
-          current_phase: 'Reporting',
-          lead_auditor: 'Marina Costa',
-          planned_start_date: '2024-12-01',
-          planned_end_date: '2025-02-01',
-          progress: 90,
-          ai_risk_score: 4.1,
-          findings_count: 5,
-          overdue: true
-        }
-      ]);
+    const loadAlexSessions = async () => {
+      // Simular delay para sessões Alex
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       // Mock Alex Audit sessions
       setAlexSessions([
@@ -207,11 +128,9 @@ const AuditIADashboard: React.FC = () => {
           user_rating: 4
         }
       ]);
-
-      setIsLoading(false);
     };
 
-    loadDashboardData();
+    loadAlexSessions();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -248,14 +167,11 @@ const AuditIADashboard: React.FC = () => {
     navigate('/audit/alex-ai');
   };
 
-  const filteredAudits = audits.filter(audit => {
-    const matchesSearch = audit.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         audit.audit_number.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || audit.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Usar função otimizada do hook
+  const filteredAudits = filterAudits(searchTerm, statusFilter);
 
-  if (isLoading) {
+  // Loading apenas se não tiver nenhum dado crítico
+  if (isLoadingAudits && audits.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -321,38 +237,8 @@ const AuditIADashboard: React.FC = () => {
 
 
 
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, index) => (
-          <Card key={index}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
-                  <p className="text-2xl font-bold">{kpi.value}</p>
-                  <div className="flex items-center mt-2">
-                    <TrendingUp className={cn(
-                      "h-4 w-4 mr-1",
-                      kpi.trend === 'up' ? 'text-green-600' : 
-                      kpi.trend === 'down' ? 'text-red-600' : 'text-muted-foreground'
-                    )} />
-                    <span className={cn(
-                      "text-sm font-medium",
-                      kpi.trend === 'up' ? 'text-green-600' : 
-                      kpi.trend === 'down' ? 'text-red-600' : 'text-muted-foreground'
-                    )}>
-                      {kpi.change}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-3 rounded-full bg-muted">
-                  <kpi.icon className={cn("h-6 w-6", kpi.color)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Métricas Principais Otimizadas */}
+      <QuickMetrics metrics={metrics} isLoading={isLoadingMetrics} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

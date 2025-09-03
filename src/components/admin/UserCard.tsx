@@ -70,7 +70,7 @@ import {
   Settings,
   Bell
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { getUserDisplayInfo } from '@/utils/userHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import type { ExtendedUser, AppRole } from '@/types/user-management';

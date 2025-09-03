@@ -57,7 +57,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useAssessmentManagement } from '@/hooks/useAssessmentManagement';
 import AssessmentCard from './AssessmentCard';
 import SortableAssessmentCard from './SortableAssessmentCard';

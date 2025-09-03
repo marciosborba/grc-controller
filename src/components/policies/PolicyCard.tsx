@@ -71,7 +71,7 @@ import {
   FileCheck,
   GraduationCap
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth} from '@/contexts/AuthContextOptimized';
 import { usePolicyManagement } from '@/hooks/usePolicyManagement';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
