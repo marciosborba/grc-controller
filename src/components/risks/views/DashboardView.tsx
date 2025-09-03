@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ interface DashboardViewProps {
   filters?: RiskFilters;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({
+export const DashboardView: React.FC<DashboardViewProps> = memo(({
   risks,
   metrics,
   searchTerm,
@@ -449,4 +449,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </Card>
     </div>
   );
-};
+});

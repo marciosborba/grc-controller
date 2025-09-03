@@ -87,7 +87,7 @@ const moduleLabels: Record<NotificationModule, { label: string; description: str
     icon: Info
   },
   privacy: { 
-    label: 'Privacidade e LGPD', 
+    label: 'Privacidade', 
     description: 'Proteção de dados e privacidade',
     icon: Settings
   },

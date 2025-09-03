@@ -44,7 +44,11 @@ import {
   FileText,
   BarChart3,
   RefreshCw,
-  Building
+  Building,
+  TestTube,
+  FileCheck,
+  ClipboardList,
+  KeyRound
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +85,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -361,48 +365,7 @@ interface PlatformSettings {
 // ============================================================================
 // DADOS MOCK PARA DEMONSTRAÇÃO
 // ============================================================================
-
-const MOCK_ROLES: CustomRole[] = [
-  {
-    id: '1',
-    name: 'super_admin',
-    display_name: 'Super Administrador',
-    description: 'Acesso total à plataforma com poderes de configuração global',
-    permissions: ['*'],
-    color: '#ef4444',
-    icon: 'Crown',
-    is_system: true,
-    is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'compliance_manager',
-    display_name: 'Gerente de Compliance',
-    description: 'Gerencia políticas de compliance e auditoria',
-    permissions: ['compliance.read', 'compliance.write', 'audit.read', 'reports.export'],
-    color: '#3b82f6',
-    icon: 'Shield',
-    is_system: false,
-    is_active: true,
-    created_at: '2024-01-15T00:00:00Z',
-    updated_at: '2024-01-15T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'security_analyst',
-    display_name: 'Analista de Segurança',
-    description: 'Monitora e analisa incidentes de segurança',
-    permissions: ['security.read', 'incidents.read', 'incidents.write', 'vulnerabilities.read'],
-    color: '#f59e0b',
-    icon: 'Zap',
-    is_system: false,
-    is_active: true,
-    created_at: '2024-02-01T00:00:00Z',
-    updated_at: '2024-02-01T00:00:00Z'
-  }
-];
+// MOCK_ROLES removido - sistema agora usa 100% dados do banco de dados
 
 // Dados serão carregados do banco via Supabase
 const MOCK_THEMES: ThemeConfig[] = [];
@@ -411,30 +374,58 @@ const MOCK_THEMES: ThemeConfig[] = [];
 const MOCK_FONTS: FontConfig[] = [];
 
 const AVAILABLE_PERMISSIONS = [
-  { id: 'users.read', name: 'Visualizar Usuários', category: 'Usuários' },
-  { id: 'users.write', name: 'Gerenciar Usuários', category: 'Usuários' },
-  { id: 'users.delete', name: 'Excluir Usuários', category: 'Usuários' },
-  { id: 'tenants.read', name: 'Visualizar Tenants', category: 'Tenants' },
-  { id: 'tenants.write', name: 'Gerenciar Tenants', category: 'Tenants' },
+  // Assessments
+  { id: 'assessment.read', name: 'Visualizar Assessments', category: 'Assessments' },
+  { id: 'assessment.write', name: 'Gerenciar Assessments', category: 'Assessments' },
+  
+  // Auditoria
+  { id: 'audit.read', name: 'Visualizar Auditoria', category: 'Auditoria' },
+  { id: 'audit.write', name: 'Gerenciar Auditoria', category: 'Auditoria' },
+  
+  // Compliance
   { id: 'compliance.read', name: 'Visualizar Compliance', category: 'Compliance' },
   { id: 'compliance.write', name: 'Gerenciar Compliance', category: 'Compliance' },
-  { id: 'security.read', name: 'Visualizar Segurança', category: 'Segurança' },
-  { id: 'security.write', name: 'Gerenciar Segurança', category: 'Segurança' },
-  { id: 'incidents.read', name: 'Visualizar Incidentes', category: 'Incidentes' },
-  { id: 'incidents.write', name: 'Gerenciar Incidentes', category: 'Incidentes' },
-  { id: 'reports.read', name: 'Visualizar Relatórios', category: 'Relatórios' },
-  { id: 'reports.export', name: 'Exportar Relatórios', category: 'Relatórios' },
-  { id: 'audit.read', name: 'Visualizar Auditoria', category: 'Auditoria' },
-  { id: 'logs.read', name: 'Visualizar Logs', category: 'Logs' },
-  { id: 'settings.read', name: 'Visualizar Configurações', category: 'Configurações' },
-  { id: 'settings.write', name: 'Gerenciar Configurações', category: 'Configurações' }
+  
+  // Gestão de Riscos
+  { id: 'risk.read', name: 'Visualizar Riscos', category: 'Riscos' },
+  { id: 'risk.write', name: 'Gerenciar Riscos', category: 'Riscos' },
+  
+  // Incidentes
+  { id: 'incident.read', name: 'Visualizar Incidentes', category: 'Incidentes' },
+  { id: 'incident.write', name: 'Gerenciar Incidentes', category: 'Incidentes' },
+  
+  // Privacidade e LGPD
+  { id: 'privacy.read', name: 'Visualizar Privacidade', category: 'Privacidade' },
+  { id: 'privacy.write', name: 'Gerenciar Privacidade', category: 'Privacidade' },
+  
+  // Vendor Risk
+  { id: 'vendor.read', name: 'Visualizar Vendor Risk', category: 'Vendor Risk' },
+  { id: 'vendor.write', name: 'Gerenciar Vendor Risk', category: 'Vendor Risk' },
+  
+  // Relatórios
+  { id: 'report.read', name: 'Visualizar Relatórios', category: 'Relatórios' },
+  { id: 'report.write', name: 'Gerenciar Relatórios', category: 'Relatórios' },
+  { id: 'report.export', name: 'Exportar Relatórios', category: 'Relatórios' },
+  
+  // Plataforma Adm
+  { id: 'users.read', name: 'Visualizar Usuários', category: 'Plataforma Adm' },
+  { id: 'users.write', name: 'Gerenciar Usuários', category: 'Plataforma Adm' },
+  { id: 'users.delete', name: 'Excluir Usuários', category: 'Plataforma Adm' },
+  { id: 'admin', name: 'Administrador', category: 'Plataforma Adm' },
+  { id: 'tenants.read', name: 'Visualizar Tenants', category: 'Plataforma Adm' },
+  { id: 'tenants.write', name: 'Gerenciar Tenants', category: 'Plataforma Adm' },
+  { id: 'security.read', name: 'Visualizar Segurança', category: 'Plataforma Adm' },
+  { id: 'security.write', name: 'Gerenciar Segurança', category: 'Plataforma Adm' },
+  { id: 'vulnerabilities.read', name: 'Visualizar Vulnerabilidades', category: 'Plataforma Adm' },
+  { id: 'logs.read', name: 'Visualizar Logs', category: 'Plataforma Adm' },
+  { id: 'logs.write', name: 'Gerenciar Logs', category: 'Plataforma Adm' },
+  { id: 'settings.read', name: 'Visualizar Configurações', category: 'Plataforma Adm' },
+  { id: 'settings.write', name: 'Gerenciar Configurações', category: 'Plataforma Adm' },
+  { id: 'all', name: 'Todas as Permissões', category: 'Plataforma Adm' },
+  { id: 'platform_admin', name: 'Administrador da Plataforma', category: 'Plataforma Adm' }
 ];
 
-const PREDEFINED_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
-  '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
-  '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#64748b'
-];
+
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -442,11 +433,13 @@ const PREDEFINED_COLORS = [
 
 const GlobalRulesSection: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('roles');
   const [isLoading, setIsLoading] = useState(false);
   
   // Estados para Roles
-  const [roles, setRoles] = useState<CustomRole[]>(MOCK_ROLES);
+  const [roles, setRoles] = useState<CustomRole[]>([]);
+  const [loadingRoles, setLoadingRoles] = useState(true); // Iniciar como true
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [editingRole, setEditingRole] = useState<CustomRole | null>(null);
   const [roleForm, setRoleForm] = useState({
@@ -559,13 +552,15 @@ const GlobalRulesSection: React.FC = () => {
   // ============================================================================
   
   useEffect(() => {
-    // Só carregar temas quando o componente estiver realmente visível
-    // Adicionar delay para evitar interferir com carregamento inicial
+    // Carregar dados imediatamente
+    loadRoles(); // Carregar roles do banco de dados primeiro
+    
+    // Carregar outros dados com delay menor
     const timer = setTimeout(() => {
       loadThemes();
       loadFonts();
       loadTenants(); // Carregar tenants para configuração por tenant
-    }, 1000); // 1 segundo de delay para não interferir com carregamento inicial
+    }, 500); // Delay menor para outros dados
 
     return () => clearTimeout(timer);
   }, []);
@@ -767,7 +762,11 @@ const GlobalRulesSection: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar temas:', error);
-      toast.error('Erro ao carregar temas');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar temas',
+        variant: 'destructive'
+      });
     } finally {
       setLoadingThemes(false);
     }
@@ -811,7 +810,11 @@ const GlobalRulesSection: React.FC = () => {
       setFonts(processedFonts);
     } catch (error) {
       console.error('Erro ao carregar fontes:', error);
-      toast.error('Erro ao carregar fontes');
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar fontes',
+        variant: 'destructive'
+      });
     } finally {
       setLoadingFonts(false);
     }
@@ -820,6 +823,75 @@ const GlobalRulesSection: React.FC = () => {
   // ============================================================================
   // FUNÇÕES PARA GERENCIAMENTO DE ROLES
   // ============================================================================
+  
+  const loadRoles = async () => {
+    try {
+      setLoadingRoles(true);
+      console.log('💾 [GLOBAL RULES] Carregando roles do banco de dados...');
+      
+      const { data: customRoles, error } = await supabase
+        .from('custom_roles')
+        .select('*')
+        .eq('is_active', true)
+        .order('is_system', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      console.log('🔍 [DEBUG] Query result:', { data: customRoles, error });
+
+      if (error) {
+        console.error('❌ Erro ao carregar roles:', error);
+        toast({
+          title: 'Erro',
+          description: `Erro ao carregar roles: ${error.message}`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      console.log(`✅ [GLOBAL RULES] ${customRoles?.length || 0} roles carregadas do banco`);
+      console.log('📊 [GLOBAL RULES] Roles do banco:', customRoles);
+      
+      // Converter para formato CustomRole
+      const convertedRoles: CustomRole[] = (customRoles || []).map(role => ({
+        id: role.id,
+        name: role.name,
+        display_name: role.display_name,
+        description: role.description || '',
+        permissions: role.permissions || [],
+        color: role.color,
+        icon: role.icon || 'Users',
+        is_system: role.is_system || false,
+        is_active: role.is_active || true,
+        created_at: role.created_at || new Date().toISOString(),
+        updated_at: role.updated_at || new Date().toISOString()
+      }));
+      
+      console.log('🔄 [DEBUG] Converted roles:', convertedRoles);
+      
+      // Usar apenas roles do banco de dados
+      setRoles(convertedRoles);
+      console.log(`🎯 [GLOBAL RULES] ${convertedRoles.length} roles definidas no estado`);
+      
+      if (convertedRoles.length > 0) {
+        toast({
+          title: 'Sucesso',
+          description: `${convertedRoles.length} roles carregadas do banco de dados`
+        });
+      } else {
+        console.log('⚠️ [WARNING] Nenhuma role encontrada no banco');
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro inesperado ao carregar roles:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro inesperado ao carregar roles',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingRoles(false);
+    }
+  };
   
   const handleCreateRole = () => {
     setEditingRole(null);
@@ -835,6 +907,16 @@ const GlobalRulesSection: React.FC = () => {
   };
   
   const handleEditRole = (role: CustomRole) => {
+    // Verificar se é uma role do sistema
+    if (role.is_system) {
+      toast({
+        title: 'Informação',
+        description: 'Roles do sistema não podem ser editadas. Elas são gerenciadas automaticamente pela plataforma.',
+        variant: 'default'
+      });
+      return;
+    }
+    
     setEditingRole(role);
     setRoleForm({
       name: role.name,
@@ -850,39 +932,165 @@ const GlobalRulesSection: React.FC = () => {
   const handleSaveRole = async () => {
     setIsLoading(true);
     try {
+      // Verificar se é uma role do sistema
+      if (editingRole && editingRole.is_system) {
+        toast({
+          title: 'Erro',
+          description: 'Roles do sistema não podem ser editadas',
+          variant: 'destructive'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       if (editingRole) {
-        // Atualizar role existente
+        // Atualizar role existente no banco
+        const { error } = await supabase
+          .from('custom_roles')
+          .update({
+            name: roleForm.name,
+            display_name: roleForm.display_name,
+            description: roleForm.description,
+            permissions: roleForm.permissions,
+            color: roleForm.color,
+            icon: roleForm.icon,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingRole.id);
+
+        if (error) {
+          console.error('Erro ao atualizar role:', error);
+          toast({
+            title: 'Erro',
+            description: 'Erro ao atualizar role no banco de dados',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Atualizar estado local
         setRoles(prev => prev.map(r => 
           r.id === editingRole.id 
             ? { ...r, ...roleForm, updated_at: new Date().toISOString() }
             : r
         ));
-        toast.success('Role atualizada com sucesso!');
+        toast({
+          title: 'Sucesso',
+          description: 'Role atualizada com sucesso!'
+        });
       } else {
-        // Criar nova role
+        // Criar nova role no banco
+        const { data, error } = await supabase
+          .from('custom_roles')
+          .insert({
+            name: roleForm.name,
+            display_name: roleForm.display_name,
+            description: roleForm.description,
+            permissions: roleForm.permissions,
+            color: roleForm.color,
+            icon: roleForm.icon,
+            is_system: false,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Erro ao criar role:', error);
+          toast({
+            title: 'Erro',
+            description: 'Erro ao criar role no banco de dados',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Adicionar ao estado local
         const newRole: CustomRole = {
-          id: Date.now().toString(),
-          ...roleForm,
+          id: data.id,
+          name: data.name,
+          display_name: data.display_name,
+          description: data.description || '',
+          permissions: data.permissions || [],
+          color: data.color,
+          icon: data.icon || 'Users',
           is_system: false,
           is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: data.created_at,
+          updated_at: data.updated_at
         };
         setRoles(prev => [...prev, newRole]);
-        toast.success('Role criada com sucesso!');
+        toast({
+          title: 'Sucesso',
+          description: 'Role criada com sucesso!'
+        });
       }
       setShowRoleDialog(false);
+      
+      // Notificar outros componentes sobre a atualização
+      window.dispatchEvent(new CustomEvent('rolesUpdated'));
+      
     } catch (error) {
-      toast.error('Erro ao salvar role');
+      console.error('Erro inesperado ao salvar role:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro inesperado ao salvar role',
+        variant: 'destructive'
+      });
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleDeleteRole = async (roleId: string) => {
-    if (confirm('Tem certeza que deseja excluir esta role?')) {
-      setRoles(prev => prev.filter(r => r.id !== roleId));
-      toast.success('Role excluída com sucesso!');
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+    
+    if (role.is_system) {
+      toast({
+        title: 'Erro',
+        description: 'Não é possível excluir roles do sistema',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (confirm(`Tem certeza que deseja excluir a role "${role.display_name}"?`)) {
+      try {
+        // Deletar do banco
+        const { error } = await supabase
+          .from('custom_roles')
+          .delete()
+          .eq('id', roleId);
+
+        if (error) {
+          console.error('Erro ao deletar role:', error);
+          toast({
+            title: 'Erro',
+            description: 'Erro ao deletar role do banco de dados',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Remover do estado local
+        setRoles(prev => prev.filter(r => r.id !== roleId));
+        toast({
+          title: 'Sucesso',
+          description: 'Role excluída com sucesso!'
+        });
+        
+        // Notificar outros componentes sobre a atualização
+        window.dispatchEvent(new CustomEvent('rolesUpdated'));
+        
+      } catch (error) {
+        console.error('Erro inesperado ao deletar role:', error);
+        toast({
+          title: 'Erro',
+          description: 'Erro inesperado ao deletar role',
+          variant: 'destructive'
+        });
+      }
     }
   };
   
@@ -1080,20 +1288,29 @@ const GlobalRulesSection: React.FC = () => {
   const handleExportTheme = (theme: ThemeConfig) => {
     console.log('Exportando tema:', theme.name);
     // TODO: Implementar exportação de tema
-    toast.success('Funcionalidade de exportação será implementada em breve');
+    toast({
+      title: 'Info',
+      description: 'Funcionalidade de exportação será implementada em breve'
+    });
   };
 
   const handleSaveTheme = () => {
     console.log('Salvando tema...');
     // TODO: Implementar salvamento de tema
-    toast.success('Funcionalidade de salvamento será implementada em breve');
+    toast({
+      title: 'Info',
+      description: 'Funcionalidade de salvamento será implementada em breve'
+    });
     setShowThemeDialog(false);
   };
 
   const handleApplyTheme = (theme: ThemeConfig) => {
     console.log('Aplicando tema:', theme.name);
     // TODO: Implementar aplicação de tema
-    toast.success('Funcionalidade de aplicação será implementada em breve');
+    toast({
+      title: 'Info',
+      description: 'Funcionalidade de aplicação será implementada em breve'
+    });
   };
 
   const handleEditTheme = (theme: ThemeConfig) => {
@@ -1105,7 +1322,10 @@ const GlobalRulesSection: React.FC = () => {
   const handleDuplicateTheme = (theme: ThemeConfig) => {
     console.log('Duplicando tema:', theme.name);
     // TODO: Implementar duplicação de tema
-    toast.success('Funcionalidade de duplicação será implementada em breve');
+    toast({
+      title: 'Info',
+      description: 'Funcionalidade de duplicação será implementada em breve'
+    });
   };
 
 
@@ -1189,14 +1409,79 @@ const GlobalRulesSection: React.FC = () => {
                 Crie e gerencie roles personalizadas com permissões específicas
               </p>
             </div>
-            <Button onClick={handleCreateRole} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Nova Role
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => loadRoles()} variant="outline" className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Atualizar
+              </Button>
+              <Button onClick={handleCreateRole} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Role
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {roles.map((role) => (
+          {/* Card de Integração com Teste de Roles */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 dark:from-blue-950/30 dark:to-indigo-950/30 dark:border-blue-800">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TestTube className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <CardTitle className="text-base text-blue-900 dark:text-blue-100">Teste de Roles em Tempo Real</CardTitle>
+                </div>
+                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700">
+                  Integrado
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  As roles criadas aqui são automaticamente sincronizadas com o sistema de teste de roles no sidebar.
+                  Platform Admins podem testar qualquer role em tempo real.
+                </p>
+                <div className="flex items-center gap-4 text-xs text-blue-700 dark:text-blue-300">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Sincronização automática</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span>Teste em tempo real</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span>Permissões dinâmicas</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {loadingRoles ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando roles do banco de dados...</p>
+              </div>
+            </div>
+          ) : roles.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma role encontrada</h3>
+                <p className="text-muted-foreground mb-4">
+                  Não há roles cadastradas no banco de dados.
+                </p>
+                <Button onClick={handleCreateRole} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar primeira role
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {roles.map((role) => (
               <Card key={role.id} className="relative group hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
@@ -1243,10 +1528,12 @@ const GlobalRulesSection: React.FC = () => {
                       size="sm" 
                       variant="outline" 
                       onClick={() => handleEditRole(role)}
+                      disabled={role.is_system}
                       className="flex-1"
+                      title={role.is_system ? 'Roles do sistema não podem ser editadas' : ''}
                     >
                       <Edit className="h-3 w-3 mr-1" />
-                      Editar
+                      {role.is_system ? 'Sistema' : 'Editar'}
                     </Button>
                     {!role.is_system && (
                       <Button 
@@ -1261,8 +1548,9 @@ const GlobalRulesSection: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
 
@@ -1539,130 +1827,256 @@ const GlobalRulesSection: React.FC = () => {
       {/* DIALOG: CRIAR/EDITAR ROLE */}
       {/* ============================================================================ */}
       <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {editingRole ? 'Editar Role' : 'Criar Nova Role'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure as permissões e propriedades da role
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Informações Básicas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nome da Role</Label>
-                <Input
-                  value={roleForm.name}
-                  onChange={(e) => setRoleForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="ex: security_analyst"
-                />
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="flex items-center gap-3">
+              <div 
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                style={{ backgroundColor: roleForm.color }}
+              >
+                <Users className="h-5 w-5" />
               </div>
-              <div className="space-y-2">
-                <Label>Nome de Exibição</Label>
-                <Input
-                  value={roleForm.display_name}
-                  onChange={(e) => setRoleForm(prev => ({ ...prev, display_name: e.target.value }))}
-                  placeholder="ex: Analista de Segurança"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={roleForm.description}
-                onChange={(e) => setRoleForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descreva as responsabilidades desta role..."
-                rows={3}
-              />
-            </div>
-
-            {/* Cor e Ícone */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={roleForm.color}
-                    onChange={(e) => setRoleForm(prev => ({ ...prev, color: e.target.value }))}
-                    className="w-16 h-10"
-                  />
-                  <div className="flex flex-wrap gap-1">
-                    {PREDEFINED_COLORS.slice(0, 8).map((color) => (
-                      <button
-                        key={color}
-                        className="w-6 h-6 rounded border-2 border-white shadow-sm"
-                        style={{ backgroundColor: color }}
-                        onClick={() => setRoleForm(prev => ({ ...prev, color }))}
-                      />
-                    ))}
-                  </div>
+              <div>
+                <div className="text-xl font-bold">
+                  {editingRole ? 'Editar Role' : 'Criar Nova Role'}
+                </div>
+                <div className="text-sm text-muted-foreground font-normal">
+                  {editingRole ? `Modificando: ${editingRole.display_name}` : 'Configure as permissões e propriedades da nova role'}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Ícone</Label>
-                <Select value={roleForm.icon} onValueChange={(value) => setRoleForm(prev => ({ ...prev, icon: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Users">👥 Users</SelectItem>
-                    <SelectItem value="Shield">🛡️ Shield</SelectItem>
-                    <SelectItem value="Zap">⚡ Zap</SelectItem>
-                    <SelectItem value="Star">⭐ Star</SelectItem>
-                    <SelectItem value="Crown">👑 Crown</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            </DialogTitle>
+          </DialogHeader>
 
-            {/* Permissões */}
-            <div className="space-y-4">
-              <Label className="text-base font-semibold">Permissões</Label>
-              <div className="grid grid-cols-1 gap-4">
-                {Object.entries(
-                  AVAILABLE_PERMISSIONS.reduce((acc, perm) => {
-                    if (!acc[perm.category]) acc[perm.category] = [];
-                    acc[perm.category].push(perm);
-                    return acc;
-                  }, {} as Record<string, typeof AVAILABLE_PERMISSIONS>)
-                ).map(([category, permissions]) => (
-                  <div key={category} className="space-y-2">
-                    <Label className="text-sm font-medium">{category}</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {permissions.map((permission) => (
-                        <div key={permission.id} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={permission.id}
-                            checked={roleForm.permissions.includes(permission.id)}
-                            onCheckedChange={() => toggleRolePermission(permission.id)}
-                          />
-                          <Label htmlFor={permission.id} className="text-sm">
-                            {permission.name}
-                          </Label>
-                        </div>
-                      ))}
+          <div className="flex-1 overflow-y-auto">
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="basic" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Informações Básicas
+                </TabsTrigger>
+                <TabsTrigger value="permissions" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Permissões ({roleForm.permissions.length})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Tab: Informações Básicas */}
+              <TabsContent value="basic" className="space-y-6 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Detalhes da Role
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Nome da Role *</Label>
+                        <Input
+                          value={roleForm.name}
+                          onChange={(e) => setRoleForm(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="ex: security_analyst"
+                          className="h-10"
+                        />
+                        <p className="text-xs text-muted-foreground">Nome único usado internamente (sem espaços)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Nome de Exibição *</Label>
+                        <Input
+                          value={roleForm.display_name}
+                          onChange={(e) => setRoleForm(prev => ({ ...prev, display_name: e.target.value }))}
+                          placeholder="ex: Analista de Segurança"
+                          className="h-10"
+                        />
+                        <p className="text-xs text-muted-foreground">Nome amigável exibido na interface</p>
+                      </div>
                     </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Descrição</Label>
+                      <Textarea
+                        value={roleForm.description}
+                        onChange={(e) => setRoleForm(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Descreva as responsabilidades e escopo desta role..."
+                        rows={3}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-muted-foreground">Explique o propósito e responsabilidades desta role</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Palette className="h-5 w-5" />
+                      Aparência
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Cor</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="color"
+                            value={roleForm.color}
+                            onChange={(e) => setRoleForm(prev => ({ ...prev, color: e.target.value }))}
+                            className="w-12 h-9 p-1 border"
+                          />
+                          <Input
+                            value={roleForm.color}
+                            onChange={(e) => setRoleForm(prev => ({ ...prev, color: e.target.value }))}
+                            placeholder="#3b82f6"
+                            className="h-9 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ícone</Label>
+                        <Select value={roleForm.icon} onValueChange={(value) => setRoleForm(prev => ({ ...prev, icon: value }))}>
+                          <SelectTrigger className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Users">👥 Usuários</SelectItem>
+                            <SelectItem value="Shield">🛡️ Escudo</SelectItem>
+                            <SelectItem value="Zap">⚡ Raio</SelectItem>
+                            <SelectItem value="Star">⭐ Estrela</SelectItem>
+                            <SelectItem value="Crown">👑 Coroa</SelectItem>
+                            <SelectItem value="Eye">👁️ Olho</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Preview</Label>
+                        <div className="p-3 border rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-7 h-7 rounded-md flex items-center justify-center text-white shadow-sm"
+                              style={{ backgroundColor: roleForm.color }}
+                            >
+                              <Users className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm truncate">{roleForm.display_name || 'Nome da Role'}</div>
+                              <div className="text-xs text-muted-foreground truncate">{roleForm.name || 'nome_da_role'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Tab: Permissões */}
+              <TabsContent value="permissions" className="space-y-4 mt-0">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Permissões da Role</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Selecione as permissões que esta role deve ter. {roleForm.permissions.length} permissões selecionadas.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setRoleForm(prev => ({ ...prev, permissions: [] }))}
+                    >
+                      Limpar Todas
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setRoleForm(prev => ({ ...prev, permissions: AVAILABLE_PERMISSIONS.map(p => p.id) }))}
+                    >
+                      Selecionar Todas
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {Object.entries(
+                    AVAILABLE_PERMISSIONS.reduce((acc, perm) => {
+                      if (!acc[perm.category]) acc[perm.category] = [];
+                      acc[perm.category].push(perm);
+                      return acc;
+                    }, {} as Record<string, typeof AVAILABLE_PERMISSIONS>)
+                  ).map(([category, permissions]) => {
+                    const selectedInCategory = permissions.filter(p => roleForm.permissions.includes(p.id)).length;
+                    const totalInCategory = permissions.length;
+                    
+                    return (
+                      <Card key={category} className="h-fit">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              {category === 'Assessments' && <ClipboardList className="h-4 w-4" />}
+                              {category === 'Auditoria' && <Eye className="h-4 w-4" />}
+                              {category === 'Compliance' && <FileCheck className="h-4 w-4" />}
+                              {category === 'Riscos' && <AlertTriangle className="h-4 w-4" />}
+                              {category === 'Incidentes' && <Zap className="h-4 w-4" />}
+                              {category === 'Privacidade' && <KeyRound className="h-4 w-4" />}
+                              {category === 'Vendor Risk' && <Users className="h-4 w-4" />}
+                              {category === 'Relatórios' && <BarChart3 className="h-4 w-4" />}
+                              {category === 'Plataforma Adm' && <Crown className="h-4 w-4" />}
+                              {!['Assessments', 'Auditoria', 'Compliance', 'Riscos', 'Incidentes', 'Privacidade', 'Vendor Risk', 'Relatórios', 'Plataforma Adm'].includes(category) && <FileCheck className="h-4 w-4" />}
+                              {category}
+                            </CardTitle>
+                            <Badge variant={selectedInCategory > 0 ? 'default' : 'secondary'} className="text-xs">
+                              {selectedInCategory}/{totalInCategory}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {permissions.map((permission) => (
+                            <div key={permission.id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                              <Checkbox
+                                id={permission.id}
+                                checked={roleForm.permissions.includes(permission.id)}
+                                onCheckedChange={() => toggleRolePermission(permission.id)}
+                                className="mt-0.5"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <Label htmlFor={permission.id} className="text-sm font-medium cursor-pointer">
+                                  {permission.name}
+                                </Label>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {permission.id}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
-              <X className="h-4 w-4 mr-2" />
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveRole} disabled={isLoading}>
-              <Save className="h-4 w-4 mr-2" />
-              {isLoading ? 'Salvando...' : 'Salvar Role'}
-            </Button>
+          <DialogFooter className="pt-4 border-t">
+            <div className="flex items-center justify-between w-full">
+              <div className="text-sm text-muted-foreground">
+                {roleForm.permissions.length} permissões selecionadas
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveRole} disabled={isLoading || !roleForm.name || !roleForm.display_name}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Salvando...' : (editingRole ? 'Atualizar Role' : 'Criar Role')}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

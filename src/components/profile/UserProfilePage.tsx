@@ -64,6 +64,60 @@ import { logActivity } from '@/utils/securityLogger';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 
+// Função para obter a role mais alta do usuário
+const getUserHighestRole = (user: any) => {
+  if (user?.isPlatformAdmin) {
+    return {
+      name: 'Super Administrador',
+      icon: Crown,
+      color: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800'
+    };
+  }
+  
+  // Hierarquia de roles (da mais alta para a mais baixa)
+  const roleHierarchy = [
+    { role: 'super_admin', name: 'Super Administrador', icon: Crown, color: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800' },
+    { role: 'admin', name: 'Administrador', icon: Shield, color: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800' },
+    { role: 'ciso', name: 'CISO', icon: Shield, color: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800' },
+    { role: 'risk_manager', name: 'Gerente de Risco', icon: AlertTriangle, color: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-800' },
+    { role: 'compliance_officer', name: 'Oficial de Compliance', icon: CheckCircle, color: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800' },
+    { role: 'auditor', name: 'Auditor', icon: Eye, color: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800' },
+    { role: 'user', name: 'Usuário', icon: User, color: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-800' }
+  ];
+  
+  // Verificar se o usuário tem alguma das roles na hierarquia
+  if (user?.roles && Array.isArray(user.roles)) {
+    for (const hierarchyRole of roleHierarchy) {
+      if (user.roles.includes(hierarchyRole.role)) {
+        return {
+          name: hierarchyRole.name,
+          icon: hierarchyRole.icon,
+          color: hierarchyRole.color
+        };
+      }
+    }
+  }
+  
+  // Fallback para role única
+  if (user?.role) {
+    const foundRole = roleHierarchy.find(r => r.role === user.role);
+    if (foundRole) {
+      return {
+        name: foundRole.name,
+        icon: foundRole.icon,
+        color: foundRole.color
+      };
+    }
+  }
+  
+  // Fallback padrão
+  return {
+    name: 'Usuário',
+    icon: User,
+    color: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-800'
+  };
+};
+
 interface UserProfile {
   user_id: string;
   full_name: string;
@@ -467,12 +521,16 @@ export const UserProfilePage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-            <Crown className="h-3 w-3 mr-1" />
-            {user?.isPlatformAdmin ? 'Administrador da Plataforma' : 
-             user?.isAdmin ? 'Administrador' : 
-             user?.role || 'Usuário'}
-          </Badge>
+          {(() => {
+            const userRole = getUserHighestRole(user);
+            const IconComponent = userRole.icon;
+            return (
+              <Badge variant="outline" className={userRole.color}>
+                <IconComponent className="h-3 w-3 mr-1" />
+                {userRole.name}
+              </Badge>
+            );
+          })()}
           {profile.last_login_at && (
             <Badge variant="secondary">
               <Clock className="h-3 w-3 mr-1" />

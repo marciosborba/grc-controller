@@ -11,12 +11,17 @@ import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeC
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardPage from "@/components/dashboard/DashboardPage";
+import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
+import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
+import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { GeneralSettingsPage } from "@/components/general-settings/GeneralSettingsPage";
 
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
+const RiskTestMinimal = lazy(() => import("@/components/risks/RiskTestMinimal"));
+const RiskTestWithHook = lazy(() => import("@/components/risks/RiskTestWithHook"));
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
 
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
@@ -67,7 +72,7 @@ const AIManagementPage = lazy(() => import("@/components/ai/AIManagementPage").t
 
 // Other modules
 const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
-const ReportsPage = lazy(() => import("@/components/reports/ReportsPage").then(module => ({ default: module.ReportsPage })));
+const ReportsPage = lazy(() => import("@/components/reports/ReportsPageOptimized"));
 const UserProfilePage = lazy(() => import("@/components/profile/UserProfilePage").then(module => ({ default: module.UserProfilePage })));
 const NotificationsPage = lazy(() => import("@/components/notifications/NotificationsPage").then(module => ({ default: module.NotificationsPage })));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
@@ -190,9 +195,22 @@ const App = () => (
                 }>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
+                  <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
+                  <Route path="dashboard-test-no-queries" element={<DashboardPageNoQueries />} />
                   <Route path="risks" element={
                     <Suspense fallback={<PageLoader />}>
                       <RiskManagementCenter />
+                    </Suspense>
+                  } />
+                  <Route path="risks-test" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskTestMinimal />
+                    </Suspense>
+                  } />
+                  <Route path="risks-hook-test" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RiskTestWithHook />
                     </Suspense>
                   } />
                   <Route path="risks-hub" element={

@@ -27,3 +27,17 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.security
+.env.encrypted
+.env.key
+.env.decrypted
+.env.temp
+
+# Security files
+.db-session
+logs/
+backups/env/
+*.backup
+*.key
+*.pem
+*.crt

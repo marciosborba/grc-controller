@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
+import { AppSidebarFixed as AppSidebar } from './AppSidebarFixed';
 import { AppHeader } from './AppHeader';
 
 const AppLayoutContent = () => {

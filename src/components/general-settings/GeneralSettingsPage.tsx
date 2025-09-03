@@ -37,6 +37,7 @@ import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard'
 import GlobalRulesSection from './sections/GlobalRulesSection';
 import { StaticColorController } from './sections/StaticColorController';
 import DocumentationModal from './DocumentationModal';
+import CryptoFieldMappingConfig from '../admin/CryptoFieldMappingConfig';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -192,7 +193,7 @@ export const GeneralSettingsPage = () => {
         <TabsList className={cn(
           "grid w-full",
           (user?.isPlatformAdmin || user?.role === 'admin') 
-            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-9" 
+            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-10" 
             : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8"
         )}>
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
@@ -206,6 +207,12 @@ export const GeneralSettingsPage = () => {
             <TabsTrigger value="static-colors" className="text-xs sm:text-sm flex items-center gap-1">
               <Palette className="h-3 w-3" />
               APP Color
+            </TabsTrigger>
+          )}
+          {(user?.isPlatformAdmin || user?.role === 'admin') && (
+            <TabsTrigger value="crypto-mapping" className="text-xs sm:text-sm flex items-center gap-1">
+              <Key className="h-3 w-3" />
+              Mapeamento Cripto
             </TabsTrigger>
           )}
           <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
@@ -305,6 +312,25 @@ export const GeneralSettingsPage = () => {
         {(user?.isPlatformAdmin || user?.role === 'admin') && (
           <TabsContent value="static-colors">
             <StaticColorController />
+          </TabsContent>
+        )}
+
+        {/* Crypto Field Mapping Tab - Only for Platform Admins or System Admins */}
+        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+          <TabsContent value="crypto-mapping">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <Key className="h-6 w-6 text-primary" />
+                <div>
+                  <h2 className="text-xl font-semibold">Mapeamento de Campos Criptográficos</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Configure globalmente quais campos usam quais chaves de criptografia para todos os tenants
+                  </p>
+                </div>
+              </div>
+              <Separator />
+              <CryptoFieldMappingConfig />
+            </div>
           </TabsContent>
         )}
 

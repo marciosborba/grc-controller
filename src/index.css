@@ -1,14 +1,11 @@
 /* Controller GRC - Static Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Cores de fallback ANTES do import para menor prioridade */
 @layer base {
   :root {
-    /* FALLBACKS - Menor prioridade que static-colors.css */
+    /* CORES PRINCIPAIS */
     --primary: 198 87% 50%;
     --primary-hover: 173 88% 54%;
     --primary-glow: 173 95% 78%;
@@ -31,45 +28,6 @@
     --risk-low: 142 76% 36%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-  }
-  
-  .dark {
-    /* FALLBACKS DARK - Menor prioridade que static-colors.css */
-    --primary: 198 87% 50%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
-    --primary-foreground: 0 0% 0%;
-    --primary-text: 0 0% 100%;
-    --secondary: 215 8% 12%;
-    --secondary-foreground: 0 0% 100%;
-    --success: 142 76% 46%;
-    --success-foreground: 0 0% 0%;
-    --warning: 38 92% 60%;
-    --warning-foreground: 0 0% 0%;
-    --danger: 0 84% 70%;
-    --danger-foreground: 0 0% 0%;
-    --muted: 215 12% 16%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --border: 215 10% 22%;
-    --risk-critical: 0 84% 70%;
-    --risk-high: 24 95% 63%;
-    --risk-medium: 38 92% 60%;
-    --risk-low: 142 76% 46%;
-    --sidebar-background: 215 8% 12%;
-    --sidebar-foreground: 0 0% 100%;
-  }
-}
-
-/* Import static colors AFTER fallbacks for higher priority */
-@import './styles/static-colors.css';
-
-@layer base {
-  :root {
-    /* 
-     * CORES PRINCIPAIS DEFINIDAS EM static-colors.css
-     * Este arquivo apenas define variáveis derivadas
-     * As cores primárias são carregadas de src/styles/static-colors.css
-     */
     
     /* Fallback colors básicos - apenas se static-colors.css não carregar */
     --background: 0 0% 100%;
@@ -112,10 +70,29 @@
   }
 
   .dark {
-    /* 
-     * DARK MODE: Cores principais definidas em static-colors.css
-     * Este arquivo apenas define variáveis derivadas
-     */
+    /* CORES PRINCIPAIS DARK MODE */
+    --primary: 198 87% 50%;
+    --primary-hover: 173 88% 54%;
+    --primary-glow: 173 95% 78%;
+    --primary-foreground: 0 0% 0%;
+    --primary-text: 0 0% 100%;
+    --secondary: 215 8% 12%;
+    --secondary-foreground: 0 0% 100%;
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 0%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 0%;
+    --danger: 0 84% 70%;
+    --danger-foreground: 0 0% 0%;
+    --muted: 215 12% 16%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --border: 215 10% 22%;
+    --risk-critical: 0 84% 70%;
+    --risk-high: 24 95% 63%;
+    --risk-medium: 38 92% 60%;
+    --risk-low: 142 76% 46%;
+    --sidebar-background: 215 8% 12%;
+    --sidebar-foreground: 0 0% 100%;
     
     /* Fallback colors básicos - apenas se static-colors.css não carregar */
     --background: 222 18% 4%;
@@ -166,9 +143,11 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
-    /* Ensure dark mode colors are applied */
+    /* Ensure dark mode colors are applied with smooth transitions */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    /* Smooth transitions to prevent flash */
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Improve rendering for all elements */

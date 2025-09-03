@@ -22,7 +22,7 @@ interface ReportData {
   complianceRecords: number;
 }
 
-export const ReportsPage = () => {
+const ReportsPage = () => {
   const [selectedModule, setSelectedModule] = useState<string>('all');
   const [reportData, setReportData] = useState<ReportData>({
     risks: 0,
@@ -948,3 +948,5 @@ export const ReportsPage = () => {
     </div>
   );
 };
+
+export default ReportsPage;

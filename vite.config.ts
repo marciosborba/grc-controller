@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { colorUpdaterPlugin } from "./vite-color-plugin.js";
+import { DevelopmentSecurityHelper } from "./src/utils/securityHeaders";
 // import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
@@ -9,6 +10,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // Headers de segurança para desenvolvimento
+    ...(mode === 'development' ? DevelopmentSecurityHelper.getViteDevConfig().server : {}),
   },
   plugins: [
     react(),
