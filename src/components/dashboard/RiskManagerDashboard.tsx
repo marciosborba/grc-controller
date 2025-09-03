@@ -60,7 +60,7 @@ const getRiskColor = (level: string) => {
   }
 };
 
-export const RiskManagerDashboard = () => {
+const RiskManagerDashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -273,3 +273,6 @@ export const RiskManagerDashboard = () => {
     </div>
   );
 };
+
+export default RiskManagerDashboard;
+export { RiskManagerDashboard };

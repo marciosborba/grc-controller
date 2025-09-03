@@ -84,7 +84,7 @@ const mockFindings = [
   }
 ];
 
-export const AuditorDashboard = () => {
+const AuditorDashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -356,3 +356,6 @@ export const AuditorDashboard = () => {
     </div>
   );
 };
+
+export default AuditorDashboard;
+export { AuditorDashboard };

@@ -2,10 +2,10 @@ import React, { lazy, Suspense } from 'react';
 import { useAuth} from '@/contexts/AuthContextOptimized';
 
 // Lazy load dashboards to reduce initial bundle size
-const ExecutiveDashboard = lazy(() => import('./ExecutiveDashboard').then(module => ({ default: module.ExecutiveDashboard })));
-const RiskManagerDashboard = lazy(() => import('./RiskManagerDashboard').then(module => ({ default: module.RiskManagerDashboard })));
-const ComplianceDashboard = lazy(() => import('./ComplianceDashboard').then(module => ({ default: module.ComplianceDashboard })));
-const AuditorDashboard = lazy(() => import('./AuditorDashboard').then(module => ({ default: module.AuditorDashboard })));
+const ExecutiveDashboard = lazy(() => import('./ExecutiveDashboard'));
+const RiskManagerDashboard = lazy(() => import('./RiskManagerDashboard'));
+const ComplianceDashboard = lazy(() => import('./ComplianceDashboard'));
+const AuditorDashboard = lazy(() => import('./AuditorDashboard'));
 
 // Lightweight loader for dashboard switching
 const DashboardLoader = () => (

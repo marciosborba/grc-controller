@@ -62,7 +62,7 @@ const kpiData = [
   { month: 'Jun', riskScore: 2.1, complianceScore: 93 }
 ];
 
-export const ExecutiveDashboard = () => {
+const ExecutiveDashboard = () => {
   const queryClient = useQueryClient();
   const [realTimeData, setRealTimeData] = useState({
     riskScore: 0,
@@ -78,16 +78,19 @@ export const ExecutiveDashboard = () => {
   });
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchRealTimeData = async () => {
       try {
         // Debug do usuário e autenticação
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        // Usuário autenticado
-        // Tenant do contexto verificado
         
         if (authError) {
           console.error('❌ Erro de autenticação:', authError);
+          return;
         }
+        
+        if (!isMounted) return;
         const [
           risksResult,
           vendorsResult,
@@ -210,29 +213,40 @@ export const ExecutiveDashboard = () => {
           ((publishedPolicies / Math.max(policies.length, 1)) * 50)
         );
 
-        setRealTimeData({
-          riskScore: Number(riskScore.toFixed(1)),
-          complianceScore,
-          totalVendors: vendors.length,
-          totalPolicies: policies.length,
-          criticalRisks,
-          openIncidents: incidents.filter(i => i.status !== 'resolvido' && i.status !== 'fechado').length,
-          totalAssessments: assessments.length,
-          completedAssessments,
-          totalDPIA: dpia.length,
-          ethicsReports: ethics.length
-        });
+        if (isMounted) {
+          setRealTimeData({
+            riskScore: Number(riskScore.toFixed(1)),
+            complianceScore,
+            totalVendors: vendors.length,
+            totalPolicies: policies.length,
+            criticalRisks,
+            openIncidents: incidents.filter(i => i.status !== 'resolvido' && i.status !== 'fechado').length,
+            totalAssessments: assessments.length,
+            completedAssessments,
+            totalDPIA: dpia.length,
+            ethicsReports: ethics.length
+          });
+        }
       } catch (error) {
-        console.error('Erro ao carregar dados em tempo real:', error);
+        if (isMounted) {
+          console.error('Erro ao carregar dados em tempo real:', error);
+        }
       }
     };
 
     fetchRealTimeData();
     
     // Atualizar dados a cada 5 minutos
-    const interval = setInterval(fetchRealTimeData, 5 * 60 * 1000);
+    const interval = setInterval(() => {
+      if (isMounted) {
+        fetchRealTimeData();
+      }
+    }, 5 * 60 * 1000);
     
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -504,3 +518,6 @@ export const ExecutiveDashboard = () => {
     </div>
   );
 };
+
+export default ExecutiveDashboard;
+export { ExecutiveDashboard };

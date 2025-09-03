@@ -9,12 +9,15 @@ import { useAuth} from '@/contexts/AuthContextOptimized';
 import { Shield, AlertCircle, UserPlus, LogIn, Eye, EyeOff } from 'lucide-react';
 import { useSecureInput, validationRules } from '@/hooks/useSecureInput';
 import { logSuspiciousActivity } from '@/utils/securityLogger';
+
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
   const [lastAttempt, setLastAttempt] = useState<number>(0);
+  const [error, setError] = useState<string>('');
+
   const {
     login,
     signup,
@@ -48,41 +51,76 @@ const LoginPage = () => {
   }, [attemptCount, lastAttempt]);
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(''); // Limpar erro anterior
+    
+    console.log('🔐 Tentativa de login iniciada:', {
+      email: emailInput.value,
+      isRateLimited,
+      isValid: emailInput.isValid && passwordInput.isValid
+    });
+    
     if (isRateLimited) {
+      setError('Muitas tentativas de login. Tente novamente em 5 minutos.');
       await logSuspiciousActivity('rate_limit_exceeded', {
         attempts: attemptCount,
         email: emailInput.value
       });
       return;
     }
+    
     if (!emailInput.isValid || !passwordInput.isValid) {
+      setError('Por favor, verifique os dados inseridos.');
       return;
     }
+    
     setIsSubmitting(true);
+    
     try {
+      console.log('🔐 Chamando função de login...');
       await login(emailInput.value, passwordInput.value);
+      console.log('✅ Login realizado com sucesso!');
       setAttemptCount(0); // Reset on success
+      setError('');
     } catch (err: any) {
+      console.error('❌ Erro no login:', err);
       const newAttemptCount = attemptCount + 1;
       setAttemptCount(newAttemptCount);
       setLastAttempt(Date.now());
+      
+      // Definir mensagem de erro mais específica
+      if (err.message?.includes('Invalid login credentials')) {
+        setError('Email ou senha incorretos.');
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('Por favor, confirme seu email antes de fazer login.');
+      } else if (err.message?.includes('Too many requests')) {
+        setError('Muitas tentativas. Tente novamente em alguns minutos.');
+      } else {
+        setError(err.message || 'Erro ao fazer login. Tente novamente.');
+      }
+      
       if (newAttemptCount >= 3) {
         await logSuspiciousActivity('multiple_failed_logins', {
           attempts: newAttemptCount,
           email: emailInput.value
         });
       }
-      throw err;
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(''); // Limpar erro anterior
+    
     if (!emailInput.isValid || !passwordInput.isValid || !nameInput.isValid) {
+      setError('Por favor, verifique os dados inseridos.');
       return;
     }
+    
     setIsSubmitting(true);
+    
     try {
       await signup(emailInput.value, passwordInput.value, nameInput.value, jobTitleInput.value);
 
@@ -92,21 +130,15 @@ const LoginPage = () => {
       nameInput.reset();
       jobTitleInput.reset();
       setIsSignup(false);
+      setError('');
     } catch (err: any) {
-      throw err;
+      console.error('❌ Erro no signup:', err);
+      setError(err.message || 'Erro ao criar conta. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
-  const fillDemoAccount = (demoEmail: string) => {
-    // Log demo account usage
-    logSuspiciousActivity('demo_account_used', {
-      demo_email: demoEmail
-    });
-    emailInput.onChange(demoEmail);
-    passwordInput.onChange('demo123');
-    setIsSignup(false);
-  };
+
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
@@ -122,10 +154,10 @@ const LoginPage = () => {
             <CardTitle>Acesso à Plataforma</CardTitle>
           </CardHeader>
           <CardContent>
-            {isRateLimited && <Alert variant="destructive" className="mb-4">
+            {(isRateLimited || error) && <Alert variant="destructive" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Muitas tentativas de login. Tente novamente em 5 minutos.
+                  {isRateLimited ? 'Muitas tentativas de login. Tente novamente em 5 minutos.' : error}
                 </AlertDescription>
               </Alert>}
 
@@ -163,6 +195,7 @@ const LoginPage = () => {
                   <Button type="submit" className="w-full" disabled={isSubmitting || isLoading || isRateLimited || !emailInput.isValid || !passwordInput.isValid}>
                     {isSubmitting ? 'Entrando...' : 'Entrar'}
                   </Button>
+
                 </form>
               </TabsContent>
               
@@ -206,35 +239,7 @@ const LoginPage = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Para Demonstração</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground mb-3">
-              Use as contas demo abaixo ou registre uma nova conta. 
-              <strong> Senha das contas demo: demo123</strong>
-            </p>
-            <div className="space-y-2">
-              <button onClick={() => fillDemoAccount('admin@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
-                <div className="font-medium">admin@cyberguard.com</div>
-                <div className="text-muted-foreground">Admin/CISO</div>
-              </button>
-              <button onClick={() => fillDemoAccount('risk@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
-                <div className="font-medium">risk@cyberguard.com</div>
-                <div className="text-muted-foreground">Risk Manager</div>
-              </button>
-              <button onClick={() => fillDemoAccount('compliance@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
-                <div className="font-medium">compliance@cyberguard.com</div>
-                <div className="text-muted-foreground">Compliance Officer</div>
-              </button>
-              <button onClick={() => fillDemoAccount('auditor@cyberguard.com')} className="w-full text-left p-2 bg-muted hover:bg-muted/80 rounded border text-xs" disabled={isSubmitting || isRateLimited}>
-                <div className="font-medium">auditor@cyberguard.com</div>
-                <div className="text-muted-foreground">Auditor</div>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </div>;
 };

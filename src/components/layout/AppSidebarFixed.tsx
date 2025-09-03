@@ -315,23 +315,34 @@ export function AppSidebarFixed() {
 
   // CORRIGIDO: useEffect com dependências corretas
   useEffect(() => {
-    if (userIsPlatformAdmin && !rolesLoaded) {
+    let isMounted = true;
+    
+    if (userIsPlatformAdmin && !rolesLoaded && isMounted) {
       loadDatabaseRoles();
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [userIsPlatformAdmin, rolesLoaded, loadDatabaseRoles]);
 
   // CORRIGIDO: Listener para atualizações de roles com controle
   useEffect(() => {
+    let isMounted = true;
+    
     const handleRolesUpdated = () => {
-      console.log('🔄 [ROLES] Evento de atualização recebido, recarregando roles...');
-      if (userIsPlatformAdmin) {
+      if (isMounted && userIsPlatformAdmin) {
+        console.log('🔄 [ROLES] Evento de atualização recebido, recarregando roles...');
         setRolesLoaded(false); // NOVO: resetar flag para permitir novo carregamento
         loadDatabaseRoles();
       }
     };
 
     window.addEventListener('rolesUpdated', handleRolesUpdated);
-    return () => window.removeEventListener('rolesUpdated', handleRolesUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('rolesUpdated', handleRolesUpdated);
+    };
   }, [userIsPlatformAdmin, loadDatabaseRoles]);
 
   const convertDatabaseRolesToTestRoles = useCallback((dbRoles: DatabaseRole[]): TestRole[] => {
@@ -405,8 +416,8 @@ export function AppSidebarFixed() {
       return false;
     }
     
-    // MODO DE TESTE DE ROLE
-    if (isTestingRole && currentTestRole) {
+    // MODO DE TESTE DE ROLE (apenas quando explicitamente ativado)
+    if (isTestingRole && currentTestRole && currentTestRole.id !== '1') {
       // Permitir acesso ao dropdown de teste mesmo em modo de teste
       if (permissions.includes('platform_admin')) {
         return user.isPlatformAdmin;
@@ -415,16 +426,16 @@ export function AppSidebarFixed() {
       // Verificar permissões da role de teste
       const hasTestPermission = permissions.some(permission => {
         const hasSpecific = currentTestRole.permissions.includes(permission);
-        const hasSuperAccess = currentTestRole.permissions.includes('*');
+        const hasSuperAccess = currentTestRole.permissions.includes('*') || currentTestRole.permissions.includes('all');
         return hasSpecific || hasSuperAccess;
       });
       
       return hasTestPermission;
     }
     
-    // MODO NORMAL (sem teste de role)
+    // MODO NORMAL (role original do usuário)
     
-    // Platform Admin sempre tem acesso (exceto quando testando)
+    // Platform Admin sempre tem acesso total
     if (user.isPlatformAdmin) {
       return true;
     }
@@ -514,6 +525,9 @@ export function AppSidebarFixed() {
                           to={item.url} 
                           className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
                           title={collapsed ? item.title : ''}
+                          onClick={() => {
+                            console.log('🔗 [SIDEBAR] Navigating to:', item.url);
+                          }}
                         >
                           <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                           {!collapsed && (

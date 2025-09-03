@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
 // Critical imports (always loaded)
@@ -96,17 +96,23 @@ const PageLoader = () => (
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1, // Reduzido para startup mais rápido
-      retryDelay: 500, // Delay menor
-      staleTime: 2 * 60 * 1000, // 2 minutes (reduzido)
-      gcTime: 5 * 60 * 1000, // 5 minutes (reduzido)
+      retry: 0, // Sem retry para evitar travamentos
+      retryDelay: 1000,
+      staleTime: 10 * 60 * 1000, // 10 minutes (aumentado)
+      gcTime: 15 * 60 * 1000, // 15 minutes (aumentado)
       refetchOnWindowFocus: false,
-      refetchOnReconnect: false, // Desabilitado para startup
-      refetchOnMount: false // Desabilitado globalmente
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      refetchInterval: false,
+      refetchIntervalInBackground: false,
+      networkMode: 'online', // Apenas quando online
+      throwOnError: false // Não lançar erros que podem travar
     },
     mutations: {
-      retry: 0, // Sem retry para mutations no startup
-      retryDelay: 200
+      retry: 0,
+      retryDelay: 1000,
+      networkMode: 'online',
+      throwOnError: false
     }
   }
 });

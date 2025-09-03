@@ -95,7 +95,9 @@ export const AppHeader = () => {
                   <p className="text-sm font-medium truncate max-w-[120px]">
                     {getUserDisplayName(user?.name, user?.email)}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.jobTitle}</p>
+                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                    {user?.jobTitle || 'Cargo não informado'}
+                  </p>
                 </div>
               </Button>
             </DropdownMenuTrigger>

@@ -66,7 +66,7 @@ const mockIncidents = [
   }
 ];
 
-export const ComplianceDashboard = () => {
+const ComplianceDashboard = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -334,3 +334,6 @@ export const ComplianceDashboard = () => {
     </div>
   );
 };
+
+export default ComplianceDashboard;
+export { ComplianceDashboard };
