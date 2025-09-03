@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { OwaspVulnerabilityScanner } from './OwaspVulnerabilityScanner';
+import EthicsDiagnostic from './EthicsDiagnostic';
 import { 
   Settings, 
   AlertTriangle, 
@@ -914,7 +915,7 @@ export const SystemDiagnosticSection = () => {
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="overview" className="flex items-center gap-2">
           <Activity className="h-4 w-4" />
           Visão Geral
@@ -922,6 +923,10 @@ export const SystemDiagnosticSection = () => {
         <TabsTrigger value="vulnerabilities" className="flex items-center gap-2">
           <Shield className="h-4 w-4" />
           Vulnerabilidades
+        </TabsTrigger>
+        <TabsTrigger value="ethics" className="flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Módulo Ética
         </TabsTrigger>
       </TabsList>
 
@@ -1198,6 +1203,10 @@ export const SystemDiagnosticSection = () => {
 
       <TabsContent value="vulnerabilities">
         <OwaspVulnerabilityScanner />
+      </TabsContent>
+
+      <TabsContent value="ethics">
+        <EthicsDiagnostic />
       </TabsContent>
     </Tabs>
   );

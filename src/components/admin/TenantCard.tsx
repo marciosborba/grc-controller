@@ -46,7 +46,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   ChevronDown,
@@ -69,8 +68,10 @@ import {
   Shield,
   Search,
   RefreshCw,
-
-  Copy
+  Copy,
+  Calendar,
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -119,8 +120,6 @@ interface TenantUser {
   last_login_at?: string;
 }
 
-
-
 interface RiskMatrixConfig {
   type: '4x4' | '5x5';
   impact_labels: string[];
@@ -167,6 +166,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [activeSection, setActiveSection] = useState<'info' | 'company' | 'users' | 'crypto' | 'config'>('info');
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [isEditingRiskMatrix, setIsEditingRiskMatrix] = useState(false);
   const [isEditingUsers, setIsEditingUsers] = useState(false);
@@ -221,12 +221,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersLoaded, setUsersLoaded] = useState(false);
-  const [selectedTab, setSelectedTab] = useState("info");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [isAddingUser, setIsAddingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
-
-
 
   const getStatusBadge = () => {
     if (!tenant.is_active) {
@@ -634,14 +631,6 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
-
-
-
-
-
-
-
-
   // Filtrar usuários baseado na pesquisa
   const filteredUsers = tenantUsers.filter(user =>
     user.full_name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
@@ -664,42 +653,64 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   }, [isExpanded]);
 
   useEffect(() => {
-    if (selectedTab === 'users' && isExpanded && !usersLoaded) {
+    if (activeSection === 'users' && isExpanded && !usersLoaded) {
       loadTenantUsers();
     }
-  }, [selectedTab, isExpanded]);
-
-
+  }, [activeSection, isExpanded]);
 
   return (
     <Card className={cn(
-      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
+      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer relative",
       isExpanded 
         ? "shadow-lg border-primary/30" 
-        : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
+        : "hover:bg-muted/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-                <div>
-                  <CardTitle className="text-lg font-semibold">{getDisplayName()}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">{tenant.slug}</p>
+          <CardHeader className="pb-3 relative z-10 group/header">
+            {/* Hover Effect Gradient for Header */}
+            <div 
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+              style={{
+                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
+              }}
+            />
+            <div className="flex items-center justify-between gap-4 relative z-10">
+              {/* Left Section */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                {isExpanded ? 
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                }
+                
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-right">
-                  <div className={`flex items-center gap-1 ${getUsersUsageColor()}`}>
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium">{getCurrentUserCount()}</span>
-                    <span className="text-muted-foreground">/ {tenant.max_users}</span>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    {getPlanBadge()}
+                
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CardTitle className="text-sm font-semibold truncate">{getDisplayName()}</CardTitle>
                     {getStatusBadge()}
                   </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">{tenant.slug}</span>
+                    <span>•</span>
+                    <span className="truncate">{getPlanBadge()}</span>
+                    <span>•</span>
+                    <span className="truncate">{tenant.contact_email}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right Section */}
+              <div className="text-right flex-shrink-0">
+                <div className={`flex items-center gap-1 ${getUsersUsageColor()}`}>
+                  <Users className="h-4 w-4" />
+                  <span className="font-medium">{getCurrentUserCount()}</span>
+                  <span className="text-muted-foreground">/ {tenant.max_users}</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Criado em {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
                 </div>
               </div>
             </div>
@@ -707,80 +718,138 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="pt-0">
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-              <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 w-full mb-6 h-auto">
-                <TabsTrigger value="info">
-                  <Activity className="h-4 w-4 mr-2" />
+          <CardContent className="pt-0 relative z-10">
+            <div className="space-y-6">
+              {/* Navigation Tabs */}
+              <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+                <button
+                  onClick={() => setActiveSection('info')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'info' 
+                      ? 'bg-background shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <Activity className="h-4 w-4" />
                   Informações
-                </TabsTrigger>
-                <TabsTrigger value="company">
-                  <Building2 className="h-4 w-4 mr-2" />
+                </button>
+                
+                <button
+                  onClick={() => setActiveSection('company')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'company' 
+                      ? 'bg-background shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <Building2 className="h-4 w-4" />
                   Empresa
-                </TabsTrigger>
-                <TabsTrigger value="users">
-                  <Users className="h-4 w-4 mr-2" />
-                  Usuários ({tenantUsers.length})
-                </TabsTrigger>
-                <TabsTrigger value="crypto">
-                  <Shield className="h-4 w-4 mr-2" />
+                </button>
+                
+                <button
+                  onClick={() => setActiveSection('users')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'users' 
+                      ? 'bg-background shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <Users className="h-4 w-4" />
+                  Usuários
+                  {tenantUsers.length > 0 && (
+                    <Badge variant="outline" className="ml-1 h-5 text-xs">
+                      {tenantUsers.length}
+                    </Badge>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => setActiveSection('crypto')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'crypto' 
+                      ? 'bg-background shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <Shield className="h-4 w-4" />
                   Criptografia
-                </TabsTrigger>
-                <TabsTrigger value="config">
-                  <Settings className="h-4 w-4 mr-2" />
+                </button>
+                
+                <button
+                  onClick={() => setActiveSection('config')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                    activeSection === 'config' 
+                      ? 'bg-background shadow-sm text-primary' 
+                      : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  <Settings className="h-4 w-4" />
                   Configurações
-                </TabsTrigger>
-              </TabsList>
+                </button>
+              </div>
 
-              {/* Guia Informações Básicas */}
-              <TabsContent value="info" className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">INFORMAÇÕES BÁSICAS</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>Contato: {tenant.contact_email}</span>
-                    </div>
-                    {tenant.contact_phone && (
+              {/* 1. INFORMAÇÕES BÁSICAS */}
+              {activeSection === 'info' && (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-medium text-muted-foreground mb-4">INFORMAÇÕES BÁSICAS</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>Telefone: {tenant.contact_phone}</span>
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>Contato: {tenant.contact_email}</span>
                       </div>
-                    )}
-                    {tenant.billing_email && (
+                      {tenant.contact_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>Telefone: {tenant.contact_phone}</span>
+                        </div>
+                      )}
+                      {tenant.billing_email && (
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          <span>Faturamento: {tenant.billing_email}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                        <span>Faturamento: {tenant.billing_email}</span>
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>Criado em: {new Date(tenant.created_at).toLocaleDateString('pt-BR')}</span>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-muted-foreground" />
-                      <span>Criado em: {new Date(tenant.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
-                </div>
 
-                <Separator />
+                  <Separator />
 
-                {/* Estatísticas de Usuários */}
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">ESTATÍSTICAS DE USUÁRIOS</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Usuários Ativos:</span>
-                      <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
-                        {getCurrentUserCount()}
+                  {/* Estatísticas de Usuários */}
+                  <div>
+                    <h4 className="text-lg font-medium text-muted-foreground mb-4">ESTATÍSTICAS DE USUÁRIOS</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 border rounded-lg">
+                        <Users className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+                        <div className={`text-2xl font-bold ${getUsersUsageColor()}`}>
+                          {getCurrentUserCount()}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Usuários Ativos</div>
+                      </div>
+                      
+                      <div className="text-center p-4 border rounded-lg">
+                        <TrendingUp className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                        <div className="text-2xl font-bold text-gray-600">
+                          {tenant.max_users}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Limite Máximo</div>
+                      </div>
+                      
+                      <div className="text-center p-4 border rounded-lg">
+                        <BarChart3 className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+                        <div className="text-2xl font-bold">
+                          {Math.round((getCurrentUserCount() / tenant.max_users) * 100)}%
+                        </div>
+                        <div className="text-sm text-muted-foreground">Taxa de Utilização</div>
                       </div>
                     </div>
-                    <div>
-                      <span className="font-medium">Limite Máximo:</span>
-                      <div className="text-lg font-bold text-gray-600">
-                        {tenant.max_users}
-                      </div>
-                    </div>
-                    <div className="md:col-span-2">
-                      <span className="font-medium">Taxa de Utilização:</span>
-                      <div className="flex items-center gap-3 mt-1">
+
+                    <div className="mt-4">
+                      <div className="flex items-center gap-3">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full transition-all duration-300 ${
@@ -800,331 +869,351 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         </span>
                       </div>
                     </div>
+
                     {getCurrentUserCount() >= tenant.max_users * 0.9 && (
-                      <div className="md:col-span-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <div className="flex items-center gap-2 text-yellow-800">
                           <Activity className="h-4 w-4" />
                           <span className="font-medium">Atenção:</span>
                         </div>
                         <p className="text-sm text-yellow-700 mt-1">
-                          Este tenant está próximo do limite de usuários. Consider aumentar o limite para evitar bloqueios.
+                          Este tenant está próximo do limite de usuários. Considere aumentar o limite para evitar bloqueios.
                         </p>
                       </div>
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              )}
 
-              {/* Guia Dados da Empresa */}
-              <TabsContent value="company" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    DADOS CADASTRAIS DA EMPRESA
-                  </h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditingCompany(true)}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Editar
-                  </Button>
-                </div>
-
-                {companyData.corporate_name || companyData.tax_id || companyData.address ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    {companyData.corporate_name && (
-                      <div>
-                        <span className="font-medium">Razão Social:</span> {companyData.corporate_name}
-                      </div>
-                    )}
-                    {companyData.trading_name && companyData.trading_name !== companyData.corporate_name && (
-                      <div>
-                        <span className="font-medium">Nome Fantasia:</span> {companyData.trading_name}
-                      </div>
-                    )}
-                    {companyData.tax_id && (
-                      <div>
-                        <span className="font-medium">CNPJ:</span> {companyData.tax_id}
-                      </div>
-                    )}
-                    {companyData.industry && (
-                      <div>
-                        <span className="font-medium">Setor:</span> {companyData.industry}
-                      </div>
-                    )}
-                    {companyData.size && (
-                      <div>
-                        <span className="font-medium">Porte:</span> {companyData.size}
-                      </div>
-                    )}
-                    {companyData.address && (
-                      <div className="md:col-span-2">
-                        <span className="font-medium">Endereço:</span> {companyData.address}
-                        {companyData.city && `, ${companyData.city}`}
-                        {companyData.state && `, ${companyData.state}`}
-                        {companyData.zip_code && ` - ${companyData.zip_code}`}
-                      </div>
-                    )}
-                    {companyData.description && (
-                      <div className="md:col-span-2">
-                        <span className="font-medium">Descrição:</span> {companyData.description}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">
-                    Nenhum dado cadastral adicionado. Clique em "Editar" para configurar.
-                  </p>
-                )}
-              </TabsContent>
-
-              {/* Guia Usuários */}
-              <TabsContent value="users" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    USUÁRIOS DA TENANT ({tenantUsers.length}/{tenant.max_users})
-                  </h4>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={loadTenantUsers}
-                      disabled={loadingUsers}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loadingUsers ? 'animate-spin' : ''}`} />
-                      Atualizar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsAddingUser(true)}
-                      disabled={tenantUsers.length >= tenant.max_users}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Adicionar Usuário
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Barra de Pesquisa */}
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Pesquisar por nome, email ou cargo..."
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Lista de Usuários */}
-                {loadingUsers ? (
-                  <div className="text-center py-8">
-                    <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Carregando usuários...</p>
-                  </div>
-                ) : filteredUsers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="font-medium text-muted-foreground mb-2">
-                      {userSearchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário vinculado'}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {userSearchTerm 
-                        ? 'Tente ajustar os termos da pesquisa'
-                        : 'Clique em "Adicionar Usuário" para vincular usuários a esta tenant'
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <div className="border rounded-lg">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Cargo</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Adicionado</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredUsers.map((user) => (
-                          <TableRow key={user.user_id}>
-                            <TableCell className="font-medium">
-                              {user.full_name || 'Nome não informado'}
-                            </TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {user.job_title || '-'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                                {user.is_active ? 'Ativo' : 'Inativo'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeUserFromTenant(user.user_id, user.full_name)}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                disabled={isSaving}
-                              >
-                                <UserX className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Guia Criptografia */}
-              <TabsContent value="crypto" className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Gestão de Chaves Criptográficas</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Tenant: {getDisplayName()} ({tenant.id})
-                  </p>
-                  <TenantCryptoManagement 
-                    tenantId={tenant.id} 
-                    tenantName={getDisplayName()} 
-                  />
-                </div>
-              </TabsContent>
-
-              {/* Guia Configurações */}
-              <TabsContent value="config" className="space-y-6">
-                {/* Configuração de Usuários */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      LIMITES DE USUÁRIOS
+              {/* 2. DADOS DA EMPRESA */}
+              {activeSection === 'company' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-medium text-muted-foreground flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      DADOS CADASTRAIS DA EMPRESA
                     </h4>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsEditingUsers(true)}
+                      onClick={() => setIsEditingCompany(true)}
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Editar
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">Limite Máximo:</span>
-                      <div className="text-lg font-bold text-gray-600">
-                        {tenant.max_users}
-                      </div>
+                  {companyData.corporate_name || companyData.tax_id || companyData.address ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {companyData.corporate_name && (
+                        <div>
+                          <span className="font-medium">Razão Social:</span> {companyData.corporate_name}
+                        </div>
+                      )}
+                      {companyData.trading_name && companyData.trading_name !== companyData.corporate_name && (
+                        <div>
+                          <span className="font-medium">Nome Fantasia:</span> {companyData.trading_name}
+                        </div>
+                      )}
+                      {companyData.tax_id && (
+                        <div>
+                          <span className="font-medium">CNPJ:</span> {companyData.tax_id}
+                        </div>
+                      )}
+                      {companyData.industry && (
+                        <div>
+                          <span className="font-medium">Setor:</span> {companyData.industry}
+                        </div>
+                      )}
+                      {companyData.size && (
+                        <div>
+                          <span className="font-medium">Porte:</span> {companyData.size}
+                        </div>
+                      )}
+                      {companyData.address && (
+                        <div className="md:col-span-2">
+                          <span className="font-medium">Endereço:</span> {companyData.address}
+                          {companyData.city && `, ${companyData.city}`}
+                          {companyData.state && `, ${companyData.state}`}
+                          {companyData.zip_code && ` - ${companyData.zip_code}`}
+                        </div>
+                      )}
+                      {companyData.description && (
+                        <div className="md:col-span-2">
+                          <span className="font-medium">Descrição:</span> {companyData.description}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <span className="font-medium">Usuários Ativos:</span>
-                      <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
-                        {getCurrentUserCount()}
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Nenhum dado cadastral adicionado. Clique em "Editar" para configurar.
+                    </p>
+                  )}
                 </div>
+              )}
 
-                <Separator />
-
-                {/* Configuração da Matriz de Riscos */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Grid3x3 className="h-4 w-4" />
-                      MATRIZ DE RISCOS
+              {/* 3. USUÁRIOS */}
+              {activeSection === 'users' && (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-medium text-muted-foreground flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      USUÁRIOS DA TENANT ({tenantUsers.length}/{tenant.max_users})
                     </h4>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsEditingRiskMatrix(true)}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Configurar
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadTenantUsers}
+                        disabled={loadingUsers}
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loadingUsers ? 'animate-spin' : ''}`} />
+                        Atualizar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddingUser(true)}
+                        disabled={tenantUsers.length >= tenant.max_users}
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Adicionar Usuário
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="text-sm">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium">Tipo:</span>
-                      <Badge variant="outline">{riskMatrix.type}</Badge>
+                  {/* Barra de Pesquisa */}
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Pesquisar por nome, email ou cargo..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <span className="font-medium">Níveis de Impacto:</span>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {riskMatrix.impact_labels.join(' - ')}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-medium">Níveis de Probabilidade:</span>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {riskMatrix.likelihood_labels?.join(' - ') || 'Não configurado'}
-                        </div>
-                      </div>
+                  </div>
+
+                  {/* Lista de Usuários */}
+                  {loadingUsers ? (
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Carregando usuários...</p>
                     </div>
+                  ) : filteredUsers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="font-medium text-muted-foreground mb-2">
+                        {userSearchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário vinculado'}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {userSearchTerm 
+                          ? 'Tente ajustar os termos da pesquisa'
+                          : 'Clique em "Adicionar Usuário" para vincular usuários a esta tenant'
+                        }
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Cargo</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Adicionado</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredUsers.map((user) => (
+                            <TableRow key={user.user_id}>
+                              <TableCell className="font-medium">
+                                {user.full_name || 'Nome não informado'}
+                              </TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {user.job_title || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                                  {user.is_active ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeUserFromTenant(user.user_id, user.full_name)}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  disabled={isSaving}
+                                >
+                                  <UserX className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 4. CRIPTOGRAFIA */}
+              {activeSection === 'crypto' && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">Gestão de Chaves Criptográficas</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Tenant: {getDisplayName()} ({tenant.id})
+                    </p>
+                    <TenantCryptoManagement 
+                      tenantId={tenant.id} 
+                      tenantName={getDisplayName()} 
+                    />
                   </div>
                 </div>
+              )}
 
-                <Separator />
+              {/* 5. CONFIGURAÇÕES */}
+              {activeSection === 'config' && (
+                <div className="space-y-6">
+                  {/* Configuração de Usuários */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-medium text-muted-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        LIMITES DE USUÁRIOS
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingUsers(true)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </Button>
+                    </div>
 
-                {/* Ações Perigosas */}
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-3">AÇÕES PERIGOSAS</h4>
-                  <div className="flex items-center justify-start">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={getCurrentUserCount() > 0 || isDeleting}
-                          className="text-destructive hover:text-destructive border-destructive/20"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir Tenant
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja excluir o tenant "{tenant.name}"? 
-                            Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => onDelete(tenant.id)}
-                            className="bg-destructive hover:bg-destructive/90"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Limite Máximo:</span>
+                        <div className="text-lg font-bold text-gray-600">
+                          {tenant.max_users}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium">Usuários Ativos:</span>
+                        <div className={`text-lg font-bold ${getUsersUsageColor()}`}>
+                          {getCurrentUserCount()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Configuração da Matriz de Riscos */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-lg font-medium text-muted-foreground flex items-center gap-2">
+                        <Grid3x3 className="h-4 w-4" />
+                        MATRIZ DE RISCOS
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingRiskMatrix(true)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configurar
+                      </Button>
+                    </div>
+
+                    <div className="text-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-medium">Tipo:</span>
+                        <Badge variant="outline">{riskMatrix.type}</Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="font-medium">Níveis de Impacto:</span>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {riskMatrix.impact_labels.join(' - ')}
+                          </div>
+                        </div>
+                        <div>
+                          <span className="font-medium">Níveis de Probabilidade:</span>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {riskMatrix.likelihood_labels?.join(' - ') || 'Não configurado'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Ações Perigosas */}
+                  <div>
+                    <h4 className="text-lg font-medium text-muted-foreground mb-3">AÇÕES PERIGOSAS</h4>
+                    <div className="flex items-center justify-start">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={getCurrentUserCount() > 0 || isDeleting}
+                            className="text-destructive hover:text-destructive border-destructive/20"
                           >
-                            Excluir
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir Tenant
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir o tenant "{tenant.name}"? 
+                              Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDelete(tenant.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+
+              {/* Actions */}
+              <Separator />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicar Configurações
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
@@ -1591,8 +1680,6 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
 
       {/* Dialog para Configurar Usuários */}
       <Dialog open={isEditingUsers} onOpenChange={setIsEditingUsers}>

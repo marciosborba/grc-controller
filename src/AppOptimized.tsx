@@ -36,6 +36,7 @@ const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyMana
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 const ReportsPage = lazy(() => import("@/components/reports/ReportsPageOptimized"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
+const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
 
 // NÍVEL 4: Sub-módulos específicos (lazy loading máximo)
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
@@ -46,8 +47,10 @@ const DPIAPage = lazy(() => import("@/components/privacy/DPIAPage").then(module 
 
 // NÍVEL 5: Admin e debug (carregamento sob demanda extremo)
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
-const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
 const UserProfilePage = lazy(() => import("@/components/profile/UserProfilePage").then(module => ({ default: module.UserProfilePage })));
+
+// Import direto para SystemDiagnosticPage para evitar problemas de carregamento dinâmico
+import SystemDiagnosticPage from "@/components/admin/SystemDiagnosticPage";
 
 // Contextos opcionais removidos - carregamos diretamente
 
@@ -209,6 +212,11 @@ const App = () => (
                       <IncidentManagementPage />
                     </Suspense>
                   } />
+                  <Route path="ethics" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <EthicsChannelPage />
+                    </Suspense>
+                  } />
 
                   {/* NÍVEL 4: Sub-módulos específicos */}
                   <Route path="risks/matrix" element={
@@ -247,9 +255,7 @@ const App = () => (
                   } />
                   <Route path="admin/system-diagnostic" element={
                     <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <SystemDiagnosticPage />
-                      </Suspense>
+                      <SystemDiagnosticPage />
                     </PlatformAdminRoute>
                   } />
                   <Route path="profile" element={
