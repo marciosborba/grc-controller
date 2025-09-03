@@ -212,7 +212,7 @@ export class IntelligentMonitoring {
   private writeLog(logEntry: any) {
     if (this.isDevelopment) {
       // Em desenvolvimento, apenas console
-      console.log('🔒 Security Event:', logEntry);
+      // Security Event logged
     } else {
       // Em produção, enviar para sistema de logs
       this.sendToLogSystem(logEntry);
@@ -221,7 +221,7 @@ export class IntelligentMonitoring {
 
   private handleAlert(event: any) {
     if (this.isDevelopment) {
-      console.warn('🚨 Security Alert (DEV):', event);
+      // Security Alert (DEV)
     } else {
       this.sendAlert(event);
     }
@@ -242,17 +242,17 @@ export class IntelligentMonitoring {
 
   private performFullPatternAnalysis() {
     // Implementação completa para produção
-    console.log('Performing full pattern analysis...');
+    // Performing full pattern analysis
   }
 
   private sendToLogSystem(logEntry: any) {
     // Implementar envio para sistema de logs (ELK, Splunk, etc.)
-    console.log('Sending to log system:', logEntry);
+    // Sending to log system
   }
 
   private sendAlert(event: any) {
     // Implementar envio de alertas (email, Slack, PagerDuty, etc.)
-    console.log('Sending alert:', event);
+    // Sending alert
   }
 
   // ========================================================================
@@ -286,7 +286,7 @@ export class IntelligentMonitoring {
     if (this.isDevelopment) {
       this.config.logLevel = enabled ? 'debug' : 'warn';
       this.config.enableRealTimeAlerts = enabled;
-      console.log(`🔧 Debug mode ${enabled ? 'enabled' : 'disabled'}`);
+      // Debug mode ${enabled ? 'enabled' : 'disabled'}
     }
   }
 }

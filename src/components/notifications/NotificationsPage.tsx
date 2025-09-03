@@ -273,16 +273,13 @@ export const NotificationsPage: React.FC = () => {
   const filteredNotifications = getFilteredNotifications();
 
   return (
-    <div className="h-full flex flex-col space-y-6 p-4 sm:p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
-            <Bell className="h-6 w-6 sm:h-8 sm:w-8" />
-            Notificações
-          </h1>
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Notificações</h1>
           <div className="flex items-center gap-3 mt-2">
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               Gerencie notificações e workflow dos processos
             </p>
             {/* Indicador de conexão em tempo real */}
@@ -355,53 +352,49 @@ export const NotificationsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Bell className="h-8 w-8 text-muted-foreground" />
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Bell className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">notificações</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Não Lidas</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.unread}</p>
-              </div>
-              <EyeOff className="h-8 w-8 text-blue-600" />
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Não Lidas</CardTitle>
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.unread}</div>
+            <p className="text-xs text-muted-foreground">pendentes</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Críticas</p>
-                <p className="text-2xl font-bold text-red-600">{stats.byPriority.critical || 0}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Críticas</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.byPriority.critical || 0}</div>
+            <p className="text-xs text-muted-foreground">alta prioridade</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Ação Requerida</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.actionRequired}</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-600" />
-            </div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ação Requerida</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.actionRequired}</div>
+            <p className="text-xs text-muted-foreground">requerem ação</p>
           </CardContent>
         </Card>
       </div>
@@ -409,10 +402,16 @@ export const NotificationsPage: React.FC = () => {
       {/* Filtros */}
       {showFilters && (
         <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Status</Label>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
                 <Select
                   value={currentFilters.status?.[0] || ''}
                   onValueChange={(value) => 
@@ -435,8 +434,8 @@ export const NotificationsPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Prioridade</Label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Prioridade</label>
                 <Select
                   value={currentFilters.priority?.[0] || ''}
                   onValueChange={(value) =>
@@ -459,8 +458,8 @@ export const NotificationsPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Módulo</Label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Módulo</label>
                 <Select
                   value={currentFilters.module?.[0] || ''}
                   onValueChange={(value) =>
@@ -484,8 +483,8 @@ export const NotificationsPage: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-sm font-medium">Buscar</Label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Pesquisar</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -540,10 +539,8 @@ export const NotificationsPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Conteúdo principal */}
-      <div className="flex-1">
-        {/* Lista de notificações */}
-        <div className="w-full">
+      {/* Content */}
+      <div className="space-y-4">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full justify-start">
               <TabsTrigger value="all" className="flex items-center gap-2">
@@ -617,7 +614,6 @@ export const NotificationsPage: React.FC = () => {
               )}
             </TabsContent>
           </Tabs>
-        </div>
       </div>
     </div>
   );

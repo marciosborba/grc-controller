@@ -21,9 +21,9 @@ const VendorsPage: React.FC = () => {
   }, [user?.tenantId, user?.tenant_id, fetchVendors]);
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header - Responsivo */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Gestão de Riscos de Fornecedores</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">

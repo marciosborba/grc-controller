@@ -303,7 +303,7 @@ export const loadUserColorsOnStartup = (): boolean => {
     const success = applyToDOMDirectly(data.cssContent, data.palette);
     
     if (success) {
-      console.log('🎨 User colors loaded and applied from localStorage');
+      // User colors loaded and applied from localStorage
       return true;
     }
     
@@ -330,7 +330,7 @@ export const clearUserColors = (): void => {
     document.documentElement.style.removeProperty(prop);
   });
 
-  console.log('🧹 User colors cleared, reverted to defaults');
+  // User colors cleared, reverted to defaults
 };
 
 // Check if user colors are currently applied

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Zap } from 'lucide-react';
 
 const DashboardPageUltraMinimal = () => {
-  console.log('🚀 DashboardPageUltraMinimal carregado em:', new Date().toISOString());
+  // DashboardPageUltraMinimal carregado
 
   return (
     <div className="space-y-6">

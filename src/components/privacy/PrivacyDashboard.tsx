@@ -275,9 +275,9 @@ export function PrivacyDashboard() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header - Responsivo */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Privacidade e LGPD</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
@@ -298,9 +298,9 @@ export function PrivacyDashboard() {
       )}
 
       {/* Key Metrics - Mobile-first responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
         <Card>
-          <CardContent className="p-3 sm:p-4 h-full">
+          <CardContent className="p-4 h-full">
             <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
               <div className="flex justify-center mb-1 sm:mb-2">
                 <Database className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
@@ -317,7 +317,7 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-3 sm:p-4 h-full">
+          <CardContent className="p-4 h-full">
             <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
               <div className="flex justify-center mb-1 sm:mb-2">
                 <Users className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
@@ -334,7 +334,7 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-3 sm:p-4 h-full">
+          <CardContent className="p-4 h-full">
             <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
               <div className="flex justify-center mb-1 sm:mb-2">
                 <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
@@ -353,7 +353,7 @@ export function PrivacyDashboard() {
         </Card>
 
         <Card>
-          <CardContent className="p-3 sm:p-4 h-full">
+          <CardContent className="p-4 h-full">
             <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
               <div className="flex justify-center mb-1 sm:mb-2">
                 <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
@@ -372,11 +372,11 @@ export function PrivacyDashboard() {
 
       {/* Quick Actions Grid - Responsivo */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Funcionalidades</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Funcionalidades</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {quickActions.map((action, index) => (
             <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden" onClick={action.action}>
-              <CardHeader className="p-3 sm:p-4 md:p-6">
+              <CardHeader className="p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div className={`p-1.5 sm:p-2 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
                     <action.icon className={`w-4 h-4 sm:w-5 sm:h-5 text-${action.color}-600 dark:text-${action.color}-400`} />
@@ -402,18 +402,18 @@ export function PrivacyDashboard() {
       </div>
 
       {/* Compliance Overview - Responsivo */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
               Score de Compliance LGPD
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
+            <CardDescription>
               Avaliação automática do nível de conformidade
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6">
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-xs sm:text-sm">
                 <span>Compliance Geral</span>
@@ -464,11 +464,11 @@ export function PrivacyDashboard() {
             <div className="space-y-3">
               {/* High Priority: Overdue Data Subject Requests */}
               {metrics?.data_subject_requests?.overdue_requests > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/30">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-red-800">Solicitações em Atraso</p>
-                    <p className="text-sm text-red-600">
+                    <p className="font-medium text-red-800 dark:text-red-200">Solicitações em Atraso</p>
+                    <p className="text-sm text-red-600 dark:text-red-300">
                       {metrics.data_subject_requests.overdue_requests} solicitações ultrapassaram 15 dias
                     </p>
                     <Button size="sm" className="mt-2" onClick={() => navigate('/privacy/requests')}>
@@ -480,11 +480,11 @@ export function PrivacyDashboard() {
 
               {/* High Priority: ANPD Notifications Required */}
               {metrics?.privacy_incidents?.anpd_notifications_required > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border border-red-200">
-                  <Zap className="w-5 h-5 text-red-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800/30">
+                  <Zap className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-red-800">Notificação ANPD Pendente</p>
-                    <p className="text-sm text-red-600">
+                    <p className="font-medium text-red-800 dark:text-red-200">Notificação ANPD Pendente</p>
+                    <p className="text-sm text-red-600 dark:text-red-300">
                       {metrics.privacy_incidents.anpd_notifications_required} incidentes requerem notificação à ANPD
                     </p>
                     <Button size="sm" className="mt-2" onClick={() => navigate('/privacy/incidents')}>
@@ -496,11 +496,11 @@ export function PrivacyDashboard() {
 
               {/* High Priority: Expiring Legal Bases */}
               {metrics?.legal_bases?.expiring_soon > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <Clock className="w-5 h-5 text-orange-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800/30">
+                  <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-orange-800">Bases Legais Expirando</p>
-                    <p className="text-sm text-orange-600">
+                    <p className="font-medium text-orange-800 dark:text-orange-200">Bases Legais Expirando</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-300">
                       {metrics.legal_bases.expiring_soon} bases legais expiram em breve
                     </p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/legal-bases')}>
@@ -512,11 +512,11 @@ export function PrivacyDashboard() {
 
               {/* High Priority: Pending DPIAs */}
               {metrics?.dpia_assessments?.pending_dpias > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <Shield className="w-5 h-5 text-orange-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800/30">
+                  <Shield className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-orange-800">DPIA/RIPD Pendentes</p>
-                    <p className="text-sm text-orange-600">
+                    <p className="font-medium text-orange-800 dark:text-orange-200">DPIA/RIPD Pendentes</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-300">
                       {metrics.dpia_assessments.pending_dpias} avaliações de impacto aguardam conclusão
                     </p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/dpia')}>
@@ -528,11 +528,11 @@ export function PrivacyDashboard() {
 
               {/* Medium Priority: Data Inventory Review */}
               {metrics?.data_inventory?.needs_review > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <Database className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800/30">
+                  <Database className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-yellow-800">Revisão de Inventário</p>
-                    <p className="text-sm text-yellow-600">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">Revisão de Inventário</p>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-300">
                       {metrics.data_inventory.needs_review} itens do inventário precisam de revisão
                     </p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/inventory')}>
@@ -544,11 +544,11 @@ export function PrivacyDashboard() {
 
               {/* Medium Priority: Expiring Consents */}
               {metrics?.consents?.expiring_soon > 0 && (
-                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <Users className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800/30">
+                  <Users className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-yellow-800">Consentimentos Expirando</p>
-                    <p className="text-sm text-yellow-600">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">Consentimentos Expirando</p>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-300">
                       {metrics.consents.expiring_soon} consentimentos expiram em breve
                     </p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/consents')}>
@@ -560,11 +560,11 @@ export function PrivacyDashboard() {
 
               {/* Medium Priority: Open Privacy Incidents */}
               {metrics?.privacy_incidents?.open_incidents > 0 && !metrics?.privacy_incidents?.anpd_notifications_required && (
-                <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                <div className="flex items-start space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800/30">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-yellow-800">Incidentes em Investigação</p>
-                    <p className="text-sm text-yellow-600">
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">Incidentes em Investigação</p>
+                    <p className="text-sm text-yellow-600 dark:text-yellow-300">
                       {metrics.privacy_incidents.open_incidents} incidentes aguardam resolução
                     </p>
                     <Button size="sm" variant="outline" className="mt-2" onClick={() => navigate('/privacy/incidents')}>

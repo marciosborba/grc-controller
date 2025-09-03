@@ -342,23 +342,14 @@ export const RiskManagementCenterImproved: React.FC = () => {
   // O loading será individual por componente
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header Executivo Melhorado */}
-      <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-3 mb-2">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold truncate">
-                Gestão de Riscos - Centro Integrado
-              </h1>
-              <p className="text-muted-foreground text-sm lg:text-base">
-                Plataforma unificada com Alex Risk para gestão completa de riscos corporativos
-              </p>
-            </div>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos - Centro Integrado</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Plataforma unificada com Alex Risk para gestão completa de riscos corporativos
+          </p>
           
           {/* Status do Sistema Melhorado */}
           <div className="flex items-center space-x-4 text-sm">

@@ -100,7 +100,7 @@ export const AIManagementPage: React.FC = () => {
         console.warn('Erro ao carregar prompts:', promptsError);
         // Não falhar se prompts não existirem
       } else {
-        console.log('Prompts carregados:', promptsData?.length || 0);
+        // Prompts carregados
         setPrompts(promptsData || []);
       }
 
@@ -115,7 +115,7 @@ export const AIManagementPage: React.FC = () => {
         console.warn('Erro ao carregar workflows:', workflowsError);
         // Não falhar se workflows não existirem
       } else {
-        console.log('Workflows carregados:', workflowsData?.length || 0);
+        // Workflows carregados
         setWorkflows(workflowsData || []);
       }
 
@@ -132,7 +132,7 @@ export const AIManagementPage: React.FC = () => {
         console.warn('Erro ao carregar logs de uso:', usageError);
         // Não falhar se logs não existirem
       } else {
-        console.log('Usage logs carregados:', usageData?.length || 0);
+        // Usage logs carregados
         setUsageLogs(usageData || []);
       }
 
@@ -168,7 +168,7 @@ export const AIManagementPage: React.FC = () => {
   const totalCost = totalCostFromLogs; // Usar logs como fonte da verdade
   
   // Debug logs
-  console.log('Estatísticas calculadas:', {
+  // Estatísticas calculadas
     providers: providers.length,
     activeProviders: activeProviders.length,
     prompts: prompts.length,

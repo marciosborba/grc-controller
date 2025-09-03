@@ -457,14 +457,14 @@ export class RiskLetterPDFGenerator {
   ): Promise<number> {
     // Verificar se temos dados suficientes para gerar a matriz
     if (!letter.probability_score || !letter.impact_score) {
-      console.log('Dados insuficientes para gerar matriz de risco');
+      // Dados insuficientes para gerar matriz de risco
       return yPosition;
     }
 
     try {
       // Obter configuração da matriz da tenant
       const matrixConfig = await getTenantMatrixConfig(letter.tenant_id);
-      console.log('Configuração da matriz obtida:', matrixConfig);
+      // Configuração da matriz obtida
 
       // Gerar dados da matriz
       const matrixData = generateMatrixData(matrixConfig.type);
@@ -626,12 +626,12 @@ export class RiskLetterPDFGenerator {
     riskData?: RiskData
   ): Promise<void> {
     try {
-      console.log('=== GERADOR DE PDF INICIADO ===');
-      console.log('Iniciando geração do PDF...');
-      console.log('Dados da empresa recebidos:', companyInfo);
-      console.log('Dados da carta recebidos:', letter);
-      console.log('jsPDF disponível:', typeof jsPDF);
-      console.log('Instância do documento:', this.doc);
+      // Gerador de PDF iniciado
+      // Iniciando geração do PDF
+      // Dados da empresa recebidos
+      // Dados da carta recebidos
+      // jsPDF disponível
+      // Instância do documento criada
       
       let currentY = this.addHeader(companyInfo);
       
@@ -762,11 +762,11 @@ export class RiskLetterPDFGenerator {
         this.addFooter();
       }
 
-      console.log('PDF estruturado, iniciando download...');
+      // PDF estruturado, iniciando download
       
       const fileName = `carta-aceitacao-risco-${letter.letter_number}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-      console.log('Nome do arquivo:', fileName);
-      console.log('Chamando this.doc.save...');
+      // Nome do arquivo definido
+      // Chamando save do documento
       
       // Verificar se o navegador permite downloads
       if (typeof document === 'undefined') {
@@ -781,9 +781,9 @@ export class RiskLetterPDFGenerator {
         throw new Error(`Erro ao salvar PDF: ${saveError instanceof Error ? saveError.message : 'Erro desconhecido no save'}`);
       }
       
-      console.log('=== PDF SALVO COM SUCESSO ===');
-      console.log('Arquivo:', fileName);
-      console.log('Processo de geração concluído');
+      // PDF salvo com sucesso
+      // Arquivo salvo
+      // Processo de geração concluído
       
     } catch (error) {
       console.error('Erro na geração do PDF:', error);

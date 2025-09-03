@@ -13,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const ThemeContextInner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme, setTheme, systemTheme, resolvedTheme } = useNextTheme();
 
-  console.log('🎨 ThemeContext: Sistema estático simples - apenas dark/light toggle');
+  // ThemeContext: Sistema estático simples - apenas dark/light toggle
 
   const contextValue = {
     theme,

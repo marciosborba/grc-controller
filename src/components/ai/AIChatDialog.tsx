@@ -97,7 +97,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
     setInputValue('');
     setIsLoading(true);
 
-    console.log('Enviando mensagem para IA (Dialog):', { prompt: messageToSend, type, context });
+    // Enviando mensagem para IA
 
     try {
       const { data, error } = await supabase.functions.invoke('ai-chat-glm', {
@@ -108,8 +108,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
         }
       });
 
-      console.log('Resposta da IA (Dialog) - data:', data);
-      console.log('Resposta da IA (Dialog) - error:', error);
+      // Resposta da IA recebida
 
       if (error) {
         console.error('Erro específico da Edge Function:', error);

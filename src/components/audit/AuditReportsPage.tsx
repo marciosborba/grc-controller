@@ -377,7 +377,7 @@ const AuditReportsPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 gap-4 sm:gap-6">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Auditoria</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
@@ -437,7 +437,7 @@ const AuditReportsPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -503,7 +503,7 @@ const AuditReportsPage = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
               <label className="text-sm font-medium">Pesquisar</label>
               <div className="relative">

@@ -17,7 +17,7 @@ const loadStoredColors = () => {
   try {
     const applied = loadUserColorsOnStartup();
     if (applied) {
-      console.log('🎨 User colors loaded automatically on startup');
+      // User colors loaded automatically on startup
     }
   } catch (error) {
     console.error('Error loading user colors:', error);

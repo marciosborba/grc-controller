@@ -1,7 +1,7 @@
 import React from 'react';
 
 const DashboardPageIsolated = () => {
-  console.log('🚀 DashboardPageIsolated carregado em:', new Date().toISOString());
+  // DashboardPageIsolated carregado
 
   return (
     <div className="p-6 space-y-6">

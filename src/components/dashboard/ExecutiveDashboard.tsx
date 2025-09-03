@@ -82,8 +82,8 @@ export const ExecutiveDashboard = () => {
       try {
         // Debug do usuário e autenticação
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('👤 Usuário autenticado:', user);
-        console.log('🏢 Tenant do contexto:', user?.user_metadata?.tenant_id);
+        // Usuário autenticado
+        // Tenant do contexto verificado
         
         if (authError) {
           console.error('❌ Erro de autenticação:', authError);
@@ -98,7 +98,7 @@ export const ExecutiveDashboard = () => {
           ethicsResult
         ] = await Promise.all([
           supabase.from('risk_assessments').select('*').then(result => {
-            console.log('🔍 Resultado da query risk_assessments:', result);
+            // Query risk_assessments executada
             if (result.error) {
               console.error('❌ Erro na query risk_assessments:', result.error);
             }
@@ -121,14 +121,14 @@ export const ExecutiveDashboard = () => {
         const ethics = ethicsResult.data || [];
         
         // Debug completo dos dados carregados
-        console.log('🔍 DADOS CARREGADOS:');
-        console.log('📊 risksResult:', risksResult);
-        console.log('📊 risks array:', risks);
-        console.log('📊 risks.length:', risks.length);
+        // Dados carregados:
+        // risksResult obtido
+        // risks array processado
+        // risks.length: risks.length
         
         if (risks.length > 0) {
-          console.log('📊 Primeiro risco:', risks[0]);
-          console.log('📊 Campos disponíveis:', Object.keys(risks[0]));
+          // Primeiro risco analisado
+          // Campos disponíveis verificados
           
           // Verificar todos os valores de risk_level
           const riskLevels = risks.map(r => r.risk_level);

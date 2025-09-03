@@ -126,7 +126,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       return userData;
 
     } catch (error) {
-      console.warn('Auth loading timeout, usando dados básicos:', error);
+      // Auth loading timeout, usando dados básicos
       
       // Fallback para dados básicos em caso de timeout
       const basicUser: AuthUser = {
@@ -145,7 +145,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
   // Handler otimizado para mudanças de auth
   const handleAuthChange = useCallback(async (event: string, session: Session | null) => {
-    console.log('🔐 Auth event:', event);
+    // Auth event: event
     
     setSession(session);
 

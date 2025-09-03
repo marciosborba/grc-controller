@@ -234,7 +234,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
   return (
     <div className="space-y-6 vendor-risk-management">
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 quick-actions-grid">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 quick-actions-grid">
           {getQuickActions().map((action) => (
             <Card
               key={action.id}
@@ -252,7 +252,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
               }}
               onClick={action.action}
             >
-              <CardContent className="p-5">
+              <CardContent className="p-4 md:p-6">
                 <div className="flex flex-col items-center text-center space-y-3">
                   {/* Ícone com background */}
                   <div className={`
@@ -324,7 +324,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
       <div className="w-full">
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as VendorViewMode)}>
           <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between p-4 md:p-6">
               <TabsList className="grid w-fit grid-cols-5">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />

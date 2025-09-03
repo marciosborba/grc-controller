@@ -98,14 +98,14 @@ const RiskMatrix = () => {
       try {
         // Buscar configurações da tenant usando a função centralizada
         if (user?.tenant?.id) {
-          console.log('🏢 Dashboard: Carregando configuração da matriz para tenant:', user.tenant.id);
+          // Carregando configuração da matriz para tenant
           const config = await getTenantMatrixConfig(user.tenant.id);
-          console.log('⚙️ Dashboard: Configuração carregada:', config);
+          // Configuração carregada
           setMatrixConfig(config);
         }
 
         // Buscar riscos - CORRIGIDO: usar tabela 'risk_assessments' com campos corretos
-        console.log('🔍 RiskMatrix: Buscando riscos da tabela risk_assessments...');
+        // Buscando riscos da tabela risk_assessments
         const { data, error } = await supabase
           .from('risk_assessments')
           .select('*');
@@ -115,7 +115,7 @@ const RiskMatrix = () => {
           throw error;
         }
         
-        console.log('📊 RiskMatrix: Riscos carregados:', data?.length || 0);
+        // Riscos carregados: data?.length || 0
         setRisks(data || []);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);

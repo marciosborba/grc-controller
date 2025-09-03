@@ -21,22 +21,22 @@ export const getTenantMatrixConfig = async (tenantId?: string): Promise<TenantRi
     likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável']
   };
 
-  console.log('🔍 getTenantMatrixConfig chamada com tenantId:', tenantId);
+  // Debug: getTenantMatrixConfig chamada
 
   if (!tenantId) {
-    console.log('⚠️ Nenhum tenantId fornecido, usando configuração padrão:', defaultConfig);
+    // Usando configuração padrão
     return defaultConfig;
   }
 
   try {
-    console.log('📡 Buscando configuração da tenant no banco...');
+    // Buscando configuração da tenant
     const { data, error } = await supabase
       .from('tenants')
       .select('settings')
       .eq('id', tenantId)
       .single();
 
-    console.log('📊 Resposta do banco:', { data, error });
+    // Resposta do banco obtida
 
     if (error) {
       console.error('❌ Erro na consulta:', error);
@@ -44,12 +44,12 @@ export const getTenantMatrixConfig = async (tenantId?: string): Promise<TenantRi
     }
 
     if (!data?.settings?.risk_matrix) {
-      console.log('⚠️ Nenhuma configuração risk_matrix encontrada, usando padrão:', defaultConfig);
-      console.log('📋 Settings disponíveis:', data?.settings);
+      // Nenhuma configuração encontrada, usando padrão
+      // Settings disponíveis verificados
       return defaultConfig;
     }
 
-    console.log('✅ Configuração da matriz encontrada:', data.settings.risk_matrix);
+    // Configuração da matriz encontrada
     return data.settings.risk_matrix;
   } catch (error) {
     console.error('❌ Erro ao buscar configuração da matriz:', error);
@@ -171,7 +171,7 @@ export const processRiskAnalysisWithTenantConfig = async (
   gutUrgency?: number,
   gutTendency?: number
 ): Promise<RiskAnalysisData> => {
-  console.log('🔍 processRiskAnalysisWithTenantConfig chamada:', {
+  // Debug: processRiskAnalysisWithTenantConfig chamada
     riskType,
     tenantId,
     probabilityAnswersCount: probabilityAnswers.length,
@@ -180,7 +180,7 @@ export const processRiskAnalysisWithTenantConfig = async (
   
   const config = await getTenantMatrixConfig(tenantId);
   
-  console.log('🏢 Usando configuração da tenant para análise:', {
+  // Usando configuração da tenant para análise
     tenantId,
     matrixType: config.type,
     config
@@ -196,7 +196,7 @@ export const processRiskAnalysisWithTenantConfig = async (
     gutTendency
   );
   
-  console.log('✅ Análise processada com matriz:', config.type, 'Resultado:', result);
+  // Análise processada com sucesso
   
   return result;
 };

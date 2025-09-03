@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle } from 'lucide-react';
 
 const DashboardPageNoQueries = () => {
-  console.log('🚀 DashboardPageNoQueries carregado em:', new Date().toISOString());
+  // DashboardPageNoQueries carregado
 
   return (
     <div className="space-y-6">

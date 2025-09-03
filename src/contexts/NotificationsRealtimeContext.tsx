@@ -228,7 +228,7 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
     // Verificar se o sistema de notificações em tempo real está habilitado
     const realtimeEnabled = localStorage.getItem('notifications-realtime-enabled') === 'true';
     if (!realtimeEnabled) {
-      console.log('🔌 Sistema de notificações em tempo real desabilitado');
+      // Sistema de notificações em tempo real desabilitado
       setConnectionStatus('disconnected');
       return;
     }
@@ -338,7 +338,7 @@ export const NotificationsRealtimeProvider: React.FC<NotificationsRealtimeProvid
     setConnectionTime(null);
     reconnectAttemptsRef.current = 0;
     
-    console.log('🔌 Desconectado do sistema de notificações');
+    // Desconectado do sistema de notificações
   }, []);
 
   // Função para reconectar manualmente

@@ -8,7 +8,7 @@ import React from 'react';
 import { useAuth} from '@/contexts/AuthContextOptimized';
 
 const DashboardPageUltraLight = () => {
-  console.log('🚀 DashboardPageUltraLight carregado em:', new Date().toISOString());
+  // DashboardPageUltraLight carregado
   
   const { user } = useAuth();
 

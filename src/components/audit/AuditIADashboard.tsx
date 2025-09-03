@@ -188,12 +188,11 @@ const AuditIADashboard: React.FC = () => {
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
-            <Eye className="h-8 w-8 text-primary" />
-            <span>Audit IA</span>
+             <span>Gestão de Auditoria</span>
 
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Gestão inteligente de auditorias com IA avançada e metodologias Big Four
+            Gerencie o planejamento, execução e documentações de auditoria
           </p>
         </div>
         

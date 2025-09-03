@@ -220,7 +220,7 @@ const TEST_ROLES = [
 ];
 
 export function AppSidebarFixed() {
-  console.log('🚀 [SIDEBAR] AppSidebarFixed carregado - Versão otimizada');
+  // AppSidebarFixed carregado - Versão otimizada
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
@@ -249,7 +249,7 @@ export function AppSidebarFixed() {
     
     try {
       setLoadingRoles(true);
-      console.log('💾 [ROLES] Carregando roles do banco de dados...');
+      // Carregando roles do banco de dados
       
       // Timeout para evitar travamento
       const timeoutPromise = new Promise((_, reject) => 
@@ -273,11 +273,11 @@ export function AppSidebarFixed() {
         return;
       }
 
-      console.log(`✅ [SIDEBAR] ${roles?.length || 0} roles carregadas do banco`);
+      // Roles carregadas do banco: ${roles?.length || 0}
       setDatabaseRoles(roles || []);
       
       if (!roles || roles.length === 0) {
-        console.log('📝 [SIDEBAR] Nenhuma role encontrada no banco, usando apenas Super Admin');
+        // Nenhuma role encontrada no banco, usando apenas Super Admin
         const superAdminOnly = TEST_ROLES.filter(r => r.id === '1' || r.name === 'super_admin');
         setAvailableTestRoles(superAdminOnly);
         setRolesLoaded(true); // NOVO: marcar como carregado
@@ -292,7 +292,7 @@ export function AppSidebarFixed() {
       const allRoles = superAdmin ? [superAdmin, ...convertedRoles] : convertedRoles;
       
       setAvailableTestRoles(allRoles);
-      console.log(`🧪 [SIDEBAR] ${allRoles.length} roles disponíveis para teste (1 sistema + ${convertedRoles.length} banco)`);
+      // Roles disponíveis para teste: ${allRoles.length} (1 sistema + ${convertedRoles.length} banco)
       
       // Garantir que a role atual seja válida
       const updatedSuperAdmin = allRoles.find(r => r.id === '1' || r.name === 'super_admin');

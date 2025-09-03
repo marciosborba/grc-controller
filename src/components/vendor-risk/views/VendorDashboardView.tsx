@@ -188,10 +188,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {kpis.map((kpi, index) => (
           <Card key={index}>
-            <CardContent className="p-4 lg:p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-2 flex-1 min-w-0">
                   <p className="text-sm font-medium text-muted-foreground truncate">
@@ -445,7 +445,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
               <Users className="w-6 h-6 mb-2 text-blue-600" />
               <span className="font-medium">Cadastrar Fornecedor</span>
