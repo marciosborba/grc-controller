@@ -83,10 +83,8 @@ const AISettingsPage = lazy(() => import("@/components/ai/AISettingsPage"));
 const AIAuditPage = lazy(() => import("@/components/ai/AIAuditPage"));
 
 // Import direto para teste (sem lazy loading)
-import AIManagementPageSimpleDirect from "@/components/ai/AIManagementPageSimple";
 import AIManagerNew from "@/components/ai/AIManagerNew";
 import AIManagementPageDirect from "@/components/ai/AIManagementPage";
-import AITestPage from "@/components/ai/AITestPage";
 
 // Other modules
 const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
@@ -525,13 +523,6 @@ const App = () => (
                   } />
                   
                   {/* Legacy AI management routes for compatibility */}
-                  <Route path="admin/ai-management" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIManagerDashboard />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
                   <Route path="ai-management" element={
                     <PlatformAdminRoute>
                       <Suspense fallback={<PageLoader />}>

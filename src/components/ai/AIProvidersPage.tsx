@@ -253,7 +253,7 @@ export const AIProvidersPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6">
+      <div className="space-y-6">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-muted-foreground">Carregando provedores de IA...</p>
@@ -272,7 +272,7 @@ export const AIProvidersPage: React.FC = () => {
             Voltar
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
               <Cpu className="h-6 w-6" />
               Provedores de IA
             </h1>
@@ -412,41 +412,84 @@ export const AIProvidersPage: React.FC = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{getProviderIcon(provider.provider_type)}</span>
+                    <div className="p-3 rounded-lg text-2xl bg-card">
+                      {getProviderIcon(provider.provider_type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {provider.name}
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg font-medium">
+                          {provider.name}
+                        </CardTitle>
                         {provider.is_primary && (
-                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                            Principal
+                          </Badge>
                         )}
-                      </CardTitle>
-                      <CardDescription>{provider.model_name}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {provider.provider_type}
+                        </Badge>
+                        {provider.is_active ? (
+                          <Badge variant="default" className="text-xs">
+                            Ativo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">
+                            Inativo
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">{provider.model_name}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={provider.is_active ? 'default' : 'secondary'}
-                      className={provider.is_active ? 'bg-green-100 text-green-800' : ''}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleTestConnection(provider)}
+                      disabled={testResults[provider.id]?.status === 'testing'}
                     >
-                      {provider.is_active ? 'Ativo' : 'Inativo'}
-                    </Badge>
+                      Testar
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => openEditDialog(provider)}
+                    >
+                      Editar
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleSetPrimary(provider)}
+                      disabled={provider.is_primary}
+                    >
+                      Configurar
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Statistics */}
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-lg font-bold text-foreground">{provider.total_requests || 0}</p>
-                    <p className="text-xs text-muted-foreground">Requisições</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="text-center">
+                    <p className="text-lg font-bold">{provider.total_requests || 0}</p>
+                    <p className="text-xs text-muted-foreground">Total Requisições</p>
                   </div>
-                  <div>
-                    <p className="text-lg font-bold text-foreground">{provider.tokens_used_today || 0}</p>
-                    <p className="text-xs text-muted-foreground">Tokens Hoje</p>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{provider.successful_requests || 0}</p>
+                    <p className="text-xs text-muted-foreground">Sucessos</p>
                   </div>
-                  <div>
-                    <p className="text-lg font-bold text-foreground">${(provider.cost_usd_today || 0).toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground">Custo Hoje</p>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{provider.failed_requests || 0}</p>
+                    <p className="text-xs text-muted-foreground">Falhas</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-sky-600 dark:text-sky-400">
+                      {provider.total_requests > 0 ? Math.round((provider.successful_requests / provider.total_requests) * 100) : 0}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">Taxa Sucesso</p>
                   </div>
                 </div>
 
@@ -457,94 +500,90 @@ export const AIProvidersPage: React.FC = () => {
                       <span>Taxa de Sucesso</span>
                       <span>{Math.round((provider.successful_requests / provider.total_requests) * 100)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-muted rounded-full h-2">
                       <div 
-                        className="bg-green-500 h-2 rounded-full" 
+                        className="bg-green-500 dark:bg-green-400 h-2 rounded-full transition-all" 
                         style={{ width: `${(provider.successful_requests / provider.total_requests) * 100}%` }}
                       ></div>
                     </div>
                   </div>
                 )}
 
-                {/* API Key Display */}
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">API Key:</Label>
-                  <div className="flex items-center gap-1 flex-1">
-                    <Input
-                      type={showApiKey[provider.id] ? 'text' : 'password'}
-                      value={provider.api_key}
-                      readOnly
-                      className="text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setShowApiKey({ ...showApiKey, [provider.id]: !showApiKey[provider.id] })}
-                    >
-                      {showApiKey[provider.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    </Button>
+                {/* Configuration Details */}
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <h5 className="text-sm font-medium mb-3">Configurações:</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Modelo:</span>
+                      <span className="ml-2 text-muted-foreground">{provider.model_name}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Tokens Hoje:</span>
+                      <span className="ml-2 text-muted-foreground">{provider.tokens_used_today || 0}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Custo Hoje:</span>
+                      <span className="ml-2 text-muted-foreground">${(provider.cost_usd_today || 0).toFixed(4)}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">Status:</span>
+                      <span className={`ml-2 ${provider.is_active ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {provider.is_active ? 'Operacional' : 'Inativo'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 pt-3 border-t border-border/50">
+                    <h6 className="text-xs font-medium mb-2">Detalhes Técnicos:</h6>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <div>
+                        <span className="font-medium">Endpoint:</span>
+                        <span className="ml-2 font-mono">
+                          {provider.provider_type === 'glm' ? 'https://open.bigmodel.cn/api/paas/v4/chat/completions' :
+                           provider.provider_type === 'openai' ? 'https://api.openai.com/v1/chat/completions' :
+                           provider.provider_type === 'claude' ? 'https://api.anthropic.com/v1/messages' :
+                           provider.provider_type === 'azure-openai' ? 'https://[resource].openai.azure.com/openai/deployments/[deployment]/chat/completions' :
+                           'Endpoint personalizado'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="font-medium">API Key:</span>
+                        <div className="flex items-center gap-1 flex-1">
+                          <Input
+                            type={showApiKey[provider.id] ? 'text' : 'password'}
+                            value={provider.api_key}
+                            readOnly
+                            className="text-xs h-6 font-mono"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setShowApiKey({ ...showApiKey, [provider.id]: !showApiKey[provider.id] })}
+                          >
+                            {showApiKey[provider.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Test Results */}
                 {testResults[provider.id] && (
-                  <Alert className={testResults[provider.id].status === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
+                  <Alert className={testResults[provider.id].status === 'success' ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/50' : testResults[provider.id].status === 'testing' ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/50' : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/50'}>
                     {testResults[provider.id].status === 'success' ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                     ) : testResults[provider.id].status === 'testing' ? (
-                      <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+                      <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
                     ) : (
-                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                     )}
                     <AlertDescription>
                       {testResults[provider.id].status === 'testing' ? 'Testando conexão...' : testResults[provider.id].message}
                     </AlertDescription>
                   </Alert>
                 )}
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleTestConnection(provider)}
-                    disabled={testResults[provider.id]?.status === 'testing'}
-                  >
-                    <TestTube className="h-3 w-3 mr-1" />
-                    Testar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditDialog(provider)}
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </Button>
-                  {!provider.is_primary && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleSetPrimary(provider)}
-                    >
-                      <Star className="h-3 w-3 mr-1" />
-                      Principal
-                    </Button>
-                  )}
-                  <div className="flex items-center ml-auto">
-                    <Switch
-                      checked={provider.is_active}
-                      onCheckedChange={() => handleToggleActive(provider)}
-                    />
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDeleteProvider(provider.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           ))}

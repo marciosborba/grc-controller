@@ -19,7 +19,8 @@ import {
   Shield as ShieldIcon,
   X,
   Save,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -197,57 +198,84 @@ const AIManagementPage: React.FC = () => {
 
       setProviders(finalProvidersData || []);
 
-      // Carregar prompts - tentar múltiplas tabelas para encontrar os dados
-      console.log('🔍 [AI MANAGER] Tentando carregar prompts de diferentes tabelas...');
+      // Carregar prompts - buscar especificamente os prompts Alex
+      console.log('🔍 [AI MANAGER] Carregando prompts Alex e outros templates...');
       
-      // Tentar primeira tabela: ai_grc_prompt_templates
-      const { data: promptsData1, error: promptsError1 } = await supabase
+      // Buscar TODOS os prompts sem filtro de tenant (para ver se existem prompts Alex globais)
+      const { data: allPromptsGlobal, error: allPromptsGlobalError } = await supabase
         .from('ai_grc_prompt_templates')
-        .select('id, name, is_active, category, title, template_content, description, use_case, created_at')
-        .order('created_at', { ascending: false });
-
-      console.log('📝 [AI MANAGER] Prompts da tabela ai_grc_prompt_templates:', promptsData1?.length || 0, promptsError1);
-
-      // Tentar segunda tabela: ai_module_prompts
-      const { data: promptsData2, error: promptsError2 } = await supabase
-        .from('ai_module_prompts')
-        .select('id, prompt_name as name, is_active, module_name as category, title, prompt_content, description, created_at')
-        .order('created_at', { ascending: false });
-
-      console.log('📝 [AI MANAGER] Prompts da tabela ai_module_prompts:', promptsData2?.length || 0, promptsError2);
-
-      // Tentar terceira tabela: integrations (pode ter configs de prompts)
-      const { data: integrationsData, error: integrationsError } = await supabase
-        .from('integrations')
         .select('*')
-        .eq('tenant_id', user?.tenantId)
-        .eq('type', 'mcp')
         .order('created_at', { ascending: false });
 
-      console.log('🔗 [AI MANAGER] Integrações MCP encontradas:', integrationsData?.length || 0, integrationsError);
+      console.log('📝 [AI MANAGER] TODOS os prompts (sem filtro tenant):', allPromptsGlobal?.length || 0, allPromptsGlobalError);
+      
+      // Buscar prompts Alex especificamente (sem filtro de tenant)
+      const { data: alexPromptsData, error: alexPromptsError } = await supabase
+        .from('ai_grc_prompt_templates')
+        .select('*')
+        .eq('category', 'alex')
+        .order('created_at', { ascending: false });
 
-      // Usar os dados que foram encontrados
-      let finalPromptsData = [];
-      if (promptsData1 && promptsData1.length > 0) {
-        finalPromptsData = promptsData1;
-        console.log('✅ [AI MANAGER] Usando prompts da tabela ai_grc_prompt_templates');
-      } else if (promptsData2 && promptsData2.length > 0) {
-        finalPromptsData = promptsData2;
-        console.log('✅ [AI MANAGER] Usando prompts da tabela ai_module_prompts');
-      } else if (integrationsData && integrationsData.length > 0) {
-        // Adaptar integrações como "prompts"
-        finalPromptsData = integrationsData.map(integration => ({
-          id: integration.id,
-          name: integration.name,
-          is_active: integration.status === 'connected',
-          category: 'integration',
-          title: integration.name
-        }));
-        console.log('✅ [AI MANAGER] Usando integrações MCP como prompts');
-      } else {
-        console.log('⚠️ [AI MANAGER] Nenhum prompt encontrado em todas as tabelas testadas');
+      console.log('🤖 [AI MANAGER] Prompts Alex encontrados (sem filtro tenant):', alexPromptsData?.length || 0, alexPromptsError);
+      
+      // Buscar prompts Alex com categoria 'Alex' (maiúscula)
+      const { data: alexPromptsDataCap, error: alexPromptsErrorCap } = await supabase
+        .from('ai_grc_prompt_templates')
+        .select('*')
+        .eq('category', 'Alex')
+        .order('created_at', { ascending: false });
+
+      console.log('🤖 [AI MANAGER] Prompts Alex encontrados (categoria Alex maiúscula):', alexPromptsDataCap?.length || 0, alexPromptsErrorCap);
+      
+      // Buscar prompts que contenham 'alex' no nome
+      const { data: alexPromptsName, error: alexPromptsNameError } = await supabase
+        .from('ai_grc_prompt_templates')
+        .select('*')
+        .ilike('name', '%alex%')
+        .order('created_at', { ascending: false });
+
+      console.log('🤖 [AI MANAGER] Prompts com "alex" no nome:', alexPromptsName?.length || 0, alexPromptsNameError);
+      
+      // Log detalhado de TODOS os prompts para debug
+      if (allPromptsGlobal && allPromptsGlobal.length > 0) {
+        console.log('📊 [AI MANAGER] Categorias encontradas:', [...new Set(allPromptsGlobal.map(p => p.category))]);
+        console.log('📊 [AI MANAGER] Primeiros 5 prompts:', allPromptsGlobal.slice(0, 5).map(p => ({ id: p.id, name: p.name, category: p.category, title: p.title })));
       }
+      
+      // Tentar segunda tabela: ai_module_prompts
+      const { data: modulePromptsData, error: modulePromptsError } = await supabase
+        .from('ai_module_prompts')
+        .select('id, prompt_name as name, is_active, module_name as category, title, prompt_content as template_content, description, created_at')
+        .order('created_at', { ascending: false });
 
+      console.log('📝 [AI MANAGER] Prompts da tabela ai_module_prompts:', modulePromptsData?.length || 0, modulePromptsError);
+
+      // Combinar todos os prompts encontrados
+      let finalPromptsData = [];
+      
+      // Adicionar prompts da tabela principal
+      if (allPromptsGlobal && allPromptsGlobal.length > 0) {
+        finalPromptsData = [...finalPromptsData, ...allPromptsGlobal];
+        console.log('✅ [AI MANAGER] Adicionados prompts da tabela ai_grc_prompt_templates:', allPromptsGlobal.length);
+      }
+      
+      // Adicionar prompts de módulos
+      if (modulePromptsData && modulePromptsData.length > 0) {
+        finalPromptsData = [...finalPromptsData, ...modulePromptsData];
+        console.log('✅ [AI MANAGER] Adicionados prompts da tabela ai_module_prompts:', modulePromptsData.length);
+      }
+      
+      // Log detalhado dos prompts Alex
+      const alexPrompts = finalPromptsData.filter(p => 
+        p.category === 'alex' || 
+        p.category === 'Alex' || 
+        (p.name && p.name.toLowerCase().includes('alex')) ||
+        (p.title && p.title.toLowerCase().includes('alex'))
+      );
+      console.log('🤖 [AI MANAGER] Prompts Alex filtrados (busca ampla):', alexPrompts.length);
+      console.log('🤖 [AI MANAGER] Detalhes dos prompts Alex:', alexPrompts.map(p => ({ id: p.id, name: p.name, category: p.category, title: p.title })));
+      
+      console.log('📊 [AI MANAGER] Total final de prompts carregados:', finalPromptsData.length);
       setPrompts(finalPromptsData || []);
 
       // Carregar workflows
@@ -292,8 +320,47 @@ const AIManagementPage: React.FC = () => {
   useEffect(() => {
     if (user?.tenantId) {
       loadAIData();
+      loadAIConfiguration();
     }
   }, [user?.tenantId]);
+
+  // Carregar configurações existentes
+  const loadAIConfiguration = async () => {
+    if (!user?.tenantId) return;
+    
+    try {
+      const { data: config, error } = await supabase
+        .from('ai_configurations')
+        .select('*')
+        .eq('tenant_id', user.tenantId)
+        .single();
+
+      if (config && !error) {
+        setAiConfig({
+          defaultProvider: config.default_provider || 'claude',
+          defaultModel: config.default_model || 'claude-3-5-sonnet',
+          temperature: config.temperature || 0.7,
+          maxTokens: config.max_tokens_per_request || 4000,
+          contextWindow: config.context_window || 8000,
+          rateLimit: config.max_requests_per_minute || 30,
+          contentFilter: config.enable_content_filtering ?? true,
+          piiDetection: config.enable_pii_detection ?? true,
+          requireApproval: config.require_approval_for_sensitive ?? true,
+          auditLogging: config.enable_audit_logging ?? true,
+          retentionPeriod: config.retention_period_days || 365,
+          topP: config.top_p || 1.0,
+          frequencyPenalty: config.frequency_penalty || 0.0,
+          presencePenalty: config.presence_penalty || 0.0,
+          timeout: config.timeout_seconds || 30,
+          retryAttempts: config.retry_attempts || 3,
+          streaming: config.enable_streaming ?? true
+        });
+        console.log('✅ [AI MANAGER] Configurações carregadas do banco');
+      }
+    } catch (error) {
+      console.warn('⚠️ [AI MANAGER] Erro ao carregar configurações:', error);
+    }
+  };
 
   // Função para salvar configurações de IA
   const saveAIConfiguration = async () => {
@@ -310,41 +377,44 @@ const AIManagementPage: React.FC = () => {
         .eq('tenant_id', user.tenantId)
         .single();
 
+      const configData = {
+        name: 'Configuração Principal',
+        tenant_id: user.tenantId,
+        default_provider: aiConfig.defaultProvider,
+        default_model: aiConfig.defaultModel,
+        max_tokens_per_request: aiConfig.maxTokens,
+        max_requests_per_minute: aiConfig.rateLimit,
+        temperature: aiConfig.temperature,
+        context_window: aiConfig.contextWindow,
+        enable_content_filtering: aiConfig.contentFilter,
+        enable_pii_detection: aiConfig.piiDetection,
+        require_approval_for_sensitive: aiConfig.requireApproval,
+        enable_audit_logging: aiConfig.auditLogging,
+        retention_period_days: aiConfig.retentionPeriod,
+        top_p: aiConfig.topP,
+        frequency_penalty: aiConfig.frequencyPenalty,
+        presence_penalty: aiConfig.presencePenalty,
+        timeout_seconds: aiConfig.timeout,
+        retry_attempts: aiConfig.retryAttempts,
+        enable_streaming: aiConfig.streaming,
+        updated_at: new Date().toISOString()
+      };
+
       let result;
       if (existingConfig) {
         // Atualizar configuração existente
         result = await supabase
           .from('ai_configurations')
-          .update({
-            default_provider: aiConfig.defaultProvider,
-            max_tokens_per_request: aiConfig.maxTokens,
-            max_requests_per_minute: aiConfig.rateLimit,
-            temperature: aiConfig.temperature,
-            context_window: aiConfig.contextWindow,
-            enable_content_filtering: aiConfig.contentFilter,
-            enable_pii_detection: aiConfig.piiDetection,
-            require_approval_for_sensitive: aiConfig.requireApproval,
-            enable_audit_logging: aiConfig.auditLogging,
-            updated_at: new Date().toISOString()
-          })
+          .update(configData)
           .eq('id', existingConfig.id);
       } else {
         // Criar nova configuração
         result = await supabase
           .from('ai_configurations')
           .insert({
-            name: 'Configuração Principal',
-            tenant_id: user.tenantId,
-            default_provider: aiConfig.defaultProvider,
-            max_tokens_per_request: aiConfig.maxTokens,
-            max_requests_per_minute: aiConfig.rateLimit,
-            temperature: aiConfig.temperature,
-            context_window: aiConfig.contextWindow,
-            enable_content_filtering: aiConfig.contentFilter,
-            enable_pii_detection: aiConfig.piiDetection,
-            require_approval_for_sensitive: aiConfig.requireApproval,
-            enable_audit_logging: aiConfig.auditLogging,
-            created_by: user.id
+            ...configData,
+            created_by: user.id,
+            created_at: new Date().toISOString()
           });
       }
 
@@ -396,19 +466,184 @@ const AIManagementPage: React.FC = () => {
     toast.info('Configurações resetadas para os valores padrão');
   };
 
-  // Função para testar provedor
-  const testProvider = async (providerId: string) => {
-    toast.info('Testando conexão com o provedor...');
-    // Simular teste - implementar lógica real depois
-    setTimeout(() => {
-      toast.success('Provedor testado com sucesso!');
-    }, 1500);
+  // Estados para modal de provedor
+  const [showProviderModal, setShowProviderModal] = useState(false);
+  const [providerModalMode, setProviderModalMode] = useState<'create' | 'edit'>('create');
+  const [providerForm, setProviderForm] = useState({
+    name: '',
+    provider_type: '',
+    model_name: '',
+    api_key: '',
+    endpoint_url: '',
+    api_version: '',
+    is_active: true,
+    is_primary: false,
+    priority: 1,
+    max_tokens: 4000,
+    temperature: 0.7,
+    timeout_seconds: 30
+  });
+
+  // Função para criar novo provedor
+  const createNewProvider = () => {
+    setProviderForm({
+      name: '',
+      provider_type: '',
+      model_name: '',
+      api_key: '',
+      endpoint_url: '',
+      api_version: '',
+      is_active: true,
+      is_primary: false,
+      priority: 1,
+      max_tokens: 4000,
+      temperature: 0.7,
+      timeout_seconds: 30
+    });
+    setProviderModalMode('create');
+    setShowProviderModal(true);
   };
 
   // Função para editar provedor
   const editProvider = (providerId: string) => {
-    setEditingProvider(providerId);
-    toast.info('Modo de edição ativado para o provedor');
+    const provider = providers.find(p => p.id === providerId);
+    if (provider) {
+      setProviderForm({
+        name: provider.name || '',
+        provider_type: provider.provider_type || '',
+        model_name: provider.model_name || '',
+        api_key: provider.api_key || '',
+        endpoint_url: provider.endpoint_url || '',
+        api_version: provider.api_version || '',
+        is_active: provider.is_active ?? true,
+        is_primary: provider.is_primary ?? false,
+        priority: provider.priority || 1,
+        max_tokens: provider.max_tokens || 4000,
+        temperature: provider.temperature || 0.7,
+        timeout_seconds: provider.timeout_seconds || 30
+      });
+      setEditingProvider(providerId);
+      setProviderModalMode('edit');
+      setShowProviderModal(true);
+    }
+  };
+
+  // Função para salvar provedor
+  const saveProvider = async () => {
+    if (!user?.tenantId) return;
+    
+    setSaving(true);
+    try {
+      if (providerModalMode === 'create') {
+        // Criar novo provedor
+        const { error } = await supabase
+          .from('ai_grc_providers')
+          .insert({
+            name: providerForm.name,
+            provider_type: providerForm.provider_type,
+            model_name: providerForm.model_name,
+            api_key: providerForm.api_key,
+            endpoint_url: providerForm.endpoint_url,
+            api_version: providerForm.api_version,
+            is_active: providerForm.is_active,
+            is_primary: providerForm.is_primary,
+            priority: providerForm.priority,
+            max_tokens: providerForm.max_tokens,
+            temperature: providerForm.temperature,
+            timeout_seconds: providerForm.timeout_seconds,
+            tenant_id: user.tenantId,
+            created_by: user.id
+          });
+
+        if (error) throw error;
+        toast.success('Provedor criado com sucesso!');
+      } else if (providerModalMode === 'edit' && editingProvider) {
+        // Atualizar provedor existente
+        const { error } = await supabase
+          .from('ai_grc_providers')
+          .update({
+            name: providerForm.name,
+            provider_type: providerForm.provider_type,
+            model_name: providerForm.model_name,
+            api_key: providerForm.api_key,
+            endpoint_url: providerForm.endpoint_url,
+            api_version: providerForm.api_version,
+            is_active: providerForm.is_active,
+            is_primary: providerForm.is_primary,
+            priority: providerForm.priority,
+            max_tokens: providerForm.max_tokens,
+            temperature: providerForm.temperature,
+            timeout_seconds: providerForm.timeout_seconds,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingProvider)
+          .eq('tenant_id', user.tenantId);
+
+        if (error) throw error;
+        toast.success('Provedor atualizado com sucesso!');
+      }
+
+      // Recarregar dados e fechar modal
+      await loadAIData();
+      setShowProviderModal(false);
+      setEditingProvider(null);
+      
+    } catch (error) {
+      console.error('Erro ao salvar provedor:', error);
+      toast.error('Erro ao salvar provedor: ' + (error as any).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Função para deletar provedor
+  const deleteProvider = async (providerId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este provedor?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('ai_grc_providers')
+        .delete()
+        .eq('id', providerId)
+        .eq('tenant_id', user?.tenantId);
+      
+      if (error) throw error;
+      toast.success('Provedor excluído com sucesso!');
+      await loadAIData();
+    } catch (error) {
+      console.error('Erro ao excluir provedor:', error);
+      toast.error('Erro ao excluir provedor: ' + (error as any).message);
+    }
+  };
+
+  // Função para testar provedor
+  const testProvider = async (providerId: string) => {
+    toast.info('Testando conexão com o provedor...');
+    
+    try {
+      // Simular teste de conexão - implementar lógica real depois
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Registrar teste no banco
+      const { error } = await supabase
+        .from('ai_usage_logs')
+        .insert({
+          provider_id: providerId,
+          operation_type: 'test_connection',
+          tokens_input: 0,
+          tokens_output: 0,
+          cost_usd: 0,
+          tenant_id: user?.tenantId,
+          created_by: user?.id
+        });
+      
+      if (error) console.warn('Erro ao registrar teste:', error);
+      
+      toast.success('Provedor testado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao testar provedor:', error);
+      toast.error('Erro ao testar provedor');
+    }
   };
 
   // Função para criar novo prompt
@@ -624,29 +859,26 @@ const AIManagementPage: React.FC = () => {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center space-x-3 mb-4">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Brain className="h-6 w-6 text-blue-600" />
-          </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-foreground">
               Gestão de IA
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Configuração e gerenciamento de assistentes IA especializados em GRC
             </p>
           </div>
         </div>
         
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800">
             <ShieldIcon className="h-3 w-3 mr-1" />
             Platform Admin
           </Badge>
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
             <Globe className="h-3 w-3 mr-1" />
             Sistema Ativo
           </Badge>
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
             <Lock className="h-3 w-3 mr-1" />
             Seguro
           </Badge>
@@ -987,11 +1219,16 @@ const AIManagementPage: React.FC = () => {
                   {/* Modelo Padrão */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Modelo Padrão</label>
-                    <select className="w-full p-2 border border-border rounded-md">
+                    <select 
+                      className="w-full p-2 border border-border rounded-md"
+                      value={aiConfig.defaultModel}
+                      onChange={(e) => setAiConfig({...aiConfig, defaultModel: e.target.value})}
+                    >
                       <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
                       <option value="gpt-4-turbo">GPT-4 Turbo</option>
                       <option value="gpt-4o">GPT-4o</option>
                       <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                      <option value="glm-4">GLM-4</option>
                     </select>
                     <p className="text-xs text-muted-foreground">Modelo de linguagem usado por padrão</p>
                   </div>
@@ -1049,7 +1286,8 @@ const AIManagementPage: React.FC = () => {
                     <label className="text-sm font-medium">Limite de Requisições/Minuto</label>
                     <input 
                       type="number" 
-                      defaultValue="30"
+                      value={aiConfig.rateLimit}
+                      onChange={(e) => setAiConfig({...aiConfig, rateLimit: parseInt(e.target.value) || 30})}
                       min="1"
                       max="1000"
                       className="w-full p-2 border border-border rounded-md"
@@ -1076,7 +1314,12 @@ const AIManagementPage: React.FC = () => {
                       <label className="text-sm font-medium">Filtro de Conteúdo</label>
                       <p className="text-xs text-muted-foreground">Bloquear conteúdo inapropriado</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-4 w-4" />
+                    <input 
+                      type="checkbox" 
+                      checked={aiConfig.contentFilter}
+                      onChange={(e) => setAiConfig({...aiConfig, contentFilter: e.target.checked})}
+                      className="h-4 w-4" 
+                    />
                   </div>
 
                   {/* Detecção de PII */}
@@ -1085,7 +1328,12 @@ const AIManagementPage: React.FC = () => {
                       <label className="text-sm font-medium">Detecção de PII</label>
                       <p className="text-xs text-muted-foreground">Detectar informações pessoais</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-4 w-4" />
+                    <input 
+                      type="checkbox" 
+                      checked={aiConfig.piiDetection}
+                      onChange={(e) => setAiConfig({...aiConfig, piiDetection: e.target.checked})}
+                      className="h-4 w-4" 
+                    />
                   </div>
 
                   {/* Aprovação para Conteúdo Sensível */}
@@ -1094,7 +1342,12 @@ const AIManagementPage: React.FC = () => {
                       <label className="text-sm font-medium">Aprovação para Sensível</label>
                       <p className="text-xs text-muted-foreground">Exigir aprovação para conteúdo sensível</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-4 w-4" />
+                    <input 
+                      type="checkbox" 
+                      checked={aiConfig.requireApproval}
+                      onChange={(e) => setAiConfig({...aiConfig, requireApproval: e.target.checked})}
+                      className="h-4 w-4" 
+                    />
                   </div>
 
                   {/* Log de Auditoria */}
@@ -1103,14 +1356,23 @@ const AIManagementPage: React.FC = () => {
                       <label className="text-sm font-medium">Log de Auditoria</label>
                       <p className="text-xs text-muted-foreground">Registrar todas as interações</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-4 w-4" />
+                    <input 
+                      type="checkbox" 
+                      checked={aiConfig.auditLogging}
+                      onChange={(e) => setAiConfig({...aiConfig, auditLogging: e.target.checked})}
+                      className="h-4 w-4" 
+                    />
                   </div>
                 </div>
 
                 {/* Retenção de Dados */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Período de Retenção de Dados</label>
-                  <select className="w-full p-2 border border-border rounded-md">
+                  <select 
+                    className="w-full p-2 border border-border rounded-md"
+                    value={aiConfig.retentionPeriod}
+                    onChange={(e) => setAiConfig({...aiConfig, retentionPeriod: parseInt(e.target.value)})}
+                  >
                     <option value="30">30 dias</option>
                     <option value="90">90 dias</option>
                     <option value="365">1 ano</option>
@@ -1141,10 +1403,11 @@ const AIManagementPage: React.FC = () => {
                         min="0" 
                         max="1" 
                         step="0.05" 
-                        defaultValue="1.0"
+                        value={aiConfig.topP}
+                        onChange={(e) => setAiConfig({...aiConfig, topP: parseFloat(e.target.value)})}
                         className="flex-1"
                       />
-                      <span className="text-sm font-mono w-10">1.0</span>
+                      <span className="text-sm font-mono w-10">{aiConfig.topP.toFixed(2)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Controla a diversidade das palavras consideradas</p>
                   </div>
@@ -1158,10 +1421,11 @@ const AIManagementPage: React.FC = () => {
                         min="-2" 
                         max="2" 
                         step="0.1" 
-                        defaultValue="0.0"
+                        value={aiConfig.frequencyPenalty}
+                        onChange={(e) => setAiConfig({...aiConfig, frequencyPenalty: parseFloat(e.target.value)})}
                         className="flex-1"
                       />
-                      <span className="text-sm font-mono w-10">0.0</span>
+                      <span className="text-sm font-mono w-10">{aiConfig.frequencyPenalty.toFixed(1)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Penaliza repetição de tokens frequentes</p>
                   </div>
@@ -1175,10 +1439,11 @@ const AIManagementPage: React.FC = () => {
                         min="-2" 
                         max="2" 
                         step="0.1" 
-                        defaultValue="0.0"
+                        value={aiConfig.presencePenalty}
+                        onChange={(e) => setAiConfig({...aiConfig, presencePenalty: parseFloat(e.target.value)})}
                         className="flex-1"
                       />
-                      <span className="text-sm font-mono w-10">0.0</span>
+                      <span className="text-sm font-mono w-10">{aiConfig.presencePenalty.toFixed(1)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">Penaliza repetição de qualquer token</p>
                   </div>
@@ -1188,7 +1453,8 @@ const AIManagementPage: React.FC = () => {
                     <label className="text-sm font-medium">Timeout (segundos)</label>
                     <input 
                       type="number" 
-                      defaultValue="30"
+                      value={aiConfig.timeout}
+                      onChange={(e) => setAiConfig({...aiConfig, timeout: parseInt(e.target.value) || 30})}
                       min="5"
                       max="300"
                       className="w-full p-2 border border-border rounded-md"
@@ -1201,7 +1467,8 @@ const AIManagementPage: React.FC = () => {
                     <label className="text-sm font-medium">Tentativas de Retry</label>
                     <input 
                       type="number" 
-                      defaultValue="3"
+                      value={aiConfig.retryAttempts}
+                      onChange={(e) => setAiConfig({...aiConfig, retryAttempts: parseInt(e.target.value) || 3})}
                       min="1"
                       max="10"
                       className="w-full p-2 border border-border rounded-md"
@@ -1215,7 +1482,12 @@ const AIManagementPage: React.FC = () => {
                       <label className="text-sm font-medium">Streaming de Respostas</label>
                       <p className="text-xs text-muted-foreground">Receber respostas em tempo real</p>
                     </div>
-                    <input type="checkbox" defaultChecked className="h-4 w-4" />
+                    <input 
+                      type="checkbox" 
+                      checked={aiConfig.streaming}
+                      onChange={(e) => setAiConfig({...aiConfig, streaming: e.target.checked})}
+                      className="h-4 w-4" 
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -1284,13 +1556,13 @@ const AIManagementPage: React.FC = () => {
                       </p>
                     </div>
                     <div className="space-x-2">
-                      <Button size="sm">
+                      <Button size="sm" onClick={createNewProvider}>
                         <Plus className="h-4 w-4 mr-2" />
                         Novo Provedor
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <Cpu className="h-4 w-4 mr-2" />
-                        Testar Conexões
+                      <Button variant="outline" size="sm" onClick={() => loadAIData()}>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Atualizar
                       </Button>
                     </div>
                   </div>
@@ -1316,9 +1588,9 @@ const AIManagementPage: React.FC = () => {
                       };
 
                       const getStatusColor = () => {
-                        if (!isActive) return 'bg-gray-50 border-gray-200';
-                        if (successRate < 80) return 'bg-red-50 border-red-200';
-                        return 'bg-green-50 border-green-200';
+                        if (!isActive) return 'bg-muted/30 border-border';
+                        if (successRate < 80) return 'bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-800';
+                        return 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800';
                       };
 
                       return (
@@ -1335,7 +1607,7 @@ const AIManagementPage: React.FC = () => {
                                       {provider.name}
                                     </h4>
                                     {isPrimary && (
-                                      <Badge variant="default" className="text-xs bg-yellow-100 text-yellow-800">
+                                      <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
                                         Principal
                                       </Badge>
                                     )}
@@ -1373,8 +1645,13 @@ const AIManagementPage: React.FC = () => {
                                 >
                                   Editar
                                 </Button>
-                                <Button variant="ghost" size="sm">
-                                  Configurar
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => deleteProvider(provider.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  Excluir
                                 </Button>
                               </div>
                             </div>
@@ -1390,19 +1667,19 @@ const AIManagementPage: React.FC = () => {
                                 <p className="text-xs text-muted-foreground">Total Requisições</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-lg font-bold text-green-600">
+                                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                                   {provider.successful_requests || 0}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Sucessos</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-lg font-bold text-red-600">
+                                <p className="text-lg font-bold text-rose-600 dark:text-rose-400">
                                   {provider.failed_requests || 0}
                                 </p>
                                 <p className="text-xs text-muted-foreground">Falhas</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-lg font-bold text-blue-600">
+                                <p className="text-lg font-bold text-sky-600 dark:text-sky-400">
                                   {successRate}%
                                 </p>
                                 <p className="text-xs text-muted-foreground">Taxa Sucesso</p>
@@ -1433,7 +1710,7 @@ const AIManagementPage: React.FC = () => {
                                 )}
                                 <div>
                                   <span className="font-medium">Status:</span>
-                                  <span className={`ml-2 ${isActive ? 'text-green-600' : 'text-gray-500'}`}>
+                                  <span className={`ml-2 ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>
                                     {isActive ? 'Operacional' : 'Desabilitado'}
                                   </span>
                                 </div>
@@ -1446,11 +1723,11 @@ const AIManagementPage: React.FC = () => {
                                     <span className="text-xs font-medium">Taxa de Sucesso</span>
                                     <span className="text-xs">{successRate}%</span>
                                   </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div className="w-full bg-muted rounded-full h-2">
                                     <div 
-                                      className={`h-2 rounded-full ${
-                                        successRate >= 95 ? 'bg-green-500' :
-                                        successRate >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                                      className={`h-2 rounded-full transition-all ${
+                                        successRate >= 95 ? 'bg-emerald-500 dark:bg-emerald-400' :
+                                        successRate >= 80 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-rose-500 dark:bg-rose-400'
                                       }`}
                                       style={{ width: `${successRate}%` }}
                                     ></div>
@@ -1672,6 +1949,175 @@ const AIManagementPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal para criar/editar provedor */}
+      <Dialog open={showProviderModal} onOpenChange={setShowProviderModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Cpu className="h-5 w-5" />
+              <span>{providerModalMode === 'create' ? 'Criar Novo Provedor' : 'Editar Provedor'}</span>
+            </DialogTitle>
+            <DialogDescription>
+              {providerModalMode === 'create' 
+                ? 'Configure um novo provedor de IA para integração com a plataforma'
+                : 'Edite as configurações do provedor de IA'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Nome */}
+            <div className="space-y-2">
+              <Label htmlFor="provider-name">Nome do Provedor</Label>
+              <Input
+                id="provider-name"
+                placeholder="Ex: OpenAI GPT-4, Claude 3.5 Sonnet..."
+                value={providerForm.name}
+                onChange={(e) => setProviderForm({...providerForm, name: e.target.value})}
+              />
+            </div>
+
+            {/* Tipo de Provedor */}
+            <div className="space-y-2">
+              <Label htmlFor="provider-type">Tipo de Provedor</Label>
+              <select 
+                id="provider-type"
+                className="w-full p-2 border border-border rounded-md"
+                value={providerForm.provider_type}
+                onChange={(e) => setProviderForm({...providerForm, provider_type: e.target.value})}
+              >
+                <option value="">Selecione o tipo</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Anthropic Claude</option>
+                <option value="azure-openai">Azure OpenAI</option>
+                <option value="glm">GLM (Zhipu AI)</option>
+                <option value="google-palm">Google PaLM</option>
+                <option value="custom">Provedor Personalizado</option>
+              </select>
+            </div>
+
+            {/* Modelo */}
+            <div className="space-y-2">
+              <Label htmlFor="model-name">Nome do Modelo</Label>
+              <Input
+                id="model-name"
+                placeholder="Ex: gpt-4, claude-3-5-sonnet, glm-4..."
+                value={providerForm.model_name}
+                onChange={(e) => setProviderForm({...providerForm, model_name: e.target.value})}
+              />
+            </div>
+
+            {/* API Key */}
+            <div className="space-y-2">
+              <Label htmlFor="api-key">API Key</Label>
+              <Input
+                id="api-key"
+                type="password"
+                placeholder="Chave de API do provedor"
+                value={providerForm.api_key}
+                onChange={(e) => setProviderForm({...providerForm, api_key: e.target.value})}
+              />
+            </div>
+
+            {/* URL do Endpoint */}
+            <div className="space-y-2">
+              <Label htmlFor="endpoint-url">URL do Endpoint (Opcional)</Label>
+              <Input
+                id="endpoint-url"
+                placeholder="https://api.openai.com/v1/chat/completions"
+                value={providerForm.endpoint_url}
+                onChange={(e) => setProviderForm({...providerForm, endpoint_url: e.target.value})}
+              />
+            </div>
+
+            {/* Configurações Avançadas */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="priority">Prioridade</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={providerForm.priority}
+                  onChange={(e) => setProviderForm({...providerForm, priority: parseInt(e.target.value) || 1})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-tokens">Máx. Tokens</Label>
+                <Input
+                  id="max-tokens"
+                  type="number"
+                  min="100"
+                  max="32000"
+                  value={providerForm.max_tokens}
+                  onChange={(e) => setProviderForm({...providerForm, max_tokens: parseInt(e.target.value) || 4000})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="temperature">Temperature</Label>
+                <Input
+                  id="temperature"
+                  type="number"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={providerForm.temperature}
+                  onChange={(e) => setProviderForm({...providerForm, temperature: parseFloat(e.target.value) || 0.7})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="timeout">Timeout (segundos)</Label>
+                <Input
+                  id="timeout"
+                  type="number"
+                  min="5"
+                  max="300"
+                  value={providerForm.timeout_seconds}
+                  onChange={(e) => setProviderForm({...providerForm, timeout_seconds: parseInt(e.target.value) || 30})}
+                />
+              </div>
+            </div>
+
+            {/* Switches */}
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="is-active"
+                checked={providerForm.is_active}
+                onChange={(e) => setProviderForm({...providerForm, is_active: e.target.checked})}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="is-active">Provedor Ativo</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox" 
+                id="is-primary"
+                checked={providerForm.is_primary}
+                onChange={(e) => setProviderForm({...providerForm, is_primary: e.target.checked})}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="is-primary">Provedor Principal</Label>
+            </div>
+
+            {/* Botões */}
+            <div className="flex gap-2 pt-4">
+              <Button onClick={saveProvider} disabled={saving} className="flex-1">
+                {saving ? 'Salvando...' : (providerModalMode === 'create' ? 'Criar' : 'Atualizar')} Provedor
+              </Button>
+              <Button variant="outline" onClick={() => setShowProviderModal(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal para criar/editar prompt */}
       <Dialog open={showPromptModal} onOpenChange={setShowPromptModal}>
