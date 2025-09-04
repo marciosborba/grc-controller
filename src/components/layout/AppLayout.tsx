@@ -4,16 +4,53 @@ import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebarFixed as AppSidebar } from './AppSidebarFixed';
 import { AppHeader } from './AppHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import QuickAIManagerTest from '@/components/debug/QuickAIManagerTest';
 
 const AppLayoutContent = () => {
   const { state } = useSidebar();
   const location = useLocation();
   const isCollapsed = state === 'collapsed';
   
-  // Debug: Log route changes
+  // Debug: Log route changes com mais detalhes
   useEffect(() => {
-    console.log('🗺️ [NAVIGATION] Route changed to:', location.pathname);
-  }, [location.pathname]);
+    console.log('🗺️ [NAVIGATION] Route changed:', {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+      state: location.state,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Debug específico para AI Management
+    if (location.pathname.includes('ai-management')) {
+      console.log('🤖 [AI MANAGEMENT ROUTE] Detectada navegação para AI Management!');
+      console.log('👤 [AI MANAGEMENT ROUTE] Rota detectada:', location.pathname);
+    }
+    
+    // Debug específico para IA Manager
+    if (location.pathname === '/ai-management') {
+      console.log('🤖 [NAVIGATION] === NAVEGAÇÃO PARA IA MANAGER DETECTADA ===');
+      console.log('🗺️ [NAVIGATION] Rota de destino: /ai-management');
+      console.log('🕰️ [NAVIGATION] Timestamp:', new Date().toISOString());
+      console.log('🎯 [NAVIGATION] A rota /ai-management foi alcançada com sucesso!');
+      console.log('🤖 [NAVIGATION] === FIM DEBUG NAVEGAÇÃO ===');
+    }
+    
+    // Debug para qualquer 404 ou erro
+    if (location.pathname === '/404' || location.pathname.includes('not-found')) {
+      console.log('❌ [NAVIGATION] 404 DETECTADO!');
+      console.log('🗺️ [NAVIGATION] Rota que causou 404:', location.pathname);
+      console.log('📊 [NAVIGATION] State:', location.state);
+    }
+    
+    // Debug para redirecionamentos inesperados
+    if (location.pathname !== '/ai-management' && location.state?.from === '/ai-management') {
+      console.log('⚠️ [NAVIGATION] REDIRECIONAMENTO DETECTADO!');
+      console.log('🗺️ [NAVIGATION] De: /ai-management');
+      console.log('🗺️ [NAVIGATION] Para:', location.pathname);
+      console.log('📊 [NAVIGATION] State:', location.state);
+    }
+  }, [location]);
   
   return (
     <div className="relative min-h-screen w-full bg-background">
@@ -33,6 +70,9 @@ const AppLayoutContent = () => {
           </ErrorBoundary>
         </main>
       </div>
+      
+      {/* Botão de teste flutuante */}
+      <QuickAIManagerTest />
     </div>
   );
 };

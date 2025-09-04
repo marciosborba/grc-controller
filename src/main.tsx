@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client'
-import App from './AppOptimized.tsx'
+import App from './App.tsx'
 import './index.css'
 
 // Function to remove preloader and show app

@@ -72,7 +72,21 @@ const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPa
 // GeneralSettingsPage agora é importado diretamente acima
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
-const AIManagementPage = lazy(() => import("@/components/ai/AIManagementPage").then(module => ({ default: module.AIManagementPage })));
+
+// AI Manager - New modular structure
+const AIManagerDashboard = lazy(() => import("@/components/ai/AIManagerDashboard"));
+const AIProvidersPage = lazy(() => import("@/components/ai/AIProvidersPage"));
+const AIPromptsPage = lazy(() => import("@/components/ai/AIPromptsPage"));
+const AIWorkflowsPage = lazy(() => import("@/components/ai/AIWorkflowsPage"));
+const AIUsagePage = lazy(() => import("@/components/ai/AIUsagePage"));
+const AISettingsPage = lazy(() => import("@/components/ai/AISettingsPage"));
+const AIAuditPage = lazy(() => import("@/components/ai/AIAuditPage"));
+
+// Import direto para teste (sem lazy loading)
+import AIManagementPageSimpleDirect from "@/components/ai/AIManagementPageSimple";
+import AIManagerNew from "@/components/ai/AIManagerNew";
+import AIManagementPageDirect from "@/components/ai/AIManagementPage";
+import AITestPage from "@/components/ai/AITestPage";
 
 // Other modules
 const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
@@ -87,6 +101,11 @@ const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssess
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
 const UserDebugInfo = lazy(() => import("@/components/admin/UserDebugInfo"));
+const AuthDebugComponent = lazy(() => import("@/components/debug/AuthDebugComponent"));
+const PlatformAdminDebugRoute = lazy(() => import("@/components/debug/PlatformAdminDebugRoute"));
+const UserPermissionsDebug = lazy(() => import("@/components/debug/UserPermissionsDebug"));
+const AIManagerDirectTest = lazy(() => import("@/components/debug/AIManagerDirectTest"));
+const SimpleAITest = lazy(() => import("@/components/debug/SimpleAITest"));
 
 // Loading component for Suspense
 const PageLoader = () => (
@@ -99,21 +118,21 @@ const PageLoader = () => (
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 0, // Sem retry para evitar travamentos
-      retryDelay: 1000,
-      staleTime: 10 * 60 * 1000, // 10 minutes (aumentado)
-      gcTime: 15 * 60 * 1000, // 15 minutes (aumentado)
+      retry: 2, // Permitir 2 tentativas
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 15 * 60 * 1000, // 15 minutes
       refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      refetchOnReconnect: true, // Reconectar quando voltar online
       refetchOnMount: false,
       refetchInterval: false,
       refetchIntervalInBackground: false,
-      networkMode: 'online', // Apenas quando online
-      throwOnError: false // Não lançar erros que podem travar
+      networkMode: 'online',
+      throwOnError: false
     },
     mutations: {
-      retry: 0,
-      retryDelay: 1000,
+      retry: 1, // Uma tentativa para mutations
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
       networkMode: 'online',
       throwOnError: false
     }
@@ -137,7 +156,22 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   
+  console.log('🔐 [PLATFORM ADMIN ROUTE] === VERIFICAÇÃO DE ACESSO ===');
+  console.log('👤 [PLATFORM ADMIN ROUTE] Dados do usuário:', {
+    user,
+    isLoading,
+    isPlatformAdmin: user?.isPlatformAdmin,
+    roles: user?.roles,
+    permissions: user?.permissions,
+    timestamp: new Date().toISOString(),
+    currentUrl: window.location.pathname
+  });
+  
+  console.log('🗺️ [PLATFORM ADMIN ROUTE] URL atual:', window.location.pathname);
+  console.log('🕰️ [PLATFORM ADMIN ROUTE] Timestamp:', new Date().toISOString());
+  
   if (isLoading) {
+    console.log('⏳ [PLATFORM ADMIN ROUTE] Usuário ainda carregando...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-4 border-border border-t-primary"></div>
@@ -146,12 +180,24 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   if (!user) {
+    console.log('❌ [PLATFORM ADMIN ROUTE] Usuário não logado, redirecionando para /login');
     return <Navigate to="/login" replace />;
   }
   
   if (!user.isPlatformAdmin) {
+    console.log('❌ [PLATFORM ADMIN ROUTE] Usuário não é Platform Admin, redirecionando para /dashboard');
+    console.log('📊 [PLATFORM ADMIN ROUTE] Detalhes da verificação:', {
+      isPlatformAdmin: user.isPlatformAdmin,
+      roles: user.roles,
+      hasAdminRole: user.roles?.includes('admin'),
+      hasSuperAdminRole: user.roles?.includes('super_admin'),
+      hasPlatformAdminRole: user.roles?.includes('platform_admin')
+    });
     return <Navigate to="/dashboard" replace />;
   }
+  
+  console.log('✅ [PLATFORM ADMIN ROUTE] Usuário é Platform Admin, permitindo acesso');
+  console.log('🔐 [PLATFORM ADMIN ROUTE] === FIM VERIFICAÇÃO ===');
   
   return <>{children}</>;
 };
@@ -198,15 +244,7 @@ const App = () => (
                   </Suspense>
                 } />
                 
-                {/* TESTE PÚBLICO - SEM PROTEÇÃO */}
-                <Route path="/test-public-route" element={
-                  <div style={{padding: '3rem', background: 'purple', color: 'white', fontSize: '28px', textAlign: 'center'}}>
-                    {console.log('🟣 [PUBLIC TEST] Rota pública funcionando - SEM PROTEÇÃO!')}
-                    <h1>✅ ROTA PÚBLICA FUNCIONA!</h1>
-                    <p>Esta rota está FORA do ProtectedRoute</p>
-                    <p>Timestamp: {new Date().toLocaleString()}</p>
-                  </div>
-                } />
+
                 
                 {/* Protected Routes */}
                 <Route path="/" element={
@@ -435,6 +473,72 @@ const App = () => (
                       </Suspense>
                     </PlatformAdminRoute>
                   } />
+                  {/* AI Manager - New modular structure */}
+                  <Route path="ai-manager" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIManagementPageDirect />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/providers" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIProvidersPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/prompts" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIPromptsPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/workflows" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIWorkflowsPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/usage" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIUsagePage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/settings" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AISettingsPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-manager/audit" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIAuditPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  
+                  {/* Legacy AI management routes for compatibility */}
+                  <Route path="admin/ai-management" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIManagerDashboard />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="ai-management" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <AIManagerDashboard />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
                   <Route path="debug-user" element={
                     <Suspense fallback={<PageLoader />}>
                       <DebugUserInfo />
@@ -443,6 +547,21 @@ const App = () => (
                   <Route path="user-debug" element={
                     <Suspense fallback={<PageLoader />}>
                       <UserDebugInfo />
+                    </Suspense>
+                  } />
+                  <Route path="auth-debug" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuthDebugComponent />
+                    </Suspense>
+                  } />
+                  <Route path="permissions-debug" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <UserPermissionsDebug />
+                    </Suspense>
+                  } />
+                  <Route path="ai-manager-test" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AIManagerDirectTest />
                     </Suspense>
                   } />
                   <Route path="profile" element={
@@ -465,13 +584,9 @@ const App = () => (
                       <GeneralSettingsPage />
                     </Suspense>
                   } />
-                  <Route path="admin/ai-management" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIManagementPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
+                  
+
+
                   <Route path="notifications" element={
                     <Suspense fallback={<PageLoader />}>
                       <NotificationsPage />
@@ -482,7 +597,19 @@ const App = () => (
                       <HelpPage />
                     </Suspense>
                   } />
+                  
+                  {/* Rotas de teste movidas para DENTRO da estrutura aninhada */}
+                  <Route path="test-route" element={
+                    <div style={{padding: '20px'}}>
+                      <h1>🧪 TESTE DE ROTA FUNCIONANDO!</h1>
+                      <p>Se você consegue ver essa mensagem, o problema não é na estrutura de rotas.</p>
+                      <p>Timestamp: {new Date().toISOString()}</p>
+                    </div>
+                  } />
                 </Route>
+
+                
+                
                 
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />

@@ -153,11 +153,11 @@ const navigationItems = [{
     permissions: ['platform_admin'],
     description: 'Gestão de organizações'
   }, {
-    title: 'IA Mananger',
-    url: '/admin/ai-management',
+    title: 'IA Manager',
     icon: Brain,
+    url: '/ai-management',
     permissions: ['platform_admin'],
-    description: 'Configuração e gestão de assistentes de IA'
+    description: 'Gestão de IA e Automação'
   }, {
     title: 'Global Settings ',
     url: '/settings/general',
@@ -313,16 +313,23 @@ export function AppSidebarFixed() {
     }
   }, [userIsPlatformAdmin, rolesLoaded]); // CORRIGIDO: dependências corretas
 
-  // CORRIGIDO: useEffect com dependências corretas
+  // CORRIGIDO: useEffect com dependências corretas e cleanup melhorado
   useEffect(() => {
     let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
     
     if (userIsPlatformAdmin && !rolesLoaded && isMounted) {
-      loadDatabaseRoles();
+      // Debounce para evitar múltiplas chamadas
+      timeoutId = setTimeout(() => {
+        if (isMounted) {
+          loadDatabaseRoles();
+        }
+      }, 100);
     }
     
     return () => {
       isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [userIsPlatformAdmin, rolesLoaded, loadDatabaseRoles]);
 
@@ -526,7 +533,43 @@ export function AppSidebarFixed() {
                           className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
                           title={collapsed ? item.title : ''}
                           onClick={() => {
-                            console.log('🔗 [SIDEBAR] Navigating to:', item.url);
+                            console.log('🔗 [SIDEBAR CLICK] Clique detectado:', {
+                              title: item.title,
+                              url: item.url,
+                              timestamp: new Date().toISOString()
+                            });
+                            
+                            if (item.title === 'IA Manager') {
+                              console.log('🤖 [IA MANAGER CLICK] Clique no IA Manager detectado!');
+                              console.log('🌐 [IA MANAGER CLICK] Navegando para:', item.url);
+                              console.log('🚀 [IA MANAGER] Usando NavLink normal...');
+                              console.log('👤 [IA MANAGER CLICK] Dados do usuário:', {
+                                id: user?.id,
+                                name: user?.name,
+                                isPlatformAdmin: user?.isPlatformAdmin,
+                                roles: user?.roles,
+                                permissions: user?.permissions
+                              });
+                              console.log('🔐 [IA MANAGER CLICK] Permissões necessárias:', {
+                                requiredPermissions: item.permissions
+                              });
+                              console.log('🛣️ [IA MANAGER CLICK] Estado da navegação:', {
+                                currentPath: location.pathname,
+                                targetPath: item.url,
+                                willNavigate: true
+                              });
+                              
+                              // Teste adicional: navegação manual para debug
+                              setTimeout(() => {
+                                console.log('🔄 [IA MANAGER CLICK] Verificando se navegação aconteceu...');
+                                console.log('📍 [IA MANAGER CLICK] Caminho atual após clique:', window.location.pathname);
+                                if (window.location.pathname !== '/ai-management') {
+                                  console.log('⚠️ [IA MANAGER CLICK] NAVEGAÇÃO FALHOU! Ainda em:', window.location.pathname);
+                                } else {
+                                  console.log('✅ [IA MANAGER CLICK] Navegação bem-sucedida!');
+                                }
+                              }, 100);
+                            }
                           }}
                         >
                           <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />

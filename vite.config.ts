@@ -12,6 +12,12 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     // Headers de segurança para desenvolvimento
     ...(mode === 'development' ? DevelopmentSecurityHelper.getViteDevConfig().server : {}),
+    // Configuração para SPA routing - todas as rotas retornam index.html
+    historyApiFallback: true,
+  },
+  // Configuração para SPA routing
+  preview: {
+    port: 8080,
   },
   plugins: [
     react(),

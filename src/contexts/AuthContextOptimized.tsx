@@ -56,7 +56,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Cache super otimizado para startup rápido
 const authCache = new Map<string, { user: AuthUser, timestamp: number }>();
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutos para auth
-const STARTUP_TIMEOUT = 3000; // 3 segundos timeout para startup
+const STARTUP_TIMEOUT = 10000; // 10 segundos timeout para startup
+const AUTH_TIMEOUT = 15000; // 15 segundos timeout para auth
+const USER_DATA_TIMEOUT = 12000; // 12 segundos timeout para user data
 
 // Funções utilitárias minimalistas
 const sanitizeInput = (input: string): string => {
@@ -66,6 +68,18 @@ const sanitizeInput = (input: string): string => {
 
 const validateEmailFormat = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+// Debounce function para evitar múltiplas chamadas
+const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -183,7 +197,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         
         // Timeout para carregamento de dados do usuário
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), 10000);
+          setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), USER_DATA_TIMEOUT);
         });
         
         const userDataPromise = loadUserData(session.user);
@@ -220,19 +234,19 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       try {
         console.log('🚀 [AUTH] Inicializando autenticação...');
         
-        // Timeout mais agressivo
+        // Timeout para inicialização
         timeoutId = setTimeout(() => {
           if (mounted) {
             console.warn('⚠️ [AUTH] Timeout na inicialização, continuando sem sessão');
             setIsLoading(false);
           }
-        }, 5000); // 5 segundos timeout
+        }, STARTUP_TIMEOUT);
         
         const sessionPromise = supabase.auth.getSession();
         const { data: { session: currentSession }, error } = await Promise.race([
           sessionPromise,
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 4000)
+            setTimeout(() => reject(new Error('Timeout')), STARTUP_TIMEOUT - 1000)
           )
         ]);
         
@@ -264,8 +278,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     initializeAuth();
 
-    // Listener para mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+    // Listener para mudanças de auth com debounce
+    const debouncedHandleAuthChange = debounce(handleAuthChange, 300);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(debouncedHandleAuthChange);
 
     return () => {
       mounted = false;
@@ -273,6 +288,32 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       subscription.unsubscribe();
     };
   }, [handleAuthChange]);
+
+  // Heartbeat para verificar sessão periodicamente
+  useEffect(() => {
+    if (!user) return;
+    
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('⚠️ [AUTH HEARTBEAT] Erro ao verificar sessão:', error.message);
+          return;
+        }
+        
+        if (!currentSession && user) {
+          console.warn('⚠️ [AUTH HEARTBEAT] Sessão perdida, fazendo logout limpo');
+          setUser(null);
+          setSession(null);
+        }
+      } catch (error) {
+        console.warn('⚠️ [AUTH HEARTBEAT] Erro inesperado:', error);
+      }
+    }, 60000); // A cada minuto
+    
+    return () => clearInterval(heartbeatInterval);
+  }, [user]);
 
   // Login otimizado
   const login = useCallback(async (email: string, password: string) => {
@@ -294,9 +335,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     try {
       console.log('🔐 [AUTH] Chamando supabase.auth.signInWithPassword...');
       
-      // Timeout mais curto para evitar travamento
+      // Timeout para autenticação
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout na autenticação. Verifique sua conexão.')), 8000);
+        setTimeout(() => reject(new Error('Timeout na autenticação. Verifique sua conexão.')), AUTH_TIMEOUT);
       });
       
       const loginPromise = supabase.auth.signInWithPassword({

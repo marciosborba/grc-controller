@@ -11,13 +11,19 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 
 interface AlexAssessmentWizardProps {
-  onClose: () => void;
-  onComplete: () => void;
+  userRole: string;
+  tenantConfig: any;
+  selectedFramework?: string | null;
+  onComplete: (data: any) => void;
+  onCancel: () => void;
 }
 
 const AlexAssessmentWizard: React.FC<AlexAssessmentWizardProps> = ({
-  onClose,
-  onComplete
+  userRole,
+  tenantConfig,
+  selectedFramework,
+  onComplete,
+  onCancel
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -30,23 +36,26 @@ const AlexAssessmentWizard: React.FC<AlexAssessmentWizardProps> = ({
               <CardTitle>Alex Assessment Wizard</CardTitle>
               <p className="text-gray-600">Criação inteligente de assessments</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onCancel}>
               <X className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
-            <h3 className="text-lg font-semibold mb-2">Em construção</h3>
+            <h3 className="text-lg font-semibold mb-2">Alex Assessment Wizard</h3>
             <p className="text-gray-600 mb-4">
-              O wizard inteligente será implementado em breve
+              Wizard inteligente para criação de assessments com IA
             </p>
+            {selectedFramework && (
+              <Badge className="mb-4">Framework: {selectedFramework}</Badge>
+            )}
             <div className="flex gap-2 justify-center">
-              <Button variant="outline" onClick={onClose}>
-                Fechar
+              <Button variant="outline" onClick={onCancel}>
+                Cancelar
               </Button>
-              <Button onClick={onComplete}>
-                Simular Conclusão
+              <Button onClick={() => onComplete({ name: 'Assessment Teste', framework: selectedFramework })}>
+                Simular Criação
               </Button>
             </div>
           </div>

@@ -34,18 +34,28 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAlexAssessment } from '@/hooks/useAlexAssessment';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface AlexDashboardProps {
-  searchTerm: string;
-  selectedCategory: string;
   userRole: string;
+  tenantConfig: any;
+  recentAssessments: any[];
+  quickStats: any;
+  onNewAssessment: () => void;
+  onUseFramework: (frameworkId: string) => void;
+  searchTerm?: string;
+  selectedCategory?: string;
 }
 
 const AlexDashboard: React.FC<AlexDashboardProps> = ({
-  searchTerm,
-  selectedCategory,
-  userRole
+  userRole,
+  tenantConfig,
+  recentAssessments,
+  quickStats,
+  onNewAssessment,
+  onUseFramework,
+  searchTerm = '',
+  selectedCategory = ''
 }) => {
   const isMobile = useIsMobile();
   const { generateAnalytics, isGeneratingAnalytics } = useAlexAssessment();

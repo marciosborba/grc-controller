@@ -174,8 +174,8 @@ const navigationItems = [{
     permissions: ['platform_admin'],
     description: 'Gestão de organizações'
   }, {
-    title: 'IA Mananger',
-    url: '/admin/ai-management',
+    title: 'IA Manager',
+    url: '/ai-manager',
     icon: Brain,
     permissions: ['platform_admin'],
     description: 'Configuração e gestão de assistentes de IA'
@@ -598,6 +598,33 @@ export function AppSidebar() {
   const handleProfileClick = () => {
     navigate('/profile');
   };
+
+  const handleAIManagerClick = (item: any, event: React.MouseEvent) => {
+    console.log('🧠 [AI MANAGER DEBUG] === CLIQUE NO IA MANAGER ===');
+    console.log('🕰️ [AI MANAGER DEBUG] Timestamp:', new Date().toISOString());
+    console.log('🗺️ [AI MANAGER DEBUG] URL atual:', window.location.pathname);
+    console.log('🎯 [AI MANAGER DEBUG] URL de destino:', item.url);
+    console.log('👤 [AI MANAGER DEBUG] Usuário atual:', {
+      id: user?.id,
+      name: user?.name,
+      isPlatformAdmin: user?.isPlatformAdmin,
+      roles: user?.roles,
+      permissions: user?.permissions
+    });
+    console.log('🔐 [AI MANAGER DEBUG] Verificação de acesso:', {
+      hasAccess: hasAccess(item.permissions, item.title),
+      requiredPermissions: item.permissions,
+      itemTitle: item.title
+    });
+    console.log('🛣️ [AI MANAGER DEBUG] Informações da rota:', {
+      from: window.location.pathname,
+      to: item.url,
+      method: 'NavLink click'
+    });
+    console.log('🧠 [AI MANAGER DEBUG] === FIM DEBUG CLIQUE ===');
+    
+    // Não prevenir o comportamento padrão - deixar o NavLink funcionar normalmente
+  };
   return <Sidebar className="border-r border-border" collapsible="icon">
       {/* Header - Responsivo */}
       <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
@@ -731,6 +758,7 @@ export function AppSidebar() {
                             to={item.url} 
                             className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
                             title={collapsed ? item.title : ''}
+                            onClick={item.title === 'IA Manager' ? (e) => handleAIManagerClick(item, e) : undefined}
                           >
                             <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                             {!collapsed && (

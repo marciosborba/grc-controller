@@ -33,7 +33,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useAlexAssessment } from '@/hooks/useAlexAssessment';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { toast } from 'sonner';
 
 interface AIRecommendation {
@@ -54,9 +54,10 @@ interface AIRecommendation {
 
 interface AlexAIRecommendationsProps {
   userRole: string;
+  tenantConfig: any;
 }
 
-const AlexAIRecommendations: React.FC<AlexAIRecommendationsProps> = ({ userRole }) => {
+const AlexAIRecommendations: React.FC<AlexAIRecommendationsProps> = ({ userRole, tenantConfig }) => {
   const isMobile = useIsMobile();
   const { getAIRecommendations, isGettingRecommendations } = useAlexAssessment();
   
