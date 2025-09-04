@@ -44,7 +44,27 @@ const navigationItems = [{
       url: '/assessments',
       icon: ClipboardList,
       permissions: ['assessment.read'],
-      description: 'Gestão de Assessments (apenas para roles específicas)'
+      description: 'Gestão de Assessments',
+      submenu: [
+        {
+          title: 'Alex Assessment Engine',
+          url: '/assessments',
+          icon: Brain,
+          description: 'Sistema inteligente com IA integrada'
+        },
+        {
+          title: 'Assessments Legacy',
+          url: '/assessments/legacy',
+          icon: ClipboardList,
+          description: 'Sistema tradicional de assessments'
+        },
+        {
+          title: 'Frameworks',
+          url: '/assessments/frameworks',
+          icon: FileCheck,
+          description: 'Gerenciamento de frameworks'
+        }
+      ]
     },
     {
       title: 'Auditoria',
@@ -602,7 +622,18 @@ export function AppSidebar() {
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
         {navigationItems.map((group, groupIndex) => {
-          const filteredItems = group.items.filter(item => hasPermission(item.permissions));
+          const filteredItems = group.items.filter(item => {
+    const hasAccess = hasPermission(item.permissions);
+    // DEBUG: Log das permissões para cada item
+    console.log(`🔐 [PERMISSION DEBUG] ${item.title}:`, {
+      requiredPermissions: item.permissions,
+      hasAccess,
+      userIsPlatformAdmin: user?.isPlatformAdmin,
+      userPermissions: user?.permissions || [],
+      userRoles: user?.roles || []
+    });
+    return hasAccess;
+  });
           
           // Debug: mostrar itens filtrados
           if (isTestingRole && currentTestRole) {
@@ -633,26 +664,89 @@ export function AppSidebar() {
                 <SidebarMenu>
                   {filteredItems.map(item => (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
-                          title={collapsed ? item.title : ''}
-                        >
-                          <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                          {!collapsed && (
-                            <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
-                                <ChevronRight className="h-2 w-2 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                      {/* Se o item tem submenu, renderizar diferente */}
+                      {item.submenu ? (
+                        <div className="space-y-1">
+                          {/* Item principal - navega para o primeiro item do submenu */}
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to={item.submenu[0].url} // Navega para o primeiro item do submenu (Alex Assessment Engine)
+                              className={`${getNavCls(isActive(item.url) || item.submenu.some(sub => isActive(sub.url)))} flex items-center w-full px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 group mb-1`}
+                              title={item.title}
+                              onClick={() => {
+                                console.log(`🔗 [SIDEBAR DEBUG] Clicando em ${item.title}, navegando para:`, item.submenu[0].url);
+                                console.log(`🔐 [PERMISSION CHECK] Permissões do usuário:`, {
+                                  isPlatformAdmin: user?.isPlatformAdmin,
+                                  permissions: user?.permissions,
+                                  roles: user?.roles,
+                                  requiredForAssessment: ['assessment.read']
+                                });
+                              }}
+                            >
+                              <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                              {!collapsed && (
+                                <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
+                                    <ChevronRight className="h-3 w-3 transition-transform group-hover:rotate-90 flex-shrink-0" />
+                                  </div>
+                                  <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              )}
+                            </NavLink>
+                          </SidebarMenuButton>
+                          
+                          {/* Submenu items - sempre visível para Assessment */}
+                          {!collapsed && item.submenu.map(subItem => (
+                            <SidebarMenuButton asChild key={subItem.title}>
+                              <NavLink
+                                to={subItem.url}
+                                className={`${getNavCls(isActive(subItem.url))} flex items-center w-full px-4 sm:px-6 py-2 sm:py-3 ml-2 rounded-lg transition-all duration-200 group text-sm`}
+                                title={subItem.title}
+                              >
+                                <subItem.icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                                <div className="ml-2 flex-1 min-w-0">
+                                  <span className="text-xs sm:text-sm font-medium truncate">{subItem.title}</span>
+                                  {subItem.title === 'Alex Assessment Engine' && (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200">
+                                        IA
+                                      </Badge>
+                                      <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
+                                        NOVO
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              </NavLink>
+                            </SidebarMenuButton>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Item normal sem submenu */
+                        <SidebarMenuButton asChild>
+                          <NavLink 
+                            to={item.url} 
+                            className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
+                            title={collapsed ? item.title : ''}
+                          >
+                            <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                            {!collapsed && (
+                              <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
+                                  <ChevronRight className="h-2 w-2 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                </div>
+                                <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
+                                  {item.description}
+                                </p>
                               </div>
-                              <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
-                                {item.description}
-                              </p>
-                            </div>
-                          )}
-                        </NavLink>
-                      </SidebarMenuButton>
+                            )}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      )}
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>

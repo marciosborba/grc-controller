@@ -50,6 +50,9 @@ const FrameworkDetailPage = lazy(() => import("@/components/assessments/Framewor
 const FrameworkEvaluationPage = lazy(() => import("@/components/assessments/FrameworkEvaluationPage"));
 const CreateFrameworkPage = lazy(() => import("@/components/assessments/CreateFrameworkPage"));
 
+// Alex Assessment Engine - Next-gen modular assessment system
+const AlexAssessmentEngineTemp = lazy(() => import("@/components/assessments/AlexAssessmentEngineTemp"));
+
 // Privacy module
 const PrivacyDashboard = lazy(() => import("@/components/privacy/PrivacyDashboard").then(module => ({ default: module.PrivacyDashboard })));
 const DataDiscoveryPage = lazy(() => import("@/components/privacy/DataDiscoveryPage").then(module => ({ default: module.DataDiscoveryPage })));
@@ -195,6 +198,16 @@ const App = () => (
                   </Suspense>
                 } />
                 
+                {/* TESTE PÚBLICO - SEM PROTEÇÃO */}
+                <Route path="/test-public-route" element={
+                  <div style={{padding: '3rem', background: 'purple', color: 'white', fontSize: '28px', textAlign: 'center'}}>
+                    {console.log('🟣 [PUBLIC TEST] Rota pública funcionando - SEM PROTEÇÃO!')}
+                    <h1>✅ ROTA PÚBLICA FUNCIONA!</h1>
+                    <p>Esta rota está FORA do ProtectedRoute</p>
+                    <p>Timestamp: {new Date().toLocaleString()}</p>
+                  </div>
+                } />
+                
                 {/* Protected Routes */}
                 <Route path="/" element={
                   <ProtectedRoute>
@@ -203,6 +216,12 @@ const App = () => (
                 }>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="assessments" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsPage />
+                    </Suspense>
+                  } />
+                  
                   <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
                   <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
                   <Route path="dashboard-test-no-queries" element={<DashboardPageNoQueries />} />
@@ -293,14 +312,10 @@ const App = () => (
                       <AlexAuditAI />
                     </Suspense>
                   } />
-                  <Route path="assessments" element={
+                  {/* ROTAS ESPECÍFICAS PRIMEIRO (mais específicas) */}
+                  <Route path="assessments/legacy" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentsPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkManagementPage />
                     </Suspense>
                   } />
                   <Route path="assessments/frameworks/create" element={
@@ -308,21 +323,29 @@ const App = () => (
                       <CreateFrameworkPage />
                     </Suspense>
                   } />
-                  <Route path="assessments/frameworks/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkDetailPage />
-                    </Suspense>
-                  } />
                   <Route path="assessments/frameworks/:id/evaluate" element={
                     <Suspense fallback={<PageLoader />}>
                       <FrameworkEvaluationPage />
                     </Suspense>
                   } />
-                  <Route path="assessments/:id" element={
+                  <Route path="assessments/frameworks/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworkDetailPage />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/frameworks" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworkManagementPage />
+                    </Suspense>
+                  } />
+                  {/* TEMPORARIAMENTE REMOVIDA PARA TESTE */}
+                  {/* <Route path="assessments/:id" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentDetailPage />
                     </Suspense>
-                  } />
+                  } /> */}
+                  
+                  {/* ROTAS MOVIDAS PARA O TOPO - REMOVENDO DUPLICATAS */}
                   <Route path="assessment-detail/:id" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentDetailPage />
