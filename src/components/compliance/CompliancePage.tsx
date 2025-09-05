@@ -55,7 +55,9 @@ import {
   Activity,
   Eye,
   Archive,
-  Shield
+  Shield,
+  Settings2,
+  Workflow
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -64,7 +66,10 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import ComplianceCard from './ComplianceCard';
 import SortableComplianceCard from './SortableComplianceCard';
+import ComplianceProcessBuilder from './process-builder/ComplianceProcessBuilder';
+import { ProcessExecutorDemo } from './runtime/ProcessExecutorDemo';
 import type { ComplianceAssessment } from '@/types/compliance-management';
+import type { ComplianceProcessTemplate } from '@/types/compliance-process-templates';
 
 const CompliancePage = () => {
   const { user } = useAuth();
@@ -87,6 +92,11 @@ const CompliancePage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para o Process Builder
+  const [isProcessBuilderOpen, setIsProcessBuilderOpen] = useState(false);
+  const [processTemplates, setProcessTemplates] = useState<ComplianceProcessTemplate[]>([]);
+  const [isExecutorDemoOpen, setIsExecutorDemoOpen] = useState(false);
 
   // Estados para drag and drop
   const sensors = useSensors(
@@ -180,7 +190,28 @@ const CompliancePage = () => {
     };
 
     fetchAssessments();
+    fetchProcessTemplates();
   }, [user?.id]);
+
+  // Função para carregar templates de processo
+  const fetchProcessTemplates = async () => {
+    if (!user?.tenantId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('compliance_process_templates')
+        .select('*')
+        .eq('tenant_id', user.tenantId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProcessTemplates(data || []);
+    } catch (error) {
+      console.error('Error fetching process templates:', error);
+      // Não mostrar toast de erro para não poluir a UI
+    }
+  };
 
   // Aplicar filtros
   useEffect(() => {
@@ -272,6 +303,18 @@ const CompliancePage = () => {
     setEditingAssessment(null);
   };
 
+  // Função para salvar template de processo
+  const handleSaveProcessTemplate = async (template: ComplianceProcessTemplate) => {
+    try {
+      // Recarregar templates
+      await fetchProcessTemplates();
+      toast.success('Template de processo salvo com sucesso!');
+    } catch (error) {
+      console.error('Error saving process template:', error);
+      toast.error('Erro ao salvar template de processo');
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -353,35 +396,97 @@ const CompliancePage = () => {
           </p>
         </div>
         
-        <button
-          onClick={() => {
-            resetForm();
-            setIsDialogOpen(true);
-          }}
-              style={{
-                backgroundColor: 'hsl(var(--primary))', // Usa variável CSS primary
-                color: 'white', // Texto branco para melhor contraste
-                border: '1px solid hsl(var(--primary))',
-            padding: '8px 16px',
-            borderRadius: '6px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.9';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1';
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          Nova Avaliação
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setIsProcessBuilderOpen(true)}
+            style={{
+              backgroundColor: 'transparent',
+              color: 'hsl(var(--primary))',
+              border: '1px solid hsl(var(--primary))',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'hsl(var(--primary))';
+            }}
+            title="Configure templates de processo personalizados"
+          >
+            <Settings2 className="w-4 h-4" />
+            Configurar Processos
+          </button>
+
+          <button
+            onClick={() => setIsExecutorDemoOpen(true)}
+            style={{
+              backgroundColor: 'transparent',
+              color: 'hsl(var(--primary))',
+              border: '1px solid hsl(var(--primary))',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'hsl(var(--primary))';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'hsl(var(--primary))';
+            }}
+            title="Teste os templates de processo em modo demonstração"
+          >
+            <Workflow className="w-4 h-4" />
+            Testar Processos
+          </button>
+
+          <button
+            onClick={() => {
+              resetForm();
+              setIsDialogOpen(true);
+            }}
+            style={{
+              backgroundColor: 'hsl(var(--primary))',
+              color: 'white',
+              border: '1px solid hsl(var(--primary))',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Nova Avaliação
+          </button>
+        </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -582,6 +687,24 @@ const CompliancePage = () => {
           </DndContext>
         )}
       </div>
+
+      {/* Process Builder */}
+      <ComplianceProcessBuilder
+        isOpen={isProcessBuilderOpen}
+        onClose={() => setIsProcessBuilderOpen(false)}
+        onSave={handleSaveProcessTemplate}
+        mode="create"
+      />
+
+      {/* Process Executor Demo */}
+      <Dialog open={isExecutorDemoOpen} onOpenChange={setIsExecutorDemoOpen}>
+        <DialogContent className="max-w-7xl h-[90vh] p-0">
+          <ProcessExecutorDemo
+            templates={processTemplates}
+            onClose={() => setIsExecutorDemoOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
