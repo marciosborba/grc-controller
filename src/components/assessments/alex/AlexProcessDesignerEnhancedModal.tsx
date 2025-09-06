@@ -19,7 +19,7 @@ import {
   GitBranch, MessageSquare, Bell, Gauge, TrendingUp,
   BarChart, PieChart, LineChart, Award, Shield, Cog,
   Lock, Phone, Link, CalendarDays, ToggleLeft, Image,
-  Minus, Palette, Tag, PenTool
+  Minus, Palette, Tag, PenTool, Plug
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -903,6 +903,82 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
       toast.success('Canvas limpo!');
     }
   }, []);
+
+  // ==================== WORKFLOW HANDLERS ====================
+  const handleWorkflowDragStart = useCallback((e: React.DragEvent, nodeData: any) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/plain', JSON.stringify(nodeData));
+    
+    console.log('🔄 [WORKFLOW DRAG] Iniciando drag:', nodeData);
+  }, []);
+
+  const handleWorkflowCanvasDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleWorkflowCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    
+    try {
+      const nodeData = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left - 60; // Offset para centralizar
+      const y = e.clientY - rect.top - 20;
+      
+      const newNode = {
+        id: `node_${Date.now()}`,
+        type: nodeData.type,
+        label: nodeData.label,
+        position: { x: Math.max(0, x), y: Math.max(0, y) },
+        data: getDefaultWorkflowData(nodeData.type),
+        connections: []
+      };
+      
+      setWorkflowNodes(prev => [...prev, newNode]);
+      console.log('🔄 [WORKFLOW DROP] Nó adicionado:', newNode);
+      toast.success(`Elemento "${nodeData.label}" adicionado ao workflow!`);
+    } catch (error) {
+      console.error('❌ [WORKFLOW DROP] Erro ao adicionar nó:', error);
+      toast.error('Erro ao adicionar elemento ao workflow');
+    }
+  }, []);
+
+  const getDefaultWorkflowData = useCallback((type: string) => {
+    const defaults: Record<string, any> = {
+      start: { priority: 'medium' },
+      end: { priority: 'medium' },
+      decision: { condition: '', priority: 'medium' },
+      parallel: { priority: 'medium' },
+      task: { assignedTo: [], priority: 'medium' },
+      timer: { timerDuration: '3600', priority: 'medium' },
+      notification: { notificationTemplate: '', priority: 'medium' }
+    };
+    
+    return defaults[type] || { priority: 'medium' };
+  }, []);
+
+  const updateNodeProperty = useCallback((nodeId: string, property: string, value: any) => {
+    setWorkflowNodes(prev => prev.map(node => 
+      node.id === nodeId 
+        ? { ...node, data: { ...node.data, [property]: value } }
+        : node
+    ));
+    
+    if (selectedNode && selectedNode.id === nodeId) {
+      setSelectedNode(prev => prev ? { ...prev, data: { ...prev.data, [property]: value } } : null);
+    }
+    
+    setHasUnsavedChanges(true);
+  }, [selectedNode]);
+
+  const deleteWorkflowNode = useCallback((nodeId: string) => {
+    setWorkflowNodes(prev => prev.filter(node => node.id !== nodeId));
+    if (selectedNode && selectedNode.id === nodeId) {
+      setSelectedNode(null);
+    }
+    toast.success('Elemento removido do workflow!');
+  }, [selectedNode]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
@@ -2056,83 +2132,180 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
             
             {/* CAMADA 2: Workflow Engine Visual */}
             <TabsContent value="workflow" className="space-y-6 h-full">
-              <div className="h-full flex gap-6">
+              <div className="h-full flex gap-4">
                 
                 {/* Paleta de Nós do Workflow */}
-                <div className="w-64 flex-shrink-0">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <GitBranch className="h-4 w-4" />
-                        Elementos do Workflow
+                <div className="w-56 flex-shrink-0 min-w-0">
+                  <Card className="h-full flex flex-col">
+                    <CardHeader className="pb-2 px-3 pt-3 flex-shrink-0">
+                      <CardTitle className="text-xs flex items-center gap-2">
+                        <GitBranch className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">Elementos Workflow</span>
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="overflow-auto">
-                      <div className="space-y-4">
+                    <CardContent className="px-2 pb-3 flex-1 min-h-0 overflow-y-auto">
+                      <div className="space-y-3">
                         
                         {/* Nós de Controle */}
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
                             Controle de Fluxo
                           </h4>
                           <div className="space-y-1">
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-green-50">
-                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                              <span className="text-xs font-medium">Início</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-300 dark:hover:border-green-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'start', label: 'Início', category: 'control' })}
+                                 title="Ponto de início do processo">
+                              <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Início</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-red-50">
-                              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                              <span className="text-xs font-medium">Fim</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-300 dark:hover:border-red-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'end', label: 'Fim', category: 'control' })}
+                                 title="Ponto de finalização do processo">
+                              <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Fim</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-yellow-50">
-                              <div className="w-3 h-3 bg-yellow-500 rounded transform rotate-45"></div>
-                              <span className="text-xs font-medium">Decisão</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-yellow-50 dark:hover:bg-yellow-950 hover:border-yellow-300 dark:hover:border-yellow-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'decision', label: 'Decisão', category: 'control' })}
+                                 title="Ponto de decisão condicional">
+                              <div className="w-3 h-3 bg-yellow-500 rounded transform rotate-45 flex-shrink-0"></div>
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Decisão</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-purple-50">
-                              <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                              <span className="text-xs font-medium">Paralelo</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-950 hover:border-purple-300 dark:hover:border-purple-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'parallel', label: 'Paralelo', category: 'control' })}
+                                 title="Execução paralela de tarefas">
+                              <div className="w-3 h-3 bg-purple-500 rounded flex-shrink-0"></div>
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Paralelo</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'merge', label: 'Junção', category: 'control' })}
+                                 title="Junção de fluxos paralelos">
+                              <div className="w-3 h-3 bg-indigo-500 rounded-full flex-shrink-0"></div>
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Junção</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
                           </div>
                         </div>
                         
                         {/* Tarefas */}
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
                             Tarefas
                           </h4>
                           <div className="space-y-1">
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-blue-50">
-                              <Users className="h-3 w-3 text-blue-600" />
-                              <span className="text-xs font-medium">Tarefa de Usuário</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'user_task', label: 'Tarefa Usuário', category: 'task' })}
+                                 title="Tarefa executada por usuário">
+                              <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Tarefa Usuário</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-indigo-50">
-                              <Cog className="h-3 w-3 text-indigo-600" />
-                              <span className="text-xs font-medium">Tarefa Automática</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'auto_task', label: 'Tarefa Automática', category: 'task' })}
+                                 title="Tarefa executada automaticamente">
+                              <Cog className="h-3 w-3 text-indigo-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Tarefa Automática</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-teal-50">
-                              <CheckCircle className="h-3 w-3 text-teal-600" />
-                              <span className="text-xs font-medium">Aprovação</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-teal-50 dark:hover:bg-teal-950 hover:border-teal-300 dark:hover:border-teal-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'approval', label: 'Aprovação', category: 'task' })}
+                                 title="Tarefa de aprovação">
+                              <CheckCircle className="h-3 w-3 text-teal-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Aprovação</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'review', label: 'Revisão', category: 'task' })}
+                                 title="Tarefa de revisão">
+                              <Eye className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Revisão</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 dark:hover:border-rose-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'escalation', label: 'Escalação', category: 'task' })}
+                                 title="Tarefa de escalação">
+                              <TrendingUp className="h-3 w-3 text-rose-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Escalação</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
                           </div>
                         </div>
                         
                         {/* Eventos */}
                         <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
                             Eventos
                           </h4>
                           <div className="space-y-1">
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-orange-50">
-                              <Timer className="h-3 w-3 text-orange-600" />
-                              <span className="text-xs font-medium">Timer</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-950 hover:border-orange-300 dark:hover:border-orange-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'timer', label: 'Timer', category: 'event' })}
+                                 title="Evento baseado em tempo">
+                              <Timer className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Timer</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-pink-50">
-                              <Bell className="h-3 w-3 text-pink-600" />
-                              <span className="text-xs font-medium">Notificação</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-pink-50 dark:hover:bg-pink-950 hover:border-pink-300 dark:hover:border-pink-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'notification', label: 'Notificação', category: 'event' })}
+                                 title="Envio de notificação">
+                              <Bell className="h-3 w-3 text-pink-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Notificação</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
-                            <div className="p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-cyan-50">
-                              <MessageSquare className="h-3 w-3 text-cyan-600" />
-                              <span className="text-xs font-medium">Mensagem</span>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-cyan-50 dark:hover:bg-cyan-950 hover:border-cyan-300 dark:hover:border-cyan-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'message', label: 'Mensagem', category: 'event' })}
+                                 title="Envio de mensagem">
+                              <MessageSquare className="h-3 w-3 text-cyan-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Mensagem</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-950 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'webhook', label: 'Webhook', category: 'event' })}
+                                 title="Chamada de webhook">
+                              <Plug className="h-3 w-3 text-amber-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Webhook</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Conectores */}
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
+                            Conectores
+                          </h4>
+                          <div className="space-y-1">
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'condition', label: 'Condição', category: 'connector' })}
+                                 title="Conector condicional">
+                              <GitBranch className="h-3 w-3 text-slate-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Condição</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </div>
+                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-950 hover:border-gray-300 dark:hover:border-gray-600 transition-all w-full"
+                                 draggable
+                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'loop', label: 'Loop', category: 'connector' })}
+                                 title="Loop de repetição">
+                              <RefreshCw className="h-3 w-3 text-gray-600 flex-shrink-0" />
+                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Loop</span>
+                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                             </div>
                           </div>
                         </div>
@@ -2142,12 +2315,15 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                 </div>
                 
                 {/* Canvas do Workflow */}
-                <div className="flex-1">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
+                <div className="flex-1 flex flex-col min-h-0">
+                  <Card className="h-full flex flex-col">
+                    <CardHeader className="flex-shrink-0 pb-3">
+                      <div className="flex items-center justify-between mb-2">
                         <CardTitle className="text-lg">Designer de Workflow</CardTitle>
                         <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                            {workflowNodes.length} elemento{workflowNodes.length !== 1 ? 's' : ''}
+                          </div>
                           <Button size="sm" variant="outline">
                             <PlayCircle className="h-4 w-4 mr-1" />
                             Simular
@@ -2156,11 +2332,41 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                             <Eye className="h-4 w-4 mr-1" />
                             Validar
                           </Button>
+                          <Button size="sm" variant="outline" onClick={() => setWorkflowNodes([])}>
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Limpar
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Controles do Canvas */}
+                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="text-gray-600 dark:text-gray-400">Controles:</span>
+                          <Badge variant="secondary">Arrastar para mover</Badge>
+                          <Badge variant="secondary">Clique para selecionar</Badge>
+                          <Badge variant="secondary">Del para excluir</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Select defaultValue="100">
+                            <SelectTrigger className="w-20 h-6 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="50">50%</SelectItem>
+                              <SelectItem value="75">75%</SelectItem>
+                              <SelectItem value="100">100%</SelectItem>
+                              <SelectItem value="125">125%</SelectItem>
+                              <SelectItem value="150">150%</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="h-full overflow-auto">
-                      <div className="relative w-full h-96 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <CardContent className="flex-1 min-h-0 p-4">
+                      <div className="relative w-full h-full bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 min-h-[600px] overflow-hidden"
+                           onDrop={handleWorkflowCanvasDrop}
+                           onDragOver={handleWorkflowCanvasDragOver}>
                         
                         {workflowNodes.length === 0 ? (
                           <div className="flex items-center justify-center h-full">
@@ -2221,18 +2427,18 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                 </div>
                                 
                                 <div className="text-xs text-gray-500 space-y-1">
-                                  {node.data.assignedTo && (
-                                    <div>👤 {node.data.assignedTo.join(', ')}</div>
+                                  {node.data?.assignedTo && (
+                                    <div>👤 {node.data?.assignedTo?.join(', ')}</div>
                                   )}
-                                  {node.data.priority && (
+                                  {node.data?.priority && (
                                     <Badge className={`text-xs px-1 py-0 ${
-                                      node.data.priority === 'high' || node.data.priority === 'critical' 
+                                      node.data?.priority === 'high' || node.data?.priority === 'critical' 
                                         ? 'bg-red-100 text-red-800' 
-                                        : node.data.priority === 'medium' 
+                                        : node.data?.priority === 'medium' 
                                           ? 'bg-yellow-100 text-yellow-800' 
                                           : 'bg-green-100 text-green-800'
                                     }`}>
-                                      {node.data.priority}
+                                      {node.data?.priority}
                                     </Badge>
                                   )}
                                 </div>
@@ -2279,94 +2485,168 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                 </div>
                 
                 {/* Propriedades do Nó Selecionado */}
-                <div className="w-64 flex-shrink-0">
-                  <Card className="h-full">
-                    <CardHeader>
+                <div className="w-64 flex-shrink-0 min-h-0">
+                  <Card className="h-full flex flex-col">
+                    <CardHeader className="flex-shrink-0 pb-3">
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Settings className="h-4 w-4" />
-                        Propriedades do Nó
+                        Propriedades
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="overflow-auto">
+                    <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
                       {selectedNode ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3 pr-2">
+                          {/* Informações básicas do nó */}
+                          <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className={`w-2 h-2 rounded-full ${
+                                selectedNode.type === 'start' ? 'bg-green-500' :
+                                selectedNode.type === 'end' ? 'bg-red-500' :
+                                selectedNode.type === 'decision' ? 'bg-yellow-500' :
+                                selectedNode.type === 'parallel' ? 'bg-purple-500' :
+                                'bg-blue-500'
+                              }`}></div>
+                              <span className="text-xs font-medium">Tipo: {selectedNode.category}</span>
+                            </div>
+                            <div className="text-xs text-gray-500">ID: {selectedNode.id}</div>
+                          </div>
+
+                          {/* Nome do nó */}
                           <div>
-                            <Label className="text-xs">Nome do Nó</Label>
+                            <Label className="text-xs font-semibold">Nome do Elemento</Label>
                             <Input
-                              value={selectedNode.label}
-                              onChange={(e) => {
-                                const updatedNodes = workflowNodes.map(node => 
-                                  node.id === selectedNode.id ? { ...node, label: e.target.value } : node
-                                );
-                                setWorkflowNodes(updatedNodes);
-                                setSelectedNode({ ...selectedNode, label: e.target.value });
-                                setHasUnsavedChanges(true);
-                              }}
-                              className="h-8 text-xs"
+                              value={selectedNode.properties?.name || selectedNode.label}
+                              onChange={(e) => updateNodeProperty(selectedNode.id, 'name', e.target.value)}
+                              className="h-8 text-xs mt-1"
+                              placeholder="Nome do elemento"
                             />
                           </div>
-                          
+
+                          {/* Descrição */}
                           <div>
-                            <Label className="text-xs">Tipo</Label>
-                            <Select 
-                              value={selectedNode.type}
-                              onValueChange={(value: any) => {
-                                const updatedNodes = workflowNodes.map(node => 
-                                  node.id === selectedNode.id ? { ...node, type: value } : node
-                                );
-                                setWorkflowNodes(updatedNodes);
-                                setSelectedNode({ ...selectedNode, type: value });
-                                setHasUnsavedChanges(true);
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="start">Início</SelectItem>
-                                <SelectItem value="task">Tarefa</SelectItem>
-                                <SelectItem value="decision">Decisão</SelectItem>
-                                <SelectItem value="parallel">Paralelo</SelectItem>
-                                <SelectItem value="timer">Timer</SelectItem>
-                                <SelectItem value="notification">Notificação</SelectItem>
-                                <SelectItem value="end">Fim</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <Label className="text-xs font-semibold">Descrição</Label>
+                            <Textarea
+                              value={selectedNode.properties?.description || ''}
+                              onChange={(e) => updateNodeProperty(selectedNode.id, 'description', e.target.value)}
+                              className="h-12 text-xs mt-1 resize-none"
+                              placeholder="Descrição do elemento..."
+                            />
                           </div>
-                          
-                          {(selectedNode.type === 'task' || selectedNode.type === 'decision') && (
-                            <>
+
+                          {/* Propriedades específicas por tipo */}
+
+                          {/* Elementos de Controle */}
+                          {selectedNode.type === 'start' && (
+                            <div className="space-y-2">
                               <div>
-                                <Label className="text-xs">Responsável</Label>
-                                <Select>
-                                  <SelectTrigger className="h-8">
-                                    <SelectValue placeholder="Selecionar papel" />
+                                <Label className="text-xs font-semibold">Tipo de Gatilho</Label>
+                                <Select 
+                                  value={selectedNode.properties?.trigger || 'manual'}
+                                  onValueChange={(value) => updateNodeProperty(selectedNode.id, 'trigger', value)}
+                                >
+                                  <SelectTrigger className="h-7 text-xs mt-1">
+                                    <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="respondent">Respondente</SelectItem>
-                                    <SelectItem value="auditor">Auditor</SelectItem>
-                                    <SelectItem value="manager">Gestor</SelectItem>
-                                    <SelectItem value="admin">Administrador</SelectItem>
+                                    <SelectItem value="manual">Manual</SelectItem>
+                                    <SelectItem value="automatic">Automático</SelectItem>
+                                    <SelectItem value="scheduled">Agendado</SelectItem>
+                                    <SelectItem value="event">Por Evento</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
-                              
+                            </div>
+                          )}
+
+                          {selectedNode.type === 'decision' && (
+                            <div className="space-y-2">
                               <div>
-                                <Label className="text-xs">Prioridade</Label>
+                                <Label className="text-xs font-semibold">Condição</Label>
+                                <Textarea
+                                  value={selectedNode.properties?.condition || ''}
+                                  onChange={(e) => updateNodeProperty(selectedNode.id, 'condition', e.target.value)}
+                                  className="h-12 text-xs mt-1 resize-none"
+                                  placeholder="Expressão condicional..."
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label className="text-xs font-semibold">Label Verdadeiro</Label>
+                                  <Input
+                                    value={selectedNode.properties?.trueLabel || 'Sim'}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'trueLabel', e.target.value)}
+                                    className="h-7 text-xs mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold">Label Falso</Label>
+                                  <Input
+                                    value={selectedNode.properties?.falseLabel || 'Não'}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'falseLabel', e.target.value)}
+                                    className="h-7 text-xs mt-1"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedNode.type === 'parallel' && (
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs font-semibold">Número de Branches</Label>
+                                <Input
+                                  type="number"
+                                  value={selectedNode.properties?.branches || 2}
+                                  onChange={(e) => updateNodeProperty(selectedNode.id, 'branches', Number(e.target.value))}
+                                  className="h-7 text-xs mt-1"
+                                  min="2"
+                                  max="10"
+                                />
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id="waitAll"
+                                  checked={selectedNode.properties?.waitAll || false}
+                                  onChange={(e) => updateNodeProperty(selectedNode.id, 'waitAll', e.target.checked)}
+                                  className="h-3 w-3"
+                                />
+                                <Label htmlFor="waitAll" className="text-xs">Aguardar todos os branches</Label>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Tarefas */}
+                          {['user_task', 'auto_task', 'approval', 'review', 'escalation'].includes(selectedNode.type) && (
+                            <div className="space-y-2">
+                              {selectedNode.type !== 'auto_task' && (
+                                <div>
+                                  <Label className="text-xs font-semibold">Responsável</Label>
+                                  <Select 
+                                    value={selectedNode.properties?.assignee || ''}
+                                    onValueChange={(value) => updateNodeProperty(selectedNode.id, 'assignee', value)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs mt-1">
+                                      <SelectValue placeholder="Selecionar responsável" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="respondent">Respondente</SelectItem>
+                                      <SelectItem value="auditor">Auditor</SelectItem>
+                                      <SelectItem value="manager">Gestor</SelectItem>
+                                      <SelectItem value="admin">Administrador</SelectItem>
+                                      <SelectItem value="custom">Personalizado</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              <div>
+                                <Label className="text-xs font-semibold">Prioridade</Label>
                                 <Select 
-                                  value={selectedNode.data.priority}
-                                  onValueChange={(value: any) => {
-                                    const updatedNodes = workflowNodes.map(node => 
-                                      node.id === selectedNode.id 
-                                        ? { ...node, data: { ...node.data, priority: value } } 
-                                        : node
-                                    );
-                                    setWorkflowNodes(updatedNodes);
-                                    setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, priority: value } });
-                                    setHasUnsavedChanges(true);
-                                  }}
+                                  value={selectedNode.properties?.priority || 'medium'}
+                                  onValueChange={(value) => updateNodeProperty(selectedNode.id, 'priority', value)}
                                 >
-                                  <SelectTrigger className="h-8">
+                                  <SelectTrigger className="h-7 text-xs mt-1">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -2377,51 +2657,194 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                   </SelectContent>
                                 </Select>
                               </div>
-                            </>
-                          )}
-                          
-                          {selectedNode.type === 'decision' && (
-                            <div>
-                              <Label className="text-xs">Condição</Label>
-                              <Textarea
-                                value={selectedNode.data.condition || ''}
-                                onChange={(e) => {
-                                  const updatedNodes = workflowNodes.map(node => 
-                                    node.id === selectedNode.id 
-                                      ? { ...node, data: { ...node.data, condition: e.target.value } } 
-                                      : node
-                                  );
-                                  setWorkflowNodes(updatedNodes);
-                                  setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, condition: e.target.value } });
-                                  setHasUnsavedChanges(true);
-                                }}
-                                className="h-16 text-xs"
-                                placeholder="Ex: score >= 3"
-                              />
+
+                              {selectedNode.type !== 'auto_task' && (
+                                <div>
+                                  <Label className="text-xs font-semibold">Prazo (dias)</Label>
+                                  <Input
+                                    type="number"
+                                    value={selectedNode.properties?.dueDays || ''}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'dueDays', Number(e.target.value))}
+                                    className="h-7 text-xs mt-1"
+                                    min="1"
+                                    placeholder="Ex: 3"
+                                  />
+                                </div>
+                              )}
+
+                              {selectedNode.type === 'auto_task' && (
+                                <div>
+                                  <Label className="text-xs font-semibold">Script/Ação</Label>
+                                  <Textarea
+                                    value={selectedNode.properties?.script || ''}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'script', e.target.value)}
+                                    className="h-16 text-xs mt-1 resize-none"
+                                    placeholder="Código ou ação a executar..."
+                                  />
+                                </div>
+                              )}
+
+                              {selectedNode.type === 'escalation' && (
+                                <div>
+                                  <Label className="text-xs font-semibold">Nível de Escalação</Label>
+                                  <Input
+                                    type="number"
+                                    value={selectedNode.properties?.level || 1}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'level', Number(e.target.value))}
+                                    className="h-7 text-xs mt-1"
+                                    min="1"
+                                    max="5"
+                                  />
+                                </div>
+                              )}
                             </div>
                           )}
+
+                          {/* Eventos */}
+                          {selectedNode.type === 'timer' && (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label className="text-xs font-semibold">Duração</Label>
+                                  <Input
+                                    type="number"
+                                    value={selectedNode.properties?.duration || 60}
+                                    onChange={(e) => updateNodeProperty(selectedNode.id, 'duration', Number(e.target.value))}
+                                    className="h-7 text-xs mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs font-semibold">Unidade</Label>
+                                  <Select 
+                                    value={selectedNode.properties?.unit || 'minutes'}
+                                    onValueChange={(value) => updateNodeProperty(selectedNode.id, 'unit', value)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs mt-1">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="seconds">Segundos</SelectItem>
+                                      <SelectItem value="minutes">Minutos</SelectItem>
+                                      <SelectItem value="hours">Horas</SelectItem>
+                                      <SelectItem value="days">Dias</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {['notification', 'message'].includes(selectedNode.type) && (
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs font-semibold">Mensagem</Label>
+                                <Textarea
+                                  value={selectedNode.properties?.message || ''}
+                                  onChange={(e) => updateNodeProperty(selectedNode.id, 'message', e.target.value)}
+                                  className="h-16 text-xs mt-1 resize-none"
+                                  placeholder="Conteúdo da mensagem..."
+                                />
+                              </div>
+                              {selectedNode.type === 'message' && (
+                                <div>
+                                  <Label className="text-xs font-semibold">Canal</Label>
+                                  <Select 
+                                    value={selectedNode.properties?.channel || 'email'}
+                                    onValueChange={(value) => updateNodeProperty(selectedNode.id, 'channel', value)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs mt-1">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="email">Email</SelectItem>
+                                      <SelectItem value="sms">SMS</SelectItem>
+                                      <SelectItem value="push">Push</SelectItem>
+                                      <SelectItem value="slack">Slack</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {selectedNode.type === 'webhook' && (
+                            <div className="space-y-2">
+                              <div>
+                                <Label className="text-xs font-semibold">URL</Label>
+                                <Input
+                                  value={selectedNode.properties?.url || ''}
+                                  onChange={(e) => updateNodeProperty(selectedNode.id, 'url', e.target.value)}
+                                  className="h-7 text-xs mt-1"
+                                  placeholder="https://api.exemplo.com/webhook"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs font-semibold">Método</Label>
+                                <Select 
+                                  value={selectedNode.properties?.method || 'POST'}
+                                  onValueChange={(value) => updateNodeProperty(selectedNode.id, 'method', value)}
+                                >
+                                  <SelectTrigger className="h-7 text-xs mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="GET">GET</SelectItem>
+                                    <SelectItem value="POST">POST</SelectItem>
+                                    <SelectItem value="PUT">PUT</SelectItem>
+                                    <SelectItem value="PATCH">PATCH</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Configurações gerais */}
+                          <div className="space-y-1.5 pt-2 border-t">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="active"
+                                checked={selectedNode.properties?.active !== false}
+                                onChange={(e) => updateNodeProperty(selectedNode.id, 'active', e.target.checked)}
+                                className="h-3 w-3"
+                              />
+                              <Label htmlFor="active" className="text-xs">Ativo</Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="required"
+                                checked={selectedNode.properties?.required || false}
+                                onChange={(e) => updateNodeProperty(selectedNode.id, 'required', e.target.checked)}
+                                className="h-3 w-3"
+                              />
+                              <Label htmlFor="required" className="text-xs">Obrigatório</Label>
+                            </div>
+                          </div>
                           
-                          <div className="pt-4 border-t">
+                          {/* Botão de remoção */}
+                          <div className="pt-3 border-t">
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => {
-                                const updatedNodes = workflowNodes.filter(node => node.id !== selectedNode.id);
-                                setWorkflowNodes(updatedNodes);
-                                setSelectedNode(null);
-                                setHasUnsavedChanges(true);
-                                toast.success('Nó removido!');
-                              }}
-                              className="w-full"
+                              onClick={() => deleteWorkflowNode(selectedNode.id)}
+                              className="w-full h-7 text-xs"
                             >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remover Nó
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Remover Elemento
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Selecione um nó no canvas para editar suas propriedades
+                        <div className="text-center py-8">
+                          <Settings className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                            Nenhum elemento selecionado
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            Clique em um elemento no canvas para editar suas propriedades
+                          </div>
                         </div>
                       )}
                     </CardContent>
