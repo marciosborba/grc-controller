@@ -4,7 +4,6 @@ import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebarFixed as AppSidebar } from './AppSidebarFixed';
 import { AppHeader } from './AppHeader';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import QuickAIManagerTest from '@/components/debug/QuickAIManagerTest';
 
 const AppLayoutContent = () => {
   const { state } = useSidebar();
@@ -70,9 +69,6 @@ const AppLayoutContent = () => {
           </ErrorBoundary>
         </main>
       </div>
-      
-      {/* Botão de teste flutuante */}
-      <QuickAIManagerTest />
     </div>
   );
 };
