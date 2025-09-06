@@ -20,7 +20,9 @@ import {
   Plus,
   Search,
   Loader2,
-  Eye
+  Eye,
+  Rocket,
+  Edit
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
@@ -33,6 +35,8 @@ const AlexDashboard = React.lazy(() => import('./alex/AlexDashboard'));
 const AlexAIRecommendations = React.lazy(() => import('./alex/AlexAIRecommendations'));
 const AlexAssessmentWizard = React.lazy(() => import('./alex/AlexAssessmentWizard'));
 const AlexProcessDesigner = React.lazy(() => import('./alex/AlexProcessDesigner'));
+const AlexProcessDesignerEnhanced = React.lazy(() => import('./alex/AlexProcessDesignerEnhanced'));
+const AlexProcessDesignerEnhancedModal = React.lazy(() => import('./alex/AlexProcessDesignerEnhancedModal'));
 const AlexFrameworkDebug = React.lazy(() => import('./alex/AlexFrameworkDebug'));
 const AlexTemplateDebug = React.lazy(() => import('./alex/AlexTemplateDebug'));
 const NavigationDiagnostic = React.lazy(() => import('../debug/NavigationDiagnostic'));
@@ -45,6 +49,8 @@ const AssessmentsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showWizard, setShowWizard] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<string | null>(null);
+  const [showEnhancedModal, setShowEnhancedModal] = useState(false);
+  const [enhancedModalMode, setEnhancedModalMode] = useState<'create' | 'edit'>('create');
 
   // Configurações do tenant para os componentes Alex
   const tenantConfig = {
@@ -208,20 +214,56 @@ const AssessmentsPage: React.FC = () => {
         </Button>
         <Button 
           variant="outline"
-          onClick={() => setActiveTab('process-designer')}
+          onClick={() => {
+            console.log('🔧 Clicando em Designer de Processos');
+            setActiveTab('process-designer');
+            console.log('✅ activeTab setado para: process-designer');
+          }}
           className="flex items-center gap-2 hover:bg-orange-50 hover:text-orange-700 hover:border-orange-300"
         >
           <Settings2 className="h-4 w-4" />
           Designer de Processos
           <Badge className="bg-orange-100 text-orange-800 text-xs">
-            ADAPTATIVO
+            Beta
+          </Badge>
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => {
+            console.log('🚀 Clicando em Designer Enhanced Modal - Criar');
+            setEnhancedModalMode('create');
+            setShowEnhancedModal(true);
+            toast.info('Abrindo Designer Enhanced em modal - Modo Criação');
+          }}
+          className="flex items-center gap-2 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300"
+        >
+          <Rocket className="h-4 w-4" />
+          Criar Enhanced
+          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
+            v4.0 Modal
+          </Badge>
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => {
+            console.log('🚀 Clicando em Designer Enhanced Modal - Editar');
+            setEnhancedModalMode('edit');
+            setShowEnhancedModal(true);
+            toast.info('Abrindo Designer Enhanced em modal - Modo Edição');
+          }}
+          className="flex items-center gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+        >
+          <Edit className="h-4 w-4" />
+          Editar Enhanced
+          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs">
+            Edit
           </Badge>
         </Button>
       </div>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-9">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -256,6 +298,11 @@ const AssessmentsPage: React.FC = () => {
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Designer</span>
             <span className="sm:hidden">Des</span>
+          </TabsTrigger>
+          <TabsTrigger value="process-designer-enhanced" className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+            <Rocket className="h-4 w-4" />
+            <span className="hidden sm:inline">Enhanced</span>
+            <span className="sm:hidden">Enh</span>
           </TabsTrigger>
           <TabsTrigger value="debug" className="flex items-center gap-2 bg-orange-100 text-orange-700">
             <AlertCircle className="h-4 w-4" />
@@ -399,6 +446,12 @@ const AssessmentsPage: React.FC = () => {
           </Suspense>
         </TabsContent>
 
+        <TabsContent value="process-designer-enhanced" className="space-y-6">
+          <Suspense fallback={<LoadingSpinner message="Carregando designer enhanced..." />}>
+            <AlexProcessDesignerEnhanced />
+          </Suspense>
+        </TabsContent>
+
         <TabsContent value="debug" className="space-y-6">
           <Suspense fallback={<LoadingSpinner message="Carregando ferramenta de debug..." />}>
             <Tabs defaultValue="navigation" className="w-full">
@@ -440,6 +493,22 @@ const AssessmentsPage: React.FC = () => {
           </Suspense>
         </TabsContent>
       </Tabs>
+
+      {/* Modal do Designer Enhanced */}
+      {showEnhancedModal && (
+        <Suspense fallback={<LoadingSpinner message="Carregando Designer Enhanced..." />}>
+          <AlexProcessDesignerEnhancedModal
+            isOpen={showEnhancedModal}
+            onClose={() => setShowEnhancedModal(false)}
+            mode={enhancedModalMode}
+            onSave={(data) => {
+              console.log('Dados salvos do Enhanced:', data);
+              toast.success(`${enhancedModalMode === 'create' ? 'Criado' : 'Salvo'} com sucesso!`);
+              setShowEnhancedModal(false);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* Modal do Wizard de Criação */}
       {showWizard && (
