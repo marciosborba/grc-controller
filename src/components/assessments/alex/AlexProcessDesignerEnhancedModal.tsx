@@ -15,14 +15,16 @@ import {
   Trash2, Move, GripVertical, Columns, RotateCcw, Database,
   Upload, Star, Hash, Mail, Calendar, Clock, ChevronDown,
   CheckSquare, Circle, Sliders, Zap, Sparkles, Layout,
-  ArrowRight, CheckCircle, AlertCircle, Users, Timer,
+  ArrowRight, CheckCircle, AlertCircle, AlertTriangle, Users, Timer,
   GitBranch, MessageSquare, Bell, Gauge, TrendingUp,
   BarChart, PieChart, LineChart, Award, Shield, Cog,
   Lock, Phone, Link, CalendarDays, ToggleLeft, Image,
-  Minus, Palette, Tag, PenTool, Plug
+  Minus, Palette, Tag, PenTool, Plug, BookOpen, Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useProcessManagement } from '@/hooks/useProcessManagement';
+import FormPreviewModal from './FormPreviewModal';
 
 // ==================== INTERFACES EXPANDIDAS ====================
 
@@ -147,10 +149,12 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
   onSave
 }) => {
   const { user } = useAuth();
-  const [activeLayer, setActiveLayer] = useState<'template' | 'form' | 'workflow' | 'analytics' | 'reports' | 'integrations'>('template');
+  const { saveProcess, updateProcess, loadProcess, loading: saveLoading } = useProcessManagement();
+  const [activeLayer, setActiveLayer] = useState<'template' | 'form' | 'workflow' | 'analytics' | 'reports' | 'integrations' | 'documentation'>('template');
   const [isMaximized, setIsMaximized] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isFormPreviewOpen, setIsFormPreviewOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ProcessTemplate | null>(null);
   
   // Estados do Form Builder
@@ -163,6 +167,16 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
   
   // Estados do Workflow Engine
   const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
+  const [workflowConnections, setWorkflowConnections] = useState<any[]>([]);
+  const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<WorkflowNode | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionSource, setConnectionSource] = useState<string | null>(null);
+  
+  // Estados para Relatórios
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [reportData, setReportData] = useState<any>(null);
+  const [reportFilters, setReportFilters] = useState<any>({});
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
   
   // Estados do Processo
@@ -310,6 +324,7 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
       setFormFields(initialData.formFields || []);
       setFormRows(initialData.formRows || []);
       setWorkflowNodes(initialData.workflowNodes || []);
+      setWorkflowConnections(initialData.workflowConnections || []);
       setProcessName(initialData.processName || '');
       setProcessDescription(initialData.processDescription || '');
       setProcessCategory(initialData.processCategory || 'custom');
@@ -321,6 +336,43 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
       loadTemplate(selectedTemplate);
     }
   }, [selectedTemplate]);
+
+  // Load process data in edit mode
+  useEffect(() => {
+    const loadProcessData = async () => {
+      if (mode === 'edit' && initialData?.id) {
+        try {
+          const processData = await loadProcess(initialData.id);
+          if (processData) {
+            setProcessName(processData.name);
+            setProcessDescription(processData.description || '');
+            setProcessCategory(processData.category || 'custom');
+            
+            // Load form structure if available
+            if (processData.field_definitions?.fields) {
+              setFormFields(processData.field_definitions.fields);
+            }
+            if (processData.field_definitions?.formRows) {
+              setFormRows(processData.field_definitions.formRows);
+            }
+            
+            // Load workflow if available
+            if (processData.workflow_definition?.nodes) {
+              setWorkflowNodes(processData.workflow_definition.nodes);
+            }
+            
+            setActiveLayer('form');
+            toast.success(`Processo "${processData.name}" carregado para edição!`);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar processo:', error);
+          toast.error('Erro ao carregar processo para edição');
+        }
+      }
+    };
+
+    loadProcessData();
+  }, [mode, initialData, loadProcess]);
 
   if (!isOpen) return null;
 
@@ -353,36 +405,56 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
     toast.success(`Template "${template.name}" carregado!`);
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!processName.trim()) {
       toast.error('Nome do processo é obrigatório!');
       return;
     }
 
-    const data = {
-      processName,
-      processDescription,
-      processCategory,
-      layer: activeLayer,
+    if (saveLoading) {
+      toast.info('Aguarde, salvando processo...');
+      return;
+    }
+
+    const processData = {
+      name: processName,
+      description: processDescription,
+      category: processCategory,
+      framework: processCategory.toUpperCase(),
       formFields,
       formRows,
       workflowNodes,
-      template: selectedTemplate,
-      timestamp: new Date().toISOString(),
-      user: user?.id,
-      metadata: {
-        estimatedTime: selectedTemplate?.estimatedTime,
-        complexity: selectedTemplate?.complexity,
-        tags: selectedTemplate?.tags || []
-      }
+      workflowConnections,
+      analytics: {
+        kpis: selectedTemplate?.analytics?.kpis || ['Tempo de Execução', 'Taxa de Conclusão'],
+        reports: selectedTemplate?.analytics?.reports || ['Relatório de Performance']
+      },
+      integrations: selectedTemplate?.integrations || ['email', 'webhook']
     };
-    
-    if (onSave) {
-      onSave(data);
+
+    try {
+      let result;
+      if (mode === 'edit' && initialData?.id) {
+        result = await updateProcess(initialData.id, processData);
+        if (result) {
+          setHasUnsavedChanges(false);
+          if (onSave) {
+            onSave({ ...processData, id: initialData.id });
+          }
+        }
+      } else {
+        result = await saveProcess(processData);
+        if (result) {
+          setHasUnsavedChanges(false);
+          if (onSave) {
+            onSave({ ...processData, id: result });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao salvar processo:', error);
+      toast.error('Erro ao salvar processo. Tente novamente.');
     }
-    
-    setHasUnsavedChanges(false);
-    toast.success(`Processo "${processName}" ${mode === 'create' ? 'criado' : 'salvo'} com sucesso!`);
   };
 
   const handleClose = () => {
@@ -944,15 +1016,67 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
     }
   }, []);
 
+  // Conectar nós do workflow
+  const handleWorkflowNodeClick = useCallback((node: WorkflowNode) => {
+    if (isConnecting && connectionSource && connectionSource !== node.id) {
+      // Criar conexão
+      const newConnection = {
+        id: `conn_${Date.now()}`,
+        source: connectionSource,
+        target: node.id,
+        label: '',
+        condition: ''
+      };
+      
+      setWorkflowConnections(prev => [...prev, newConnection]);
+      setIsConnecting(false);
+      setConnectionSource(null);
+      toast.success('Conexão criada com sucesso!');
+    } else {
+      // Selecionar nó para edição ou iniciar conexão
+      setSelectedWorkflowNode(node);
+      if (isConnecting) {
+        setConnectionSource(node.id);
+      }
+    }
+  }, [isConnecting, connectionSource]);
+  
+  const startConnection = useCallback((nodeId: string) => {
+    setIsConnecting(true);
+    setConnectionSource(nodeId);
+    toast.info('Clique em outro nó para criar a conexão');
+  }, []);
+  
+  const cancelConnection = useCallback(() => {
+    setIsConnecting(false);
+    setConnectionSource(null);
+  }, []);
+  
+  const deleteWorkflowNode = useCallback((nodeId: string) => {
+    setWorkflowNodes(prev => prev.filter(n => n.id !== nodeId));
+    setWorkflowConnections(prev => prev.filter(c => c.source !== nodeId && c.target !== nodeId));
+    setSelectedWorkflowNode(null);
+    toast.success('Nó removido do workflow');
+  }, []);
+  
+  const updateWorkflowNode = useCallback((nodeId: string, updates: any) => {
+    setWorkflowNodes(prev => prev.map(node => 
+      node.id === nodeId ? { ...node, ...updates } : node
+    ));
+  }, []);
+  
   const getDefaultWorkflowData = useCallback((type: string) => {
     const defaults: Record<string, any> = {
-      start: { priority: 'medium' },
-      end: { priority: 'medium' },
-      decision: { condition: '', priority: 'medium' },
-      parallel: { priority: 'medium' },
-      task: { assignedTo: [], priority: 'medium' },
-      timer: { timerDuration: '3600', priority: 'medium' },
-      notification: { notificationTemplate: '', priority: 'medium' }
+      start: { priority: 'medium', description: '' },
+      end: { priority: 'medium', description: '' },
+      decision: { condition: '', priority: 'medium', description: '' },
+      parallel: { priority: 'medium', description: '' },
+      user_task: { assignedTo: [], priority: 'medium', description: '', formFields: [] },
+      auto_task: { script: '', priority: 'medium', description: '' },
+      approval: { approvers: [], priority: 'medium', description: '' },
+      review: { reviewers: [], priority: 'medium', description: '' },
+      timer: { timerDuration: '3600', priority: 'medium', description: '' },
+      notification: { notificationTemplate: '', recipients: [], priority: 'medium', description: '' }
     };
     
     return defaults[type] || { priority: 'medium' };
@@ -1047,24 +1171,33 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
               {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
             <div className="flex items-center gap-2">
-              {activeLayer !== 'template' && (
+              {activeLayer === 'form' && formFields.length > 0 && (
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => setShowPreview(!showPreview)}
+                  onClick={() => setIsFormPreviewOpen(true)}
                 >
                   <Eye className="h-4 w-4 mr-2" />
-                  {showPreview ? 'Editor' : 'Preview'}
+                  Preview Formulário
                 </Button>
               )}
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleSave}
-                disabled={!processName.trim() || (!formFields.length && !workflowNodes.length)}
+                disabled={!processName.trim() || (!formFields.length && !workflowNodes.length) || saveLoading}
               >
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Processo
+                {saveLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Processo
+                  </>
+                )}
               </Button>
             </div>
             <Button variant="outline" size="sm" onClick={handleClose}>
@@ -1077,7 +1210,7 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="px-6">
             <Tabs value={activeLayer} onValueChange={(value) => setActiveLayer(value as any)} className="w-full">
-              <TabsList className="grid w-full grid-cols-6 bg-gray-100 dark:bg-gray-700">
+              <TabsList className="grid w-full grid-cols-7 bg-gray-100 dark:bg-gray-700">
                 <TabsTrigger value="template" className="flex items-center gap-2">
                   <Layout className="h-4 w-4" />
                   <span className="hidden sm:inline">Templates</span>
@@ -1107,6 +1240,11 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                   <Network className="h-4 w-4" />
                   <span className="hidden sm:inline">Integrations</span>
                   <span className="sm:hidden">APIs</span>
+                </TabsTrigger>
+                <TabsTrigger value="documentation" className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100">
+                  <BookOpen className="h-4 w-4" />
+                  <span className="hidden sm:inline">Documentação</span>
+                  <span className="sm:hidden">Docs</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -2397,7 +2535,7 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                               <div
                                 key={node.id}
                                 className={`absolute p-3 rounded-lg border cursor-pointer transition-all hover:shadow-lg ${
-                                  selectedNode?.id === node.id 
+                                  selectedWorkflowNode?.id === node.id 
                                     ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' 
                                     : 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
                                 } ${
@@ -2413,7 +2551,7 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                   minWidth: '120px',
                                   maxWidth: '150px'
                                 }}
-                                onClick={() => setSelectedNode(node)}
+                                onClick={() => handleWorkflowNodeClick(node)}
                               >
                                 <div className="flex items-center gap-2 mb-1">
                                   {node.type === 'start' && <div className="w-3 h-3 bg-green-500 rounded-full"></div>}
@@ -2443,28 +2581,33 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                   )}
                                 </div>
                                 
-                                {/* Conectores de saída */}
-                                {node.connections.map((connectionId, idx) => {
-                                  const targetNode = workflowNodes.find(n => n.id === connectionId);
-                                  if (!targetNode) return null;
-                                  
-                                  return (
-                                    <svg
-                                      key={`${node.id}-${connectionId}`}
-                                      className="absolute pointer-events-none"
-                                      style={{
-                                        left: '100%',
-                                        top: '50%',
-                                        width: `${Math.abs(targetNode.position.x - node.position.x - 120)}px`,
-                                        height: `${Math.abs(targetNode.position.y - node.position.y)}px`,
-                                        transform: `translate(0, -50%)`
-                                      }}
-                                    >
-                                      <defs>
-                                        <marker id={`arrow-${node.id}-${idx}`} markerWidth="10" markerHeight="10" refX="9" refY="2" orient="auto" className="fill-gray-400">
-                                          <polygon points="0 0, 10 2, 0 4" />
-                                        </marker>
-                                      </defs>
+                                {/* Botões de ação */}
+                                <div className="absolute -top-2 -right-2 flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startConnection(node.id);
+                                    }}
+                                    title="Conectar a outro nó"
+                                  >
+                                    <Plus className="h-2 w-2" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteWorkflowNode(node.id);
+                                    }}
+                                    title="Remover nó"
+                                  >
+                                    <X className="h-2 w-2" />
+                                  </Button>
+                                </div>
                                       <path
                                         d={`M 0 ${Math.abs(targetNode.position.y - node.position.y) > 50 ? 0 : Math.abs(targetNode.position.y - node.position.y)/2} L ${Math.abs(targetNode.position.x - node.position.x - 120)} ${targetNode.position.y - node.position.y < 0 ? 0 : Math.abs(targetNode.position.y - node.position.y)}`}
                                         stroke="#9CA3AF"
@@ -2494,21 +2637,21 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                      {selectedNode ? (
+                      {selectedWorkflowNode ? (
                         <div className="space-y-3 pr-2">
                           {/* Informações básicas do nó */}
                           <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <div className={`w-2 h-2 rounded-full ${
-                                selectedNode.type === 'start' ? 'bg-green-500' :
-                                selectedNode.type === 'end' ? 'bg-red-500' :
-                                selectedNode.type === 'decision' ? 'bg-yellow-500' :
-                                selectedNode.type === 'parallel' ? 'bg-purple-500' :
+                                selectedWorkflowNode.type === 'start' ? 'bg-green-500' :
+                                selectedWorkflowNode.type === 'end' ? 'bg-red-500' :
+                                selectedWorkflowNode.type === 'decision' ? 'bg-yellow-500' :
+                                selectedWorkflowNode.type === 'parallel' ? 'bg-purple-500' :
                                 'bg-blue-500'
                               }`}></div>
-                              <span className="text-xs font-medium">Tipo: {selectedNode.category}</span>
+                              <span className="text-xs font-medium">Tipo: {selectedWorkflowNode.type}</span>
                             </div>
-                            <div className="text-xs text-gray-500">ID: {selectedNode.id}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">ID: {selectedWorkflowNode.id}</div>
                           </div>
 
                           {/* Nome do nó */}
@@ -3579,9 +3722,1052 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                 </div>
               </div>
             </TabsContent>
+
+            {/* CAMADA 6: Documentação Completa */}
+            <TabsContent value="documentation" className="space-y-6 h-full">
+              <div className="max-w-6xl mx-auto">
+                
+                {/* Header da Documentação */}
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white">
+                      <BookOpen className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Documentação Completa</h1>
+                      <p className="text-lg text-gray-600 dark:text-gray-300">Guia definitivo para criar processos profissionais</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-1">
+                    Passo a Passo Detalhado
+                  </Badge>
+                </div>
+
+                {/* Índice de Navegação Rápida */}
+                <Card className="mb-8">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Info className="h-5 w-5" />
+                      Índice de Navegação Rápida
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <a href="#step-1" className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-700">
+                        <Layout className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">1. Templates</span>
+                      </a>
+                      <a href="#step-2" className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-green-200 dark:border-green-700">
+                        <Edit className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">2. Formulários</span>
+                      </a>
+                      <a href="#step-3" className="flex items-center gap-2 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors border border-purple-200 dark:border-purple-700">
+                        <Workflow className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">3. Workflows</span>
+                      </a>
+                      <a href="#step-4" className="flex items-center gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors border border-orange-200 dark:border-orange-700">
+                        <BarChart3 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        <span className="font-medium text-gray-900 dark:text-gray-100">4. Finalizar</span>
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* PASSO 1: Templates */}
+                <div id="step-1" className="mb-12">
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 dark:border-b dark:border-blue-700">
+                      <CardTitle className="text-2xl flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                        <Layout className="h-6 w-6 text-blue-600" />
+                        Seleção de Template
+                      </CardTitle>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2">Escolha um template pré-configurado ou crie do zero</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      
+                      {/* Templates Disponíveis */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-blue-600" />
+                          Templates Pré-configurados
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Avaliação de Compliance Básica</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Para avaliações de conformidade regulatória (LGPD, SOX, ISO27001)</p>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              • 8 campos pré-configurados • Workflow de 4 etapas • KPIs de conformidade
+                            </div>
+                          </div>
+                          
+                          <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Avaliação de Riscos</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Processo completo de identificação e avaliação de riscos</p>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              • Matriz de riscos • Análise de impacto • Planos de ação
+                            </div>
+                          </div>
+                          
+                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Checklist de Auditoria</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Para auditorias internas e externas com evidências</p>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              • Checklist dinâmico • Upload de evidências • Relatórios automáticos
+                            </div>
+                          </div>
+                          
+                          <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Template Personalizado</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Comece do zero para necessidades específicas</p>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              • Canvas em branco • Máxima flexibilidade • Configuração completa
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-4">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100">Dica Importante</h4>
+                            <p className="text-blue-800 dark:text-blue-200 text-sm mt-1">
+                              Escolha o template que mais se aproxima do seu objetivo. Você poderá personalizar completamente 
+                              todos os campos, workflows e configurações nas próximas etapas.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* PASSO 2: Form Builder */}
+                <div id="step-2" className="mb-12">
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 dark:border-b dark:border-green-700">
+                      <CardTitle className="text-2xl flex items-center gap-3">
+                        <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                        <Edit className="h-6 w-6 text-green-600" />
+                        Form Builder - Construção de Formulários
+                      </CardTitle>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2">Crie formulários poderosos com drag & drop</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      
+                      {/* Tipos de Campos */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Grid className="h-5 w-5 text-green-600" />
+                          Tipos de Campos Disponíveis
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          
+                          {/* Campos de Texto */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">📝 Campos de Texto</h4>
+                            
+                            <div className="space-y-2">
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Texto Simples</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Para nomes, títulos, descrições curtas</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de comprimento ✓ Máscaras</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Número</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Valores numéricos, moeda, percentuais</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Min/Max ✓ Casas decimais</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Senha</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Campo protegido para senhas</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Criptografado ✓ Força da senha</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">URL</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Links, endereços web, referências</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de URL</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Área de Texto</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Para textos longos, observações detalhadas</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Redimensionável ✓ Contador de caracteres</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Email</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Validação automática de formato de email</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação automática</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Telefone</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Com máscara de formatação automática</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Máscara brasileira</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Campos de Seleção */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">☑️ Campos de Seleção</h4>
+                            
+                            <div className="space-y-2">
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Lista Suspensa (Select)</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Uma opção entre várias disponíveis</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Busca ✓ Opções dinâmicas</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Radio Buttons</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção única exclusiva visível</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Ideal para 2-5 opções</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Checkboxes</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção múltipla independente</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de mínimo/máximo</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Switch (Liga/Desliga)</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Para opções binárias (Sim/Não)</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Estados visuais claros</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Dropdown Avançado</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Lista suspensa com recursos extras</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Multi-seleção ✓ Filtros</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Campos Especiais */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">⭐ Campos Especiais</h4>
+                            
+                            <div className="space-y-2">
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Data / Data-Hora</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Seletor de datas com calendário</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de período</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Avaliação (Rating)</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Sistema de estrelas para avaliações</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ 1-5 estrelas configurável</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Slider</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Controle deslizante para valores numéricos</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Min/Max configurável</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Upload de Arquivo</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Para anexar documentos e evidências</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Múltiplos tipos ✓ Tamanho limitado</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Hora</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Seletor de hora (HH:MM)</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Formato 24h ou 12h</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Data e Hora</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Combina data e hora em um campo</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Timestamp completo</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Upload de Imagem</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Fotos, capturas, diagramas</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Preview ✓ Redimensionamento</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Faixa (Range)</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção de faixa de valores</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Duplo controle deslizante</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Seletor de Cor</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Escolha de cores hex/RGB</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Palette ✓ Histórico</div>
+                              </div>
+                              
+                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                <div className="font-medium text-sm dark:text-gray-100">Tags</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">Múltiplas etiquetas personalizadas</div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Autocomplete ✓ Cores customizadas</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Campos de Workflow Especializado */}
+                        <div className="mt-8">
+                          <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                            <Zap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            Campos de Workflow Especializado
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            
+                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Aprovação</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Campo especializado de workflow</div>
+                              <div className="text-xs text-green-600 dark:text-green-400 mt-2">✓ Aprovado/Rejeitado ✓ Observações</div>
+                            </div>
+                            
+                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Responsável</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Atribuição de usuários/equipes</div>
+                              <div className="text-xs text-purple-600 dark:text-purple-400 mt-2">✓ Busca usuários ✓ Notificações</div>
+                            </div>
+                            
+                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Prioridade</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Nível de urgência/importância</div>
+                              <div className="text-xs text-red-600 dark:text-red-400 mt-2">✓ Baixa/Média/Alta/Crítica</div>
+                            </div>
+                            
+                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
+                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Status</div>
+                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Estado atual do processo</div>
+                              <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">✓ Workflow automático ✓ Cores</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Layout e Organização */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Columns className="h-5 w-5 text-green-600" />
+                          Layout e Organização
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <h4 className="font-medium">🏗️ Sistema de Linhas e Colunas</h4>
+                            <ul className="text-sm space-y-1 text-gray-700 dark:text-gray-300">
+                              <li>• <strong>Linhas:</strong> Organizem os campos horizontalmente</li>
+                              <li>• <strong>1 Coluna:</strong> Campo ocupa toda a largura</li>
+                              <li>• <strong>2 Colunas:</strong> Dois campos lado a lado (50% cada)</li>
+                              <li>• <strong>3 Colunas:</strong> Três campos (33% cada)</li>
+                              <li>• <strong>4 Colunas:</strong> Quatro campos (25% cada)</li>
+                            </ul>
+                            <div className="bg-green-50 p-3 rounded">
+                              <div className="text-xs font-medium text-green-800">💡 Dica de Layout</div>
+                              <div className="text-xs text-green-700">
+                                Use 1 coluna para textos longos, 2 colunas para dados relacionados, 
+                                3-4 colunas para dados compactos como datas e números.
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">🎨 Alturas Disponíveis</h4>
+                            <ul className="text-sm space-y-1 text-gray-700 dark:text-gray-300">
+                              <li>• <strong>Pequena:</strong> Para campos simples (texto, data)</li>
+                              <li>• <strong>Média:</strong> Para seleções e avaliações</li>
+                              <li>• <strong>Grande:</strong> Para áreas de texto</li>
+                              <li>• <strong>Extra Grande:</strong> Para uploads e conteúdo especial</li>
+                            </ul>
+                            <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-700">
+                              <div className="text-xs font-medium text-green-800 dark:text-green-200">⚡ Dica de UX</div>
+                              <div className="text-xs text-green-700 dark:text-green-300">
+                                Mantenha altura consistente em campos relacionados para 
+                                melhor experiência visual do usuário.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Guia de Uso dos Campos */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+                          <Info className="h-5 w-5" />
+                          💡 Guia de Seleção de Campos
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-2">
+                            <div className="text-blue-800 dark:text-blue-200"><strong>Para Dados Básicos:</strong></div>
+                            <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs ml-4">
+                              <li>• <strong>Texto:</strong> Nome da empresa, título do projeto</li>
+                              <li>• <strong>Número:</strong> Orçamento, quantidade, percentual</li>
+                              <li>• <strong>Email:</strong> Contato principal, responsável técnico</li>
+                              <li>• <strong>Telefone:</strong> Contato comercial, emergência</li>
+                              <li>• <strong>URL:</strong> Site da empresa, documentação online</li>
+                            </ul>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="text-blue-800 dark:text-blue-200"><strong>Para Avaliações:</strong></div>
+                            <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs ml-4">
+                              <li>• <strong>Rating:</strong> Nível de conformidade, satisfação</li>
+                              <li>• <strong>Slider:</strong> Probabilidade de risco (0-100%)</li>
+                              <li>• <strong>Select:</strong> Status (Aprovado/Pendente/Rejeitado)</li>
+                              <li>• <strong>Radio:</strong> Possui DPO? (Sim/Não/Terceirizado)</li>
+                              <li>• <strong>Checkbox:</strong> Bases legais aplicáveis (múltiplas)</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Validações */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          Sistema de Validações
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="border rounded p-3 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
+                            <h4 className="font-medium text-red-800 dark:text-red-200 flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              Validações Obrigatórias
+                            </h4>
+                            <ul className="text-sm text-red-700 dark:text-red-300 mt-2 space-y-1">
+                              <li>• Campo obrigatório (não pode ficar vazio)</li>
+                              <li>• Comprimento mínimo/máximo de texto</li>
+                              <li>• Valores mínimo/máximo para números</li>
+                              <li>• Seleção mínima/máxima de opções</li>
+                            </ul>
+                          </div>
+                          
+                          <div className="border rounded p-3 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h4 className="font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                              <Settings className="h-4 w-4" />
+                              Validações Avançadas
+                            </h4>
+                            <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
+                              <li>• Expressões regulares (regex)</li>
+                              <li>• Validação de formato (CPF, CNPJ)</li>
+                              <li>• Comparação entre campos</li>
+                              <li>• Validação condicional (depende de outro campo)</li>
+                            </ul>
+                          </div>
+                          
+                          <div className="border rounded p-3 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
+                            <h4 className="font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4" />
+                              Mensagens Personalizadas
+                            </h4>
+                            <ul className="text-sm text-green-700 dark:text-green-300 mt-2 space-y-1">
+                              <li>• Mensagens de erro customizadas</li>
+                              <li>• Dicas de preenchimento (placeholder)</li>
+                              <li>• Textos de ajuda contextuais</li>
+                              <li>• Feedback visual em tempo real</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 dark:border-green-600 p-4">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-green-900 dark:text-green-100">Como Usar o Form Builder</h4>
+                            <ol className="text-green-800 dark:text-green-200 text-sm mt-1 space-y-1 list-decimal list-inside">
+                              <li>Arraste campos da paleta lateral para o canvas</li>
+                              <li>Configure propriedades clicando no campo adicionado</li>
+                              <li>Organize o layout usando o sistema de linhas/colunas</li>
+                              <li>Adicione validações necessárias para cada campo</li>
+                              <li>Use o Preview para testar o formulário antes de salvar</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* PASSO 3: Workflow */}
+                <div id="step-3" className="mb-12">
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/40 dark:to-indigo-900/40 dark:border-b dark:border-purple-700">
+                      <CardTitle className="text-2xl flex items-center gap-3">
+                        <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                        <Workflow className="h-6 w-6 text-purple-600" />
+                        Workflow Engine - Fluxo de Processos
+                      </CardTitle>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2">Crie fluxos de trabalho visuais e automações inteligentes</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      
+                      {/* Tipos de Nós */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <GitBranch className="h-5 w-5 text-purple-600" />
+                          Tipos de Nós do Workflow
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          
+                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <PlayCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó de Início (Start)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Marco inicial do processo</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-green-700 dark:text-green-300"><strong>Quando usar:</strong> Todo processo deve começar com este nó</div>
+                              <div className="text-green-700 dark:text-green-300"><strong>Configurações:</strong> Apenas nome e descrição</div>
+                              <div className="text-green-700 dark:text-green-300"><strong>Conexões:</strong> Sempre conecta a próxima atividade</div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó de Tarefa (Task)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Atividade que requer ação humana</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-blue-700 dark:text-blue-300"><strong>Quando usar:</strong> Preenchimento, revisão, aprovação</div>
+                              <div className="text-blue-700 dark:text-blue-300"><strong>Configurações:</strong> Responsável, prazo, prioridade</div>
+                              <div className="text-blue-700 dark:text-blue-300"><strong>Tipos:</strong> Formulário, aprovação, revisão</div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <GitBranch className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó de Decisão (Decision)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Ponto de escolha baseado em condições</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Quando usar:</strong> Aprovado/Rejeitado, Score &gt; 80</div>
+                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Configurações:</strong> Condições lógicas, regras</div>
+                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Conexões:</strong> Múltiplas saídas possíveis</div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó Paralelo (Parallel)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Executa múltiplas tarefas simultaneamente</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-purple-700 dark:text-purple-300"><strong>Quando usar:</strong> Revisões independentes simultâneas</div>
+                              <div className="text-purple-700 dark:text-purple-300"><strong>Configurações:</strong> Lista de tarefas paralelas</div>
+                              <div className="text-purple-700 dark:text-purple-300"><strong>Sincronização:</strong> Aguarda conclusão de todas</div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-orange-50 dark:bg-orange-900/30 dark:border-orange-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Timer className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó de Temporizador (Timer)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Pausa o processo por período determinado</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-orange-700 dark:text-orange-300"><strong>Quando usar:</strong> Aguardar resposta, período de análise</div>
+                              <div className="text-orange-700 dark:text-orange-300"><strong>Configurações:</strong> Duração, unidade de tempo</div>
+                              <div className="text-orange-700 dark:text-orange-300"><strong>Ações:</strong> Notificações de lembrete</div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <CheckCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Nó de Fim (End)</span>
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Marco final do processo</p>
+                            <div className="mt-3 space-y-1 text-xs">
+                              <div className="text-red-700 dark:text-red-300"><strong>Quando usar:</strong> Conclusão de qualquer caminho do processo</div>
+                              <div className="text-red-700 dark:text-red-300"><strong>Configurações:</strong> Mensagem final, relatórios</div>
+                              <div className="text-red-700 dark:text-red-300"><strong>Ações:</strong> Notificações de conclusão</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Configurações Avançadas */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Settings className="h-5 w-5 text-purple-600" />
+                          Configurações Avançadas de Workflow
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <h4 className="font-medium">👥 Atribuição de Responsáveis</h4>
+                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-3 w-3 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Por Papel:</strong> Auditor, Compliance Officer, Gestor de Riscos
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Por Usuário:</strong> Nome específico do responsável
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Por Grupo:</strong> Equipe de auditoria, departamento
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Dinâmico:</strong> Com base em dados do formulário
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">⏰ Gestão de Prazos e SLAs</h4>
+                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
+                              <li className="flex items-start gap-2">
+                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Prazos:</strong> 1d, 3d, 1w, 2w, 1m (dias/semanas/meses)
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Prioridades:</strong> Baixa, Média, Alta, Crítica
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Lembretes:</strong> 50%, 80%, 100% do prazo
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
+                                <div>
+                                  <strong>Escalação:</strong> Automática para supervisor
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Condições e Regras */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Zap className="h-5 w-5 text-purple-600" />
+                          Condições e Regras de Negócio
+                        </h3>
+                        
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                          <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100">💡 Exemplos de Condições Práticas</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-green-400 dark:border-green-500">
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Score de Conformidade ≥ 80%</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Processo aprovado automaticamente</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-red-400 dark:border-red-500">
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Riscos Críticos Identificados</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Escalação imediata para CISO</div>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-blue-400 dark:border-blue-500">
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Primeiro Processo da Empresa</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Revisão detalhada obrigatória</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-yellow-400 dark:border-yellow-500">
+                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Valor do Projeto &gt; R$ 100.000</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Aprovação dupla necessária</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-400 dark:border-purple-600 p-4">
+                        <div className="flex items-start gap-2">
+                          <Workflow className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-purple-900 dark:text-purple-100">Boas Práticas para Workflows</h4>
+                            <ul className="text-purple-800 dark:text-purple-200 text-sm mt-1 space-y-1">
+                              <li>• <strong>Mantenha simples:</strong> Evite workflows muito complexos inicialmente</li>
+                              <li>• <strong>Defina responsáveis claros:</strong> Cada tarefa deve ter um dono específico</li>
+                              <li>• <strong>Configure prazos realistas:</strong> Considere a carga de trabalho das equipes</li>
+                              <li>• <strong>Use condições objetivas:</strong> Evite critérios subjetivos nas decisões</li>
+                              <li>• <strong>Teste antes de usar:</strong> Execute um processo piloto para validar o fluxo</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* PASSO 4: Finalização */}
+                <div id="step-4" className="mb-12">
+                  <Card>
+                    <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/40 dark:to-red-900/40 dark:border-b dark:border-orange-700">
+                      <CardTitle className="text-2xl flex items-center gap-3">
+                        <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
+                        <Award className="h-6 w-6 text-orange-600" />
+                        Analytics, Reports e Finalização
+                      </CardTitle>
+                      <p className="text-gray-600 dark:text-gray-300 mt-2">Configure métricas, relatórios e integrações</p>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      
+                      {/* Analytics e KPIs */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5 text-orange-600" />
+                          Analytics e KPIs Essenciais
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">📊 KPIs de Performance</h4>
+                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
+                              <li>• Taxa de conclusão dos processos</li>
+                              <li>• Tempo médio de execução</li>
+                              <li>• Processos dentro do prazo (SLA)</li>
+                              <li>• Backlog de processos pendentes</li>
+                            </ul>
+                          </div>
+                          
+                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">🎯 KPIs de Qualidade</h4>
+                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
+                              <li>• Score médio de conformidade</li>
+                              <li>• Número de não-conformidades</li>
+                              <li>• Taxa de rejeição/retrabalho</li>
+                              <li>• Satisfação dos stakeholders</li>
+                            </ul>
+                          </div>
+                          
+                          <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100">⚡ KPIs de Eficiência</h4>
+                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
+                              <li>• Automação vs. manual</li>
+                              <li>• Custo por processo executado</li>
+                              <li>• Produtividade por responsável</li>
+                              <li>• ROI dos processos de compliance</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tipos de Relatórios */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-orange-600" />
+                          Tipos de Relatórios Disponíveis
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <h4 className="font-medium">📈 Relatórios Executivos</h4>
+                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
+                              <li className="flex items-start gap-2">
+                                <BarChart className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Dashboard Executivo:</strong> Visão geral com principais KPIs
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <PieChart className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Status dos Processos:</strong> Em andamento, concluídos, atrasados
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <LineChart className="h-4 w-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Tendências:</strong> Evolução mensal dos indicadores
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <h4 className="font-medium">📋 Relatórios Operacionais</h4>
+                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
+                              <li className="flex items-start gap-2">
+                                <CheckSquare className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Log de Atividades:</strong> Histórico detalhado de cada processo
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <Users className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Performance por Usuário:</strong> Produtividade individual
+                                </div>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  <strong>Exceções e Problemas:</strong> Processos com issues
+                                </div>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Integrações */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Plug className="h-5 w-5 text-orange-600" />
+                          Integrações e Automações
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="border rounded p-3 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Email</span>
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Notificações automáticas, lembretes de prazo, relatórios por email
+                            </p>
+                          </div>
+                          
+                          <div className="border rounded p-3 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Bell className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Webhooks</span>
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Integração com sistemas externos via APIs REST
+                            </p>
+                          </div>
+                          
+                          <div className="border rounded p-3 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                              <span className="text-gray-900 dark:text-gray-100">APIs</span>
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Sincronização bidirecional de dados com ERPs
+                            </p>
+                          </div>
+                          
+                          <div className="border rounded p-3 bg-orange-50 dark:bg-orange-900/30 dark:border-orange-700">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                              <span className="text-gray-900 dark:text-gray-100">Documentos</span>
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                              Geração automática de PDFs e documentos Word
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-600 p-4">
+                        <div className="flex items-start gap-2">
+                          <Award className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-orange-900 dark:text-orange-100">Checklist Final - Antes de Salvar</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                              <div>
+                                <h5 className="font-medium text-orange-800 dark:text-orange-200 text-sm">✅ Formulário</h5>
+                                <ul className="text-orange-700 dark:text-orange-300 text-xs space-y-1 mt-1">
+                                  <li>□ Todos os campos necessários adicionados</li>
+                                  <li>□ Validações configuradas corretamente</li>
+                                  <li>□ Layout organizado e responsivo</li>
+                                  <li>□ Preview testado com dados reais</li>
+                                </ul>
+                              </div>
+                              <div>
+                                <h5 className="font-medium text-orange-800 dark:text-orange-200 text-sm">✅ Workflow</h5>
+                                <ul className="text-orange-700 dark:text-orange-300 text-xs space-y-1 mt-1">
+                                  <li>□ Fluxo completo (início → fim)</li>
+                                  <li>□ Responsáveis definidos em cada tarefa</li>
+                                  <li>□ Prazos e prioridades configurados</li>
+                                  <li>□ Condições de decisão testadas</li>
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Dicas Finais e Melhores Práticas */}
+                <Card className="mb-8">
+                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/40 dark:border-b dark:border-indigo-700">
+                    <CardTitle className="text-xl flex items-center gap-3">
+                      <Sparkles className="h-6 w-6 text-indigo-600" />
+                      Dicas Finais e Melhores Práticas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-green-800 dark:text-green-200 flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5" />
+                          ✅ Faça Sempre
+                        </h3>
+                        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                          <li className="flex items-start gap-2">
+                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
+                            <strong>Teste antes de usar em produção:</strong> Execute um processo piloto completo
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
+                            <strong>Documente decisões:</strong> Explique por que certas configurações foram escolhidas
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
+                            <strong>Colete feedback:</strong> Pergunte aos usuários sobre dificuldades
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
+                            <strong>Versione os processos:</strong> Mantenha histórico de mudanças
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
+                            <strong>Monitore KPIs:</strong> Acompanhe a eficácia dos processos criados
+                          </li>
+                        </ul>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-red-800 dark:text-red-200 flex items-center gap-2">
+                          <X className="h-5 w-5" />
+                          ❌ Evite
+                        </h3>
+                        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                          <li className="flex items-start gap-2">
+                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+                            <strong>Workflows muito complexos:</strong> Comece simples e evolua gradualmente
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+                            <strong>Campos obrigatórios em excesso:</strong> Só marque como obrigatório o essencial
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+                            <strong>Prazos irreais:</strong> Considere feriados e carga de trabalho
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+                            <strong>Responsáveis indefinidos:</strong> Toda tarefa precisa de um dono claro
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
+                            <strong>Ignorar feedback:</strong> Usuários são a melhor fonte de melhorias
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Casos de Uso Comuns */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Boxes className="h-5 w-5 text-blue-600" />
+                      Casos de Uso Comuns - Exemplos Práticos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-medium">🛡️ Processo de Compliance LGPD</h4>
+                        <div className="text-sm bg-gray-50 dark:bg-gray-800 dark:border dark:border-gray-700 rounded p-3">
+                          <div className="font-medium mb-2 text-gray-900 dark:text-gray-100">Formulário recomendado:</div>
+                          <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                            <li>• Nome da empresa (texto obrigatório)</li>
+                            <li>• Porte da empresa (select)</li>
+                            <li>• Bases legais utilizadas (checkbox múltiplo)</li>
+                            <li>• Possui DPO? (radio sim/não/terceirizado)</li>
+                            <li>• Volume de dados (slider 0-1M)</li>
+                            <li>• Relatório de impacto (upload arquivo)</li>
+                          </ul>
+                          <div className="font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100">Workflow sugerido:</div>
+                          <div className="text-xs text-gray-700 dark:text-gray-300">
+                            Início → Preenchimento (Empresa) → Análise (DPO) → 
+                            Decisão (Conforme?) → Aprovação ou Plano de Ação → Fim
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <h4 className="font-medium">🔍 Auditoria Interna Anual</h4>
+                        <div className="text-sm bg-gray-50 dark:bg-gray-800 dark:border dark:border-gray-700 rounded p-3">
+                          <div className="font-medium mb-2 text-gray-900 dark:text-gray-100">Formulário recomendado:</div>
+                          <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
+                            <li>• Área auditada (select departamentos)</li>
+                            <li>• Período da auditoria (date range)</li>
+                            <li>• Checklist de conformidade (checkbox)</li>
+                            <li>• Evidências encontradas (file upload)</li>
+                            <li>• Score de conformidade (rating 1-5)</li>
+                            <li>• Observações gerais (textarea)</li>
+                          </ul>
+                          <div className="font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100">Workflow sugerido:</div>
+                          <div className="text-xs text-gray-700 dark:text-gray-300">
+                            Início → Planejamento (Auditor) → Execução (Auditor) → 
+                            Revisão (Auditor Sênior) → Relatório → Plano Ação → Fim
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
+      
+      {/* Modal de Preview do Formulário */}
+      <FormPreviewModal
+        isOpen={isFormPreviewOpen}
+        onClose={() => setIsFormPreviewOpen(false)}
+        formFields={formFields}
+        formRows={formRows}
+        processName={processName}
+        processDescription={processDescription}
+      />
     </div>
   );
 };
