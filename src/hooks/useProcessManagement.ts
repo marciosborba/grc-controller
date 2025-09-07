@@ -57,7 +57,7 @@ export interface ProcessData {
     kpis: string[];
     reports: string[];
   };
-  integrations?: string[];
+  integrations?: any;
 }
 
 export const useProcessManagement = () => {
@@ -108,6 +108,12 @@ export const useProcessManagement = () => {
           webhook_triggers: [],
           ai_assistance: false
         },
+        analytics_config: {
+          kpis: processData.analytics?.kpis || [],
+          reports: processData.analytics?.reports || [],
+          enabled: !!(processData.analytics?.kpis?.length || processData.analytics?.reports?.length)
+        },
+        integration_config: processData.integrations || {},
         is_active: true,
         is_default_for_framework: false,
         usage_count: 0,
@@ -168,6 +174,12 @@ export const useProcessManagement = () => {
           nodes: processData.workflowNodes || [],
           connections: processData.workflowConnections || []
         },
+        analytics_config: {
+          kpis: processData.analytics?.kpis || [],
+          reports: processData.analytics?.reports || [],
+          enabled: !!(processData.analytics?.kpis?.length || processData.analytics?.reports?.length)
+        },
+        integration_config: processData.integrations || {},
         updated_by: user.id,
         updated_at: new Date().toISOString()
       };
