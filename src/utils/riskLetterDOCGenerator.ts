@@ -151,7 +151,7 @@ export class RiskLetterDOCGenerator {
         .info-box {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
-            border-radius: 5px;
+            border-radius: 7px;
             padding: 15px;
             margin-bottom: 15px;
         }

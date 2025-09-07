@@ -429,7 +429,7 @@ ${darkColors}
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 
     /* Border radius */
-    --radius: 0.75rem;
+    --radius: 0.4375rem;
   }
 
   .dark {

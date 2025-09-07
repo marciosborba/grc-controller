@@ -168,7 +168,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                 {policiesForPublication.map((policy) => (
                   <Card 
                     key={policy.id} 
-                    className={`cursor-pointer transition-all hover:shadow-md rounded-[5px] ${
+                    className={`cursor-pointer transition-all hover:shadow-md rounded-[7px] ${
                       selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
                     }`}
                     onClick={() => setSelectedPolicy(policy)}
@@ -202,7 +202,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
               <h3 className="text-lg font-semibold mb-3">Políticas Publicadas</h3>
               <div className="space-y-1.5">
                 {publishedPolicies.slice(0, 5).map((policy) => (
-                  <Card key={policy.id} className="opacity-75 rounded-[5px]">
+                  <Card key={policy.id} className="opacity-75 rounded-[7px]">
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
