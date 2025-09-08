@@ -262,7 +262,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 <th key={impact.id} className="border border-gray-300 p-2 bg-gray-50 text-xs font-medium">
                   {impact.name}
                   <br />
-                  <span className="text-xs text-muted-foreground">({impact.value})</span>
+                  <span className="text-xs text-muted-foreground">({String(impact.value)})</span>
                 </th>
               ))}
             </tr>
@@ -273,7 +273,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 <td className="border border-gray-300 p-2 bg-gray-50 text-xs font-medium">
                   {probability.name}
                   <br />
-                  <span className="text-xs text-muted-foreground">({probability.value})</span>
+                  <span className="text-xs text-muted-foreground">({String(probability.value)})</span>
                 </td>
                 {impactLevels.map(impact => {
                   const riskValue = calculateRiskLevel(probability.value, impact.value);
@@ -285,7 +285,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                       className="border border-gray-300 p-2 text-center text-xs"
                       style={{ backgroundColor: riskLevel.color + '20' }}
                     >
-                      <div className="font-medium">{riskValue}</div>
+                      <div className="font-medium">{String(riskValue)}</div>
                       <div 
                         className="text-xs px-1 py-0.5 rounded text-white"
                         style={{ backgroundColor: riskLevel.color }}
@@ -368,7 +368,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
             <div className="flex items-center justify-center">
               <Badge variant="outline" className="text-sm">
                 <CheckCircle className="h-4 w-4 mr-1" />
-                {config.dimensions.probability.length}×{config.dimensions.impact.length} configurada
+                {String(config.dimensions.probability.length)}×{String(config.dimensions.impact.length)} configurada
               </Badge>
             </div>
           </div>

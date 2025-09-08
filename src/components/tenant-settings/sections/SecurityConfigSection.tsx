@@ -279,7 +279,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               </div>
               <div>
                 <div className={`text-3xl font-bold ${getSecurityScoreColor(securityScore)}`}>
-                  {securityScore}%
+                  {String(securityScore)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
                   {securityScore >= 80 ? 'Excelente' : 
@@ -291,7 +291,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               {isLoading ? 'Salvando...' : 'Salvar Configurações'}
             </Button>
           </div>
-          <Progress value={securityScore} className="h-3" />
+          <Progress value={Number(securityScore)} className="h-3" />
           
           {securityScore < 80 && (
             <Alert className="mt-4">

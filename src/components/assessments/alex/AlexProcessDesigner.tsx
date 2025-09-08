@@ -1721,10 +1721,13 @@ const AlexProcessDesigner: React.FC = () => {
         rows: formRows
       };
       
-      setEditingForm(updatedForm);
-      setForms(prev => prev.map(f => f.id === updatedForm.id ? updatedForm : f));
-      setSelectedField(newField);
-      toast.success(`Campo ${draggedField.label || draggedField.type} adicionado!`);
+      // Usar requestAnimationFrame para suavizar a atualização da UI
+      requestAnimationFrame(() => {
+        setEditingForm(updatedForm);
+        setForms(prev => prev.map(f => f.id === updatedForm.id ? updatedForm : f));
+        setSelectedField(newField);
+        toast.success(`Campo ${draggedField.label || draggedField.type} adicionado!`);
+      });
     } else {
       // Movendo campo existente
       const updatedFields = existingFields.map((field: any) => {
@@ -1744,9 +1747,12 @@ const AlexProcessDesigner: React.FC = () => {
         fields: updatedFields
       };
       
-      setEditingForm(updatedForm);
-      setForms(prev => prev.map(f => f.id === updatedForm.id ? updatedForm : f));
-      toast.success('Campo movido!');
+      // Usar requestAnimationFrame para suavizar a atualização da UI
+      requestAnimationFrame(() => {
+        setEditingForm(updatedForm);
+        setForms(prev => prev.map(f => f.id === updatedForm.id ? updatedForm : f));
+        toast.success('Campo movido!');
+      });
     }
     
     setDraggedField(null);
@@ -2627,7 +2633,7 @@ const AlexProcessDesigner: React.FC = () => {
       {/* Editor de Processos */}
       {showNewTemplateDialog && (
         <Dialog open={showNewTemplateDialog} onOpenChange={setShowNewTemplateDialog}>
-          <DialogContent className="max-w-none max-h-none w-screen h-screen overflow-hidden m-0 p-0 rounded-none border-none">
+          <DialogContent className="max-w-none max-h-none w-screen h-screen overflow-hidden m-0 p-0 rounded-none border-none" style={{ display: 'grid', gridTemplateRows: 'auto 1fr' }}>
             <DialogHeader className="border-b pb-4 px-6 pt-4">
               <DialogTitle className="flex items-center gap-2">
                 <Settings2 className="h-6 w-6 text-blue-600" />
@@ -2639,8 +2645,8 @@ const AlexProcessDesigner: React.FC = () => {
               </DialogTitle>
             </DialogHeader>
             
-            <div className="flex-1 overflow-hidden px-6">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <div className="overflow-hidden px-6" style={{ display: 'grid', gridTemplateRows: 'auto 1fr', height: '100%' }}>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full" style={{ display: 'grid', gridTemplateRows: 'auto 1fr' }}>
                 <TabsList className="grid w-full grid-cols-4 mb-2">
                   <TabsTrigger value="basic" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -2929,7 +2935,7 @@ const AlexProcessDesigner: React.FC = () => {
                       <ScrollArea className="h-full pr-4">
                         <div className="space-y-6">
                           {/* Header da Seção */}
-                          <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 p-4 rounded-lg border">
+                          <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-4 rounded-lg border border-green-200/50 dark:border-green-800/50">
                             <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                               <Database className="h-5 w-5 text-green-600" />
                               Designer de Formulários
@@ -3024,50 +3030,233 @@ const AlexProcessDesigner: React.FC = () => {
                       <ScrollArea className="h-full pr-4">
                         <div className="space-y-6">
                           {/* Layout Principal do Construtor */}
-                          <div className="flex overflow-hidden" style={{height: 'calc(100vh - 200px)'}}>
-                          {/* Sidebar com Tipos de Campos (Menor) */}
-                          <div className="w-48 border-r bg-gray-50 dark:bg-gray-900 p-3 overflow-y-auto">
+                          <div 
+                            className="form-builder-grid" 
+                            style={{
+                              height: 'calc(100vh - 200px)'
+                            }}>
+                          {/* Sidebar com Tipos de Campos (192px fixo) */}
+                          <div className="border-r bg-gray-50 dark:bg-gray-900 p-3 overflow-y-auto">
                             <h4 className="font-medium mb-2 flex items-center gap-2">
                               <Palette className="h-3 w-3" />
                               Campos
                             </h4>
-                            <div className="space-y-1">
-                              {[
-                                { icon: FileText, label: 'Texto', type: 'text' },
-                                { icon: Hash, label: 'Número', type: 'number' },
-                                { icon: Calendar, label: 'Data', type: 'date' },
-                                { icon: Clock, label: 'Hora', type: 'time' },
-                                { icon: CheckCircle, label: 'Checkbox', type: 'checkbox' },
-                                { icon: Target, label: 'Radio', type: 'radio' },
-                                { icon: List, label: 'Select', type: 'select' },
-                                { icon: Upload, label: 'Arquivo', type: 'file' },
-                                { icon: Star, label: 'Rating', type: 'rating' },
-                                { icon: Gauge, label: 'Slider', type: 'slider' },
-                                { icon: Grid, label: 'Matriz', type: 'matrix' },
-                                { icon: FileText, label: 'Textarea', type: 'textarea' }
-                              ].map((field, index) => (
-                                <div 
-                                  key={index} 
-                                  className="p-1.5 border rounded cursor-grab active:cursor-grabbing transition-colors flex items-center gap-1.5 hover:bg-white dark:hover:bg-gray-800"
-                                  draggable
-                                  onDragStart={(e) => handleDragStart(e, field, true)}
-                                  onClick={() => addFieldToForm(field.type, formRows[0]?.id || 'row_1')}
-                                >
-                                  <field.icon className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                                  <span className="text-xs font-medium truncate">{field.label}</span>
-                                  <div className="text-xs text-muted-foreground">
-                                    ☰
-                                  </div>
+                            <div className="space-y-2">
+                              {/* Campos Básicos */}
+                              <div className="mb-3">
+                                <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Campos Básicos</h5>
+                                <div className="space-y-1">
+                                  {[
+                                    { icon: FileText, label: 'Texto', type: 'text', color: 'text-blue-600' },
+                                    { icon: FileText, label: 'Textarea', type: 'textarea', color: 'text-blue-500' },
+                                    { icon: Hash, label: 'Número', type: 'number', color: 'text-green-600' },
+                                    { icon: Mail, label: 'E-mail', type: 'email', color: 'text-purple-600' },
+                                    { icon: Globe, label: 'URL', type: 'url', color: 'text-indigo-600' },
+                                    { icon: Lock, label: 'Senha', type: 'password', color: 'text-red-600' },
+                                    { icon: Hash, label: 'CPF', type: 'cpf', color: 'text-emerald-600' },
+                                    { icon: Building, label: 'CNPJ', type: 'cnpj', color: 'text-teal-600' },
+                                    { icon: Hash, label: 'CEP', type: 'cep', color: 'text-cyan-600' },
+                                    { icon: Hash, label: 'Telefone', type: 'phone', color: 'text-pink-600' },
+                                    { icon: Hash, label: 'Moeda', type: 'currency', color: 'text-amber-600' },
+                                    { icon: Hash, label: 'Porcentagem', type: 'percentage', color: 'text-lime-600' }
+                                  ].map((field, index) => (
+                                    <div
+                                      key={index}
+                                      draggable
+                                      className="flex items-center gap-2 p-2 rounded cursor-move hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                      onDragStart={(e) => {
+                                        const fieldData = {
+                                          type: field.type,
+                                          label: field.label,
+                                          icon: field.icon.name,
+                                          isNewField: true
+                                        };
+                                        setDraggedField(fieldData);
+                                        e.dataTransfer.setData('text/plain', JSON.stringify(fieldData));
+                                      }}
+                                    >
+                                      <field.icon className={`h-4 w-4 ${field.color}`} />
+                                      <span className="text-xs font-medium">{field.label}</span>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
+                              </div>
+
+                              {/* Campos de Seleção */}
+                              <div className="mb-3">
+                                <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Seleção</h5>
+                                <div className="space-y-1">
+                                  {[
+                                    { icon: List, label: 'Dropdown', type: 'select', color: 'text-orange-600' },
+                                    { icon: CheckCircle, label: 'Checkbox', type: 'checkbox', color: 'text-green-600' },
+                                    { icon: Target, label: 'Radio', type: 'radio', color: 'text-blue-600' },
+                                    { icon: Grid, label: 'Multi-seleção', type: 'multiselect', color: 'text-purple-600' },
+                                    { icon: List, label: 'Toggle', type: 'toggle', color: 'text-cyan-600' },
+                                    { icon: CheckCircle, label: 'Checkbox Group', type: 'checkbox-group', color: 'text-emerald-600' }
+                                  ].map((field, index) => (
+                                    <div
+                                      key={index}
+                                      draggable
+                                      className="flex items-center gap-2 p-2 rounded cursor-move hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                      onDragStart={(e) => {
+                                        const fieldData = {
+                                          type: field.type,
+                                          label: field.label,
+                                          icon: field.icon.name,
+                                          isNewField: true
+                                        };
+                                        setDraggedField(fieldData);
+                                        e.dataTransfer.setData('text/plain', JSON.stringify(fieldData));
+                                      }}
+                                    >
+                                      <field.icon className={`h-4 w-4 ${field.color}`} />
+                                      <span className="text-xs font-medium">{field.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Campos de Data/Tempo */}
+                              <div className="mb-3">
+                                <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Data & Tempo</h5>
+                                <div className="space-y-1">
+                                  {[
+                                    { icon: Calendar, label: 'Data', type: 'date', color: 'text-red-600' },
+                                    { icon: Clock, label: 'Hora', type: 'time', color: 'text-orange-600' },
+                                    { icon: Calendar, label: 'Data e Hora', type: 'datetime', color: 'text-purple-600' },
+                                    { icon: Calendar, label: 'Período', type: 'daterange', color: 'text-indigo-600' }
+                                  ].map((field, index) => (
+                                    <div
+                                      key={index}
+                                      draggable
+                                      className="flex items-center gap-2 p-2 rounded cursor-move hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                      onDragStart={(e) => {
+                                        const fieldData = {
+                                          type: field.type,
+                                          label: field.label,
+                                          icon: field.icon.name,
+                                          isNewField: true
+                                        };
+                                        setDraggedField(fieldData);
+                                        e.dataTransfer.setData('text/plain', JSON.stringify(fieldData));
+                                      }}
+                                    >
+                                      <field.icon className={`h-4 w-4 ${field.color}`} />
+                                      <span className="text-xs font-medium">{field.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Campos Avançados */}
+                              <div className="mb-3">
+                                <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Avançados</h5>
+                                <div className="space-y-1">
+                                  {[
+                                    { icon: Upload, label: 'Upload Arquivo', type: 'file', color: 'text-blue-600' },
+                                    { icon: Upload, label: 'Upload Múltiplo', type: 'file-multiple', color: 'text-indigo-600' },
+                                    { icon: Upload, label: 'Upload Imagem', type: 'image', color: 'text-green-600' },
+                                    { icon: Paintbrush, label: 'Assinatura', type: 'signature', color: 'text-purple-600' },
+                                    { icon: Star, label: 'Avaliação', type: 'rating', color: 'text-yellow-600' },
+                                    { icon: Gauge, label: 'Slider', type: 'slider', color: 'text-cyan-600' },
+                                    { icon: Grid, label: 'Matriz', type: 'matrix', color: 'text-red-600' },
+                                    { icon: Code, label: 'Código/JSON', type: 'code', color: 'text-gray-600' },
+                                    { icon: Palette, label: 'Cor', type: 'color', color: 'text-pink-600' },
+                                    { icon: Map, label: 'Localização', type: 'location', color: 'text-emerald-600' },
+                                    { icon: Eye, label: 'Campo Oculto', type: 'hidden', color: 'text-gray-500' },
+                                    { icon: Hash, label: 'QR Code', type: 'qrcode', color: 'text-violet-600' },
+                                    { icon: Wand2, label: 'Campo Calculado', type: 'calculated', color: 'text-orange-600' },
+                                    { icon: Users, label: 'Seletor Usuário', type: 'user-select', color: 'text-blue-500' }
+                                  ].map((field, index) => (
+                                    <div
+                                      key={index}
+                                      draggable
+                                      className="flex items-center gap-2 p-2 rounded cursor-move hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                      onDragStart={(e) => {
+                                        const fieldData = {
+                                          type: field.type,
+                                          label: field.label,
+                                          icon: field.icon.name,
+                                          isNewField: true
+                                        };
+                                        setDraggedField(fieldData);
+                                        e.dataTransfer.setData('text/plain', JSON.stringify(fieldData));
+                                      }}
+                                    >
+                                      <field.icon className={`h-4 w-4 ${field.color}`} />
+                                      <span className="text-xs font-medium">{field.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Campos de Layout */}
+                              <div className="mb-3">
+                                <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Layout</h5>
+                                <div className="space-y-1">
+                                  {[
+                                    { icon: Separator, label: 'Separador', type: 'separator', color: 'text-gray-600' },
+                                    { icon: FileText, label: 'Título/Texto', type: 'heading', color: 'text-blue-600' },
+                                    { icon: Info, label: 'Info/Ajuda', type: 'info', color: 'text-cyan-600' },
+                                    { icon: Grid, label: 'Espaçador', type: 'spacer', color: 'text-gray-500' }
+                                  ].map((field, index) => (
+                                    <div
+                                      key={index}
+                                      draggable
+                                      className="flex items-center gap-2 p-2 rounded cursor-move hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                                      onDragStart={(e) => {
+                                        const fieldData = {
+                                          type: field.type,
+                                          label: field.label,
+                                          icon: field.icon.name,
+                                          isNewField: true
+                                        };
+                                        setDraggedField(fieldData);
+                                        e.dataTransfer.setData('text/plain', JSON.stringify(fieldData));
+                                      }}
+                                    >
+                                      <field.icon className={`h-4 w-4 ${field.color}`} />
+                                      <span className="text-xs font-medium">{field.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Rodapé da Sidebar com Ações Rápidas */}
+                            <div className="border-t pt-3 mt-4">
+                              <div className="flex flex-col gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="w-full text-xs"
+                                  onClick={() => addNewRow()}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Nova Linha
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="w-full text-xs"
+                                  onClick={() => {
+                                    // Limpar formulário
+                                    if (window.confirm('Deseja limpar todo o formulário?')) {
+                                      setEditingForm(prev => ({ ...prev, fields: [] }));
+                                      setForms(prev => prev.map(f => f.id === editingForm?.id ? { ...f, fields: [] } : f));
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  Limpar Tudo
+                                </Button>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Área de Edição Principal (Grande) */}
-                          <div className="flex-1 flex">
-                            {/* Canvas do Formulário */}
-                            <div className="flex-1 p-6 overflow-y-auto">
-                              <div className="max-w-6xl mx-auto">
+                            {/* Canvas do Formulário (área central do grid) */}
+                            <div className="p-6 overflow-y-auto">
+                              <div className="w-full">
                                 <div className="bg-white dark:bg-gray-800 border rounded-lg p-6 shadow-sm">
                                   {/* Header do Formulário */}
                                   <div className="mb-6">
@@ -3095,8 +3284,8 @@ const AlexProcessDesigner: React.FC = () => {
                                   {/* Grid de Linhas */}
                                   {editingForm?.fields?.length === 0 && formRows.length === 1 ? (
                                     <div 
-                                      className={`text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg transition-colors ${
-                                        draggedField ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-300 dark:border-gray-600'
+                                      className={`text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg transition-all duration-200 min-h-[300px] flex flex-col justify-center ${
+                                        draggedField ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 shadow-lg scale-[1.02]' : 'border-gray-300 dark:border-gray-600'
                                       }`}
                                       onDragOver={(e) => {
                                         e.preventDefault();
@@ -3109,13 +3298,22 @@ const AlexProcessDesigner: React.FC = () => {
                                         }
                                       }}
                                     >
-                                      <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                      <h4 className="text-lg font-medium mb-2">Formulário vazio</h4>
-                                      <p className="text-sm mb-2">
-                                        {draggedField ? 'Solte o campo aqui para adicionar' : 'Arraste campos da sidebar ou clique para adicionar'}
-                                      </p>
-                                      <div className="text-xs text-muted-foreground">
-                                        Layout: {formRows.length} linha{formRows.length > 1 ? 's' : ''}
+                                      <div className="space-y-4">
+                                        <Database className={`h-12 w-12 mx-auto transition-all duration-200 ${
+                                          draggedField ? 'opacity-70 text-blue-500 scale-110' : 'opacity-50'
+                                        }`} />
+                                        <h4 className="text-lg font-medium">
+                                          {draggedField ? 'Solte o campo aqui' : 'Formulário vazio'}
+                                        </h4>
+                                        <p className="text-sm max-w-sm mx-auto">
+                                          {draggedField ? 
+                                            `Adicionando campo: ${draggedField.label || draggedField.type}` : 
+                                            'Arraste campos da sidebar ou clique para adicionar'
+                                          }
+                                        </p>
+                                        <div className="text-xs text-muted-foreground">
+                                          Layout: {formRows.length} linha{formRows.length > 1 ? 's' : ''}
+                                        </div>
                                       </div>
                                     </div>
                                   ) : (
@@ -3200,9 +3398,11 @@ const AlexProcessDesigner: React.FC = () => {
                                                 return (
                                                   <div 
                                                     key={`${row.id}-${columnIndex}`}
-                                                    className={`min-h-16 border-2 border-dashed rounded p-1.5 transition-colors ${
+                                                    className={`min-h-20 border-2 border-dashed rounded p-1.5 transition-all duration-200 ${
                                                       dragOverColumn === columnIndex && selectedRow === row.id
-                                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
+                                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 shadow-md scale-[1.02]' 
+                                                        : draggedField
+                                                        ? 'border-gray-400 dark:border-gray-500 bg-gray-50/50 dark:bg-gray-800/50'
                                                         : 'border-gray-300 dark:border-gray-600'
                                                     }`}
                                                     onDragOver={(e) => handleDragOver(e, row.id, columnIndex)}
@@ -3280,6 +3480,7 @@ const AlexProcessDesigner: React.FC = () => {
                                                     
                                                     {/* Preview do Campo */}
                                                     <div className="pointer-events-none">
+                                                      {/* Campos Básicos */}
                                                       {field.type === 'text' && (
                                                         <Input placeholder={field.placeholder || 'Digite...'} disabled className="text-xs h-6" />
                                                       )}
@@ -3289,12 +3490,53 @@ const AlexProcessDesigner: React.FC = () => {
                                                       {field.type === 'number' && (
                                                         <Input type="number" placeholder="0" disabled className="text-xs h-6" />
                                                       )}
+                                                      {field.type === 'email' && (
+                                                        <Input type="email" placeholder="email@exemplo.com" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'url' && (
+                                                        <Input type="url" placeholder="https://exemplo.com" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'password' && (
+                                                        <Input type="password" placeholder="••••••••" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'cpf' && (
+                                                        <Input placeholder="000.000.000-00" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'cnpj' && (
+                                                        <Input placeholder="00.000.000/0000-00" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'cep' && (
+                                                        <Input placeholder="00000-000" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'phone' && (
+                                                        <Input placeholder="(11) 99999-9999" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'currency' && (
+                                                        <Input placeholder="R$ 0,00" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'percentage' && (
+                                                        <Input placeholder="0%" disabled className="text-xs h-6" />
+                                                      )}
+                                                      
+                                                      {/* Campos de Data/Tempo */}
                                                       {field.type === 'date' && (
                                                         <Input type="date" disabled className="text-xs h-6" />
                                                       )}
                                                       {field.type === 'time' && (
                                                         <Input type="time" disabled className="text-xs h-6" />
                                                       )}
+                                                      {field.type === 'datetime' && (
+                                                        <Input type="datetime-local" disabled className="text-xs h-6" />
+                                                      )}
+                                                      {field.type === 'daterange' && (
+                                                        <div className="flex gap-1 items-center text-xs">
+                                                          <Input type="date" disabled className="text-xs h-4 flex-1" />
+                                                          <span className="text-gray-400">-</span>
+                                                          <Input type="date" disabled className="text-xs h-4 flex-1" />
+                                                        </div>
+                                                      )}
+
+                                                      {/* Campos de Seleção */}
                                                       {field.type === 'select' && (
                                                         <Select disabled>
                                                           <SelectTrigger className="text-xs h-6">
@@ -3302,10 +3544,27 @@ const AlexProcessDesigner: React.FC = () => {
                                                           </SelectTrigger>
                                                         </Select>
                                                       )}
+                                                      {field.type === 'multiselect' && (
+                                                        <div className="border rounded text-xs p-1 text-gray-500">
+                                                          Múltiplas opções...
+                                                        </div>
+                                                      )}
                                                       {field.type === 'checkbox' && (
                                                         <div className="flex items-center space-x-1">
                                                           <input type="checkbox" disabled className="scale-75" />
                                                           <Label className="text-xs">Opção</Label>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'checkbox-group' && (
+                                                        <div className="space-y-0.5">
+                                                          <div className="flex items-center space-x-1">
+                                                            <input type="checkbox" disabled className="scale-50" />
+                                                            <Label className="text-xs">Opção 1</Label>
+                                                          </div>
+                                                          <div className="flex items-center space-x-1">
+                                                            <input type="checkbox" disabled className="scale-50" />
+                                                            <Label className="text-xs">Opção 2</Label>
+                                                          </div>
                                                         </div>
                                                       )}
                                                       {field.type === 'radio' && (
@@ -3314,10 +3573,39 @@ const AlexProcessDesigner: React.FC = () => {
                                                           <Label className="text-xs">Opção 1</Label>
                                                         </div>
                                                       )}
+                                                      {field.type === 'toggle' && (
+                                                        <div className="flex items-center space-x-2">
+                                                          <div className="w-8 h-4 bg-gray-200 rounded-full relative">
+                                                            <div className="w-3 h-3 bg-white rounded-full absolute top-0.5 left-0.5 shadow-sm" />
+                                                          </div>
+                                                          <Label className="text-xs">Toggle</Label>
+                                                        </div>
+                                                      )}
+
+                                                      {/* Campos Avançados */}
                                                       {field.type === 'file' && (
                                                         <div className="border border-dashed border-gray-300 rounded p-1 text-center">
                                                           <Upload className="h-3 w-3 mx-auto text-gray-400" />
                                                           <div className="text-xs text-gray-500">Arquivo</div>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'file-multiple' && (
+                                                        <div className="border border-dashed border-gray-300 rounded p-1 text-center">
+                                                          <Upload className="h-3 w-3 mx-auto text-gray-400" />
+                                                          <div className="text-xs text-gray-500">Múltiplos</div>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'image' && (
+                                                        <div className="border border-dashed border-gray-300 rounded p-1 text-center bg-gray-50">
+                                                          <div className="w-full h-4 bg-gray-200 rounded flex items-center justify-center">
+                                                            <Upload className="h-2 w-2 text-gray-400" />
+                                                          </div>
+                                                          <div className="text-xs text-gray-500 mt-1">Imagem</div>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'signature' && (
+                                                        <div className="border border-gray-300 rounded p-1 text-center bg-gray-50">
+                                                          <div className="text-xs text-gray-500 italic">✎ Assinatura</div>
                                                         </div>
                                                       )}
                                                       {field.type === 'rating' && (
@@ -3330,6 +3618,79 @@ const AlexProcessDesigner: React.FC = () => {
                                                       {field.type === 'slider' && (
                                                         <div className="py-1">
                                                           <input type="range" disabled className="w-full h-1" />
+                                                          <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+                                                            <span>0</span>
+                                                            <span>100</span>
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'code' && (
+                                                        <div className="border rounded text-xs p-1 bg-gray-900 dark:bg-gray-800 text-green-400 dark:text-green-300 font-mono">
+                                                          {'{ "code": "..." }'}
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'matrix' && (
+                                                        <div className="border rounded text-xs p-1">
+                                                          <div className="grid grid-cols-2 gap-0.5 text-gray-500">
+                                                            <div className="text-center">A</div>
+                                                            <div className="text-center">B</div>
+                                                            <div className="w-2 h-2 border rounded mx-auto" />
+                                                            <div className="w-2 h-2 border rounded mx-auto" />
+                                                          </div>
+                                                        </div>
+                                                      )}
+
+                                                      {/* Campos de Layout */}
+                                                      {field.type === 'separator' && (
+                                                        <div className="border-t border-gray-300 w-full" />
+                                                      )}
+                                                      {field.type === 'heading' && (
+                                                        <div className="text-xs font-semibold">Título</div>
+                                                      )}
+                                                      {field.type === 'info' && (
+                                                        <div className="flex items-center gap-1 text-xs text-blue-600">
+                                                          <Info className="h-2 w-2" />
+                                                          <span>Informação</span>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'spacer' && (
+                                                        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded" />
+                                                      )}
+                                                      
+                                                      {/* Novos Campos Avançados */}
+                                                      {field.type === 'color' && (
+                                                        <div className="flex items-center gap-2">
+                                                          <div className="w-4 h-4 bg-blue-500 rounded border border-gray-300 dark:border-gray-600" />
+                                                          <span className="text-xs text-gray-500">#0066ff</span>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'location' && (
+                                                        <div className="border rounded text-xs p-1 text-gray-500 bg-gray-50 dark:bg-gray-800">
+                                                          📍 Localização
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'hidden' && (
+                                                        <div className="border rounded text-xs p-1 text-gray-400 bg-gray-100 dark:bg-gray-800 italic">
+                                                          Campo oculto
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'qrcode' && (
+                                                        <div className="border rounded text-xs p-1 text-center bg-gray-50 dark:bg-gray-800">
+                                                          <div className="w-6 h-6 mx-auto bg-black dark:bg-white" style={{ 
+                                                            backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'%3E%3Cpath fill=\'white\' d=\'M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 21h2v2h-2zM19 19h2v2h-2z\'/%3E%3C/svg%3E")',
+                                                            backgroundSize: 'contain'
+                                                          }} />
+                                                          <div className="text-xs mt-1">QR Code</div>
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'calculated' && (
+                                                        <div className="border rounded text-xs p-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300">
+                                                          ƒ Calculado
+                                                        </div>
+                                                      )}
+                                                      {field.type === 'user-select' && (
+                                                        <div className="border rounded text-xs p-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                                                          👤 Usuário
                                                         </div>
                                                       )}
                                                     </div>
@@ -3358,8 +3719,8 @@ const AlexProcessDesigner: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Painel de Propriedades */}
-                            <div className="w-64 border-l bg-gray-50 dark:bg-gray-900 p-3 overflow-y-auto">
+                            {/* Painel de Propriedades (256px fixo) */}
+                            <div className="border-l bg-gray-50 dark:bg-gray-900 p-3 overflow-y-auto">
                               <h4 className="font-medium mb-2 flex items-center gap-2">
                                 <Settings className="h-3 w-3" />
                                 Propriedades
@@ -3401,8 +3762,8 @@ const AlexProcessDesigner: React.FC = () => {
                                     />
                                   </div>
                                   
-                                  {/* Opções para Select e Radio */}
-                                  {(selectedField.type === 'select' || selectedField.type === 'radio') && (
+                                  {/* Opções para campos de seleção */}
+                                  {(selectedField.type === 'select' || selectedField.type === 'radio' || selectedField.type === 'multiselect' || selectedField.type === 'checkbox-group') && (
                                     <div>
                                       <Label className="text-sm">Opções</Label>
                                       <div className="mt-1 space-y-2">
@@ -3514,6 +3875,361 @@ const AlexProcessDesigner: React.FC = () => {
                                           className="mt-1"
                                           placeholder="100"
                                         />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Campos de Upload */}
+                                  {(selectedField.type === 'file' || selectedField.type === 'file-multiple' || selectedField.type === 'image') && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="text-sm">Tipos de Arquivo Aceitos</Label>
+                                        <Input 
+                                          value={selectedField.acceptedTypes || ''}
+                                          onChange={(e) => updateField(selectedField.id, { acceptedTypes: e.target.value })}
+                                          className="mt-1"
+                                          placeholder={selectedField.type === 'image' ? '.jpg,.png,.gif,.svg' : '.pdf,.doc,.txt,.xlsx'}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Separados por vírgula (ex: .pdf,.doc,.txt)
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm">Tamanho Máximo (MB)</Label>
+                                        <Input 
+                                          type="number"
+                                          value={selectedField.maxFileSize || ''}
+                                          onChange={(e) => updateField(selectedField.id, { maxFileSize: parseInt(e.target.value) || 10 })}
+                                          className="mt-1"
+                                          placeholder="10"
+                                        />
+                                      </div>
+                                      {selectedField.type === 'file-multiple' && (
+                                        <div>
+                                          <Label className="text-sm">Máximo de Arquivos</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.maxFiles || ''}
+                                            onChange={(e) => updateField(selectedField.id, { maxFiles: parseInt(e.target.value) || 5 })}
+                                            className="mt-1"
+                                            placeholder="5"
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Rating */}
+                                  {selectedField.type === 'rating' && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="text-sm">Número de Estrelas</Label>
+                                        <Select 
+                                          value={selectedField.maxRating?.toString() || '5'}
+                                          onValueChange={(value) => updateField(selectedField.id, { maxRating: parseInt(value) })}
+                                        >
+                                          <SelectTrigger className="mt-1">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="3">3 estrelas</SelectItem>
+                                            <SelectItem value="5">5 estrelas</SelectItem>
+                                            <SelectItem value="10">10 estrelas</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Permitir meio ponto</Label>
+                                        <Switch 
+                                          checked={selectedField.allowHalf || false}
+                                          onCheckedChange={(checked) => updateField(selectedField.id, { allowHalf: checked })}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Slider */}
+                                  {selectedField.type === 'slider' && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <Label className="text-sm">Valor Mínimo</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.sliderMin || '0'}
+                                            onChange={(e) => updateField(selectedField.id, { sliderMin: parseInt(e.target.value) || 0 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm">Valor Máximo</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.sliderMax || '100'}
+                                            onChange={(e) => updateField(selectedField.id, { sliderMax: parseInt(e.target.value) || 100 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm">Passo</Label>
+                                        <Input 
+                                          type="number"
+                                          value={selectedField.sliderStep || '1'}
+                                          onChange={(e) => updateField(selectedField.id, { sliderStep: parseInt(e.target.value) || 1 })}
+                                          className="mt-1"
+                                          placeholder="1"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Assinatura */}
+                                  {selectedField.type === 'signature' && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <Label className="text-sm">Largura (px)</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.signatureWidth || '400'}
+                                            onChange={(e) => updateField(selectedField.id, { signatureWidth: parseInt(e.target.value) || 400 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm">Altura (px)</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.signatureHeight || '150'}
+                                            onChange={(e) => updateField(selectedField.id, { signatureHeight: parseInt(e.target.value) || 150 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Matrix */}
+                                  {selectedField.type === 'matrix' && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <Label className="text-sm">Linhas</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.matrixRows || '3'}
+                                            onChange={(e) => updateField(selectedField.id, { matrixRows: parseInt(e.target.value) || 3 })}
+                                            className="mt-1"
+                                            min="1"
+                                            max="10"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm">Colunas</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.matrixCols || '3'}
+                                            onChange={(e) => updateField(selectedField.id, { matrixCols: parseInt(e.target.value) || 3 })}
+                                            className="mt-1"
+                                            min="1"
+                                            max="10"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Campos Brasileiros */}
+                                  {(selectedField.type === 'cpf' || selectedField.type === 'cnpj' || selectedField.type === 'cep' || selectedField.type === 'phone') && (
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Validação automática</Label>
+                                        <Switch 
+                                          checked={selectedField.autoValidate !== false}
+                                          onCheckedChange={(checked) => updateField(selectedField.id, { autoValidate: checked })}
+                                        />
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Formatação automática</Label>
+                                        <Switch 
+                                          checked={selectedField.autoFormat !== false}
+                                          onCheckedChange={(checked) => updateField(selectedField.id, { autoFormat: checked })}
+                                        />
+                                      </div>
+                                      {selectedField.type === 'phone' && (
+                                        <div>
+                                          <Label className="text-sm">Tipo de Telefone</Label>
+                                          <Select 
+                                            value={selectedField.phoneType || 'mobile'}
+                                            onValueChange={(value) => updateField(selectedField.id, { phoneType: value })}
+                                          >
+                                            <SelectTrigger className="mt-1">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="mobile">Celular</SelectItem>
+                                              <SelectItem value="landline">Fixo</SelectItem>
+                                              <SelectItem value="both">Ambos</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Moeda e Porcentagem */}
+                                  {(selectedField.type === 'currency' || selectedField.type === 'percentage') && (
+                                    <div className="space-y-3">
+                                      {selectedField.type === 'currency' && (
+                                        <>
+                                          <div>
+                                            <Label className="text-sm">Moeda</Label>
+                                            <Select 
+                                              value={selectedField.currency || 'BRL'}
+                                              onValueChange={(value) => updateField(selectedField.id, { currency: value })}
+                                            >
+                                              <SelectTrigger className="mt-1">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="BRL">Real (R$)</SelectItem>
+                                                <SelectItem value="USD">Dólar ($)</SelectItem>
+                                                <SelectItem value="EUR">Euro (€)</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm">Casas Decimais</Label>
+                                            <Select 
+                                              value={selectedField.decimalPlaces?.toString() || '2'}
+                                              onValueChange={(value) => updateField(selectedField.id, { decimalPlaces: parseInt(value) })}
+                                            >
+                                              <SelectTrigger className="mt-1">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="0">0</SelectItem>
+                                                <SelectItem value="2">2</SelectItem>
+                                                <SelectItem value="4">4</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </>
+                                      )}
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <Label className="text-sm">Valor Mínimo</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.minValue || ''}
+                                            onChange={(e) => updateField(selectedField.id, { minValue: parseFloat(e.target.value) || 0 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                        <div>
+                                          <Label className="text-sm">Valor Máximo</Label>
+                                          <Input 
+                                            type="number"
+                                            value={selectedField.maxValue || ''}
+                                            onChange={(e) => updateField(selectedField.id, { maxValue: parseFloat(e.target.value) || 100 })}
+                                            className="mt-1"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Cor */}
+                                  {selectedField.type === 'color' && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="text-sm">Formato da Cor</Label>
+                                        <Select 
+                                          value={selectedField.colorFormat || 'hex'}
+                                          onValueChange={(value) => updateField(selectedField.id, { colorFormat: value })}
+                                        >
+                                          <SelectTrigger className="mt-1">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="hex">HEX (#ffffff)</SelectItem>
+                                            <SelectItem value="rgb">RGB (255,255,255)</SelectItem>
+                                            <SelectItem value="hsl">HSL (360,100%,100%)</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Mostrar paleta</Label>
+                                        <Switch 
+                                          checked={selectedField.showPalette !== false}
+                                          onCheckedChange={(checked) => updateField(selectedField.id, { showPalette: checked })}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Campo Calculado */}
+                                  {selectedField.type === 'calculated' && (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <Label className="text-sm">Fórmula</Label>
+                                        <Textarea 
+                                          value={selectedField.formula || ''}
+                                          onChange={(e) => updateField(selectedField.id, { formula: e.target.value })}
+                                          className="mt-1 font-mono text-xs"
+                                          placeholder="Ex: {campo1} + {campo2} * 0.1"
+                                          rows={3}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          Use {`{nomeCampo}`} para referenciar outros campos
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm">Recalcular quando</Label>
+                                        <Select 
+                                          value={selectedField.recalculateOn || 'change'}
+                                          onValueChange={(value) => updateField(selectedField.id, { recalculateOn: value })}
+                                        >
+                                          <SelectTrigger className="mt-1">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="change">Mudança nos campos</SelectItem>
+                                            <SelectItem value="submit">Envio do formulário</SelectItem>
+                                            <SelectItem value="manual">Manual</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Propriedades para Seletor de Usuário */}
+                                  {selectedField.type === 'user-select' && (
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Múltipla seleção</Label>
+                                        <Switch 
+                                          checked={selectedField.multiple || false}
+                                          onCheckedChange={(checked) => updateField(selectedField.id, { multiple: checked })}
+                                        />
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm">Filtrar por papel</Label>
+                                        <Select 
+                                          value={selectedField.filterByRole || 'all'}
+                                          onValueChange={(value) => updateField(selectedField.id, { filterByRole: value })}
+                                        >
+                                          <SelectTrigger className="mt-1">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="all">Todos os usuários</SelectItem>
+                                            <SelectItem value="admin">Administradores</SelectItem>
+                                            <SelectItem value="manager">Gerentes</SelectItem>
+                                            <SelectItem value="user">Usuários</SelectItem>
+                                          </SelectContent>
+                                        </Select>
                                       </div>
                                     </div>
                                   )}
@@ -3634,7 +4350,6 @@ const AlexProcessDesigner: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                          </div>
                         </div>
                         
                         {/* RODAPÉ DO CONSTRUTOR DE FORMULÁRIOS - BOTÕES MOVIDOS PARA BAIXO */}
@@ -3673,7 +4388,7 @@ const AlexProcessDesigner: React.FC = () => {
                     <ScrollArea className="h-full pr-4">
                       <div className="space-y-6">
                         {/* Header da Seção */}
-                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 p-4 rounded-lg border">
+                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-4 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
                           <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                             <Workflow className="h-5 w-5 text-purple-600" />
                             Designer de Fluxo de Processos
@@ -3708,12 +4423,16 @@ const AlexProcessDesigner: React.FC = () => {
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <div className="h-96 border-2 border-dashed rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-                              <div className="text-center">
-                                <Workflow className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                                <h4 className="text-lg font-medium mb-2">Canvas de Processo Vazio</h4>
-                                <p className="text-sm text-muted-foreground mb-4">Arraste elementos para criar seu fluxo de processo</p>
-                                <Button>
+                            <div className="h-96 border-2 border-dashed rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center transition-all duration-200 min-h-[384px]">
+                              <div className="text-center space-y-4">
+                                <Workflow className="h-16 w-16 mx-auto text-gray-400 transition-all duration-200 hover:text-gray-500 hover:scale-105" />
+                                <div className="space-y-2">
+                                  <h4 className="text-lg font-medium">Canvas de Processo Vazio</h4>
+                                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                                    Arraste elementos da palette lateral para criar seu fluxo de processo
+                                  </p>
+                                </div>
+                                <Button className="transition-all duration-200 hover:scale-105">
                                   <PlayCircle className="h-4 w-4 mr-2" />
                                   Adicionar Etapa Inicial
                                 </Button>
@@ -3751,7 +4470,7 @@ const AlexProcessDesigner: React.FC = () => {
                     <ScrollArea className="h-full pr-4">
                       <div className="space-y-6">
                         {/* Header da Seção */}
-                        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 p-4 rounded-lg border">
+                        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-4 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
                           <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
                             <Zap className="h-5 w-5 text-orange-600" />
                             Automação e Workflows

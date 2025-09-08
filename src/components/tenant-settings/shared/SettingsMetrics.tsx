@@ -39,10 +39,10 @@ export const SettingsMetrics: React.FC<SettingsMetricsProps> = ({ metrics }) => 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Usuários</p>
-              <p className="text-2xl font-bold">{metrics.activeUsers}/{metrics.totalUsers}</p>
+              <p className="text-2xl font-bold">{String(metrics.activeUsers)}/{String(metrics.totalUsers)}</p>
               {metrics.pendingInvitations > 0 && (
                 <Badge variant="secondary" className="text-xs mt-1">
-                  {metrics.pendingInvitations} convites pendentes
+                  {String(metrics.pendingInvitations)} convites pendentes
                 </Badge>
               )}
             </div>
@@ -59,13 +59,13 @@ export const SettingsMetrics: React.FC<SettingsMetricsProps> = ({ metrics }) => 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Score de Segurança</p>
-              <p className="text-2xl font-bold">{metrics.securityScore}%</p>
-              <Progress value={metrics.securityScore} className="h-2 mt-2" />
+              <p className="text-2xl font-bold">{String(metrics.securityScore)}%</p>
+              <Progress value={Number(metrics.securityScore)} className="h-2 mt-2" />
               {metrics.suspiciousActivities > 0 && (
                 <div className="flex items-center mt-1">
                   <AlertTriangle className="h-3 w-3 text-orange-500 mr-1" />
                   <span className="text-xs text-orange-600">
-                    {metrics.suspiciousActivities} atividades suspeitas
+                    {String(metrics.suspiciousActivities)} atividades suspeitas
                   </span>
                 </div>
               )}
@@ -83,9 +83,9 @@ export const SettingsMetrics: React.FC<SettingsMetricsProps> = ({ metrics }) => 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Sessões Ativas</p>
-              <p className="text-2xl font-bold">{metrics.activeSessions}</p>
+              <p className="text-2xl font-bold">{String(metrics.activeSessions)}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {Math.round((metrics.activeSessions / metrics.activeUsers) * 100)}% dos usuários ativos
+                {String(Math.round((metrics.activeSessions / metrics.activeUsers) * 100))}% dos usuários ativos
               </p>
             </div>
             <div className="p-3 rounded-full bg-purple-100">
@@ -101,11 +101,11 @@ export const SettingsMetrics: React.FC<SettingsMetricsProps> = ({ metrics }) => 
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Armazenamento</p>
-              <p className="text-2xl font-bold">{metrics.storageUsed}GB</p>
-              <Progress value={storagePercentage} className="h-2 mt-2" />
+              <p className="text-2xl font-bold">{String(metrics.storageUsed)}GB</p>
+              <Progress value={Number(storagePercentage)} className="h-2 mt-2" />
               <div className="flex items-center justify-between mt-1">
                 <span className="text-xs text-muted-foreground">
-                  {metrics.storageLimit}GB total
+                  {String(metrics.storageLimit)}GB total
                 </span>
                 <div className="flex items-center">
                   {isBackupRecent ? (

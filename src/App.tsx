@@ -94,7 +94,7 @@ const NotificationsPage = lazy(() => import("@/components/notifications/Notifica
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 
 // Tenant Settings module
-const TenantSettingsPage = lazy(() => import("@/components/tenant-settings/TenantSettingsPage").then(module => ({ default: module.TenantSettingsPage })));
+const TenantSettingsPage = lazy(() => import("@/components/tenant-settings/TenantSettingsPage"));
 
 // Public vendor assessment
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));

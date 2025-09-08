@@ -1,5872 +1,2648 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Settings2, Edit, Workflow, BarChart3, FileText, Network, 
-  Save, Plus, Grid, Eye, Boxes, Map, Settings, PlayCircle,
-  Download, RefreshCw, Share2, Globe, X, Maximize2, Minimize2,
-  Trash2, Move, GripVertical, Columns, RotateCcw, Database,
-  Upload, Star, Hash, Mail, Calendar, Clock, ChevronDown,
-  CheckSquare, Circle, Sliders, Zap, Sparkles, Layout,
-  ArrowRight, CheckCircle, AlertCircle, AlertTriangle, Users, Timer,
-  GitBranch, MessageSquare, Bell, Gauge, TrendingUp,
-  BarChart, PieChart, LineChart, Award, Shield, Cog,
-  Lock, Phone, Link, CalendarDays, ToggleLeft, Image,
-  Minus, Palette, Tag, PenTool, Plug, BookOpen, Info
-} from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContextOptimized';
+import { 
+  X, 
+  Settings2, 
+  Eye, 
+  Save, 
+  Maximize2, 
+  Minimize2, 
+  Plus, 
+  Trash2, 
+  ChevronRight,
+  Upload,
+  Download,
+  Copy,
+  Layers,
+  Workflow,
+  Grid3x3,
+  MousePointer2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Play,
+  Square,
+  Circle,
+  GitBranch,
+  GitMerge,
+  Timer,
+  Bell,
+  CheckCircle,
+  Settings,
+  Target,
+  GripVertical,
+  Users,
+  Database,
+  FileText,
+  Mail,
+  AlertTriangle,
+  Clock,
+  Activity,
+  Zap,
+  Shield,
+  Link2,
+  Layout,
+  PaintBucket,
+  Type,
+  Image,
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Calendar,
+  MapPin,
+  Filter,
+  Search,
+  MoreVertical,
+  Move,
+  RotateCw,
+  FlipHorizontal,
+  FlipVertical,
+  Maximize,
+  Minimize,
+  Monitor,
+  Smartphone,
+  Tablet,
+  PenTool,
+  Palette,
+  Sparkles,
+  Cpu,
+  CloudDownload,
+  Star
+} from 'lucide-react';
+
 import { useProcessManagement } from '@/hooks/useProcessManagement';
-import FormPreviewModal from './FormPreviewModal';
 
-// ==================== INTERFACES EXPANDIDAS ====================
+// Professional Workflow Node Types with Enhanced Configuration
+interface WorkflowNode {
+  id: string;
+  type: 'start' | 'end' | 'task' | 'decision' | 'parallel' | 'timer' | 'notification' | 'process' | 'database' | 'integration';
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  data: {
+    label: string;
+    description?: string;
+    properties?: Record<string, any>;
+    style?: {
+      backgroundColor?: string;
+      borderColor?: string;
+      textColor?: string;
+      borderWidth?: number;
+      borderRadius?: number;
+    };
+  };
+}
 
-// Form Builder Interfaces
+interface WorkflowConnection {
+  id: string;
+  source: string;
+  target: string;
+  type: 'default' | 'smooth' | 'step' | 'straight';
+  style?: {
+    strokeColor?: string;
+    strokeWidth?: number;
+    strokeDasharray?: string;
+    animated?: boolean;
+  };
+  label?: string;
+}
+
 interface FormField {
   id: string;
   type: string;
   label: string;
-  placeholder?: string;
   required: boolean;
-  rowId: string;
-  rowIndex: number;
-  column: number;
-  width: number;
   options?: string[];
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    regex?: string;
-    customMessage?: string;
-  };
-  conditionalLogic?: {
-    showWhen?: {
-      fieldId: string;
-      operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
-      value: any;
-    };
-    requiredWhen?: {
-      fieldId: string;
-      operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
-      value: any;
-    };
-  };
-  calculatedValue?: {
-    formula: string;
-    dependsOn: string[];
-  };
+  validation?: any;
+  description?: string;
+  placeholder?: string;
+  defaultValue?: any;
 }
 
-interface FormRow {
-  id: string;
-  columns: number;
-  height: string;
-  columnWidths: string[];
-}
-
-// Workflow Engine Interfaces
-interface WorkflowNode {
-  id: string;
-  type: 'start' | 'task' | 'decision' | 'parallel' | 'end' | 'timer' | 'notification';
-  label: string;
-  position: { x: number; y: number };
-  data: {
-    assignedTo?: string[];
-    dueDate?: string;
-    priority?: 'low' | 'medium' | 'high' | 'critical';
-    formId?: string;
-    condition?: string;
-    timerDuration?: string;
-    notificationTemplate?: string;
-  };
-  connections: string[]; // IDs dos próximos nós
-}
-
-interface WorkflowInstance {
-  id: string;
-  processId: string;
-  status: 'draft' | 'active' | 'completed' | 'suspended' | 'error';
-  currentNodes: string[];
-  processData: Record<string, any>;
-  participants: string[];
-  startedAt: string;
-  completedAt?: string;
-  slaDeadline?: string;
-}
-
-// Process Template Interfaces
 interface ProcessTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'compliance' | 'audit' | 'risk' | 'policy' | 'incident' | 'assessment' | 'custom';
-  icon: string;
-  tags: string[];
-  formStructure: FormRow[];
-  formFields: FormField[];
-  workflowNodes: WorkflowNode[];
-  analytics: {
-    kpis: string[];
-    reports: string[];
-  };
-  integrations: string[];
+  complexity: 'Simple' | 'Medium' | 'Complex';
   estimatedTime: string;
-  complexity: 'simple' | 'medium' | 'complex';
-}
-
-// Analytics & Reporting Interfaces
-interface ProcessMetrics {
-  completionRate: number;
-  averageTime: number;
-  bottlenecks: string[];
-  slaCompliance: number;
-  userSatisfaction: number;
-  errorRate: number;
+  category: string;
+  fields: FormField[];
+  workflow: {
+    nodes: WorkflowNode[];
+    connections: WorkflowConnection[];
+  };
 }
 
 interface AlexProcessDesignerEnhancedModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode?: 'create' | 'edit';
-  initialData?: any;
-  onSave?: (data: any) => void;
+  mode: 'create' | 'edit';
+  processId?: string;
+  initialData?: ProcessTemplate | null;
+  onSave?: (processData: any) => void;
 }
 
-const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModalProps> = ({
-  isOpen,
-  onClose,
-  mode = 'create',
-  initialData,
-  onSave
-}) => {
-  const { user } = useAuth();
-  const { saveProcess, updateProcess, loadProcess, loading: saveLoading } = useProcessManagement();
-  const [activeLayer, setActiveLayer] = useState<'template' | 'form' | 'workflow' | 'analytics' | 'reports' | 'integrations' | 'documentation'>('template');
-  const [isMaximized, setIsMaximized] = useState(true);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [isFormPreviewOpen, setIsFormPreviewOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ProcessTemplate | null>(null);
-  
-  // Estados do Form Builder
-  const [formFields, setFormFields] = useState<FormField[]>([]);
-  const [selectedField, setSelectedField] = useState<FormField | null>(null);
-  const [draggedField, setDraggedField] = useState<any | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
-  const [selectedRow, setSelectedRow] = useState<string | null>(null);
-  const [formRows, setFormRows] = useState<FormRow[]>([]);
-  
-  // Estados do Workflow Engine
-  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
-  const [workflowConnections, setWorkflowConnections] = useState<any[]>([]);
-  const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<WorkflowNode | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionSource, setConnectionSource] = useState<string | null>(null);
-  const [connectionLineStyle, setConnectionLineStyle] = useState<'straight' | 'curved'>('curved');
-  const [connectionLineType, setConnectionLineType] = useState<'solid' | 'dashed'>('solid');
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
-  const [canvasScale, setCanvasScale] = useState(1);
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  
-  // Estados para Relatórios
-  const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [reportData, setReportData] = useState<any>(null);
-  const [reportFilters, setReportFilters] = useState<any>({
-    reportName: '',
-    reportType: '',
-    outputFormat: 'pdf',
-    startDate: '',
-    endDate: '',
-    department: 'all',
-    status: 'all',
-    schedule: 'manual',
-    sections: {
-      summary: true,
-      kpis: true,
-      details: true,
-      trends: false,
-      recommendations: false,
-      appendix: false
-    }
-  });
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [reportHistory, setReportHistory] = useState<any[]>([]);
-  
-  // Estados para Integrações
-  const [integrationSettings, setIntegrationSettings] = useState<any>({
-    notifications: {
-      email: { enabled: true, config: {} },
-      whatsapp: { enabled: false, config: {} },
-      push: { enabled: true, config: {} }
-    },
-    systems: {
-      erp: { enabled: false, config: {} },
-      activeDirectory: { enabled: false, config: {} },
-      biTools: { enabled: false, config: {} }
-    },
-    apis: {
-      restApi: { enabled: false, config: {} },
-      webhook: { enabled: false, config: {} },
-      customApi: { enabled: false, config: {} }
-    }
-  });
-  
-  // Estados do Processo
-  const [processName, setProcessName] = useState('');
-  const [processDescription, setProcessDescription] = useState('');
-  const [processCategory, setProcessCategory] = useState<'compliance' | 'audit' | 'risk' | 'policy' | 'incident' | 'assessment' | 'custom'>('custom');
-  const [processFramework, setProcessFramework] = useState('');
-  
-  // ==================== TEMPLATES PRÉ-CONFIGURADOS ====================
-  const processTemplates: ProcessTemplate[] = [
-    {
-      id: 'compliance-basic',
-      name: 'Avaliação de Compliance Básica',
-      description: 'Template para avaliações de conformidade regulatória',
-      category: 'compliance',
-      icon: 'Shield',
-      tags: ['LGPD', 'SOX', 'ISO27001'],
-      estimatedTime: '2-4 semanas',
-      complexity: 'medium',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: ['Conformidade', 'Tempo de Resposta'], reports: ['Relatório de Gaps'] },
-      integrations: ['email', 'webhook']
-    },
-    {
-      id: 'risk-assessment',
-      name: 'Avaliação de Riscos',
-      description: 'Processo completo de identificação e avaliação de riscos',
-      category: 'risk',
-      icon: 'AlertCircle',
-      tags: ['Riscos', 'Impacto', 'Probabilidade'],
-      estimatedTime: '1-2 semanas',
-      complexity: 'medium',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: ['Nível de Risco', 'Planos de Ação'], reports: ['Matriz de Riscos'] },
-      integrations: ['email', 'dashboard']
-    },
-    {
-      id: 'audit-checklist',
-      name: 'Checklist de Auditoria',
-      description: 'Template para auditorias internas e externas',
-      category: 'audit',
-      icon: 'CheckCircle',
-      tags: ['Auditoria', 'Checklist', 'Evidências'],
-      estimatedTime: '1-3 semanas',
-      complexity: 'simple',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: ['Conformidade', 'Não-conformidades'], reports: ['Relatório de Auditoria'] },
-      integrations: ['file-upload', 'email']
-    },
-    {
-      id: 'incident-management',
-      name: 'Gestão de Incidentes',
-      description: 'Workflow para registro e tratamento de incidentes de segurança',
-      category: 'incident',
-      icon: 'AlertCircle',
-      tags: ['Incidentes', 'Segurança', 'Resposta'],
-      estimatedTime: '1-2 dias',
-      complexity: 'simple',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: ['Tempo de Resposta', 'Taxa de Resolução'], reports: ['Log de Incidentes'] },
-      integrations: ['notification', 'escalation']
-    },
-    {
-      id: 'policy-review',
-      name: 'Revisão de Políticas',
-      description: 'Processo de revisão e aprovação de políticas organizacionais',
-      category: 'policy',
-      icon: 'FileText',
-      tags: ['Políticas', 'Revisão', 'Aprovação'],
-      estimatedTime: '2-6 semanas',
-      complexity: 'complex',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: ['Políticas Atualizadas', 'Tempo de Aprovação'], reports: ['Status das Políticas'] },
-      integrations: ['document-management', 'approval-workflow']
-    },
-    {
-      id: 'custom-blank',
-      name: 'Processo Personalizado',
-      description: 'Começar do zero com um processo totalmente customizado',
-      category: 'custom',
-      icon: 'Sparkles',
-      tags: ['Personalizado', 'Flexível'],
-      estimatedTime: 'Variável',
-      complexity: 'simple',
-      formStructure: [],
-      formFields: [],
-      workflowNodes: [],
-      analytics: { kpis: [], reports: [] },
-      integrations: []
-    }
-  ];
+// Professional Canvas Grid Component
+const CanvasGrid: React.FC<{ scale: number; offset: { x: number; y: number } }> = ({ scale, offset }) => {
+  const gridSize = 20 * scale;
+  const patternId = 'canvas-grid';
 
-  // Definição dos tipos de campos disponíveis
-  const fieldTypes = {
-    basic: [
-      { type: 'text', label: 'Texto', icon: Edit, color: 'bg-blue-100', description: 'Campo de texto simples' },
-      { type: 'number', label: 'Número', icon: Hash, color: 'bg-green-100', description: 'Números e valores' },
-      { type: 'email', label: 'Email', icon: Mail, color: 'bg-yellow-100', description: 'Endereço de email' },
-      { type: 'password', label: 'Senha', icon: Lock, color: 'bg-gray-100', description: 'Campo de senha' },
-      { type: 'phone', label: 'Telefone', icon: Phone, color: 'bg-green-100', description: 'Número de telefone' },
-      { type: 'url', label: 'URL', icon: Link, color: 'bg-blue-100', description: 'Endereço web' },
-      { type: 'date', label: 'Data', icon: Calendar, color: 'bg-purple-100', description: 'Seletor de data' },
-      { type: 'time', label: 'Hora', icon: Clock, color: 'bg-pink-100', description: 'Seletor de hora' },
-      { type: 'datetime', label: 'Data/Hora', icon: Calendar, color: 'bg-indigo-100', description: 'Data e hora juntas' },
-      { type: 'select', label: 'Seleção', icon: ChevronDown, color: 'bg-indigo-100', description: 'Lista de opções' },
-      { type: 'textarea', label: 'Texto Longo', icon: FileText, color: 'bg-cyan-100', description: 'Área de texto expandida' }
-    ],
-    advanced: [
-      { type: 'checkbox', label: 'Checkbox', icon: CheckSquare, color: 'bg-orange-100', description: 'Múltiplas seleções' },
-      { type: 'radio', label: 'Radio', icon: Circle, color: 'bg-red-100', description: 'Seleção única' },
-      { type: 'dropdown', label: 'Dropdown', icon: ChevronDown, color: 'bg-slate-100', description: 'Lista suspensa avançada' },
-      { type: 'switch', label: 'Switch', icon: ToggleLeft, color: 'bg-teal-100', description: 'Interruptor on/off' },
-      { type: 'file', label: 'Upload', icon: Upload, color: 'bg-teal-100', description: 'Upload de arquivos' },
-      { type: 'image', label: 'Imagem', icon: Image, color: 'bg-purple-100', description: 'Upload de imagem' },
-      { type: 'rating', label: 'Avaliação', icon: Star, color: 'bg-amber-100', description: 'Sistema de estrelas' },
-      { type: 'slider', label: 'Slider', icon: Sliders, color: 'bg-lime-100', description: 'Controle deslizante' },
-      { type: 'range', label: 'Faixa', icon: Minus, color: 'bg-gray-100', description: 'Seleção de faixa' },
-      { type: 'color', label: 'Cor', icon: Palette, color: 'bg-pink-100', description: 'Seletor de cor' },
-      { type: 'tags', label: 'Tags', icon: Tag, color: 'bg-cyan-100', description: 'Múltiplas tags' }
-    ],
-    workflow: [
-      { type: 'approval', label: 'Aprovação', icon: CheckCircle, color: 'bg-emerald-100', description: 'Campo de aprovação' },
-      { type: 'assignee', label: 'Responsável', icon: Users, color: 'bg-violet-100', description: 'Atribuir responsável' },
-      { type: 'priority', label: 'Prioridade', icon: Zap, color: 'bg-red-100', description: 'Nível de prioridade' },
-      { type: 'status', label: 'Status', icon: Gauge, color: 'bg-blue-100', description: 'Status do processo' },
-      { type: 'due_date', label: 'Prazo', icon: CalendarDays, color: 'bg-orange-100', description: 'Data limite' },
-      { type: 'comments', label: 'Comentários', icon: MessageSquare, color: 'bg-green-100', description: 'Área de comentários' },
-      { type: 'signature', label: 'Assinatura', icon: PenTool, color: 'bg-indigo-100', description: 'Assinatura digital' },
-      { type: 'timer', label: 'Cronômetro', icon: Timer, color: 'bg-yellow-100', description: 'Controle de tempo' }
-    ]
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+      <svg width="100%" height="100%" className="absolute inset-0">
+        <defs>
+          <pattern
+            id={patternId}
+            x={offset.x % gridSize}
+            y={offset.y % gridSize}
+            width={gridSize}
+            height={gridSize}
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d={`M ${gridSize} 0 L 0 0 0 ${gridSize}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              className="text-gray-300 dark:text-gray-600"
+            />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+      </svg>
+    </div>
+  );
+};
+
+// Professional Canvas Controls
+const CanvasControls: React.FC<{
+  scale: number;
+  onScaleChange: (scale: number) => void;
+  onReset: () => void;
+  onFitToScreen: () => void;
+}> = ({ scale, onScaleChange, onReset, onFitToScreen }) => {
+  return (
+    <div className="absolute top-4 right-4 flex flex-col gap-2 bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border border-white/20 z-40">
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 hover:bg-blue-100"
+          onClick={() => onScaleChange(Math.min(3, scale + 0.2))}
+          title="Zoom In"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <div className="text-xs font-medium text-gray-600 min-w-[3rem] text-center">
+          {Math.round(scale * 100)}%
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 w-8 p-0 hover:bg-blue-100"
+          onClick={() => onScaleChange(Math.max(0.2, scale - 0.2))}
+          title="Zoom Out"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+      </div>
+      <Separator />
+      <div className="flex flex-col gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 text-xs justify-start px-2"
+          onClick={onFitToScreen}
+          title="Ajustar à Tela"
+        >
+          <Monitor className="h-3 w-3 mr-1" />
+          Ajustar
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 text-xs justify-start px-2"
+          onClick={onReset}
+          title="Resetar Vista"
+        >
+          <RotateCcw className="h-3 w-3 mr-1" />
+          Reset
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// Professional Form Builder Component
+const FormBuilderSection: React.FC<{
+  formFields: FormField[];
+  setFormFields: React.Dispatch<React.SetStateAction<FormField[]>>;
+  editingField: FormField | null;
+  setEditingField: React.Dispatch<React.SetStateAction<FormField | null>>;
+  showFieldModal: boolean;
+  setShowFieldModal: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedFieldType: string;
+  setSelectedFieldType: React.Dispatch<React.SetStateAction<string>>;
+  setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
+  setCurrentStep: React.Dispatch<React.SetStateAction<'form-builder' | 'workflow-designer'>>;
+  gridConfig: { columns: number; rows: number; gap: number };
+  setGridConfig: React.Dispatch<React.SetStateAction<{ columns: number; rows: number; gap: number }>>;
+}> = ({ 
+  formFields, setFormFields, editingField, setEditingField,
+  showFieldModal, setShowFieldModal, selectedFieldType, setSelectedFieldType,
+  setHasUnsavedChanges, setCurrentStep, gridConfig, setGridConfig 
+}) => {
+  // Drag and Drop states
+  const [draggedField, setDraggedField] = useState<FormField | null>(null);
+  const [dropTarget, setDropTarget] = useState<{row: number, col: number} | null>(null);
+  const [showColumnControls, setShowColumnControls] = useState(false);
+  
+  // Grid sizing states
+  const [columnWidths, setColumnWidths] = useState<number[]>([]);
+  const [rowHeights, setRowHeights] = useState<number[]>([]);
+  
+  // Flexible rows system - each row can have different number of columns
+  const [rowStructure, setRowStructure] = useState<{[rowIndex: number]: number}>({});
+  
+  // Initialize and update arrays when grid changes
+  React.useEffect(() => {
+    setColumnWidths(prev => {
+      const newWidths = Array.from({ length: gridConfig.columns }, (_, i) => prev[i] || 1);
+      return newWidths;
+    });
+    setRowHeights(prev => {
+      const newHeights = Array.from({ length: gridConfig.rows }, (_, i) => prev[i] || 1);
+      return newHeights;
+    });
+  }, [gridConfig.columns, gridConfig.rows]);
+
+  // Calculate flexible row structure based on fields
+  const calculateRowStructure = () => {
+    const structure: {[rowIndex: number]: number} = {};
+    
+    // Start with minimum 1 row, 1 column
+    const maxRow = Math.max(1, formFields.reduce((max, field) => {
+      const row = parseInt(field.gridRow || '1');
+      return Math.max(max, row);
+    }, 1));
+    
+    // Initialize each row with 1 column minimum
+    for (let row = 1; row <= maxRow; row++) {
+      structure[row] = 1;
+    }
+    
+    // Calculate actual columns needed per row based on fields
+    formFields.forEach(field => {
+      const row = parseInt(field.gridRow || '1');
+      const col = parseInt(field.gridColumn || '1');
+      if (row && col) {
+        structure[row] = Math.max(structure[row] || 1, col);
+      }
+    });
+    
+    return structure;
   };
 
-  // ==================== EFFECTS ====================
-  useEffect(() => {
-    if (initialData && mode === 'edit') {
-      setFormFields(initialData.formFields || []);
-      setFormRows(initialData.formRows || []);
-      setWorkflowNodes(initialData.workflowNodes || []);
-      setWorkflowConnections(initialData.workflowConnections || []);
-      setProcessName(initialData.processName || '');
-      setProcessDescription(initialData.processDescription || '');
-      setProcessCategory(initialData.processCategory || 'custom');
-      setProcessFramework(initialData.framework || '');
-    }
-  }, [initialData, mode]);
+  // Update row structure when fields change
+  React.useEffect(() => {
+    const newStructure = calculateRowStructure();
+    setRowStructure(newStructure);
+    
+    // Update gridConfig to match the flexible structure
+    const maxRows = Math.max(1, Object.keys(newStructure).length);
+    const maxCols = Math.max(1, ...Object.values(newStructure));
+    
+    setGridConfig(prev => ({
+      ...prev,
+      rows: maxRows,
+      columns: maxCols
+    }));
+  }, [formFields]);
+  
+  const fieldTypes = [
+    // Campos Básicos
+    { type: 'text', label: 'Texto', icon: Type, description: 'Campo de texto simples', category: 'basic' },
+    { type: 'textarea', label: 'Texto Longo', icon: FileText, description: 'Área de texto multi-linha', category: 'basic' },
+    { type: 'number', label: 'Número', icon: BarChart3, description: 'Campo numérico', category: 'basic' },
+    { type: 'email', label: 'E-mail', icon: Mail, description: 'Campo de e-mail', category: 'basic' },
+    { type: 'password', label: 'Senha', icon: Shield, description: 'Campo de senha', category: 'basic' },
+    { type: 'url', label: 'URL', icon: Link2, description: 'Campo de URL', category: 'basic' },
+    
+    // Campos Brasileiros
+    { type: 'cpf', label: 'CPF', icon: Users, description: 'Campo de CPF brasileiro', category: 'brazilian' },
+    { type: 'cnpj', label: 'CNPJ', icon: Database, description: 'Campo de CNPJ', category: 'brazilian' },
+    { type: 'cep', label: 'CEP', icon: MapPin, description: 'Código postal brasileiro', category: 'brazilian' },
+    { type: 'phone', label: 'Telefone', icon: Users, description: 'Telefone brasileiro', category: 'brazilian' },
+    
+    // Campos de Data/Tempo
+    { type: 'date', label: 'Data', icon: Calendar, description: 'Seletor de data', category: 'datetime' },
+    { type: 'time', label: 'Hora', icon: Clock, description: 'Seletor de hora', category: 'datetime' },
+    { type: 'datetime', label: 'Data e Hora', icon: Calendar, description: 'Data e hora juntos', category: 'datetime' },
+    { type: 'daterange', label: 'Período', icon: Calendar, description: 'Intervalo de datas', category: 'datetime' },
+    
+    // Campos de Seleção
+    { type: 'select', label: 'Dropdown', icon: Filter, description: 'Lista suspensa de opções', category: 'selection' },
+    { type: 'multiselect', label: 'Multi-seleção', icon: CheckCircle, description: 'Múltiplas opções dropdown', category: 'selection' },
+    { type: 'radio', label: 'Radio', icon: Circle, description: 'Botões de rádio', category: 'selection' },
+    { type: 'checkbox', label: 'Checkbox', icon: CheckCircle, description: 'Caixas de seleção', category: 'selection' },
+    { type: 'checkbox-group', label: 'Grupo Checkbox', icon: Grid3x3, description: 'Grupo de checkboxes', category: 'selection' },
+    { type: 'toggle', label: 'Toggle', icon: Settings, description: 'Interruptor on/off', category: 'selection' },
+    
+    // Campos Avançados
+    { type: 'file', label: 'Upload', icon: Upload, description: 'Upload de arquivo', category: 'advanced' },
+    { type: 'file-multiple', label: 'Upload Múltiplo', icon: Upload, description: 'Upload de múltiplos arquivos', category: 'advanced' },
+    { type: 'image', label: 'Imagem', icon: Image, description: 'Upload de imagem', category: 'advanced' },
+    { type: 'signature', label: 'Assinatura', icon: PenTool, description: 'Campo de assinatura digital', category: 'advanced' },
+    { type: 'rating', label: 'Avaliação', icon: Star, description: 'Sistema de estrelas', category: 'advanced' },
+    { type: 'slider', label: 'Slider', icon: Settings, description: 'Controle deslizante', category: 'advanced' },
+    { type: 'color', label: 'Cor', icon: Palette, description: 'Seletor de cores', category: 'advanced' },
+    { type: 'matrix', label: 'Matriz', icon: Grid3x3, description: 'Grid de dados', category: 'advanced' },
+    { type: 'code', label: 'Código', icon: Monitor, description: 'Editor de código', category: 'advanced' },
+    
+    // Campos de Moeda/Financeiro
+    { type: 'currency', label: 'Moeda', icon: BarChart3, description: 'Valores monetários', category: 'financial' },
+    { type: 'percentage', label: 'Porcentagem', icon: PieChart, description: 'Valores percentuais', category: 'financial' },
+    
+    // Campos Especiais
+    { type: 'calculated', label: 'Calculado', icon: Cpu, description: 'Campo com fórmula', category: 'special' },
+    { type: 'user-select', label: 'Usuário', icon: Users, description: 'Seletor de usuários', category: 'special' },
+    { type: 'location', label: 'Localização', icon: MapPin, description: 'Campo de localização', category: 'special' },
+    { type: 'qrcode', label: 'QR Code', icon: Square, description: 'Gerador de QR Code', category: 'special' },
+    { type: 'hidden', label: 'Oculto', icon: Eye, description: 'Campo oculto', category: 'special' },
+    
+    // Campos de Layout
+    { type: 'separator', label: 'Separador', icon: Minimize, description: 'Linha divisória', category: 'layout' },
+    { type: 'heading', label: 'Título', icon: Type, description: 'Título de seção', category: 'layout' },
+    { type: 'info', label: 'Informação', icon: AlertTriangle, description: 'Texto informativo', category: 'layout' },
+    { type: 'spacer', label: 'Espaçador', icon: Move, description: 'Espaço em branco', category: 'layout' }
+  ];
 
-  useEffect(() => {
-    if (selectedTemplate && selectedTemplate.id !== 'custom-blank') {
-      loadTemplate(selectedTemplate);
-    }
-  }, [selectedTemplate]);
-
-  // Load process data in edit mode
-  useEffect(() => {
-    const loadProcessData = async () => {
-      if (mode === 'edit' && initialData?.id) {
-        try {
-          const processData = await loadProcess(initialData.id);
-          if (processData) {
-            setProcessName(processData.name);
-            setProcessDescription(processData.description || '');
-            setProcessCategory(processData.category || 'custom');
-            
-            // Load form structure if available
-            if (processData.field_definitions?.fields) {
-              setFormFields(processData.field_definitions.fields);
-            }
-            if (processData.field_definitions?.formRows) {
-              setFormRows(processData.field_definitions.formRows);
-            }
-            
-            // Load workflow if available
-            if (processData.workflow_definition?.nodes) {
-              setWorkflowNodes(processData.workflow_definition.nodes);
-            }
-            
-            setActiveLayer('form');
-            toast.success(`Processo "${processData.name}" carregado para edição!`);
-          }
-        } catch (error) {
-          console.error('Erro ao carregar processo:', error);
-          toast.error('Erro ao carregar processo para edição');
-        }
-      }
+  const addField = (type: string) => {
+    const newField: FormField = {
+      id: `field-${Date.now()}`,
+      type,
+      label: `${fieldTypes.find(f => f.type === type)?.label} ${formFields.length + 1}`,
+      required: false,
+      placeholder: '',
+      description: '',
+      options: type === 'select' || type === 'radio' || type === 'checkbox' ? ['Opção 1'] : undefined
     };
+    
+    setFormFields(prev => [...prev, newField]);
+    setHasUnsavedChanges(true);
+    setEditingField(newField);
+    setShowFieldModal(true);
+  };
 
-    loadProcessData();
-  }, [mode, initialData, loadProcess]);
+  const updateField = (updatedField: FormField) => {
+    setFormFields(prev => prev.map(field => 
+      field.id === updatedField.id ? updatedField : field
+    ));
+    setHasUnsavedChanges(true);
+  };
+
+  const removeField = (fieldId: string) => {
+    setFormFields(prev => prev.filter(field => field.id !== fieldId));
+    setHasUnsavedChanges(true);
+  };
+
+  const moveField = (dragIndex: number, dropIndex: number) => {
+    const updatedFields = [...formFields];
+    const draggedItem = updatedFields[dragIndex];
+    updatedFields.splice(dragIndex, 1);
+    updatedFields.splice(dropIndex, 0, draggedItem);
+    setFormFields(updatedFields);
+    setHasUnsavedChanges(true);
+  };
+
+  // Drag and Drop functions
+  const handleDragStart = (e: React.DragEvent, field: FormField) => {
+    setDraggedField(field);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', field.id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, row: number, col: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget({ row, col });
+  };
+
+  const handleDragLeave = () => {
+    setDropTarget(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetRow: number, targetCol: number) => {
+    e.preventDefault();
+    
+    const fieldType = e.dataTransfer.getData('fieldType');
+    
+    if (fieldType) {
+      // Creating new field from palette
+      const newField = {
+        id: `field-${Date.now()}`,
+        type: fieldType as const,
+        label: `Campo ${formFields.length + 1}`,
+        required: false,
+        gridRow: targetRow.toString(),
+        gridColumn: targetCol.toString()
+      };
+      
+      // If this is the first field, create at least 1 line
+      if (formFields.length === 0) {
+        setGridConfig(prev => ({ 
+          ...prev, 
+          columns: Math.max(1, targetCol),
+          rows: Math.max(1, targetRow)
+        }));
+      }
+      
+      setFormFields(prev => [...prev, newField]);
+      setHasUnsavedChanges(true);
+    } else if (draggedField) {
+      // Moving existing field
+      const updatedFields = formFields.map(field => 
+        field.id === draggedField.id 
+          ? { ...field, gridRow: targetRow.toString(), gridColumn: targetCol.toString() }
+          : field
+      );
+      setFormFields(updatedFields);
+      setHasUnsavedChanges(true);
+    }
+    
+    setDraggedField(null);
+    setDropTarget(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedField(null);
+    setDropTarget(null);
+  };
+
+  return (
+    <div className="flex flex-1 h-full">
+      {/* Field Types Palette */}
+      <div className="w-80 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Tipos de Campo</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Arraste ou clique para adicionar</p>
+        </div>
+        
+        <ScrollArea className="flex-1 p-4">
+          <div className="space-y-6">
+            {/* Agrupar por categoria */}
+            {Object.entries(
+              fieldTypes.reduce((acc, field) => {
+                const category = field.category || 'other';
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(field);
+                return acc;
+              }, {} as Record<string, typeof fieldTypes>)
+            ).map(([category, fields]) => {
+              const categoryLabels = {
+                basic: 'Campos Básicos',
+                brazilian: 'Campos Brasileiros', 
+                datetime: 'Data e Tempo',
+                selection: 'Seleção',
+                advanced: 'Avançados',
+                financial: 'Financeiro',
+                special: 'Especiais',
+                layout: 'Layout'
+              };
+              
+              const categoryColors = {
+                basic: 'from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20',
+                brazilian: 'from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20',
+                datetime: 'from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20',
+                selection: 'from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20',
+                advanced: 'from-cyan-50 to-teal-50 dark:from-cyan-950/20 dark:to-teal-950/20',
+                financial: 'from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20',
+                special: 'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20',
+                layout: 'from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20'
+              };
+
+              return (
+                <div key={category} className="space-y-3">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                    {categoryLabels[category] || category}
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {fields.map(({ type, label, icon: Icon, description }) => (
+                      <div
+                        key={type}
+                        className={`group relative cursor-move p-3 rounded-lg bg-gradient-to-br ${categoryColors[category] || categoryColors.basic}
+                                   border border-gray-200/50 dark:border-gray-700/50
+                                   hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200
+                                   hover:scale-105 active:scale-95`}
+                        onClick={() => addField(type)}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('fieldType', type);
+                          e.dataTransfer.effectAllowed = 'copy';
+                        }}
+                        title={description + ' - Clique ou arraste para o grid'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-md 
+                                       group-hover:bg-white dark:group-hover:bg-gray-700 transition-colors">
+                            <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 block truncate">{label}</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400 block truncate">{description}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Form Preview Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Form Header */}
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-background">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-foreground">Preview do Formulário</h3>
+              <p className="text-muted-foreground">
+                {formFields.length === 0 
+                  ? 'Adicione campos usando a paleta lateral' 
+                  : `${formFields.length} campo${formFields.length > 1 ? 's' : ''} adicionado${formFields.length > 1 ? 's' : ''}`
+                }
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Grid Configuration Controls */}
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Colunas:</Label>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGridConfig(prev => ({ ...prev, columns: Math.max(1, prev.columns - 1) }))}
+                    className="w-6 h-6 p-0"
+                    disabled={gridConfig.columns <= 1}
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
+                    value={gridConfig.columns}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      if (value >= 1 && value <= 50) {
+                        setGridConfig(prev => ({ ...prev, columns: value }));
+                      }
+                    }}
+                    className="w-16 h-8 text-center text-xs"
+                    min="1"
+                    max="50"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGridConfig(prev => ({ ...prev, columns: Math.min(50, prev.columns + 1) }))}
+                    className="w-6 h-6 p-0"
+                    disabled={gridConfig.columns >= 50}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Linhas:</Label>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGridConfig(prev => ({ ...prev, rows: Math.max(1, prev.rows - 1) }))}
+                    className="w-6 h-6 p-0"
+                    disabled={gridConfig.rows <= 1}
+                  >
+                    -
+                  </Button>
+                  <Input
+                    type="number"
+                    value={gridConfig.rows}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      if (value >= 1 && value <= 100) {
+                        setGridConfig(prev => ({ ...prev, rows: value }));
+                      }
+                    }}
+                    className="w-16 h-8 text-center text-xs"
+                    min="1"
+                    max="100"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setGridConfig(prev => ({ ...prev, rows: Math.min(100, prev.rows + 1) }))}
+                    className="w-6 h-6 p-0"
+                    disabled={gridConfig.rows >= 100}
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Gap:</Label>
+                <Select 
+                  value={gridConfig.gap.toString()} 
+                  onValueChange={(value) => setGridConfig(prev => ({ ...prev, gap: parseInt(value) }))}
+                >
+                  <SelectTrigger className="w-16 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">4px</SelectItem>
+                    <SelectItem value="2">8px</SelectItem>
+                    <SelectItem value="3">12px</SelectItem>
+                    <SelectItem value="4">16px</SelectItem>
+                    <SelectItem value="5">20px</SelectItem>
+                    <SelectItem value="6">24px</SelectItem>
+                    <SelectItem value="8">32px</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {/* Advanced Column Controls Toggle - moved here */}
+                <Button
+                  size="sm"
+                  variant={showColumnControls ? "default" : "outline"}
+                  onClick={() => setShowColumnControls(!showColumnControls)}
+                  className="px-3 h-8 text-xs"
+                  title="Controles avançados de colunas"
+                >
+                  <Settings className="w-3 h-3 mr-1" />
+                  Colunas
+                </Button>
+              </div>
+              
+              {formFields.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (formFields.length > 0) {
+                        setCurrentStep('workflow-designer');
+                      }
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Próximo: Workflow Designer
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Advanced Grid Controls */}
+          {showColumnControls && (
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <div className="space-y-4">
+                {/* Column Widths */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Largura das Colunas</h4>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setColumnWidths(Array.from({ length: gridConfig.columns }, () => 1));
+                      }}
+                      className="px-2 py-1 h-6 text-xs"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(gridConfig.columns, 12)}, 1fr)`}}>
+                    {Array.from({ length: gridConfig.columns }, (_, index) => (
+                      <div key={index} className="flex flex-col items-center">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1">C{index + 1}</label>
+                        <input
+                          type="range"
+                          min="0.3"
+                          max="4"
+                          step="0.1"
+                          value={columnWidths[index] || 1}
+                          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                          title={`Ajustar largura da coluna ${index + 1}`}
+                          onChange={(e) => {
+                            const newWidths = [...columnWidths];
+                            newWidths[index] = parseFloat(e.target.value);
+                            setColumnWidths(newWidths);
+                          }}
+                        />
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {(columnWidths[index] || 1).toFixed(1)}fr
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Row Heights */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Altura das Linhas</h4>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setRowHeights(Array.from({ length: gridConfig.rows }, () => 1));
+                      }}
+                      className="px-2 py-1 h-6 text-xs"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(gridConfig.rows, 10)}, 1fr)`}}>
+                    {Array.from({ length: gridConfig.rows }, (_, index) => (
+                      <div key={index} className="flex flex-col items-center">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 mb-1">L{index + 1}</label>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="3"
+                          step="0.1"
+                          value={rowHeights[index] || 1}
+                          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                          title={`Ajustar altura da linha ${index + 1}`}
+                          onChange={(e) => {
+                            const newHeights = [...rowHeights];
+                            newHeights[index] = parseFloat(e.target.value);
+                            setRowHeights(newHeights);
+                          }}
+                        />
+                        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {((rowHeights[index] || 1) * 120).toFixed(0)}px
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Grid Info */}
+                <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  Grid: {gridConfig.columns}×{gridConfig.rows} • Total de células: {gridConfig.columns * gridConfig.rows}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Form Fields List */}
+        <div className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 relative">
+          {/* Grid Visualization */}
+          {formFields.length === 0 ? (
+            <div className="absolute inset-0">
+              {/* Full area drop zone for first field */}
+              <div 
+                className={`absolute inset-0 border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100/20 dark:bg-gray-800/20 transition-all duration-300 ${
+                  dropTarget ? 'border-green-400 dark:border-green-500 bg-green-50/30 dark:bg-green-900/30' : ''
+                }`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'copy';
+                  setDropTarget({ row: 1, col: 1 });
+                }}
+                onDragLeave={() => setDropTarget(null)}
+                onDrop={(e) => handleDrop(e, 1, 1)}
+              >
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center p-12 bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+                    <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-200 dark:from-blue-900/50 dark:to-indigo-800/50 rounded-full flex items-center justify-center">
+                      <Type className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-3">Canvas Vazio</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-sm text-sm leading-relaxed">
+                      <strong>Arraste um campo</strong> da paleta lateral para começar a criar seu formulário.
+                      <br />O grid será criado automaticamente.
+                    </p>
+                    <div className="flex flex-col items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <span>ou</span>
+                      <Button
+                        onClick={() => {
+                          addField('text');
+                          setGridConfig({ columns: 1, rows: 1, gap: 4 });
+                        }}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Campo de Texto
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 relative space-y-4">
+              {/* Render flexible rows */}
+              {Object.entries(rowStructure)
+                .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                .map(([rowIndex, columnsInRow]) => {
+                  const rowNum = parseInt(rowIndex);
+                  
+                  return (
+                    <div key={`row-${rowNum}`} className="flex gap-4 min-h-[120px]">
+                      {/* Row Controls */}
+                      <div className="flex flex-col items-center justify-center w-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{rowNum}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          onClick={() => {
+                            // Remove all fields from this row
+                            setFormFields(prev => prev.filter(field => parseInt(field.gridRow || '1') !== rowNum));
+                            setHasUnsavedChanges(true);
+                          }}
+                          title="Remover linha"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
+                      {/* Row Content */}
+                      <div className="flex-1 grid gap-4" style={{
+                        gridTemplateColumns: `repeat(${columnsInRow}, 1fr)`
+                      }}>
+                        {Array.from({ length: columnsInRow }, (_, colIndex) => {
+                          const col = colIndex + 1;
+                          const hasField = formFields.some(field => 
+                            parseInt(field.gridRow || '1') === rowNum && 
+                            parseInt(field.gridColumn || '1') === col
+                          );
+                          
+                          if (hasField) return null;
+                          
+                          return (
+                            <div
+                              key={`empty-${rowNum}-${col}`}
+                              className={`border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center text-xs text-gray-500 dark:text-gray-400 bg-gray-100/30 dark:bg-gray-800/20 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all duration-200 cursor-pointer min-h-[120px] ${
+                                dropTarget?.row === rowNum && dropTarget?.col === col ? 'border-green-400 bg-green-50/50 dark:bg-green-900/20' : ''
+                              }`}
+                              onClick={() => {
+                                const newField = {
+                                  id: `field-${Date.now()}`,
+                                  type: 'text' as const,
+                                  label: `Campo ${formFields.length + 1}`,
+                                  required: false,
+                                  gridRow: rowNum.toString(),
+                                  gridColumn: col.toString()
+                                };
+                                setFormFields(prev => [...prev, newField]);
+                                setHasUnsavedChanges(true);
+                              }}
+                              title={`Posição Linha ${rowNum}, Coluna ${col} - Clique para adicionar campo`}
+                              onDragOver={(e) => handleDragOver(e, rowNum, col)}
+                              onDragLeave={handleDragLeave}
+                              onDrop={(e) => handleDrop(e, rowNum, col)}
+                            >
+                              <div className="text-center">
+                                <Plus className="w-5 h-5 mx-auto mb-1 opacity-50" />
+                                <span className="block text-xs">L{rowNum}:C{col}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        {/* Render fields in this row */}
+                        {formFields
+                          .filter(field => parseInt(field.gridRow || '1') === rowNum)
+                          .sort((a, b) => parseInt(a.gridColumn || '1') - parseInt(b.gridColumn || '1'))
+                          .map((field) => (
+                            <div
+                              key={field.id}
+                              className={`bg-card dark:bg-card/50 rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative min-h-[120px] cursor-move ${
+                                draggedField?.id === field.id ? 'opacity-50 scale-95' : ''
+                              }`}
+                              style={{
+                                gridColumn: parseInt(field.gridColumn || '1')
+                              }}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, field)}
+                              onDragEnd={handleDragEnd}
+                            >
+                              {/* Drag Handle */}
+                              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-70 transition-opacity">
+                                <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                              </div>
+                              
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-start gap-3">
+                                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                    {(() => {
+                                      const fieldType = fieldTypes.find(f => f.type === field.type);
+                                      const IconComponent = fieldType?.icon || Type;
+                                      return <IconComponent className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+                                    })()}
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{field.label}</h4>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                      {fieldTypes.find(f => f.type === field.type)?.label}
+                                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                                    </p>
+                                    {field.description && (
+                                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{field.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  {/* Grid Position Indicator */}
+                                  {field.gridRow && field.gridColumn && (
+                                    <div className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
+                                      L{field.gridRow}:C{field.gridColumn}
+                                    </div>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingField(field);
+                                      setShowFieldModal(true);
+                                    }}
+                                    className="h-8 w-8 p-0"
+                                    title="Editar campo"
+                                  >
+                                    <Settings className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeField(field.id)}
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    title="Remover campo"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {/* Field Preview */}
+                              <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {field.label}
+                                  {field.required && <span className="text-red-500 ml-1">*</span>}
+                                </Label>
+                                
+                                {field.type === 'text' && (
+                                  <Input
+                                    placeholder={field.placeholder || 'Digite aqui...'}
+                                    className="mt-2"
+                                    disabled
+                                  />
+                                )}
+                                
+                                {field.type === 'textarea' && (
+                                  <Textarea
+                                    placeholder={field.placeholder || 'Digite aqui...'}
+                                    className="mt-2"
+                                    disabled
+                                  />
+                                )}
+                                
+                                {field.type === 'select' && (
+                                  <Select disabled>
+                                    <SelectTrigger className="mt-2">
+                                      <SelectValue placeholder={field.placeholder || 'Selecione uma opção'} />
+                                    </SelectTrigger>
+                                  </Select>
+                                )}
+                                
+                                {/* Add other field type previews as needed */}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      
+                      {/* Add Column Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-auto py-12 px-4 border-dashed"
+                        onClick={() => {
+                          const newStructure = {...rowStructure};
+                          newStructure[rowNum] = (newStructure[rowNum] || 1) + 1;
+                          setRowStructure(newStructure);
+                          setHasUnsavedChanges(true);
+                        }}
+                        title={`Adicionar coluna à linha ${rowNum}`}
+                      >
+                        <div className="flex flex-col items-center text-gray-500 dark:text-gray-400">
+                          <Plus className="w-5 h-5 mb-1" />
+                          <span className="text-xs">Coluna</span>
+                        </div>
+                      </Button>
+                    </div>
+                  );
+                })}
+                
+              {/* Add Row Button */}
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="outline"
+                  className="border-dashed"
+                  onClick={() => {
+                    const nextRowNum = Math.max(...Object.keys(rowStructure).map(k => parseInt(k))) + 1;
+                    const newStructure = {...rowStructure};
+                    newStructure[nextRowNum] = 1;
+                    setRowStructure(newStructure);
+                    setHasUnsavedChanges(true);
+                  }}
+                  title="Adicionar nova linha"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Linha
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {/* Field Configuration Modal */}
+      {showFieldModal && editingField && (
+        <FieldConfigModal
+          field={editingField}
+          isOpen={showFieldModal}
+          onClose={() => {
+            setShowFieldModal(false);
+            setEditingField(null);
+          }}
+          onSave={(updatedField) => {
+            updateField(updatedField);
+            setShowFieldModal(false);
+            setEditingField(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Field Configuration Modal Component
+const FieldConfigModal: React.FC<{
+  field: FormField;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (field: FormField) => void;
+}> = ({ field, isOpen, onClose, onSave }) => {
+  const [localField, setLocalField] = useState<FormField>(field);
+  
+  useEffect(() => {
+    setLocalField(field);
+  }, [field]);
+
+  const handleSave = () => {
+    onSave(localField);
+  };
+
+  const addOption = () => {
+    setLocalField(prev => ({
+      ...prev,
+      options: [...(prev.options || []), `Opção ${(prev.options?.length || 0) + 1}`]
+    }));
+  };
+
+  const removeOption = (index: number) => {
+    setLocalField(prev => ({
+      ...prev,
+      options: prev.options?.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateOption = (index: number, value: string) => {
+    setLocalField(prev => ({
+      ...prev,
+      options: prev.options?.map((opt, i) => i === index ? value : opt)
+    }));
+  };
 
   if (!isOpen) return null;
 
-  // ==================== TEMPLATE CREATION FUNCTIONS ====================
-  // These functions must be declared before loadTemplate to avoid temporal dead zone errors
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>Configurar Campo - {localField.label}</DialogTitle>
+          <DialogDescription>
+            Configure todas as propriedades e comportamentos do campo
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic">Básico</TabsTrigger>
+            <TabsTrigger value="advanced">Avançado</TabsTrigger>
+            <TabsTrigger value="validation">Validação</TabsTrigger>
+            <TabsTrigger value="layout">Layout</TabsTrigger>
+          </TabsList>
+          
+          <ScrollArea className="max-h-[60vh] w-full">
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Rótulo do Campo</Label>
+                  <Input
+                    value={localField.label}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, label: e.target.value }))}
+                    placeholder="Nome do campo"
+                  />
+                </div>
+                <div>
+                  <Label>Nome Interno (ID)</Label>
+                  <Input
+                    value={localField.name || ''}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="campo_exemplo"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label>Descrição/Instruções</Label>
+                <Textarea
+                  value={localField.description || ''}
+                  onChange={(e) => setLocalField(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Descrição detalhada ou instruções para preenchimento"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Placeholder</Label>
+                  <Input
+                    value={localField.placeholder || ''}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, placeholder: e.target.value }))}
+                    placeholder="Texto de exemplo"
+                  />
+                </div>
+                <div>
+                  <Label>Valor Padrão</Label>
+                  <Input
+                    value={localField.defaultValue || ''}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, defaultValue: e.target.value }))}
+                    placeholder="Valor inicial"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={localField.required}
+                    onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, required: checked }))}
+                  />
+                  <Label>Obrigatório</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={localField.disabled}
+                    onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, disabled: checked }))}
+                  />
+                  <Label>Desabilitado</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={localField.readonly}
+                    onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, readonly: checked }))}
+                  />
+                  <Label>Somente leitura</Label>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={localField.visible !== false}
+                    onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, visible: checked }))}
+                  />
+                  <Label>Visível</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={localField.showLabel !== false}
+                    onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, showLabel: checked }))}
+                  />
+                  <Label>Mostrar rótulo</Label>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="advanced" className="space-y-4 mt-4">
+              {/* Configurações específicas por tipo de campo */}
+              
+              {/* Options for selection fields */}
+              {(localField.type === 'select' || localField.type === 'radio' || localField.type === 'checkbox' || 
+                localField.type === 'multiselect' || localField.type === 'checkbox-group') && (
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-semibold mb-3">Opções de Seleção</h4>
+                  <div className="space-y-2">
+                    {localField.options?.map((option, index) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={option}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                          placeholder={`Opção ${index + 1}`}
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => removeOption(index)}
+                          className="text-destructive hover:bg-destructive/10"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={addOption}
+                      className="w-full"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Opção
+                    </Button>
+                  </div>
+                  
+                  {localField.type === 'select' && (
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={localField.allowSearch || false}
+                          onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, allowSearch: checked }))}
+                        />
+                        <Label>Permitir busca</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={localField.clearable !== false}
+                          onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, clearable: checked }))}
+                        />
+                        <Label>Permitir limpar</Label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+          {/* Propriedades específicas por tipo de campo */}
+          
+          {/* Campos Brasileiros */}
+          {(localField.type === 'cpf' || localField.type === 'cnpj' || localField.type === 'cep' || localField.type === 'phone') && (
+            <div className="space-y-3 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <h4 className="text-sm font-semibold text-green-800 dark:text-green-200">Configurações Brasileiras</h4>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={localField.autoValidate !== false}
+                  onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, autoValidate: checked }))}
+                />
+                <Label>Validação automática</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={localField.autoFormat !== false}
+                  onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, autoFormat: checked }))}
+                />
+                <Label>Formatação automática</Label>
+              </div>
+              {localField.type === 'phone' && (
+                <div>
+                  <Label>Tipo de Telefone</Label>
+                  <Select 
+                    value={localField.phoneType || 'mobile'}
+                    onValueChange={(value) => setLocalField(prev => ({ ...prev, phoneType: value }))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mobile">Celular</SelectItem>
+                      <SelectItem value="landline">Fixo</SelectItem>
+                      <SelectItem value="both">Ambos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Campos de Upload */}
+          {(localField.type === 'file' || localField.type === 'file-multiple' || localField.type === 'image') && (
+            <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200">Configurações de Upload</h4>
+              <div>
+                <Label>Tipos aceitos</Label>
+                <Input
+                  value={localField.acceptedTypes || ''}
+                  onChange={(e) => setLocalField(prev => ({ ...prev, acceptedTypes: e.target.value }))}
+                  placeholder={localField.type === 'image' ? '.jpg,.png,.gif,.svg' : '.pdf,.doc,.txt,.xlsx'}
+                />
+              </div>
+              <div>
+                <Label>Tamanho máximo (MB)</Label>
+                <Input
+                  type="number"
+                  value={localField.maxFileSize || ''}
+                  onChange={(e) => setLocalField(prev => ({ ...prev, maxFileSize: parseInt(e.target.value) }))}
+                  placeholder="10"
+                />
+              </div>
+              {localField.type === 'file-multiple' && (
+                <div>
+                  <Label>Máximo de arquivos</Label>
+                  <Input
+                    type="number"
+                    value={localField.maxFiles || ''}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, maxFiles: parseInt(e.target.value) }))}
+                    placeholder="5"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Campo de Rating */}
+          {localField.type === 'rating' && (
+            <div className="space-y-3 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h4 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">Configurações de Avaliação</h4>
+              <div>
+                <Label>Número de estrelas</Label>
+                <Select 
+                  value={localField.maxRating?.toString() || '5'}
+                  onValueChange={(value) => setLocalField(prev => ({ ...prev, maxRating: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 estrelas</SelectItem>
+                    <SelectItem value="5">5 estrelas</SelectItem>
+                    <SelectItem value="10">10 estrelas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={localField.allowHalf || false}
+                  onCheckedChange={(checked) => setLocalField(prev => ({ ...prev, allowHalf: checked }))}
+                />
+                <Label>Permitir meio ponto</Label>
+              </div>
+            </div>
+          )}
+
+          {/* Campo de Slider */}
+          {localField.type === 'slider' && (
+            <div className="space-y-3 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <h4 className="text-sm font-semibold text-purple-800 dark:text-purple-200">Configurações de Slider</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Valor mínimo</Label>
+                  <Input
+                    type="number"
+                    value={localField.sliderMin || '0'}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, sliderMin: parseInt(e.target.value) }))}
+                  />
+                </div>
+                <div>
+                  <Label>Valor máximo</Label>
+                  <Input
+                    type="number"
+                    value={localField.sliderMax || '100'}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, sliderMax: parseInt(e.target.value) }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <Label>Passo</Label>
+                <Input
+                  type="number"
+                  value={localField.sliderStep || '1'}
+                  onChange={(e) => setLocalField(prev => ({ ...prev, sliderStep: parseInt(e.target.value) }))}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Campo Calculado */}
+          {localField.type === 'calculated' && (
+            <div className="space-y-3 p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <h4 className="text-sm font-semibold text-orange-800 dark:text-orange-200">Configurações de Cálculo</h4>
+              <div>
+                <Label>Fórmula</Label>
+                <Textarea
+                  value={localField.formula || ''}
+                  onChange={(e) => setLocalField(prev => ({ ...prev, formula: e.target.value }))}
+                  placeholder="Ex: {campo1} + {campo2} * 0.1"
+                  rows={3}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  Use {`{nomeCampo}`} para referenciar outros campos
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Campo de Moeda */}
+          {localField.type === 'currency' && (
+            <div className="space-y-3 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Configurações de Moeda</h4>
+              <div>
+                <Label>Moeda</Label>
+                <Select 
+                  value={localField.currency || 'BRL'}
+                  onValueChange={(value) => setLocalField(prev => ({ ...prev, currency: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">Real (R$)</SelectItem>
+                    <SelectItem value="USD">Dólar ($)</SelectItem>
+                    <SelectItem value="EUR">Euro (€)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Casas decimais</Label>
+                <Select 
+                  value={localField.decimalPlaces?.toString() || '2'}
+                  onValueChange={(value) => setLocalField(prev => ({ ...prev, decimalPlaces: parseInt(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Campo de Assinatura */}
+          {localField.type === 'signature' && (
+            <div className="space-y-3 p-3 bg-indigo-50 dark:bg-indigo-950/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+              <h4 className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">Configurações de Assinatura</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Largura (px)</Label>
+                  <Input
+                    type="number"
+                    value={localField.signatureWidth || '400'}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, signatureWidth: parseInt(e.target.value) }))}
+                  />
+                </div>
+                <div>
+                  <Label>Altura (px)</Label>
+                  <Input
+                    type="number"
+                    value={localField.signatureHeight || '150'}
+                    onChange={(e) => setLocalField(prev => ({ ...prev, signatureHeight: parseInt(e.target.value) }))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+            </TabsContent>
+            
+            <TabsContent value="validation" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Regras de Validação</h3>
+                
+                {/* Validação para campos de texto */}
+                {(localField.type === 'text' || localField.type === 'textarea' || localField.type === 'email') && (
+                  <div className="p-4 border rounded-lg bg-muted/50">
+                    <h4 className="font-semibold mb-3">Validação de Texto</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Comprimento Mínimo</Label>
+                        <Input
+                          type="number"
+                          value={localField.minLength || ''}
+                          onChange={(e) => setLocalField(prev => ({ ...prev, minLength: parseInt(e.target.value) }))}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <Label>Comprimento Máximo</Label>
+                        <Input
+                          type="number"
+                          value={localField.maxLength || ''}
+                          onChange={(e) => setLocalField(prev => ({ ...prev, maxLength: parseInt(e.target.value) }))}
+                          placeholder="255"
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Label>Padrão RegEx</Label>
+                      <Input
+                        value={localField.pattern || ''}
+                        onChange={(e) => setLocalField(prev => ({ ...prev, pattern: e.target.value }))}
+                        placeholder="^[A-Za-z0-9]+$"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Expressão regular para validação</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-semibold mb-3">Mensagens de Erro</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Mensagem de Campo Obrigatório</Label>
+                      <Input
+                        value={localField.errorRequired || ''}
+                        onChange={(e) => setLocalField(prev => ({ ...prev, errorRequired: e.target.value }))}
+                        placeholder="Este campo é obrigatório"
+                      />
+                    </div>
+                    <div>
+                      <Label>Mensagem de Formato Inválido</Label>
+                      <Input
+                        value={localField.errorFormat || ''}
+                        onChange={(e) => setLocalField(prev => ({ ...prev, errorFormat: e.target.value }))}
+                        placeholder="Formato inválido"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="layout" className="space-y-4 mt-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Configurações de Layout</h3>
+                
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-semibold mb-3">Posicionamento no Grid</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Span Colunas</Label>
+                      <Select 
+                        value={localField.gridColumnSpan?.toString() || '1'}
+                        onValueChange={(value) => setLocalField(prev => ({ 
+                          ...prev, 
+                          gridColumnSpan: parseInt(value) 
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 coluna</SelectItem>
+                          <SelectItem value="2">2 colunas</SelectItem>
+                          <SelectItem value="3">3 colunas</SelectItem>
+                          <SelectItem value="4">4 colunas</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Largura</Label>
+                      <Select 
+                        value={localField.width || 'full'}
+                        onValueChange={(value) => setLocalField(prev => ({ ...prev, width: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full">100%</SelectItem>
+                          <SelectItem value="3/4">75%</SelectItem>
+                          <SelectItem value="1/2">50%</SelectItem>
+                          <SelectItem value="1/3">33%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4 border rounded-lg bg-muted/50">
+                  <h4 className="font-semibold mb-3">Espaçamento</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Margem Superior</Label>
+                      <Select 
+                        value={localField.marginTop || '0'}
+                        onValueChange={(value) => setLocalField(prev => ({ ...prev, marginTop: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0</SelectItem>
+                          <SelectItem value="2">8px</SelectItem>
+                          <SelectItem value="4">16px</SelectItem>
+                          <SelectItem value="6">24px</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Margem Inferior</Label>
+                      <Select 
+                        value={localField.marginBottom || '4'}
+                        onValueChange={(value) => setLocalField(prev => ({ ...prev, marginBottom: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0</SelectItem>
+                          <SelectItem value="2">8px</SelectItem>
+                          <SelectItem value="4">16px</SelectItem>
+                          <SelectItem value="6">24px</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+            Salvar Campo
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Professional Node Palette
+const NodePalette: React.FC<{
+  onNodeAdd: (type: WorkflowNode['type'], position: { x: number; y: number }) => void;
+}> = ({ onNodeAdd }) => {
+  const nodeTypes = [
+    { type: 'start', label: 'Início', icon: Play, color: 'from-emerald-500 to-teal-600' },
+    { type: 'end', label: 'Fim', icon: Square, color: 'from-red-500 to-rose-600' },
+    { type: 'task', label: 'Tarefa', icon: CheckCircle, color: 'from-blue-500 to-indigo-600' },
+    { type: 'decision', label: 'Decisão', icon: GitBranch, color: 'from-amber-400 to-orange-500' },
+    { type: 'parallel', label: 'Paralelo', icon: GitMerge, color: 'from-purple-500 to-indigo-600' },
+    { type: 'timer', label: 'Timer', icon: Timer, color: 'from-orange-500 to-red-500' },
+    { type: 'notification', label: 'Notificação', icon: Bell, color: 'from-pink-500 to-rose-600' },
+    { type: 'process', label: 'Processo', icon: Settings, color: 'from-cyan-500 to-blue-600' },
+    { type: 'database', label: 'Database', icon: Database, color: 'from-green-500 to-emerald-600' },
+    { type: 'integration', label: 'Integração', icon: Link2, color: 'from-violet-500 to-purple-600' }
+  ];
+
+  return (
+    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Elementos</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Arraste para o canvas</p>
+      </div>
+      
+      <ScrollArea className="flex-1 p-4">
+        <div className="grid grid-cols-2 gap-3">
+          {nodeTypes.map(({ type, label, icon: Icon, color }) => (
+            <div
+              key={type}
+              className={`relative group cursor-pointer p-3 rounded-xl bg-gradient-to-br ${color} 
+                         hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg
+                         hover:shadow-xl border border-white/20`}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/reactflow', JSON.stringify({ type }));
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onClick={() => {
+                // Add node at center of canvas when clicked
+                const centerX = 400;
+                const centerY = 300;
+                onNodeAdd(type as WorkflowNode['type'], { x: centerX, y: centerY });
+              }}
+              title={`Adicionar ${label}`}
+            >
+              <div className="flex flex-col items-center text-white">
+                <div className="p-2 bg-white/20 rounded-lg mb-2 backdrop-blur-sm">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium text-center leading-tight">{label}</span>
+              </div>
+              
+              {/* Hover effect */}
+              <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+};
+
+export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModalProps> = ({
+  isOpen,
+  onClose,
+  mode,
+  processId,
+  initialData,
+  onSave
+}) => {
+  // Main state
+  const [currentStep, setCurrentStep] = useState<'form-builder' | 'workflow-designer'>('form-builder');
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ProcessTemplate | null>(null);
+  const [processName, setProcessName] = useState('');
   
-  const createComplianceTemplate = useCallback(() => {
-    const rows: FormRow[] = [
-      { id: 'row_1', columns: 2, height: 'auto', columnWidths: ['2fr', '1fr'] },
-      { id: 'row_2', columns: 1, height: 'auto', columnWidths: ['1fr'] },
-      { id: 'row_3', columns: 3, height: 'auto', columnWidths: ['1fr', '1fr', '1fr'] },
-      { id: 'row_4', columns: 2, height: 'large', columnWidths: ['1fr', '1fr'] }
-    ];
-    
-    const fields: FormField[] = [
-      {
-        id: 'field_framework', type: 'select', label: 'Framework de Compliance', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 0, width: 1, placeholder: 'Selecione o framework',
-        options: ['LGPD', 'ISO 27001', 'SOX', 'PCI-DSS', 'NIST', 'Outro']
-      },
-      {
-        id: 'field_priority', type: 'select', label: 'Prioridade', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 1, width: 1, placeholder: 'Nível de prioridade',
-        options: ['Baixa', 'Média', 'Alta', 'Crítica']
-      },
-      {
-        id: 'field_description', type: 'textarea', label: 'Descrição da Avaliação', required: true,
-        rowId: 'row_2', rowIndex: 1, column: 0, width: 1, placeholder: 'Descreva o escopo e objetivos da avaliação...'
-      },
-      {
-        id: 'field_score', type: 'select', label: 'Nível de Conformidade', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 0, width: 1, placeholder: 'Avalie o nível',
-        options: ['1 - Não Conforme', '2 - Parcialmente Conforme', '3 - Conforme', '4 - Totalmente Conforme', '5 - Excelente']
-      },
-      {
-        id: 'field_impact', type: 'select', label: 'Impacto do Gap', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 1, width: 1, placeholder: 'Nível de impacto',
-        options: ['Baixo', 'Médio', 'Alto', 'Muito Alto']
-      },
-      {
-        id: 'field_deadline', type: 'date', label: 'Prazo para Conformidade', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 2, width: 1, placeholder: ''
-      },
-      {
-        id: 'field_evidence', type: 'file', label: 'Evidências', required: false,
-        rowId: 'row_4', rowIndex: 3, column: 0, width: 1, placeholder: 'Upload de evidências'
-      },
-      {
-        id: 'field_action_plan', type: 'textarea', label: 'Plano de Ação', required: false,
-        rowId: 'row_4', rowIndex: 3, column: 1, width: 1, placeholder: 'Descreva as ações corretivas necessárias...'
+  // Form Builder state
+  const [selectedFieldType, setSelectedFieldType] = useState<string>('');
+  const [editingField, setEditingField] = useState<FormField | null>(null);
+  const [showFieldModal, setShowFieldModal] = useState(false);
+  const [draggedField, setDraggedField] = useState<FormField | null>(null);
+  const [formGridConfig, setFormGridConfig] = useState({ columns: 1, rows: 1, gap: 4 });
+
+  // Canvas state
+  const [canvasScale, setCanvasScale] = useState(1);
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // Workflow state
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
+  const [workflowConnections, setWorkflowConnections] = useState<WorkflowConnection[]>([]);
+  const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<WorkflowNode | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Connection state
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionSource, setConnectionSource] = useState<WorkflowNode | null>(null);
+  const [tempConnection, setTempConnection] = useState<{ start: { x: number; y: number }; end: { x: number; y: number } } | null>(null);
+
+  // Form state
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [formPreviewOpen, setIsFormPreviewOpen] = useState(false);
+
+  // Refs
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const nodeIdCounter = useRef(1);
+
+  const { saveProcess, updateProcess, loadProcess, loading: saveLoading, error } = useProcessManagement();
+
+  // Load initial data when component mounts or initialData changes
+  useEffect(() => {
+    if (initialData && mode === 'edit') {
+      setProcessName(initialData.name || '');
+      // Convert ProcessTemplate to WorkflowNodes and WorkflowConnections if needed
+      if (initialData.workflow?.nodes) {
+        setWorkflowNodes(initialData.workflow.nodes);
       }
-    ];
-    
-    const workflow: WorkflowNode[] = [
-      {
-        id: 'start', type: 'start', label: 'Início da Avaliação', position: { x: 100, y: 100 },
-        data: {}, connections: ['assessment']
-      },
-      {
-        id: 'assessment', type: 'task', label: 'Preenchimento da Avaliação', position: { x: 300, y: 100 },
-        data: { assignedTo: ['respondent'], priority: 'medium' }, connections: ['review']
-      },
-      {
-        id: 'review', type: 'task', label: 'Revisão Técnica', position: { x: 500, y: 100 },
-        data: { assignedTo: ['auditor'], priority: 'high' }, connections: ['approval']
-      },
-      {
-        id: 'approval', type: 'decision', label: 'Aprovação Final', position: { x: 700, y: 100 },
-        data: { assignedTo: ['manager'], condition: 'score >= 3' }, connections: ['end', 'correction']
-      },
-      {
-        id: 'correction', type: 'task', label: 'Correção/Melhoria', position: { x: 700, y: 250 },
-        data: { assignedTo: ['respondent'], priority: 'high' }, connections: ['review']
-      },
-      {
-        id: 'end', type: 'end', label: 'Avaliação Concluída', position: { x: 900, y: 100 },
-        data: {}, connections: []
+      if (initialData.workflow?.connections) {
+        setWorkflowConnections(initialData.workflow.connections);
       }
-    ];
-    
-    return { rows, fields, workflow };
-  }, []);
-  
-  const createRiskAssessmentTemplate = useCallback(() => {
-    const rows: FormRow[] = [
-      { id: 'row_1', columns: 2, height: 'auto', columnWidths: ['1fr', '1fr'] },
-      { id: 'row_2', columns: 1, height: 'auto', columnWidths: ['1fr'] },
-      { id: 'row_3', columns: 3, height: 'auto', columnWidths: ['1fr', '1fr', '1fr'] },
-      { id: 'row_4', columns: 2, height: 'auto', columnWidths: ['1fr', '1fr'] }
-    ];
-    
-    const fields: FormField[] = [
-      {
-        id: 'risk_category', type: 'select', label: 'Categoria do Risco', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 0, width: 1, placeholder: 'Selecione a categoria',
-        options: ['Operacional', 'Financeiro', 'Estratégico', 'Regulatório', 'Reputacional', 'Tecnológico']
-      },
-      {
-        id: 'risk_owner', type: 'select', label: 'Responsável pelo Risco', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 1, width: 1, placeholder: 'Selecione o responsável',
-        options: ['TI', 'Financeiro', 'RH', 'Operações', 'Compliance', 'Jurídico']
-      },
-      {
-        id: 'risk_description', type: 'textarea', label: 'Descrição do Risco', required: true,
-        rowId: 'row_2', rowIndex: 1, column: 0, width: 1, placeholder: 'Descreva detalhadamente o risco identificado...'
-      },
-      {
-        id: 'probability', type: 'select', label: 'Probabilidade', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 0, width: 1, placeholder: 'Nível de probabilidade',
-        options: ['1 - Muito Baixa', '2 - Baixa', '3 - Média', '4 - Alta', '5 - Muito Alta']
-      },
-      {
-        id: 'impact', type: 'select', label: 'Impacto', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 1, width: 1, placeholder: 'Nível de impacto',
-        options: ['1 - Insignificante', '2 - Baixo', '3 - Moderado', '4 - Alto', '5 - Catastrófico']
-      },
-      {
-        id: 'risk_level', type: 'select', label: 'Nível do Risco (P x I)', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 2, width: 1, placeholder: 'Calculado automaticamente',
-        options: ['1-4 - Baixo', '5-9 - Médio', '10-14 - Alto', '15-25 - Crítico'],
-        calculatedValue: { formula: 'probability * impact', dependsOn: ['probability', 'impact'] }
-      },
-      {
-        id: 'current_controls', type: 'textarea', label: 'Controles Atuais', required: false,
-        rowId: 'row_4', rowIndex: 3, column: 0, width: 1, placeholder: 'Descreva os controles existentes...'
-      },
-      {
-        id: 'action_plan', type: 'textarea', label: 'Plano de Tratamento', required: true,
-        rowId: 'row_4', rowIndex: 3, column: 1, width: 1, placeholder: 'Descreva as ações de mitigação...'
+      if (initialData.fields) {
+        setFormFields(initialData.fields);
       }
-    ];
+    }
+  }, [initialData, mode]);
+
+  // Professional Node Creation System
+  const createNode = useCallback((
+    type: WorkflowNode['type'], 
+    position: { x: number; y: number },
+    customData?: Partial<WorkflowNode['data']>
+  ): WorkflowNode => {
+    const nodeDefaults = {
+      start: { width: 120, height: 120, label: 'Início' },
+      end: { width: 120, height: 80, label: 'Fim' },
+      task: { width: 160, height: 100, label: 'Nova Tarefa' },
+      decision: { width: 120, height: 120, label: 'Decisão' },
+      parallel: { width: 180, height: 80, label: 'Processo Paralelo' },
+      timer: { width: 140, height: 90, label: 'Timer' },
+      notification: { width: 150, height: 90, label: 'Notificação' },
+      process: { width: 160, height: 100, label: 'Processo' },
+      database: { width: 140, height: 100, label: 'Base de Dados' },
+      integration: { width: 160, height: 90, label: 'Integração' }
+    };
+
+    const defaults = nodeDefaults[type];
     
-    const workflow: WorkflowNode[] = [
-      {
-        id: 'start', type: 'start', label: 'Identificação do Risco', position: { x: 100, y: 100 },
-        data: {}, connections: ['assessment']
-      },
-      {
-        id: 'assessment', type: 'task', label: 'Avaliação de Risco', position: { x: 300, y: 100 },
-        data: { assignedTo: ['risk_analyst'], priority: 'medium' }, connections: ['validation']
-      },
-      {
-        id: 'validation', type: 'task', label: 'Validação pelo Gestor', position: { x: 500, y: 100 },
-        data: { assignedTo: ['risk_manager'], priority: 'high' }, connections: ['treatment']
-      },
-      {
-        id: 'treatment', type: 'task', label: 'Definição do Tratamento', position: { x: 700, y: 100 },
-        data: { assignedTo: ['risk_owner'], priority: 'high' }, connections: ['approval']
-      },
-      {
-        id: 'approval', type: 'decision', label: 'Aprovação do Plano', position: { x: 900, y: 100 },
-        data: { assignedTo: ['cro'], condition: 'risk_level > 10' }, connections: ['end', 'revision']
-      },
-      {
-        id: 'revision', type: 'task', label: 'Revisão do Plano', position: { x: 900, y: 250 },
-        data: { assignedTo: ['risk_analyst'], priority: 'high' }, connections: ['treatment']
-      },
-      {
-        id: 'end', type: 'end', label: 'Risco Cadastrado', position: { x: 1100, y: 100 },
-        data: {}, connections: []
+    return {
+      id: `node-${nodeIdCounter.current++}`,
+      type,
+      position,
+      size: { width: defaults.width, height: defaults.height },
+      data: {
+        label: defaults.label,
+        description: '',
+        properties: {},
+        ...customData
       }
-    ];
-    
-    return { rows, fields, workflow };
-  }, []);
-  
-  const createAuditChecklistTemplate = useCallback(() => {
-    const rows: FormRow[] = [
-      { id: 'row_1', columns: 2, height: 'auto', columnWidths: ['2fr', '1fr'] },
-      { id: 'row_2', columns: 1, height: 'auto', columnWidths: ['1fr'] },
-      { id: 'row_3', columns: 2, height: 'auto', columnWidths: ['1fr', '1fr'] },
-      { id: 'row_4', columns: 1, height: 'large', columnWidths: ['1fr'] }
-    ];
-    
-    const fields: FormField[] = [
-      {
-        id: 'audit_area', type: 'select', label: 'Área de Auditoria', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 0, width: 1, placeholder: 'Selecione a área',
-        options: ['TI', 'Financeiro', 'RH', 'Operações', 'Compliance', 'Qualidade', 'Segurança']
-      },
-      {
-        id: 'audit_type', type: 'select', label: 'Tipo de Auditoria', required: true,
-        rowId: 'row_1', rowIndex: 0, column: 1, width: 1, placeholder: 'Tipo da auditoria',
-        options: ['Interna', 'Externa', 'Regulatória', 'Certificação', 'Due Diligence']
-      },
-      {
-        id: 'audit_scope', type: 'textarea', label: 'Escopo da Auditoria', required: true,
-        rowId: 'row_2', rowIndex: 1, column: 0, width: 1, placeholder: 'Descreva o escopo e objetivos da auditoria...'
-      },
-      {
-        id: 'compliance_status', type: 'select', label: 'Status de Conformidade', required: true,
-        rowId: 'row_3', rowIndex: 2, column: 0, width: 1, placeholder: 'Status atual',
-        options: ['Conforme', 'Não Conforme', 'Parcialmente Conforme', 'Não Aplicável', 'Pendente']
-      },
-      {
-        id: 'finding_severity', type: 'select', label: 'Severidade do Achado', required: false,
-        rowId: 'row_3', rowIndex: 2, column: 1, width: 1, placeholder: 'Nível de severidade',
-        options: ['Baixa', 'Média', 'Alta', 'Crítica'],
-        conditionalLogic: { showWhen: { fieldId: 'compliance_status', operator: 'equals', value: 'Não Conforme' } }
-      },
-      {
-        id: 'observations', type: 'textarea', label: 'Observações e Evidências', required: false,
-        rowId: 'row_4', rowIndex: 3, column: 0, width: 1, placeholder: 'Descreva os achados, evidências coletadas e recomendações...'
-      }
-    ];
-    
-    const workflow: WorkflowNode[] = [
-      {
-        id: 'start', type: 'start', label: 'Início da Auditoria', position: { x: 100, y: 100 },
-        data: {}, connections: ['planning']
-      },
-      {
-        id: 'planning', type: 'task', label: 'Planejamento', position: { x: 300, y: 100 },
-        data: { assignedTo: ['auditor'], priority: 'medium' }, connections: ['execution']
-      },
-      {
-        id: 'execution', type: 'task', label: 'Execução da Auditoria', position: { x: 500, y: 100 },
-        data: { assignedTo: ['auditor'], priority: 'high' }, connections: ['review']
-      },
-      {
-        id: 'review', type: 'task', label: 'Revisão dos Achados', position: { x: 700, y: 100 },
-        data: { assignedTo: ['auditee'], priority: 'medium' }, connections: ['reporting']
-      },
-      {
-        id: 'reporting', type: 'task', label: 'Elaboração do Relatório', position: { x: 900, y: 100 },
-        data: { assignedTo: ['auditor'], priority: 'high' }, connections: ['end']
-      },
-      {
-        id: 'end', type: 'end', label: 'Auditoria Concluída', position: { x: 1100, y: 100 },
-        data: {}, connections: []
-      }
-    ];
-    
-    return { rows, fields, workflow };
+    };
   }, []);
 
-  // ==================== TEMPLATE MANAGEMENT ====================
-  const loadTemplate = useCallback((template: ProcessTemplate) => {
-    setProcessName(template.name);
-    setProcessDescription(template.description);
-    setProcessCategory(template.category);
-    setProcessFramework(template.framework);
-    
-    // Carregar estrutura pré-definida baseada no tipo do template
-    if (template.id === 'compliance-basic') {
-      const basicComplianceStructure = createComplianceTemplate();
-      setFormFields(basicComplianceStructure.fields);
-      setFormRows(basicComplianceStructure.rows);
-      setWorkflowNodes(basicComplianceStructure.workflow);
-    } else if (template.id === 'risk-assessment') {
-      const riskAssessmentStructure = createRiskAssessmentTemplate();
-      setFormFields(riskAssessmentStructure.fields);
-      setFormRows(riskAssessmentStructure.rows);
-      setWorkflowNodes(riskAssessmentStructure.workflow);
-    } else if (template.id === 'audit-checklist') {
-      const auditChecklistStructure = createAuditChecklistTemplate();
-      setFormFields(auditChecklistStructure.fields);
-      setFormRows(auditChecklistStructure.rows);
-      setWorkflowNodes(auditChecklistStructure.workflow);
-    }
-    
+  // Add node to canvas
+  const addNode = useCallback((type: WorkflowNode['type'], position: { x: number; y: number }) => {
+    const newNode = createNode(type, position);
+    setWorkflowNodes(prev => [...prev, newNode]);
+    setSelectedWorkflowNode(newNode);
     setHasUnsavedChanges(true);
-    setActiveLayer('form');
-    toast.success(`Template "${template.name}" carregado!`);
-  }, [createComplianceTemplate, createRiskAssessmentTemplate, createAuditChecklistTemplate]);
+    toast.success(`Elemento ${newNode.data.label} adicionado`);
+  }, [createNode]);
 
-  // Funções para Relatórios
-  const generateReport = useCallback(async (reportType: string) => {
-    setIsGeneratingReport(true);
-    try {
-      // Buscar dados do processo atual
-      const processData = {
-        name: processName,
-        description: processDescription,
-        category: processCategory,
-        framework: processFramework,
-        formFields: formFields,
-        formRows: formRows,
-        workflowNodes: workflowNodes,
-        workflowConnections: workflowConnections
-      };
-
-      // Gerar dados do relatório baseado no tipo
-      let reportResult;
-      switch (reportType) {
-        case 'process_status':
-          reportResult = generateProcessStatusReport(processData);
-          break;
-        case 'performance_user':
-          reportResult = generatePerformanceReport(processData);
-          break;
-        case 'bottlenecks':
-          reportResult = generateBottleneckReport(processData);
-          break;
-        case 'audit':
-          reportResult = generateAuditReport(processData);
-          break;
-        case 'compliance':
-          reportResult = generateComplianceReport(processData);
-          break;
-        default:
-          reportResult = generateDefaultReport(processData);
+  // Professional Canvas Event Handlers
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle mouse or Ctrl+Click for panning
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
+      e.preventDefault();
+    } else if (e.target === e.currentTarget) {
+      // Clicked on empty canvas
+      setSelectedWorkflowNode(null);
+      if (isConnecting) {
+        setIsConnecting(false);
+        setConnectionSource(null);
+        setTempConnection(null);
       }
-
-      setReportData(reportResult);
-      setSelectedReport(reportType);
-      
-      // Adicionar ao histórico
-      const newReportEntry = {
-        id: Date.now(),
-        name: reportFilters.reportName || `Relatório ${reportType}`,
-        type: reportType,
-        generatedAt: new Date().toISOString(),
-        format: reportFilters.outputFormat,
-        data: reportResult
-      };
-      
-      setReportHistory(prev => [newReportEntry, ...prev]);
-      toast.success('Relatório gerado com sucesso!');
-      
-    } catch (error) {
-      console.error('Erro ao gerar relatório:', error);
-      toast.error('Erro ao gerar relatório');
-    } finally {
-      setIsGeneratingReport(false);
     }
-  }, [processName, processDescription, processCategory, processFramework, formFields, formRows, workflowNodes, workflowConnections, reportFilters]);
+  }, [canvasOffset, isConnecting]);
 
-  const generateProcessStatusReport = (processData: any) => {
-    const totalFields = processData.formFields?.length || 0;
-    const totalNodes = processData.workflowNodes?.length || 0;
-    const totalConnections = processData.workflowConnections?.length || 0;
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isPanning) {
+      setCanvasOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y
+      });
+    }
     
-    return {
-      title: 'Status do Processo',
-      summary: {
-        processName: processData.name,
-        totalFields,
-        totalNodes,
-        totalConnections,
-        completionRate: Math.min(100, ((totalFields + totalNodes) / 10) * 100)
-      },
-      details: {
-        formStructure: processData.formFields?.map(field => ({
-          name: field.name,
-          type: field.type,
-          required: field.validation?.required || false
-        })) || [],
-        workflowStructure: processData.workflowNodes?.map(node => ({
-          id: node.id,
-          type: node.type,
-          name: node.properties?.name || node.type,
-          position: node.position
-        })) || []
-      }
-    };
-  };
-
-  const generatePerformanceReport = (processData: any) => {
-    const mockPerformanceData = {
-      averageCompletionTime: Math.floor(Math.random() * 10 + 3),
-      successRate: Math.floor(Math.random() * 20 + 80),
-      totalProcesses: Math.floor(Math.random() * 100 + 50),
-      activeProcesses: Math.floor(Math.random() * 20 + 10)
-    };
-    
-    return {
-      title: 'Relatório de Performance',
-      summary: mockPerformanceData,
-      recommendations: [
-        'Considere otimizar etapas com maior tempo de execução',
-        'Implemente lembretes automáticos para reduzir atrasos',
-        'Revise campos obrigatórios para simplificar preenchimento'
-      ]
-    };
-  };
-
-  const generateBottleneckReport = (processData: any) => {
-    return {
-      title: 'Análise de Gargalos',
-      bottlenecks: [
-        {
-          stage: 'Preenchimento do Formulário',
-          averageTime: '2.5 dias',
-          frequency: 'Alto',
-          suggestion: 'Simplificar campos obrigatórios'
-        },
-        {
-          stage: 'Aprovação Gerencial', 
-          averageTime: '1.8 dias',
-          frequency: 'Médio',
-          suggestion: 'Implementar aprovação automática para baixo risco'
-        }
-      ]
-    };
-  };
-
-  const generateAuditReport = (processData: any) => {
-    return {
-      title: 'Relatório de Auditoria',
-      processDefinition: processData,
-      auditTrail: [
-        {
-          timestamp: new Date().toISOString(),
-          action: 'Process Created',
-          user: 'System',
-          details: `Processo "${processData.name}" criado`
-        },
-        {
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          action: 'Form Updated',
-          user: 'System', 
-          details: `${processData.formFields?.length || 0} campos configurados`
-        },
-        {
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-          action: 'Workflow Configured',
-          user: 'System',
-          details: `${processData.workflowNodes?.length || 0} etapas definidas`
-        }
-      ],
-      complianceChecks: {
-        formValidation: processData.formFields?.some(f => f.validation?.required) ? 'Passed' : 'Warning',
-        workflowIntegrity: processData.workflowConnections?.length > 0 ? 'Passed' : 'Failed',
-        documentation: processData.description ? 'Passed' : 'Warning'
-      }
-    };
-  };
-
-  const generateComplianceReport = (processData: any) => {
-    return {
-      title: 'Relatório de Conformidade',
-      framework: processData.framework,
-      complianceScore: Math.floor(Math.random() * 30 + 70),
-      requirements: [
-        {
-          requirement: 'Documentação de Processo',
-          status: processData.description ? 'Compliant' : 'Non-Compliant',
-          evidence: processData.description || 'N/A'
-        },
-        {
-          requirement: 'Controles de Validação',
-          status: processData.formFields?.some(f => f.validation?.required) ? 'Compliant' : 'Partially Compliant',
-          evidence: `${processData.formFields?.filter(f => f.validation?.required).length || 0} campos obrigatórios`
-        },
-        {
-          requirement: 'Fluxo de Aprovação',
-          status: processData.workflowNodes?.length > 2 ? 'Compliant' : 'Non-Compliant',
-          evidence: `${processData.workflowNodes?.length || 0} etapas de workflow`
-        }
-      ]
-    };
-  };
-
-  const generateDefaultReport = (processData: any) => {
-    return {
-      title: 'Relatório Geral',
-      processData,
-      generatedAt: new Date().toISOString(),
-      summary: 'Relatório básico do processo criado'
-    };
-  };
-
-  const exportReport = useCallback(async (format: string) => {
-    if (!reportData) {
-      toast.error('Nenhum relatório selecionado para exportar');
-      return;
-    }
-
-    try {
-      // Simular exportação do relatório
-      const exportData = {
-        ...reportData,
-        exportFormat: format,
-        exportedAt: new Date().toISOString()
-      };
-
-      // Em um cenário real, aqui seria feita a chamada para API de exportação
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${reportData.title}_${format}_${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    if (isConnecting && connectionSource && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const canvasX = (e.clientX - rect.left - canvasOffset.x) / canvasScale;
+      const canvasY = (e.clientY - rect.top - canvasOffset.y) / canvasScale;
       
-      toast.success(`Relatório exportado em formato ${format.toUpperCase()}`);
-    } catch (error) {
-      console.error('Erro ao exportar relatório:', error);
-      toast.error('Erro ao exportar relatório');
+      setTempConnection({
+        start: {
+          x: connectionSource.position.x + connectionSource.size.width / 2,
+          y: connectionSource.position.y + connectionSource.size.height / 2
+        },
+        end: { x: canvasX, y: canvasY }
+      });
     }
-  }, [reportData]);
+  }, [isPanning, panStart, isConnecting, connectionSource, canvasOffset, canvasScale]);
 
-  // Funções para Integrações
-  const toggleIntegration = useCallback((category: string, integration: string) => {
-    setIntegrationSettings(prev => {
-      const newSettings = {
-        ...prev,
-        [category]: {
-          ...prev[category],
-          [integration]: {
-            ...prev[category][integration],
-            enabled: !prev[category][integration].enabled
-          }
+  const handleCanvasMouseUp = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
+  // Professional Node Interaction System
+  const handleNodeClick = useCallback((node: WorkflowNode) => {
+    if (isConnecting && connectionSource && connectionSource.id !== node.id) {
+      // Complete connection
+      const newConnection: WorkflowConnection = {
+        id: `connection-${Date.now()}`,
+        source: connectionSource.id,
+        target: node.id,
+        type: 'smooth',
+        style: {
+          strokeColor: '#3b82f6',
+          strokeWidth: 2,
+          animated: true
         }
       };
       
-      toast.success(
-        `Integração ${newSettings[category][integration].enabled ? 'ativada' : 'desativada'}: ${integration}`
+      setWorkflowConnections(prev => [...prev, newConnection]);
+      setIsConnecting(false);
+      setConnectionSource(null);
+      setTempConnection(null);
+      setHasUnsavedChanges(true);
+      toast.success('Conexão criada com sucesso');
+    } else {
+      setSelectedWorkflowNode(node);
+    }
+  }, [isConnecting, connectionSource]);
+
+  const startConnection = useCallback((node: WorkflowNode) => {
+    setIsConnecting(true);
+    setConnectionSource(node);
+    toast.info('Clique em outro elemento para conectar');
+  }, []);
+
+  const deleteNode = useCallback((nodeId: string) => {
+    setWorkflowNodes(prev => prev.filter(node => node.id !== nodeId));
+    setWorkflowConnections(prev => prev.filter(conn => conn.source !== nodeId && conn.target !== nodeId));
+    setSelectedWorkflowNode(null);
+    setHasUnsavedChanges(true);
+    toast.success('Elemento removido');
+  }, []);
+
+  // Canvas controls
+  const handleZoom = useCallback((delta: number) => {
+    setCanvasScale(prev => Math.min(3, Math.max(0.2, prev + delta)));
+  }, []);
+
+  const resetCanvas = useCallback(() => {
+    setCanvasScale(1);
+    setCanvasOffset({ x: 0, y: 0 });
+  }, []);
+
+  const fitToScreen = useCallback(() => {
+    if (workflowNodes.length === 0) return;
+
+    const padding = 100;
+    const minX = Math.min(...workflowNodes.map(n => n.position.x));
+    const minY = Math.min(...workflowNodes.map(n => n.position.y));
+    const maxX = Math.max(...workflowNodes.map(n => n.position.x + n.size.width));
+    const maxY = Math.max(...workflowNodes.map(n => n.position.y + n.size.height));
+
+    const contentWidth = maxX - minX + padding * 2;
+    const contentHeight = maxY - minY + padding * 2;
+
+    if (canvasRef.current) {
+      const canvasWidth = canvasRef.current.clientWidth;
+      const canvasHeight = canvasRef.current.clientHeight;
+      
+      const scaleX = canvasWidth / contentWidth;
+      const scaleY = canvasHeight / contentHeight;
+      const newScale = Math.min(scaleX, scaleY, 1);
+      
+      setCanvasScale(newScale);
+      setCanvasOffset({
+        x: (canvasWidth - contentWidth * newScale) / 2 - minX * newScale + padding * newScale,
+        y: (canvasHeight - contentHeight * newScale) / 2 - minY * newScale + padding * newScale
+      });
+    }
+  }, [workflowNodes]);
+
+  // Professional Node Rendering System
+  const renderWorkflowNodes = useCallback(() => {
+    if (!workflowNodes || workflowNodes.length === 0) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center p-12 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-300/30 shadow-xl">
+            <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+              <Workflow className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Canvas Vazio</h3>
+            <p className="text-gray-600 mb-4 max-w-xs">Arraste elementos da barra lateral ou clique nos botões para criar seu workflow profissional</p>
+            <div className="flex justify-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => addNode('start', { x: 200, y: 200 })}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Adicionar Início
+              </Button>
+            </div>
+          </div>
+        </div>
       );
-      
-      return newSettings;
-    });
-  }, []);
+    }
 
-  const configureIntegration = useCallback((category: string, integration: string) => {
-    // Em um cenário real, isso abriria um modal de configuração
-    toast.info(`Configurando integração: ${integration}. Em breve será implementada a interface de configuração.`);
-    
-    // Simular configuração
-    setIntegrationSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [integration]: {
-          ...prev[category][integration],
-          config: {
-            ...prev[category][integration].config,
-            configured: true,
-            configuredAt: new Date().toISOString()
+    return workflowNodes.map((node) => {
+      if (!node || !node.id || !node.position) {
+        return null;
+      }
+
+      const isSelected = selectedWorkflowNode?.id === node.id;
+      
+      // Professional node styling system
+      const getNodeStyles = (nodeType: WorkflowNode['type']) => {
+        const styleMap = {
+          start: {
+            gradient: 'from-emerald-400 via-emerald-500 to-teal-600',
+            border: 'border-emerald-300',
+            icon: Play,
+            shape: 'rounded-full',
+            glow: 'shadow-emerald-500/30'
+          },
+          end: {
+            gradient: 'from-red-400 via-red-500 to-rose-600',
+            border: 'border-red-300',
+            icon: Square,
+            shape: 'rounded-xl',
+            glow: 'shadow-red-500/30'
+          },
+          task: {
+            gradient: 'from-blue-400 via-blue-500 to-indigo-600',
+            border: 'border-blue-300',
+            icon: CheckCircle,
+            shape: 'rounded-xl',
+            glow: 'shadow-blue-500/30'
+          },
+          decision: {
+            gradient: 'from-amber-400 via-yellow-500 to-orange-500',
+            border: 'border-amber-300',
+            icon: GitBranch,
+            shape: 'rounded-lg transform rotate-45',
+            glow: 'shadow-amber-500/30'
+          },
+          parallel: {
+            gradient: 'from-purple-400 via-purple-500 to-indigo-600',
+            border: 'border-purple-300',
+            icon: GitMerge,
+            shape: 'rounded-xl',
+            glow: 'shadow-purple-500/30'
+          },
+          timer: {
+            gradient: 'from-orange-400 via-orange-500 to-red-500',
+            border: 'border-orange-300',
+            icon: Timer,
+            shape: 'rounded-xl',
+            glow: 'shadow-orange-500/30'
+          },
+          notification: {
+            gradient: 'from-pink-400 via-pink-500 to-rose-600',
+            border: 'border-pink-300',
+            icon: Bell,
+            shape: 'rounded-xl',
+            glow: 'shadow-pink-500/30'
+          },
+          process: {
+            gradient: 'from-cyan-400 via-cyan-500 to-blue-600',
+            border: 'border-cyan-300',
+            icon: Settings,
+            shape: 'rounded-xl',
+            glow: 'shadow-cyan-500/30'
+          },
+          database: {
+            gradient: 'from-green-400 via-green-500 to-emerald-600',
+            border: 'border-green-300',
+            icon: Database,
+            shape: 'rounded-xl',
+            glow: 'shadow-green-500/30'
+          },
+          integration: {
+            gradient: 'from-violet-400 via-violet-500 to-purple-600',
+            border: 'border-violet-300',
+            icon: Link2,
+            shape: 'rounded-xl',
+            glow: 'shadow-violet-500/30'
           }
-        }
-      }
-    }));
-  }, []);
+        };
 
-  const testIntegration = useCallback(async (category: string, integration: string) => {
-    const integrationConfig = integrationSettings[category][integration];
-    
-    if (!integrationConfig.enabled) {
-      toast.error('Integração deve estar ativa para ser testada');
-      return;
-    }
-
-    toast.info('Testando integração...');
-    
-    // Simular teste de integração
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simular resultado do teste
-      const success = Math.random() > 0.3; // 70% de sucesso
-      
-      if (success) {
-        toast.success(`Teste de integração ${integration} bem-sucedido!`);
-      } else {
-        toast.error(`Falha no teste de integração ${integration}. Verifique as configurações.`);
-      }
-    } catch (error) {
-      toast.error('Erro durante o teste de integração');
-    }
-  }, [integrationSettings]);
-
-  const saveIntegrationsToDatabase = useCallback(async () => {
-    try {
-      // Em um cenário real, salvaria no banco de dados
-      console.log('Salvando configurações de integração no banco:', integrationSettings);
-      
-      // Simular chamada para o banco
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Configurações de integração salvas com sucesso!');
-      return true;
-    } catch (error) {
-      console.error('Erro ao salvar integrações:', error);
-      toast.error('Erro ao salvar configurações de integração');
-      return false;
-    }
-  }, [integrationSettings]);
-
-  // Função para verificar integridade dos dados salvos
-  const verifySaveIntegrity = useCallback(async (savedId: string, originalData: any) => {
-    try {
-      // Em um cenário real, faria uma consulta no banco para verificar se todos os dados foram salvos corretamente
-      const verification = {
-        hasFormFields: originalData.formFields?.length > 0,
-        hasWorkflowNodes: originalData.workflowNodes?.length > 0,
-        hasAnalytics: originalData.analytics?.kpis?.length > 0 || originalData.analytics?.reports?.length > 0,
-        hasIntegrations: Object.keys(originalData.integrations || {}).length > 0
+        return styleMap[nodeType] || styleMap.task;
       };
-      
-      console.log('📊 Verificação de integridade dos dados salvos:', verification);
-      console.log('📋 Dados originais a serem salvos:', originalData);
-      
-      // Simular verificação (em produção, consultaria o banco)
-      return true;
-    } catch (error) {
-      console.error('❌ Erro na verificação de integridade:', error);
-      return false;
-    }
-  }, []);
 
-  const handleSave = async () => {
-    if (!processName.trim()) {
-      toast.error('Nome do processo é obrigatório!');
-      return;
-    }
+      const nodeStyles = getNodeStyles(node.type);
+      const IconComponent = nodeStyles.icon;
+      const isDecision = node.type === 'decision';
 
-    if (saveLoading) {
-      toast.info('Aguarde, salvando processo...');
-      return;
-    }
+      return (
+        <div
+          key={node.id}
+          className={`absolute cursor-pointer select-none transition-all duration-300 ease-out group
+                     hover:scale-105 active:scale-95 ${isSelected ? 'z-50' : 'z-20'}`}
+          style={{
+            left: `${node.position.x}px`,
+            top: `${node.position.y}px`,
+            width: `${node.size.width}px`,
+            height: `${node.size.height}px`,
+            transform: `scale(${isSelected ? 1.05 : 1})`,
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNodeClick(node);
+          }}
+        >
+          {/* Glow effect */}
+          <div className={`absolute inset-0 bg-gradient-to-br ${nodeStyles.gradient} ${nodeStyles.shape} 
+                          blur-lg opacity-20 scale-110 ${nodeStyles.glow}`}></div>
+          
+          {/* Main node */}
+          <div className={`relative w-full h-full bg-gradient-to-br ${nodeStyles.gradient} 
+                          border-3 ${nodeStyles.border} ${nodeStyles.shape} 
+                          shadow-2xl ${nodeStyles.glow} backdrop-blur-sm 
+                          flex flex-col items-center justify-center text-white
+                          ${isSelected ? 'ring-4 ring-white/50' : 'hover:ring-2 hover:ring-white/30'}`}>
+            
+            {/* Content */}
+            <div className={`flex flex-col items-center justify-center p-3 ${isDecision ? 'transform -rotate-45' : ''}`}>
+              {/* Icon */}
+              <div className="mb-2 p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                <IconComponent className="w-6 h-6 text-white drop-shadow-sm" />
+              </div>
+              
+              {/* Label */}
+              <div className="text-sm font-bold text-center leading-tight max-w-full">
+                <div className="truncate px-1">
+                  {node.data.label}
+                </div>
+              </div>
+              
+              {/* Description */}
+              {node.data.description && (
+                <div className="text-xs text-white/90 text-center mt-1 leading-tight max-w-full">
+                  <div className="truncate px-1">
+                    {node.data.description}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Status indicator */}
+            <div className="absolute bottom-2 right-2">
+              <div className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white animate-pulse' : 'bg-white/60'}`}></div>
+            </div>
+          </div>
 
-    // Validações adicionais
-    if (!selectedTemplate) {
-      toast.error('Selecione um template antes de salvar');
-      return;
-    }
+          {/* Professional Action Toolbar */}
+          {isSelected && (
+            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 
+                           bg-white/95 backdrop-blur-xl rounded-2xl px-4 py-3 
+                           shadow-2xl border border-white/20 flex items-center gap-3
+                           animate-in slide-in-from-top-2 duration-500">
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                className={`h-10 w-10 p-0 rounded-xl transition-all duration-200 ${
+                  isConnecting && connectionSource?.id === node.id 
+                    ? 'bg-orange-500 hover:bg-orange-600' 
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white hover:scale-110 shadow-lg`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startConnection(node);
+                }}
+                title="Conectar elemento"
+              >
+                {isConnecting && connectionSource?.id === node.id ? (
+                  <Target className="h-5 w-5" />
+                ) : (
+                  <Link2 className="h-5 w-5" />
+                )}
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-10 w-10 p-0 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl 
+                          hover:scale-110 transition-all duration-200 shadow-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Future: Open configuration panel
+                  toast.info('Configuração em desenvolvimento');
+                }}
+                title="Configurar elemento"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-10 w-10 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl 
+                          hover:scale-110 transition-all duration-200 shadow-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteNode(node.id);
+                }}
+                title="Remover elemento"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    }).filter(Boolean);
+  }, [workflowNodes, selectedWorkflowNode, isConnecting, connectionSource, handleNodeClick, startConnection, deleteNode, addNode]);
 
-    if (formFields.length === 0 && workflowNodes.length === 0) {
-      toast.error('O processo deve ter pelo menos campos de formulário ou etapas de workflow');
-      return;
-    }
-
-    // Validar conexões do workflow se houver nós
-    if (workflowNodes.length > 1 && workflowConnections.length === 0) {
-      toast.warning('Considere conectar as etapas do workflow para um fluxo completo');
-    }
-
-    // Validar integrações ativas sem configuração
-    const activeIntegrations = Object.values(integrationSettings).flatMap(category => 
-      Object.values(category).filter((integration: any) => integration.enabled && !integration.config?.configured)
-    );
+  // Professional Connection Rendering
+  const renderConnections = useCallback(() => {
+    const allConnections = [...workflowConnections];
     
-    if (activeIntegrations.length > 0) {
-      toast.warning('Algumas integrações estão ativas mas não configuradas');
+    if (tempConnection) {
+      allConnections.push({
+        id: 'temp',
+        source: 'temp',
+        target: 'temp',
+        type: 'smooth',
+        style: {
+          strokeColor: '#f59e0b',
+          strokeWidth: 3,
+          strokeDasharray: '10,5',
+          animated: true
+        }
+      } as any);
+    }
+
+    return (
+      <svg className="absolute inset-0 pointer-events-none w-full h-full" style={{ zIndex: 5 }}>
+        <defs>
+          <marker
+            id="arrowhead"
+            markerWidth="12"
+            markerHeight="8"
+            refX="11"
+            refY="4"
+            orient="auto"
+            className="fill-current text-blue-500"
+          >
+            <polygon points="0 0, 12 4, 0 8" />
+          </marker>
+          <marker
+            id="arrowhead-temp"
+            markerWidth="12"
+            markerHeight="8"
+            refX="11"
+            refY="4"
+            orient="auto"
+            className="fill-current text-amber-500"
+          >
+            <polygon points="0 0, 12 4, 0 8" />
+          </marker>
+        </defs>
+        
+        {allConnections.map((connection) => {
+          let sourcePoint, targetPoint;
+          
+          if (connection.id === 'temp' && tempConnection) {
+            sourcePoint = tempConnection.start;
+            targetPoint = tempConnection.end;
+          } else {
+            const sourceNode = workflowNodes.find(n => n.id === connection.source);
+            const targetNode = workflowNodes.find(n => n.id === connection.target);
+            
+            if (!sourceNode || !targetNode) return null;
+            
+            sourcePoint = {
+              x: sourceNode.position.x + sourceNode.size.width / 2,
+              y: sourceNode.position.y + sourceNode.size.height / 2
+            };
+            targetPoint = {
+              x: targetNode.position.x + targetNode.size.width / 2,
+              y: targetNode.position.y + targetNode.size.height / 2
+            };
+          }
+
+          const isTemp = connection.id === 'temp';
+          const strokeColor = isTemp ? '#f59e0b' : (connection.style?.strokeColor || '#3b82f6');
+          const strokeWidth = isTemp ? 3 : (connection.style?.strokeWidth || 2);
+          const strokeDasharray = isTemp ? '10,5' : connection.style?.strokeDasharray;
+          const markerId = isTemp ? 'arrowhead-temp' : 'arrowhead';
+
+          return (
+            <g key={connection.id}>
+              {/* Background stroke for better visibility */}
+              <line
+                x1={sourcePoint.x} y1={sourcePoint.y}
+                x2={targetPoint.x} y2={targetPoint.y}
+                stroke="white" strokeWidth={strokeWidth + 4}
+                strokeLinecap="round" opacity="0.3"
+              />
+              
+              {/* Main connection line */}
+              <line
+                x1={sourcePoint.x} y1={sourcePoint.y}
+                x2={targetPoint.x} y2={targetPoint.y}
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                strokeDasharray={strokeDasharray}
+                strokeLinecap="round"
+                markerEnd={`url(#${markerId})`}
+                className={connection.style?.animated ? 'animate-pulse' : ''}
+              />
+              
+              {/* Connection label */}
+              {connection.label && (
+                <text
+                  x={(sourcePoint.x + targetPoint.x) / 2}
+                  y={(sourcePoint.y + targetPoint.y) / 2}
+                  textAnchor="middle"
+                  className="fill-current text-gray-700 text-sm font-medium"
+                  style={{ dominantBaseline: 'middle' }}
+                >
+                  <tspan className="bg-white px-2 py-1 rounded">{connection.label}</tspan>
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }, [workflowConnections, workflowNodes, tempConnection]);
+
+  // Save functionality
+  const handleSave = useCallback(async () => {
+    if (!processName.trim()) {
+      toast.error('Nome do processo é obrigatório');
+      return;
     }
 
     const processData = {
       name: processName,
-      description: processDescription,
-      category: processCategory,
-      framework: processCategory.toUpperCase(),
+      description: 'Processo criado com Process Designer Enhanced',
+      category: 'custom' as const,
+      framework: 'CUSTOM',
       formFields,
-      formRows,
+      formRows: [],
       workflowNodes,
-      workflowConnections,
-      analytics: {
-        kpis: selectedTemplate?.analytics?.kpis || ['Tempo de Execução', 'Taxa de Conclusão'],
-        reports: selectedTemplate?.analytics?.reports || ['Relatório de Performance']
-      },
-      integrations: integrationSettings
+      workflowConnections
     };
 
     try {
-      let result;
-      if (mode === 'edit' && initialData?.id) {
-        result = await updateProcess(initialData.id, processData);
-        if (result) {
-          const verified = await verifySaveIntegrity(initialData.id, processData);
-          if (verified) {
-            toast.success('Processo atualizado com sucesso! Todos os dados foram salvos corretamente.');
-            console.log('✅ Processo atualizado com ID:', initialData.id);
-          } else {
-            toast.warning('Processo atualizado, mas alguns dados podem não ter sido salvos completamente');
-          }
-          
+      if (mode === 'create') {
+        const processId = await saveProcess(processData);
+        if (processId) {
           setHasUnsavedChanges(false);
-          if (onSave) {
-            onSave({ ...processData, id: initialData.id });
-          }
+          toast.success('Processo salvo com sucesso!');
+          onSave?.(processData);
         }
-      } else {
-        result = await saveProcess(processData);
-        if (result) {
-          const verified = await verifySaveIntegrity(result, processData);
-          if (verified) {
-            toast.success('Processo salvo com sucesso! Todos os dados foram salvos corretamente.');
-            console.log('✅ Processo salvo com ID:', result);
-          } else {
-            toast.warning('Processo salvo, mas alguns dados podem não ter sido salvos completamente');
-          }
-          
+      } else if (mode === 'edit' && processId) {
+        const success = await updateProcess(processId, processData);
+        if (success) {
           setHasUnsavedChanges(false);
-          if (onSave) {
-            onSave({ ...processData, id: result });
-          }
+          toast.success('Processo atualizado com sucesso!');
+          onSave?.(processData);
         }
       }
     } catch (error) {
-      console.error('Erro ao salvar processo:', error);
-      toast.error('Erro ao salvar processo. Tente novamente.');
+      console.error('Error saving process:', error);
+      toast.error('Erro ao salvar processo');
     }
-  };
+  }, [processName, formFields, workflowNodes, workflowConnections, mode, processId, saveProcess, updateProcess, onSave]);
 
-  const handleClose = () => {
-    if (hasUnsavedChanges) {
-      if (window.confirm('Você tem alterações não salvas. Deseja sair mesmo assim?')) {
-        resetModal();
-        onClose();
-      }
-    } else {
-      resetModal();
-      onClose();
-    }
-  };
-
-  const resetModal = () => {
-    setActiveLayer('template');
-    setFormFields([]);
-    setFormRows([]);
-    setWorkflowNodes([]);
-    setSelectedField(null);
-    setSelectedWorkflowNode(null);
-    setSelectedTemplate(null);
-    setProcessName('');
-    setProcessDescription('');
-    setProcessCategory('custom');
-    setHasUnsavedChanges(false);
-    setShowPreview(false);
-  };
-
-  // Template creation functions moved to before loadTemplate function
-
-  // ==================== FUNÇÕES DE GERENCIAMENTO DE LINHAS ====================
-
-  const addNewRow = useCallback((columns: number = 2) => {
-    const newRow: FormRow = {
-      id: `row_${Date.now()}`,
-      columns: columns,
-      height: 'auto',
-      columnWidths: Array(columns).fill('1fr')
-    };
-    setFormRows(prev => [...prev, newRow]);
-    setHasUnsavedChanges(true);
-    toast.success(`Nova linha adicionada com ${columns} coluna${columns > 1 ? 's' : ''}!`);
-  }, []);
-
-  const removeRow = useCallback((rowId: string) => {
-    if (formRows.length <= 1) {
-      toast.error('Deve haver pelo menos uma linha no formulário');
-      return;
-    }
-    
-    // Remover campos da linha
-    const fieldsToRemove = formFields.filter(field => field.rowId === rowId);
-    const remainingFields = formFields.filter(field => field.rowId !== rowId);
-    
-    setFormFields(remainingFields);
-    setFormRows(prev => prev.filter(row => row.id !== rowId));
-    setHasUnsavedChanges(true);
-    
-    if (fieldsToRemove.length > 0) {
-      toast.info(`${fieldsToRemove.length} campo(s) removido(s) junto com a linha`);
-    }
-    toast.success('Linha removida!');
-  }, [formRows, formFields]);
-
-  const updateRowColumns = useCallback((rowId: string, columns: number) => {
-    setFormRows(prev => prev.map(row => {
-      if (row.id === rowId) {
-        const newColumnWidths = Array(columns).fill('1fr');
-        // Preservar larguras existentes quando possível
-        for (let i = 0; i < Math.min(columns, row.columnWidths.length); i++) {
-          newColumnWidths[i] = row.columnWidths[i];
-        }
-        return { ...row, columns, columnWidths: newColumnWidths };
-      }
-      return row;
-    }));
-    
-    // Ajustar campos que excedem o novo número de colunas
-    setFormFields(prev => prev.map(field => {
-      if (field.rowId === rowId && field.column >= columns) {
-        return { ...field, column: columns - 1 };
-      }
-      return field;
-    }));
-    
-    setHasUnsavedChanges(true);
-    toast.success(`Linha atualizada para ${columns} coluna${columns > 1 ? 's' : ''}!`);
-  }, []);
-
-  const updateRowHeight = useCallback((rowId: string, height: string) => {
-    setFormRows(prev => prev.map(row => 
-      row.id === rowId ? { ...row, height } : row
-    ));
-    setHasUnsavedChanges(true);
-    toast.success('Altura da linha atualizada!');
-  }, []);
-
-  const updateColumnWidth = useCallback((rowId: string, columnIndex: number, width: string) => {
-    setFormRows(prev => prev.map(row => {
-      if (row.id === rowId) {
-        const newColumnWidths = [...row.columnWidths];
-        newColumnWidths[columnIndex] = width;
-        return { ...row, columnWidths: newColumnWidths };
-      }
-      return row;
-    }));
-    setHasUnsavedChanges(true);
-    toast.success(`Largura da coluna ${columnIndex + 1} atualizada!`);
-  }, []);
-
-  // ==================== FUNÇÕES DE DRAG AND DROP ====================
-
-  const handleDragStart = useCallback((e: React.DragEvent, field: any, isNewField: boolean = false) => {
-    const dragData = { ...field, isNewField };
-    setDraggedField(dragData);
-    
-    // Configurar dados do drag
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-    
-    // Visual feedback
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '0.5';
-    }
-  }, []);
-
-  const handleDragEnd = useCallback((e: React.DragEvent) => {
-    // Restaurar visual
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '1';
-    }
-    setDraggedField(null);
-    setDragOverColumn(null);
-    setSelectedRow(null);
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent, rowId: string, column: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-    
-    setDragOverColumn(column);
-    setSelectedRow(rowId);
-  }, []);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Só limpar se realmente saiu da área (não é um filho)
-    if (e.currentTarget.contains(e.relatedTarget as Node)) {
-      return;
-    }
-    
-    setDragOverColumn(null);
-    setSelectedRow(null);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, targetRowId: string, targetColumn: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setDragOverColumn(null);
-    setSelectedRow(null);
-    
-    let dragData;
-    try {
-      // Tentar pegar dados do dataTransfer primeiro
-      const transferData = e.dataTransfer.getData('text/plain');
-      if (transferData) {
-        dragData = JSON.parse(transferData);
-      } else {
-        dragData = draggedField;
-      }
-    } catch {
-      dragData = draggedField;
-    }
-    
-    if (!dragData) {
-      setDraggedField(null);
-      return;
-    }
-    
-    const targetRowIndex = formRows.findIndex(r => r.id === targetRowId);
-    
-    // Verificar se já existe um campo nesta posição
-    const existingField = formFields.find(f => f.rowId === targetRowId && f.column === targetColumn);
-    
-    if (dragData.isNewField) {
-      // Se já existe campo na posição, não permite adicionar
-      if (existingField) {
-        toast.error('Já existe um campo nesta posição. Escolha outra coluna.');
-        setDraggedField(null);
-        return;
-      }
-      
-      // Adicionando novo campo
-      const newField: FormField = {
-        id: `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: dragData.type,
-        label: dragData.label ? `${dragData.label}` : `Campo ${dragData.type}`,
-        required: false,
-        placeholder: dragData.type === 'textarea' ? 'Digite sua resposta detalhada aqui...' : 
-                    dragData.type === 'email' ? 'exemplo@email.com' :
-                    dragData.type === 'number' ? '0' :
-                    'Digite aqui...',
-        options: ['select', 'radio', 'checkbox'].includes(dragData.type) ? ['Opção 1', 'Opção 2', 'Opção 3'] : undefined,
-        rowId: targetRowId,
-        rowIndex: targetRowIndex,
-        column: targetColumn,
-        width: 1,
-        validation: {
-          minLength: ['text', 'textarea', 'email'].includes(dragData.type) ? 0 : undefined,
-          maxLength: ['text', 'textarea', 'email'].includes(dragData.type) ? 255 : undefined,
-          min: dragData.type === 'number' ? 0 : undefined,
-          max: dragData.type === 'number' ? 100 : undefined
-        }
-      };
-      
-      setFormFields(prev => [...prev, newField]);
-      setSelectedField(newField);
-      setHasUnsavedChanges(true);
-      toast.success(`✅ Campo "${dragData.label}" adicionado com sucesso!`);
-      
-    } else {
-      // Movendo campo existente
-      if (existingField && existingField.id !== dragData.id) {
-        toast.error('Já existe um campo nesta posição. Escolha outra coluna.');
-        setDraggedField(null);
-        return;
-      }
-      
-      setFormFields(prev => prev.map(field => {
-        if (field.id === dragData.id) {
-          return {
-            ...field,
-            rowId: targetRowId,
-            rowIndex: targetRowIndex,
-            column: targetColumn
-          };
-        }
-        return field;
-      }));
-      setHasUnsavedChanges(true);
-      toast.success(`✅ Campo "${dragData.label}" movido com sucesso!`);
-    }
-    
-    setDraggedField(null);
-  }, [draggedField, formRows, formFields]);
-
-  // ==================== FUNÇÕES DE EDIÇÃO DE CAMPOS ====================
-
-  const updateField = useCallback((fieldId: string, updates: Partial<FormField>) => {
-    setFormFields(prev => prev.map(field => 
-      field.id === fieldId ? { ...field, ...updates } : field
-    ));
-    
-    if (selectedField && selectedField.id === fieldId) {
-      setSelectedField(prev => prev ? { ...prev, ...updates } : null);
-    }
-    
-    setHasUnsavedChanges(true);
-  }, [selectedField]);
-
-  const deleteField = useCallback((fieldId: string) => {
-    setFormFields(prev => prev.filter(field => field.id !== fieldId));
-    
-    if (selectedField && selectedField.id === fieldId) {
-      setSelectedField(null);
-    }
-    
-    setHasUnsavedChanges(true);
-    toast.success('Campo removido!');
-  }, [selectedField]);
-
-  const clearCanvas = useCallback(() => {
-    if (window.confirm('Deseja limpar todo o canvas? Esta ação não pode ser desfeita.')) {
-      setFormFields([]);
-      setFormRows([]);
-      setSelectedField(null);
-      setHasUnsavedChanges(true);
-      toast.success('Canvas limpo!');
-    }
-  }, []);
-
-  // ==================== HELPER FUNCTIONS FOR WORKFLOW NODES ====================
-  // These functions must be declared before they are used to avoid temporal dead zone errors
-  
-  const getNodeShape = useCallback((type: string) => {
-    switch (type) {
-      case 'start': return 'rounded-full';
-      case 'end': return 'rounded-full';
-      case 'decision': return 'transform rotate-45 rounded-none';
-      case 'task': return 'rounded-lg';
-      case 'parallel': return 'rounded-none';
-      default: return 'rounded-lg';
-    }
-  }, []);
-
-  const getNodeSize = useCallback((type: string, node?: any) => {
-    // Use the node's actual size if it has been resized, otherwise use default size
-    if (node && node.size) {
-      return { width: `${node.size.width}px`, height: `${node.size.height}px` };
-    }
-    
-    switch (type) {
-      case 'start': case 'end': return { width: '100px', height: '100px' };
-      case 'decision': return { width: '120px', height: '120px' };
-      case 'task': return { width: '150px', height: '80px' };
-      case 'parallel': return { width: '140px', height: '60px' };
-      default: return { width: '150px', height: '80px' };
-    }
-  }, []);
-  
-  const getDefaultWorkflowData = useCallback((type: string) => {
-    const defaults: Record<string, any> = {
-      start: { priority: 'medium', description: '' },
-      end: { priority: 'medium', description: '' },
-      decision: { condition: '', priority: 'medium', description: '' },
-      parallel: { priority: 'medium', description: '' },
-      user_task: { assignedTo: [], priority: 'medium', description: '', formFields: [] },
-      auto_task: { script: '', priority: 'medium', description: '' },
-      approval: { approvers: [], priority: 'medium', description: '' },
-      review: { reviewers: [], priority: 'medium', description: '' },
-      timer: { timerDuration: '3600', priority: 'medium', description: '' },
-      notification: { notificationTemplate: '', recipients: [], priority: 'medium', description: '' }
-    };
-    
-    return defaults[type] || { priority: 'medium' };
-  }, []);
-
-  // ==================== WORKFLOW HANDLERS ====================
-  const handleWorkflowDragStart = useCallback((e: React.DragEvent, nodeData: any) => {
-    e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('text/plain', JSON.stringify(nodeData));
-    
-    console.log('🔄 [WORKFLOW DRAG] Iniciando drag:', nodeData);
-  }, []);
-
-  const handleWorkflowCanvasDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const handleWorkflowCanvasDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    
-    try {
-      const nodeData = JSON.parse(e.dataTransfer.getData('text/plain'));
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left - 60; // Offset para centralizar
-      const y = e.clientY - rect.top - 20;
-      
-      const newNode = {
-        id: `node_${Date.now()}`,
-        type: nodeData.type,
-        label: nodeData.label,
-        position: { x: Math.max(0, x), y: Math.max(0, y) },
-        data: getDefaultWorkflowData(nodeData.type),
-        connections: []
-      };
-      
-      setWorkflowNodes(prev => [...prev, newNode]);
-      console.log('🔄 [WORKFLOW DROP] Nó adicionado:', newNode);
-      toast.success(`Elemento "${nodeData.label}" adicionado ao workflow!`);
-    } catch (error) {
-      console.error('❌ [WORKFLOW DROP] Erro ao adicionar nó:', error);
-      toast.error('Erro ao adicionar elemento ao workflow');
-    }
-  }, [getDefaultWorkflowData]);
-
-  // Conectar nós do workflow
-  const handleWorkflowNodeClick = useCallback((node: WorkflowNode) => {
-    if (isConnecting) {
-      if (connectionSource && connectionSource !== node.id) {
-        // Criar conexão entre o nó fonte e o nó alvo
-        const newConnection = {
-          id: `conn_${Date.now()}`,
-          source: connectionSource,
-          target: node.id,
-          label: '',
-          condition: ''
-        };
-        
-        setWorkflowConnections(prev => [...prev, newConnection]);
-        setIsConnecting(false);
-        setConnectionSource(null);
-        toast.success(`Conexão criada entre os nós!`);
-      } else if (!connectionSource) {
-        // Definir este nó como fonte da conexão
-        setConnectionSource(node.id);
-        toast.info('Nó fonte selecionado. Clique em outro nó para criar a conexão.');
-      } else {
-        // Tentativa de conectar um nó a si mesmo
-        toast.warning('Não é possível conectar um nó a si mesmo.');
-      }
-    } else {
-      // Modo normal: apenas selecionar o nó para edição
-      setSelectedWorkflowNode(node);
-    }
-  }, [isConnecting, connectionSource]);
-  
-  const startConnection = useCallback((nodeId: string) => {
-    setIsConnecting(true);
-    setConnectionSource(nodeId);
-    toast.info('Modo de conexão ativo. Clique em outro nó para conectar ou pressione ESC para cancelar.');
-  }, []);
-
-  const cancelConnection = useCallback(() => {
-    setIsConnecting(false);
-    setConnectionSource(null);
-    toast.info('Modo de conexão cancelado.');
-  }, []);
-
-  // Listener para cancelar conexão com ESC
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isConnecting) {
-        cancelConnection();
-      }
-    };
-
-    if (isConnecting) {
-      document.addEventListener('keydown', handleKeyPress);
-      return () => document.removeEventListener('keydown', handleKeyPress);
-    }
-  }, [isConnecting, cancelConnection]);
-  
-  const deleteWorkflowNode = useCallback((nodeId: string) => {
-    setWorkflowNodes(prev => prev.filter(n => n.id !== nodeId));
-    setWorkflowConnections(prev => prev.filter(c => c.source !== nodeId && c.target !== nodeId));
-    setSelectedWorkflowNode(null);
-    toast.success('Nó removido do workflow');
-  }, []);
-  
-  const updateWorkflowNode = useCallback((nodeId: string, updates: any) => {
-    setWorkflowNodes(prev => prev.map(node => 
-      node.id === nodeId ? { ...node, ...updates } : node
-    ));
-  }, []);
-
-  const getNodeCenter = useCallback((node: any) => {
-    // Use the node's actual size if it has been resized, otherwise use default size
-    let size;
-    if (node.size) {
-      size = { width: node.size.width, height: node.size.height };
-    } else {
-      size = 
-        node.type === 'start' || node.type === 'end' ? { width: 100, height: 100 } :
-        node.type === 'decision' ? { width: 120, height: 120 } :
-        node.type === 'task' ? { width: 150, height: 80 } :
-        node.type === 'parallel' ? { width: 140, height: 60 } :
-        { width: 150, height: 80 };
-    }
-    
-    return {
-      x: node.position.x + size.width / 2,
-      y: node.position.y + size.height / 2
-    };
-  }, []);
-
-  // Calculate connection points on the edge of nodes for better visual appearance
-  const getConnectionPoints = useCallback((sourceNode: any, targetNode: any) => {
-    const sourceCenter = getNodeCenter(sourceNode);
-    const targetCenter = getNodeCenter(targetNode);
-    
-    // Get node sizes
-    let sourceSize, targetSize;
-    if (sourceNode.size) {
-      sourceSize = { width: sourceNode.size.width, height: sourceNode.size.height };
-    } else {
-      sourceSize = 
-        sourceNode.type === 'start' || sourceNode.type === 'end' ? { width: 100, height: 100 } :
-        sourceNode.type === 'decision' ? { width: 120, height: 120 } :
-        sourceNode.type === 'task' ? { width: 150, height: 80 } :
-        sourceNode.type === 'parallel' ? { width: 140, height: 60 } :
-        { width: 150, height: 80 };
-    }
-    
-    if (targetNode.size) {
-      targetSize = { width: targetNode.size.width, height: targetNode.size.height };
-    } else {
-      targetSize = 
-        targetNode.type === 'start' || targetNode.type === 'end' ? { width: 100, height: 100 } :
-        targetNode.type === 'decision' ? { width: 120, height: 120 } :
-        targetNode.type === 'task' ? { width: 150, height: 80 } :
-        targetNode.type === 'parallel' ? { width: 140, height: 60 } :
-        { width: 150, height: 80 };
-    }
-    
-    // Calculate the angle between nodes
-    const dx = targetCenter.x - sourceCenter.x;
-    const dy = targetCenter.y - sourceCenter.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    if (distance === 0) {
-      return {
-        source: sourceCenter,
-        target: targetCenter
-      };
-    }
-    
-    const angle = Math.atan2(dy, dx);
-    
-    // Calculate connection points on the edge of each node
-    let sourceX, sourceY, targetX, targetY;
-    
-    if (sourceNode.type === 'start' || sourceNode.type === 'end') {
-      // Circular nodes - connect from edge
-      const sourceRadius = sourceSize.width / 2;
-      sourceX = sourceCenter.x + (sourceRadius * Math.cos(angle));
-      sourceY = sourceCenter.y + (sourceRadius * Math.sin(angle));
-    } else {
-      // Rectangular nodes - find intersection with rectangle edge
-      const halfWidth = sourceSize.width / 2;
-      const halfHeight = sourceSize.height / 2;
-      
-      // Calculate which edge the line intersects
-      if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
-        // Line exits through left or right edge
-        sourceX = sourceCenter.x + (dx > 0 ? halfWidth : -halfWidth);
-        sourceY = sourceCenter.y + (dy * halfWidth / Math.abs(dx));
-      } else {
-        // Line exits through top or bottom edge
-        sourceX = sourceCenter.x + (dx * halfHeight / Math.abs(dy));
-        sourceY = sourceCenter.y + (dy > 0 ? halfHeight : -halfHeight);
-      }
-    }
-    
-    if (targetNode.type === 'start' || targetNode.type === 'end') {
-      // Circular nodes - connect to edge
-      const targetRadius = targetSize.width / 2;
-      targetX = targetCenter.x - (targetRadius * Math.cos(angle));
-      targetY = targetCenter.y - (targetRadius * Math.sin(angle));
-    } else {
-      // Rectangular nodes - find intersection with rectangle edge
-      const halfWidth = targetSize.width / 2;
-      const halfHeight = targetSize.height / 2;
-      
-      // Calculate which edge the line intersects (from opposite direction)
-      if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
-        // Line enters through left or right edge
-        targetX = targetCenter.x + (dx > 0 ? -halfWidth : halfWidth);
-        targetY = targetCenter.y - (dy * halfWidth / Math.abs(dx));
-      } else {
-        // Line enters through top or bottom edge
-        targetX = targetCenter.x - (dx * halfHeight / Math.abs(dy));
-        targetY = targetCenter.y + (dy > 0 ? -halfHeight : halfHeight);
-      }
-    }
-    
-    return {
-      source: { x: sourceX, y: sourceY },
-      target: { x: targetX, y: targetY }
-    };
-  }, [getNodeCenter]);
-
-  const getNodeStateClasses = useCallback((node: any) => {
-    if (selectedWorkflowNode?.id === node.id) {
-      return 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950';
-    }
-    if (isConnecting && connectionSource === node.id) {
-      return 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-950 animate-pulse';
-    }
-    if (isConnecting) {
-      return 'bg-white dark:bg-gray-700 hover:bg-green-50 dark:hover:bg-green-950 hover:ring-2 hover:ring-green-400';
-    }
-    return 'bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600';
-  }, [selectedWorkflowNode, isConnecting, connectionSource]);
-
-  const getNodeTypeClasses = useCallback((nodeType: string) => {
-    switch (nodeType) {
-      case 'start': return 'border-green-500 bg-green-50 dark:bg-green-900';
-      case 'end': return 'border-red-500 bg-red-50 dark:bg-red-900';
-      case 'decision': return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900';
-      case 'parallel': return 'border-purple-500 bg-purple-50 dark:bg-purple-900';
-      default: return 'border-blue-500 bg-blue-50 dark:bg-blue-900';
-    }
-  }, []);
-
-  // Drag and Drop para nodes do workflow - MOVED BEFORE renderWorkflowNodes
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, node: WorkflowNode) => {
-    if (isConnecting) return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    setSelectedWorkflowNode(node);
-    
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const canvasRect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
-    
-    setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  }, [isConnecting]);
-
-
-  const handleCanvasMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setIsResizing(false);
-    setResizeHandle(null);
-    setDragOffset({ x: 0, y: 0 });
-  }, []);
-
-  // Resize handling for nodes
-  const handleResizeStart = useCallback((e: React.MouseEvent, nodeId: string, handle: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    setResizeHandle(handle);
-    setSelectedWorkflowNode(workflowNodes.find(n => n.id === nodeId) || null);
-  }, [workflowNodes]);
-
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging && selectedWorkflowNode) {
-      const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const newX = (e.clientX - canvasRect.left - dragOffset.x) / canvasScale;
-      const newY = (e.clientY - canvasRect.top - dragOffset.y) / canvasScale;
-      
-      // Constrain within expanded canvas bounds
-      const constrainedX = Math.max(0, Math.min(newX, 2000));
-      const constrainedY = Math.max(0, Math.min(newY, 1500));
-      
-      updateWorkflowNode(selectedWorkflowNode.id, {
-        position: { x: constrainedX, y: constrainedY }
-      });
-    } else if (isResizing && selectedWorkflowNode && resizeHandle) {
-      const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const mouseX = (e.clientX - canvasRect.left) / canvasScale;
-      const mouseY = (e.clientY - canvasRect.top) / canvasScale;
-      
-      const currentSize = getNodeSize(selectedWorkflowNode.type);
-      const currentWidth = parseInt(currentSize.width);
-      const currentHeight = parseInt(currentSize.height);
-      
-      let newWidth = currentWidth;
-      let newHeight = currentHeight;
-      
-      switch (resizeHandle) {
-        case 'se': // southeast
-          newWidth = Math.max(80, mouseX - selectedWorkflowNode.position.x);
-          newHeight = Math.max(40, mouseY - selectedWorkflowNode.position.y);
-          break;
-        case 'sw': // southwest
-          newWidth = Math.max(80, selectedWorkflowNode.position.x + currentWidth - mouseX);
-          newHeight = Math.max(40, mouseY - selectedWorkflowNode.position.y);
-          if (newWidth !== currentWidth) {
-            updateWorkflowNode(selectedWorkflowNode.id, {
-              position: { ...selectedWorkflowNode.position, x: mouseX }
-            });
-          }
-          break;
-        case 'ne': // northeast
-          newWidth = Math.max(80, mouseX - selectedWorkflowNode.position.x);
-          newHeight = Math.max(40, selectedWorkflowNode.position.y + currentHeight - mouseY);
-          if (newHeight !== currentHeight) {
-            updateWorkflowNode(selectedWorkflowNode.id, {
-              position: { ...selectedWorkflowNode.position, y: mouseY }
-            });
-          }
-          break;
-        case 'nw': // northwest
-          newWidth = Math.max(80, selectedWorkflowNode.position.x + currentWidth - mouseX);
-          newHeight = Math.max(40, selectedWorkflowNode.position.y + currentHeight - mouseY);
-          if (newWidth !== currentWidth || newHeight !== currentHeight) {
-            updateWorkflowNode(selectedWorkflowNode.id, {
-              position: { x: mouseX, y: mouseY }
-            });
-          }
-          break;
-      }
-      
-      updateWorkflowNode(selectedWorkflowNode.id, {
-        size: { width: newWidth, height: newHeight }
-      });
-    }
-  }, [isDragging, isResizing, selectedWorkflowNode, dragOffset, resizeHandle, canvasScale, updateWorkflowNode, getNodeSize]);
-
-  const renderWorkflowNodes = useCallback(() => {
-    return workflowNodes.map((node) => {
-      const nodeSize = getNodeSize(node.type, node);
-      
-      return (
-        <div
-          key={node.id}
-          className={`absolute flex items-center justify-center cursor-pointer transition-all hover:shadow-lg border-2 ${getNodeShape(node.type)} ${getNodeStateClasses(node)} ${getNodeTypeClasses(node.type)}`}
-          onClick={() => !isDragging && handleWorkflowNodeClick(node)}
-          onMouseDown={(e) => handleNodeMouseDown(e, node)}
-          style={{
-            left: `${node.position.x}px`,
-            top: `${node.position.y}px`,
-            width: nodeSize.width,
-            height: nodeSize.height,
-            zIndex: 10,
-            cursor: isDragging && selectedWorkflowNode?.id === node.id ? 'grabbing' : 'grab'
-          }}
-        >
-          <div className={`flex flex-col items-center justify-center h-full w-full text-center p-2 ${
-            node.type === 'decision' ? 'transform -rotate-45' : ''
-          }`}>
-            <div className="flex items-center justify-center gap-1 mb-1">
-              {node.type === 'start' && <div className="w-2 h-2 bg-green-600 rounded-full"></div>}
-              {node.type === 'end' && <div className="w-2 h-2 bg-red-600 rounded-full"></div>}
-              {node.type === 'task' && <Users className="h-3 w-3 text-blue-700 dark:text-blue-300" />}
-              {node.type === 'decision' && <div className="w-2 h-2 bg-yellow-600 rounded"></div>}
-              {node.type === 'parallel' && <div className="w-2 h-2 bg-purple-600 rounded"></div>}
-              {node.type === 'timer' && <Timer className="h-3 w-3 text-orange-700 dark:text-orange-300" />}
-              {node.type === 'notification' && <Bell className="h-3 w-3 text-pink-700 dark:text-pink-300" />}
-              {isConnecting && connectionSource === node.id && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-              )}
-            </div>
-            
-            <span className={`text-xs font-semibold text-gray-800 dark:text-gray-200 leading-tight ${
-              node.type === 'start' || node.type === 'end' ? 'max-w-[70px]' :
-              node.type === 'decision' ? 'max-w-[80px]' :
-              'max-w-[130px]'
-            } overflow-hidden`} 
-            style={{ 
-              display: '-webkit-box',
-              WebkitLineClamp: node.type === 'task' ? 2 : 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
-            }}>
-              {node.label}
-            </span>
-
-            {(node.type === 'task' || node.type === 'timer') && node.data?.priority && (
-              <div className={`mt-1 px-1 py-0 rounded text-xs ${
-                node.data?.priority === 'high' || node.data?.priority === 'critical' 
-                  ? 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200' 
-                  : node.data?.priority === 'medium' 
-                    ? 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200' 
-                    : 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200'
-              }`}>
-                {node.data?.priority}
-              </div>
-            )}
-          </div>
-        
-        {/* Botões de ação */}
-        {selectedWorkflowNode?.id === node.id && (
-          <div className="absolute -top-2 -right-2 flex gap-1 z-20">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-5 w-5 p-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                startConnection(node.id);
-              }}
-              title="Conectar a outro nó"
-            >
-              <Plus className="h-2 w-2" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-5 w-5 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteWorkflowNode(node.id);
-              }}
-              title="Remover nó"
-            >
-              <X className="h-2 w-2" />
-            </Button>
-          </div>
-        )}
-        
-        {/* Resize handles - appear only when node is selected */}
-        {selectedWorkflowNode?.id === node.id && (
-          <div>
-            {/* Corner resize handles */}
-            <div
-              className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-se-resize z-30 hover:bg-blue-600"
-              onMouseDown={(e) => handleResizeStart(e, node.id, 'se')}
-              title="Redimensionar"
-              style={{ borderRadius: '0 0 3px 0' }}
-            />
-            <div
-              className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-nw-resize z-30 hover:bg-blue-600"
-              onMouseDown={(e) => handleResizeStart(e, node.id, 'nw')}
-              title="Redimensionar"
-              style={{ borderRadius: '3px 0 0 0' }}
-            />
-            <div
-              className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-ne-resize z-30 hover:bg-blue-600"
-              onMouseDown={(e) => handleResizeStart(e, node.id, 'ne')}
-              title="Redimensionar"
-              style={{ borderRadius: '0 3px 0 0' }}
-            />
-            <div
-              className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-sw-resize z-30 hover:bg-blue-600"
-              onMouseDown={(e) => handleResizeStart(e, node.id, 'sw')}
-              title="Redimensionar"
-              style={{ borderRadius: '0 0 0 3px' }}
-            />
-          </div>
-        )}
-      </div>
-      );
-    });
-  }, [
-    workflowNodes, getNodeSize, getNodeShape, getNodeStateClasses, getNodeTypeClasses,
-    isDragging, handleWorkflowNodeClick, handleNodeMouseDown, selectedWorkflowNode,
-    isConnecting, connectionSource, startConnection, deleteWorkflowNode, handleResizeStart
-  ]);
-
-  // Drag and Drop functions moved above renderWorkflowNodes
-
-  // Helper functions moved to the top of the workflow section
-
-  const updateNodeProperty = useCallback((nodeId: string, property: string, value: any) => {
-    setWorkflowNodes(prev => prev.map(node => 
-      node.id === nodeId 
-        ? { ...node, data: { ...node.data, [property]: value } }
-        : node
-    ));
-    
-    if (selectedWorkflowNode && selectedWorkflowNode.id === nodeId) {
-      setSelectedWorkflowNode(prev => prev ? { ...prev, data: { ...prev.data, [property]: value } } : null);
-    }
-    
-    setHasUnsavedChanges(true);
-  }, [selectedWorkflowNode]);
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow-2xl transition-all duration-300 ${
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+      <div className={`bg-white dark:bg-gray-900 shadow-2xl transition-all duration-300 ${
         isMaximized 
           ? 'w-full h-full max-w-none max-h-none rounded-none' 
-          : 'w-[95vw] h-[95vh] max-w-7xl'
+          : 'w-[95vw] h-[95vh] max-w-7xl rounded-2xl'
       }`}>
         
-        {/* Header do Modal */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        {/* Enhanced Header */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 px-6 py-4 flex items-center justify-between rounded-t-2xl">
           <div className="flex items-center gap-4">
-            <div className="relative p-3 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-xl shadow-lg">
-              <Settings2 className="w-6 h-6 text-white" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <div className="relative p-3 bg-white/20 backdrop-blur-md rounded-xl shadow-lg">
+              <Workflow className="w-7 h-7 text-white" />
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse"></div>
             </div>
             <div>
+              <h1 className="text-xl font-bold text-white">
+                {mode === 'create' ? 'Criar Novo' : 'Editar'} - Process Designer Professional
+              </h1>
+              {processName && (
+                <h2 className="text-lg font-semibold text-blue-100">
+                  {processName}
+                </h2>
+              )}
+              <p className="text-sm text-blue-100/80">
+                {currentStep === 'form-builder' 
+                  ? 'Etapa 1: Construtor de Formulários • Campos Dinâmicos • Validações Inteligentes'
+                  : 'Etapa 2: Designer de Workflow • Canvas Profissional • Elementos Inteligentes'
+                }
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {hasUnsavedChanges && (
+              <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-100 border-yellow-400/30">
+                <Circle className="w-2 h-2 mr-2 fill-current animate-pulse" />
+                Não salvo
+              </Badge>
+            )}
+            
+            <Input
+              placeholder="Nome do processo..."
+              value={processName}
+              onChange={(e) => {
+                setProcessName(e.target.value);
+                setHasUnsavedChanges(true);
+              }}
+              className="w-64 bg-white/10 border-white/20 text-white placeholder-white/60"
+            />
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="text-white hover:bg-white/10"
+              title={isMaximized ? "Restaurar" : "Maximizar"}
+            >
+              {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            
+            <Button 
+              onClick={handleSave}
+              disabled={!processName.trim() || saveLoading}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/20"
+              size="sm"
+            >
+              {saveLoading ? (
+                <React.Fragment>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Salvando...
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar
+                </React.Fragment>
+              )}
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onClose}
+              className="text-white hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Step Navigation */}
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center space-x-8">
+            {/* Step 1 */}
+            <div className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-300 ${
+              currentStep === 'form-builder' 
+                ? 'bg-blue-100 text-blue-700 shadow-md' 
+                : formFields.length > 0 
+                  ? 'bg-green-100 text-green-700 cursor-pointer hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-500 cursor-pointer hover:bg-gray-200'
+            }`} onClick={() => setCurrentStep('form-builder')}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep === 'form-builder' 
+                  ? 'bg-blue-500 text-white' 
+                  : formFields.length > 0 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-gray-300 text-gray-600'
+              }`}>
+                {formFields.length > 0 ? '✓' : '1'}
+              </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  {mode === 'create' ? 'Criar Novo' : 'Editar'} - Process Designer Enhanced
-                </h1>
-                {processName && (
-                  <h2 className="text-lg font-semibold text-purple-600 dark:text-purple-400">
-                    {processName}
-                  </h2>
-                )}
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {selectedTemplate 
-                    ? `Template: ${selectedTemplate.name} • ${selectedTemplate.complexity} • ${selectedTemplate.estimatedTime}`
-                    : 'Arquitetura de 5 Camadas: Templates • Form Builder • Workflow • Analytics • Integrations'
+                <p className="font-medium">Construtor de Formulários</p>
+                <p className="text-xs opacity-75">
+                  {formFields.length > 0 ? `${formFields.length} campos criados` : 'Criar campos do formulário'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Arrow */}
+            <div className="text-gray-400">
+              <ChevronRight className="w-5 h-5" />
+            </div>
+            
+            {/* Step 2 */}
+            <div className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-300 ${
+              currentStep === 'workflow-designer' 
+                ? 'bg-blue-100 text-blue-700 shadow-md' 
+                : formFields.length > 0 
+                  ? 'bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`} onClick={() => {
+              if (formFields.length > 0) {
+                setCurrentStep('workflow-designer');
+              }
+            }}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep === 'workflow-designer' 
+                  ? 'bg-blue-500 text-white' 
+                  : workflowNodes.length > 0 
+                    ? 'bg-green-500 text-white' 
+                    : formFields.length > 0 
+                      ? 'bg-gray-300 text-gray-600' 
+                      : 'bg-gray-200 text-gray-400'
+              }`}>
+                {workflowNodes.length > 0 ? '✓' : '2'}
+              </div>
+              <div>
+                <p className={`font-medium ${formFields.length === 0 ? 'text-gray-400' : ''}`}>
+                  Designer de Workflow
+                </p>
+                <p className="text-xs opacity-75">
+                  {formFields.length === 0 
+                    ? 'Complete a etapa 1 primeiro' 
+                    : workflowNodes.length > 0 
+                      ? `${workflowNodes.length} elementos no workflow` 
+                      : 'Desenhar o fluxo do processo'
                   }
                 </p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex h-[calc(100%-160px)]">
+          {/* Step 1: Form Builder */}
+          {currentStep === 'form-builder' && (
+            <FormBuilderSection 
+              formFields={formFields}
+              setFormFields={setFormFields}
+              editingField={editingField}
+              setEditingField={setEditingField}
+              showFieldModal={showFieldModal}
+              setShowFieldModal={setShowFieldModal}
+              selectedFieldType={selectedFieldType}
+              setSelectedFieldType={setSelectedFieldType}
+              setHasUnsavedChanges={setHasUnsavedChanges}
+              setCurrentStep={setCurrentStep}
+              gridConfig={formGridConfig}
+              setGridConfig={setFormGridConfig}
+            />
+          )}
           
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              {/* Badge elements removed as requested */}
-            </div>
-            {hasUnsavedChanges && (
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
-                Não salvo
-              </Badge>
-            )}
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsMaximized(!isMaximized)}
-              title={isMaximized ? "Restaurar" : "Maximizar"}
-            >
-              {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-            <div className="flex items-center gap-2">
-              {activeLayer === 'form' && formFields.length > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsFormPreviewOpen(true)}
+          {/* Step 2: Workflow Designer */}
+          {currentStep === 'workflow-designer' && (
+            <React.Fragment>
+              {/* Node Palette */}
+              <NodePalette onNodeAdd={addNode} />
+              
+              {/* Professional Canvas */}
+              <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+                <div
+                  ref={canvasRef}
+                  className="w-full h-full relative cursor-grab active:cursor-grabbing"
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onWheel={(e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    handleZoom(delta);
+                  }}
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Preview Formulário
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSave}
-                disabled={!processName.trim() || (!formFields.length && !workflowNodes.length) || saveLoading}
-              >
-                {saveLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar Processo
-                  </>
-                )}
-              </Button>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Navegação das Camadas */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="px-6">
-            <Tabs value={activeLayer} onValueChange={(value) => setActiveLayer(value as any)} className="w-full">
-              <TabsList className="grid w-full grid-cols-7 bg-gray-100 dark:bg-gray-700">
-                <TabsTrigger value="template" className="flex items-center gap-2">
-                  <Layout className="h-4 w-4" />
-                  <span className="hidden sm:inline">Templates</span>
-                  <span className="sm:hidden">Temp</span>
-                </TabsTrigger>
-                <TabsTrigger value="form" className="flex items-center gap-2" disabled={!selectedTemplate}>
-                  <Edit className="h-4 w-4" />
-                  <span className="hidden sm:inline">Form Builder</span>
-                  <span className="sm:hidden">Forms</span>
-                </TabsTrigger>
-                <TabsTrigger value="workflow" className="flex items-center gap-2" disabled={!selectedTemplate}>
-                  <Workflow className="h-4 w-4" />
-                  <span className="hidden sm:inline">Workflow</span>
-                  <span className="sm:hidden">Flow</span>
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="flex items-center gap-2" disabled={!selectedTemplate}>
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Analytics</span>
-                  <span className="sm:hidden">Charts</span>
-                </TabsTrigger>
-                <TabsTrigger value="reports" className="flex items-center gap-2" disabled={!selectedTemplate}>
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Reports</span>
-                  <span className="sm:hidden">Reports</span>
-                </TabsTrigger>
-                <TabsTrigger value="integrations" className="flex items-center gap-2" disabled={!selectedTemplate}>
-                  <Network className="h-4 w-4" />
-                  <span className="hidden sm:inline">Integrations</span>
-                  <span className="sm:hidden">APIs</span>
-                </TabsTrigger>
-                <TabsTrigger value="documentation" className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100">
-                  <BookOpen className="h-4 w-4" />
-                  <span className="hidden sm:inline">Documentação</span>
-                  <span className="sm:hidden">Docs</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-        
-        {/* Conteúdo das Camadas */}
-        <div className="flex-1 p-6 overflow-auto" style={{ height: 'calc(100vh - 140px)' }}>
-          <Tabs value={activeLayer} className="w-full h-full">
-            
-            {/* NOVA CAMADA: Template Selection */}
-            <TabsContent value="template" className="space-y-6 h-full">
-              <div className="max-w-6xl mx-auto">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold mb-2">Escolha um Template</h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Selecione um template pré-configurado ou inicie do zero com um processo personalizado
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {processTemplates.map((template) => {
-                    const IconComponent = template.icon === 'Shield' ? Shield :
-                      template.icon === 'AlertCircle' ? AlertCircle :
-                      template.icon === 'CheckCircle' ? CheckCircle :
-                      template.icon === 'FileText' ? FileText :
-                      template.icon === 'Sparkles' ? Sparkles : Cog;
-                    
-                    const isSelected = selectedTemplate?.id === template.id;
-                    
-                    return (
-                      <Card 
-                        key={template.id} 
-                        className={`cursor-pointer transition-all hover:shadow-lg ${
-                          isSelected 
-                            ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' 
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
-                        onClick={() => {
-                          setSelectedTemplate(template);
-                          setProcessName(template.name);
-                          setProcessDescription(template.description);
-                          setProcessCategory(template.category);
-                          setProcessFramework(template.framework);
-                          setHasUnsavedChanges(true);
-                        }}
-                      >
-                        <CardHeader>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-3 rounded-lg ${
-                                template.category === 'compliance' ? 'bg-blue-100 text-blue-600' :
-                                template.category === 'risk' ? 'bg-red-100 text-red-600' :
-                                template.category === 'audit' ? 'bg-green-100 text-green-600' :
-                                template.category === 'incident' ? 'bg-orange-100 text-orange-600' :
-                                template.category === 'policy' ? 'bg-purple-100 text-purple-600' :
-                                'bg-gray-100 text-gray-600'
-                              }`}>
-                                <IconComponent className="h-6 w-6" />
-                              </div>
-                              <div>
-                                <CardTitle className="text-lg">{template.name}</CardTitle>
-                                <Badge className={`mt-1 text-xs ${
-                                  template.complexity === 'simple' ? 'bg-green-100 text-green-800' :
-                                  template.complexity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {template.complexity}
-                                </Badge>
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle className="h-6 w-6 text-purple-600" />
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                            {template.description}
-                          </p>
-                          
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-500">Tempo estimado:</span>
-                              <span className="font-medium">{template.estimatedTime}</span>
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-1">
-                              {template.tags.slice(0, 3).map((tag, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                              {template.tags.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{template.tags.length - 3}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {template.analytics.kpis.length > 0 && (
-                              <div className="text-xs text-gray-500">
-                                <strong>KPIs:</strong> {template.analytics.kpis.join(', ')}
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                
-                {selectedTemplate && (
-                  <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">
-                          Template Selecionado: {selectedTemplate.name}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-4">
-                          {selectedTemplate.description}
-                        </p>
-                        
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-4">
-                            <Label className="text-sm font-medium w-32">Nome do Processo:</Label>
-                            <Input
-                              value={processName}
-                              onChange={(e) => {
-                                setProcessName(e.target.value);
-                                setHasUnsavedChanges(true);
-                              }}
-                              placeholder="Digite o nome do seu processo..."
-                              className="max-w-md"
-                            />
-                          </div>
-                          
-                          <div className="flex items-start gap-4">
-                            <Label className="text-sm font-medium w-32 mt-2">Descrição:</Label>
-                            <Textarea
-                              value={processDescription}
-                              onChange={(e) => {
-                                setProcessDescription(e.target.value);
-                                setHasUnsavedChanges(true);
-                              }}
-                              placeholder="Descreva o objetivo e escopo do processo..."
-                              rows={3}
-                              className="max-w-md"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        onClick={() => {
-                          if (!processName.trim()) {
-                            toast.error('Nome do processo é obrigatório!');
-                            return;
-                          }
-                          loadTemplate(selectedTemplate);
-                        }}
-                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                        disabled={!processName.trim()}
-                      >
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Continuar com Template
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-            {/* CAMADA 1: Form Builder com Canvas Dinâmico */}
-            <TabsContent value="form" className="space-y-6 h-full">
-              <div className="flex h-full gap-6">
-                
-                {/* Biblioteca de Componentes */}
-                <div className="w-44 flex-shrink-0 min-w-0">
-                  <Card className="h-full flex flex-col overflow-hidden">
-                    <CardHeader className="pb-1 px-2 pt-2 flex-shrink-0">
-                      <CardTitle className="text-xs flex items-center gap-1 truncate">
-                        <Boxes className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">Campos</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-1 pb-2 flex-1 min-h-0 overflow-y-auto">
-                      <div className="space-y-1 w-full overflow-hidden">
-                        
-                        {/* Campos Básicos */}
-                        <div className="w-full overflow-hidden">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 px-1">
-                            Básicos
-                          </h4>
-                          <div className="space-y-0.5 w-full">
-                            {fieldTypes.basic.map((field, index) => (
-                              <div
-                                key={index}
-                                className="group flex items-center gap-1 p-1 border rounded cursor-grab active:cursor-grabbing transition-all hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 w-full overflow-hidden"
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, field, true)}
-                                onDragEnd={handleDragEnd}
-                                title={field.description}
-                              >
-                                <div className={`p-0.5 rounded ${field.color} flex-shrink-0`}>
-                                  <field.icon className="h-2 w-2 text-gray-700" />
-                                </div>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate flex-1 overflow-hidden">{field.label}</span>
-                                <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Campos Avançados */}
-                        <div className="w-full overflow-hidden">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 px-1">
-                            Avançados
-                          </h4>
-                          <div className="space-y-0.5 w-full">
-                            {fieldTypes.advanced.map((field, index) => (
-                              <div
-                                key={index}
-                                className="group flex items-center gap-1 p-1 border rounded cursor-grab active:cursor-grabbing transition-all hover:border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950 w-full overflow-hidden"
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, field, true)}
-                                onDragEnd={handleDragEnd}
-                                title={field.description}
-                              >
-                                <div className={`p-0.5 rounded ${field.color} flex-shrink-0`}>
-                                  <field.icon className="h-2 w-2 text-gray-700" />
-                                </div>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate flex-1 overflow-hidden">{field.label}</span>
-                                <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Campos de Workflow */}
-                        <div className="w-full overflow-hidden">
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 px-1">
-                            Workflow
-                          </h4>
-                          <div className="space-y-0.5 w-full">
-                            {fieldTypes.workflow.map((field, index) => (
-                              <div
-                                key={index}
-                                className="group flex items-center gap-1 p-1 border rounded cursor-grab active:cursor-grabbing transition-all hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-950 w-full overflow-hidden"
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, field, true)}
-                                onDragEnd={handleDragEnd}
-                                title={field.description}
-                              >
-                                <div className={`p-0.5 rounded ${field.color} flex-shrink-0`}>
-                                  <field.icon className="h-2 w-2 text-gray-700" />
-                                </div>
-                                <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate flex-1 overflow-hidden">{field.label}</span>
-                                <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Canvas de Edição */}
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="bg-white dark:bg-gray-800 border rounded-lg shadow-sm flex flex-col h-full">
-                    <div className="p-4 flex-shrink-0">
-                      <div className="h-full">{/* Remove duplicate wrapper */}
-                        {/* Header do Formulário com Controles */}
-                        <div className="mb-4 flex-shrink-0">
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
-                              <h3 className="text-xl font-semibold mb-2">Canvas de Formulário</h3>
-                              <p className="text-muted-foreground">Arraste campos da biblioteca e organize em linhas</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                                {formRows.length} linha{formRows.length !== 1 ? 's' : ''} • {formFields.length} campo{formFields.length !== 1 ? 's' : ''}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {/* Controles do Canvas */}
-                          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Nova linha:</span>
-                              <Select onValueChange={(value) => addNewRow(parseInt(value))}>
-                                <SelectTrigger className="w-36 h-8">
-                                  <SelectValue placeholder="Colunas" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="1">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-4 h-2 bg-blue-200 rounded-sm"></div>
-                                      <span>1 Coluna</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="2">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex gap-0.5">
-                                        <div className="w-2 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-2 h-2 bg-blue-200 rounded-sm"></div>
-                                      </div>
-                                      <span>2 Colunas</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex gap-0.5">
-                                        <div className="w-1.5 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-1.5 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-1.5 h-2 bg-blue-200 rounded-sm"></div>
-                                      </div>
-                                      <span>3 Colunas</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="4">
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex gap-0.5">
-                                        <div className="w-1 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-1 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-1 h-2 bg-blue-200 rounded-sm"></div>
-                                        <div className="w-1 h-2 bg-blue-200 rounded-sm"></div>
-                                      </div>
-                                      <span>4 Colunas</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={clearCanvas}
-                              className="h-7 px-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-                            >
-                              <RotateCcw className="h-3 w-3 mr-1" />
-                              Limpar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                        
-                    {/* Canvas Vazio ou com Conteúdo - movido para fora do flex-shrink-0 */}
-                    <div className="flex-1 min-h-0 p-4">
-                      {formFields.length === 0 && formRows.length === 0 ? (
-                        <div 
-                          className={`h-full flex items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg transition-colors ${
-                            draggedField ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' : 'border-gray-300 dark:border-gray-600'
-                          }`}
-                        >
-                          <div className="text-center">
-                            <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <h4 className="text-lg font-medium mb-2">Canvas Vazio</h4>
-                            <p className="text-sm mb-4">
-                              {draggedField ? 'Solte o campo aqui para começar' : 'Use o dropdown acima para adicionar linhas ou arraste campos da biblioteca'}
-                            </p>
-                            <div className="space-y-2">
-                              <Button onClick={() => addNewRow(2)} variant="outline">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Adicionar Primeira Linha (2 colunas)
-                              </Button>
-                              <div className="text-xs text-muted-foreground">
-                                Ou use o dropdown "Nova linha" acima
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 h-full overflow-y-auto">
-                            {/* Renderizar linhas */}
-                            {formRows.map((row, rowIndex) => {
-                              const rowFields = formFields.filter(field => field.rowId === row.id);
-                              
-                              return (
-                                <div key={row.id} className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
-                                  {/* Header da Linha */}
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <h4 className="text-xs font-medium">Linha {rowIndex + 1}</h4>
-                                      <Badge variant="outline" className="text-xs px-1 py-0">
-                                        {row.columns}col
-                                      </Badge>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center gap-1">
-                                        <Label className="text-xs">Cols:</Label>
-                                        <Select 
-                                          value={row.columns.toString()} 
-                                          onValueChange={(value) => updateRowColumns(row.id, parseInt(value))}
-                                        >
-                                          <SelectTrigger className="w-12 h-6">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="1">1</SelectItem>
-                                            <SelectItem value="2">2</SelectItem>
-                                            <SelectItem value="3">3</SelectItem>
-                                            <SelectItem value="4">4</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <Label className="text-xs">Alt:</Label>
-                                        <Select 
-                                          value={row.height} 
-                                          onValueChange={(value) => updateRowHeight(row.id, value)}
-                                        >
-                                          <SelectTrigger className="w-16 h-6">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="auto">Auto</SelectItem>
-                                            <SelectItem value="small">Pequena</SelectItem>
-                                            <SelectItem value="medium">Média</SelectItem>
-                                            <SelectItem value="large">Grande</SelectItem>
-                                            <SelectItem value="xl">Extra</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost"
-                                        onClick={() => removeRow(row.id)}
-                                        disabled={formRows.length <= 1}
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Grid de Colunas da Linha */}
-                                  <div 
-                                    className={`grid gap-2 ${
-                                      row.height === 'small' ? 'min-h-12' :
-                                      row.height === 'medium' ? 'min-h-20' :
-                                      row.height === 'large' ? 'min-h-32' :
-                                      row.height === 'xl' ? 'min-h-48' :
-                                      'min-h-16' // auto
-                                    }`}
-                                    style={{ gridTemplateColumns: row.columnWidths.join(' ') }}
-                                  >
-                                    {Array.from({ length: row.columns }, (_, columnIndex) => {
-                                      const columnFields = rowFields.filter(field => field.column === columnIndex);
-                                      
-                                      return (
-                                        <div 
-                                          key={`${row.id}-${columnIndex}`}
-                                          className={`min-h-16 border-2 border-dashed rounded p-1.5 transition-all duration-200 ${
-                                            dragOverColumn === columnIndex && selectedRow === row.id
-                                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 shadow-lg scale-105' 
-                                              : draggedField
-                                                ? 'border-gray-400 dark:border-gray-500 bg-gray-50 dark:bg-gray-800'
-                                                : 'border-gray-300 dark:border-gray-600'
-                                          }`}
-                                          onDragOver={(e) => handleDragOver(e, row.id, columnIndex)}
-                                          onDragEnter={handleDragEnter}
-                                          onDragLeave={handleDragLeave}
-                                          onDrop={(e) => handleDrop(e, row.id, columnIndex)}
-                                        >
-                                          <div className="flex items-center justify-between mb-1">
-                                            <div className="text-xs text-muted-foreground">
-                                              {columnIndex + 1}
-                                            </div>
-                                            <Select 
-                                              value={row.columnWidths[columnIndex] || '1fr'} 
-                                              onValueChange={(value) => updateColumnWidth(row.id, columnIndex, value)}
-                                            >
-                                              <SelectTrigger className="w-12 h-4 text-xs">
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="auto">Auto</SelectItem>
-                                                <SelectItem value="1fr">1fr</SelectItem>
-                                                <SelectItem value="2fr">2fr</SelectItem>
-                                                <SelectItem value="3fr">3fr</SelectItem>
-                                                <SelectItem value="200px">200px</SelectItem>
-                                                <SelectItem value="300px">300px</SelectItem>
-                                                <SelectItem value="400px">400px</SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                  
-                                          <div className="space-y-1">
-                                            {columnFields.length === 0 ? (
-                                              <div className="flex flex-col items-center justify-center py-4 text-muted-foreground">
-                                                {draggedField ? (
-                                                  <>
-                                                    <div className="w-8 h-8 border-2 border-dashed border-blue-400 rounded-full flex items-center justify-center mb-2">
-                                                      <Plus className="h-4 w-4 text-blue-500" />
-                                                    </div>
-                                                    <div className="text-xs text-blue-600 font-medium">Solte aqui</div>
-                                                    <div className="text-xs text-gray-500">Coluna {columnIndex + 1}</div>
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <Boxes className="h-6 w-6 text-gray-400 mb-1" />
-                                                    <div className="text-xs">Arraste um campo</div>
-                                                    <div className="text-xs text-gray-400">Coluna {columnIndex + 1}</div>
-                                                  </>
-                                                )}
-                                              </div>
-                                            ) : (
-                                              columnFields.map((field) => (
-                                                <div 
-                                                  key={field.id} 
-                                                  className={`p-1.5 border rounded cursor-pointer transition-all group ${
-                                                    selectedField?.id === field.id 
-                                                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-                                                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                                  }`}
-                                                  draggable
-                                                  onDragStart={(e) => handleDragStart(e, field, false)}
-                                                  onDragEnd={handleDragEnd}
-                                                  onClick={() => setSelectedField(field)}
-                                                >
-                                                  <div className="flex items-center justify-between mb-1">
-                                                    <Label className="font-medium text-xs truncate">{field.label}</Label>
-                                                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                      <Button 
-                                                        size="sm" 
-                                                        variant="ghost"
-                                                        className="h-4 w-4 p-0"
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          setSelectedField(field);
-                                                        }}
-                                                      >
-                                                        <Edit className="h-2 w-2" />
-                                                      </Button>
-                                                      <Button 
-                                                        size="sm" 
-                                                        variant="ghost"
-                                                        className="h-4 w-4 p-0"
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          deleteField(field.id);
-                                                        }}
-                                                      >
-                                                        <Trash2 className="h-2 w-2" />
-                                                      </Button>
-                                                    </div>
-                                                  </div>
-                                          
-                                                  {/* Preview do Campo */}
-                                                  <div className="pointer-events-none">
-                                                    {field.type === 'text' && (
-                                                      <Input placeholder={field.placeholder || 'Digite...'} disabled className="text-xs h-6" />
-                                                    )}
-                                                    {field.type === 'textarea' && (
-                                                      <Textarea placeholder={field.placeholder || 'Digite...'} disabled rows={1} className="text-xs h-6 resize-none" />
-                                                    )}
-                                                    {field.type === 'number' && (
-                                                      <Input type="number" placeholder="0" disabled className="text-xs h-6" />
-                                                    )}
-                                                    {field.type === 'date' && (
-                                                      <Input type="date" disabled className="text-xs h-6" />
-                                                    )}
-                                                    {field.type === 'time' && (
-                                                      <Input type="time" disabled className="text-xs h-6" />
-                                                    )}
-                                                    {field.type === 'select' && (
-                                                      <Select disabled>
-                                                        <SelectTrigger className="text-xs h-6">
-                                                          <SelectValue placeholder="Selecione" />
-                                                        </SelectTrigger>
-                                                      </Select>
-                                                    )}
-                                                    {field.type === 'checkbox' && (
-                                                      <div className="flex items-center space-x-1">
-                                                        <input type="checkbox" disabled className="scale-75" />
-                                                        <Label className="text-xs">Opção</Label>
-                                                      </div>
-                                                    )}
-                                                    {field.type === 'radio' && (
-                                                      <div className="flex items-center space-x-1">
-                                                        <input type="radio" disabled className="scale-75" />
-                                                        <Label className="text-xs">Opção 1</Label>
-                                                      </div>
-                                                    )}
-                                                    {field.type === 'file' && (
-                                                      <div className="border border-dashed border-gray-300 rounded p-1 text-center">
-                                                        <Upload className="h-3 w-3 mx-auto text-gray-400" />
-                                                        <div className="text-xs text-gray-500">Arquivo</div>
-                                                      </div>
-                                                    )}
-                                                    {field.type === 'rating' && (
-                                                      <div className="flex gap-0.5">
-                                                        {Array.from({ length: 5 }, (_, i) => (
-                                                          <Star key={i} className="h-3 w-3 text-gray-300" />
-                                                        ))}
-                                                      </div>
-                                                    )}
-                                                    {field.type === 'slider' && (
-                                                      <div className="py-1">
-                                                        <input type="range" disabled className="w-full h-1" />
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                  
-                                                  <div className="mt-1 text-xs text-muted-foreground flex items-center justify-between">
-                                                    <span>Tipo: {field.type}</span>
-                                                    <div className="flex items-center gap-1">
-                                                      {field.required && <Badge variant="secondary" className="text-xs px-1 py-0">Req</Badge>}
-                                                      <span className="text-xs">☰</span>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ))
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Painel de Propriedades */}
-                <div className="w-64 flex-shrink-0 min-h-0">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-shrink-0 pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        Propriedades
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                      {selectedField ? (
-                        <div className="space-y-3 pr-2">
-                          {/* Informações básicas do campo */}
-                          <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs font-medium">Tipo: {selectedField.type}</span>
-                            </div>
-                            <div className="text-xs text-gray-500">ID: {selectedField.id}</div>
-                          </div>
-
-                          {/* Label do Campo */}
-                          <div>
-                            <Label className="text-xs font-semibold">Label do Campo</Label>
-                            <Input
-                              value={selectedField.label}
-                              onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
-                              className="h-8 text-xs mt-1"
-                              placeholder="Nome do campo"
-                            />
-                          </div>
-                          
-                          {/* Placeholder - para campos de entrada */}
-                          {['text', 'textarea', 'email', 'password', 'number', 'phone', 'url'].includes(selectedField.type) && (
-                            <div>
-                              <Label className="text-xs font-semibold">Placeholder</Label>
-                              <Input
-                                value={selectedField.placeholder || ''}
-                                onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })}
-                                className="h-8 text-xs mt-1"
-                                placeholder="Texto de exemplo..."
-                              />
-                            </div>
-                          )}
-
-                          {/* Descrição/Ajuda */}
-                          <div>
-                            <Label className="text-xs font-semibold">Descrição/Ajuda</Label>
-                            <Textarea
-                              value={selectedField.description || ''}
-                              onChange={(e) => updateField(selectedField.id, { description: e.target.value })}
-                              className="h-12 text-xs mt-1 resize-none"
-                              placeholder="Texto de ajuda..."
-                            />
-                          </div>
-
-                          {/* Propriedades específicas por tipo de campo */}
-                          
-                          {/* Select/Radio/Dropdown - Opções */}
-                          {(['select', 'dropdown', 'radio', 'approval', 'priority', 'status', 'tags'].includes(selectedField.type)) && (
-                            <div>
-                              <Label className="text-xs font-semibold">Opções</Label>
-                              <Textarea
-                                value={(selectedField.options || []).join('\n')}
-                                onChange={(e) => updateField(selectedField.id, { 
-                                  options: e.target.value.split('\n').filter(opt => opt.trim()) 
-                                })}
-                                className="h-16 text-xs mt-1 resize-none"
-                                placeholder={selectedField.type === 'approval' ? 'Aprovado\nReprovado\nPendente' : 
-                                          selectedField.type === 'priority' ? 'Baixa\nMédia\nAlta\nCrítica' :
-                                          selectedField.type === 'status' ? 'Não Iniciado\nEm Andamento\nConcluído\nCancelado' :
-                                          selectedField.type === 'tags' ? 'Tag1\nTag2\nTag3' :
-                                          selectedField.type === 'dropdown' ? 'Opção A\nOpção B\nOpção C\nOpção D' :
-                                          'Opção 1\nOpção 2\nOpção 3'}
-                              />
-                            </div>
-                          )}
-
-                          {/* Dropdown - Configurações específicas */}
-                          {selectedField.type === 'dropdown' && (
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="searchable"
-                                  checked={selectedField.searchable || false}
-                                  onChange={(e) => updateField(selectedField.id, { searchable: e.target.checked })}
-                                  className="h-3 w-3"
-                                />
-                                <Label htmlFor="searchable" className="text-xs">Permitir pesquisa</Label>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="multiple"
-                                  checked={selectedField.multiple || false}
-                                  onChange={(e) => updateField(selectedField.id, { multiple: e.target.checked })}
-                                  className="h-3 w-3"
-                                />
-                                <Label htmlFor="multiple" className="text-xs">Seleção múltipla</Label>
-                              </div>
-                              <div>
-                                <Label className="text-xs font-semibold">Texto quando vazio</Label>
-                                <Input
-                                  value={selectedField.emptyText || ''}
-                                  onChange={(e) => updateField(selectedField.id, { emptyText: e.target.value })}
-                                  className="h-7 text-xs mt-1"
-                                  placeholder="Selecione uma opção..."
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Color - Valor padrão */}
-                          {selectedField.type === 'color' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Cor Padrão</Label>
-                              <Input
-                                type="color"
-                                value={selectedField.defaultValue || '#000000'}
-                                onChange={(e) => updateField(selectedField.id, { defaultValue: e.target.value })}
-                                className="h-8 w-16 mt-1"
-                              />
-                            </div>
-                          )}
-
-                          {/* Switch - Labels */}
-                          {selectedField.type === 'switch' && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Label ON</Label>
-                                <Input
-                                  value={selectedField.onLabel || 'Sim'}
-                                  onChange={(e) => updateField(selectedField.id, { onLabel: e.target.value })}
-                                  className="h-7 text-xs mt-1"
-                                  placeholder="Sim"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs font-semibold">Label OFF</Label>
-                                <Input
-                                  value={selectedField.offLabel || 'Não'}
-                                  onChange={(e) => updateField(selectedField.id, { offLabel: e.target.value })}
-                                  className="h-7 text-xs mt-1"
-                                  placeholder="Não"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Image - Tipos aceitos */}
-                          {selectedField.type === 'image' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Formatos Aceitos</Label>
-                              <Input
-                                value={selectedField.accept || '.jpg,.jpeg,.png,.gif,.webp'}
-                                onChange={(e) => updateField(selectedField.id, { accept: e.target.value })}
-                                className="h-8 text-xs mt-1"
-                                placeholder=".jpg,.jpeg,.png,.gif"
-                              />
-                            </div>
-                          )}
-
-                          {/* Phone - Formato */}
-                          {selectedField.type === 'phone' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Formato</Label>
-                              <Select 
-                                value={selectedField.format || 'br'} 
-                                onValueChange={(value) => updateField(selectedField.id, { format: value })}
-                              >
-                                <SelectTrigger className="h-7 text-xs mt-1">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="br">Brasil (11) 99999-9999</SelectItem>
-                                  <SelectItem value="us">EUA (999) 999-9999</SelectItem>
-                                  <SelectItem value="international">Internacional +XX</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-
-                          {/* Timer - Unidade */}
-                          {selectedField.type === 'timer' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Unidade</Label>
-                              <Select 
-                                value={selectedField.unit || 'minutes'} 
-                                onValueChange={(value) => updateField(selectedField.id, { unit: value })}
-                              >
-                                <SelectTrigger className="h-7 text-xs mt-1">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="seconds">Segundos</SelectItem>
-                                  <SelectItem value="minutes">Minutos</SelectItem>
-                                  <SelectItem value="hours">Horas</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-
-                          {/* Number - Min/Max */}
-                          {selectedField.type === 'number' && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Valor Mínimo</Label>
-                                <Input
-                                  type="number"
-                                  value={selectedField.min || ''}
-                                  onChange={(e) => updateField(selectedField.id, { min: e.target.value ? Number(e.target.value) : undefined })}
-                                  className="h-8 text-xs mt-1"
-                                  placeholder="0"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs font-semibold">Valor Máximo</Label>
-                                <Input
-                                  type="number"
-                                  value={selectedField.max || ''}
-                                  onChange={(e) => updateField(selectedField.id, { max: e.target.value ? Number(e.target.value) : undefined })}
-                                  className="h-8 text-xs mt-1"
-                                  placeholder="100"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Textarea - Linhas */}
-                          {selectedField.type === 'textarea' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Número de Linhas</Label>
-                              <Input
-                                type="number"
-                                value={selectedField.rows || 3}
-                                onChange={(e) => updateField(selectedField.id, { rows: Number(e.target.value) || 3 })}
-                                className="h-8 text-xs mt-1"
-                                min="1"
-                                max="10"
-                              />
-                            </div>
-                          )}
-
-                          {/* Rating - Máximo */}
-                          {selectedField.type === 'rating' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Máximo de Estrelas</Label>
-                              <Input
-                                type="number"
-                                value={selectedField.maxRating || 5}
-                                onChange={(e) => updateField(selectedField.id, { maxRating: Number(e.target.value) || 5 })}
-                                className="h-8 text-xs mt-1"
-                                min="1"
-                                max="10"
-                              />
-                            </div>
-                          )}
-
-                          {/* Slider - Min/Max/Step */}
-                          {selectedField.type === 'slider' && (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label className="text-xs font-semibold">Min</Label>
-                                  <Input
-                                    type="number"
-                                    value={selectedField.min || 0}
-                                    onChange={(e) => updateField(selectedField.id, { min: Number(e.target.value) || 0 })}
-                                    className="h-8 text-xs mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold">Max</Label>
-                                  <Input
-                                    type="number"
-                                    value={selectedField.max || 100}
-                                    onChange={(e) => updateField(selectedField.id, { max: Number(e.target.value) || 100 })}
-                                    className="h-8 text-xs mt-1"
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-xs font-semibold">Passo</Label>
-                                <Input
-                                  type="number"
-                                  value={selectedField.step || 1}
-                                  onChange={(e) => updateField(selectedField.id, { step: Number(e.target.value) || 1 })}
-                                  className="h-8 text-xs mt-1"
-                                  min="0.1"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* File - Tipos aceitos */}
-                          {selectedField.type === 'file' && (
-                            <div>
-                              <Label className="text-xs font-semibold">Tipos de Arquivo Aceitos</Label>
-                              <Input
-                                value={selectedField.accept || ''}
-                                onChange={(e) => updateField(selectedField.id, { accept: e.target.value })}
-                                className="h-8 text-xs mt-1"
-                                placeholder=".pdf,.doc,.docx,.jpg,.png"
-                              />
-                              <div className="text-xs text-gray-500 mt-1">Use vírgulas para separar extensões</div>
-                            </div>
-                          )}
-
-                          {/* Validações */}
-                          <div className="space-y-1.5 pt-2 border-t">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="required"
-                                checked={selectedField.required || false}
-                                onChange={(e) => updateField(selectedField.id, { required: e.target.checked })}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor="required" className="text-xs">Obrigatório</Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="readonly"
-                                checked={selectedField.readonly || false}
-                                onChange={(e) => updateField(selectedField.id, { readonly: e.target.checked })}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor="readonly" className="text-xs">Só leitura</Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="disabled"
-                                checked={selectedField.disabled || false}
-                                onChange={(e) => updateField(selectedField.id, { disabled: e.target.checked })}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor="disabled" className="text-xs">Desabilitado</Label>
-                            </div>
-                          </div>
-
-                          {/* Width do campo */}
-                          <div>
-                            <Label className="text-xs font-semibold">Largura</Label>
-                            <Select 
-                              value={selectedField.width || 'full'} 
-                              onValueChange={(value) => updateField(selectedField.id, { width: value })}
-                            >
-                              <SelectTrigger className="h-7 text-xs mt-1">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="full">100%</SelectItem>
-                                <SelectItem value="half">50%</SelectItem>
-                                <SelectItem value="third">33%</SelectItem>
-                                <SelectItem value="quarter">25%</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
-                          {/* Botão de remoção */}
-                          <div className="pt-3 border-t">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteField(selectedField.id)}
-                              className="w-full h-7 text-xs"
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Remover
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Settings className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                            Nenhum campo selecionado
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            Clique em um campo no canvas para editar suas propriedades
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* CAMADA 2: Workflow Engine Visual */}
-            <TabsContent value="workflow" className="space-y-6 h-full">
-              <div className="h-full flex gap-4">
-                
-                {/* Paleta de Nós do Workflow */}
-                <div className="w-56 flex-shrink-0 min-w-0">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="pb-2 px-3 pt-3 flex-shrink-0">
-                      <CardTitle className="text-xs flex items-center gap-2">
-                        <GitBranch className="h-4 w-4 flex-shrink-0" />
-                        <span className="truncate">Elementos Workflow</span>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-2 pb-3 flex-1 min-h-0 overflow-y-auto">
-                      <div className="space-y-3">
-                        
-                        {/* Nós de Controle */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
-                            Controle de Fluxo
-                          </h4>
-                          <div className="space-y-1">
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-300 dark:hover:border-green-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'start', label: 'Início', category: 'control' })}
-                                 title="Ponto de início do processo">
-                              <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Início</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-red-50 dark:hover:bg-red-950 hover:border-red-300 dark:hover:border-red-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'end', label: 'Fim', category: 'control' })}
-                                 title="Ponto de finalização do processo">
-                              <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Fim</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-yellow-50 dark:hover:bg-yellow-950 hover:border-yellow-300 dark:hover:border-yellow-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'decision', label: 'Decisão', category: 'control' })}
-                                 title="Ponto de decisão condicional">
-                              <div className="w-3 h-3 bg-yellow-500 rounded transform rotate-45 flex-shrink-0"></div>
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Decisão</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-950 hover:border-purple-300 dark:hover:border-purple-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'parallel', label: 'Paralelo', category: 'control' })}
-                                 title="Execução paralela de tarefas">
-                              <div className="w-3 h-3 bg-purple-500 rounded flex-shrink-0"></div>
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Paralelo</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'merge', label: 'Junção', category: 'control' })}
-                                 title="Junção de fluxos paralelos">
-                              <div className="w-3 h-3 bg-indigo-500 rounded-full flex-shrink-0"></div>
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Junção</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Tarefas */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
-                            Tarefas
-                          </h4>
-                          <div className="space-y-1">
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-950 hover:border-blue-300 dark:hover:border-blue-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'user_task', label: 'Tarefa Usuário', category: 'task' })}
-                                 title="Tarefa executada por usuário">
-                              <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Tarefa Usuário</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'auto_task', label: 'Tarefa Automática', category: 'task' })}
-                                 title="Tarefa executada automaticamente">
-                              <Cog className="h-3 w-3 text-indigo-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Tarefa Automática</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-teal-50 dark:hover:bg-teal-950 hover:border-teal-300 dark:hover:border-teal-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'approval', label: 'Aprovação', category: 'task' })}
-                                 title="Tarefa de aprovação">
-                              <CheckCircle className="h-3 w-3 text-teal-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Aprovação</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-950 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'review', label: 'Revisão', category: 'task' })}
-                                 title="Tarefa de revisão">
-                              <Eye className="h-3 w-3 text-emerald-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Revisão</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-rose-50 dark:hover:bg-rose-950 hover:border-rose-300 dark:hover:border-rose-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'escalation', label: 'Escalação', category: 'task' })}
-                                 title="Tarefa de escalação">
-                              <TrendingUp className="h-3 w-3 text-rose-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Escalação</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Eventos */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
-                            Eventos
-                          </h4>
-                          <div className="space-y-1">
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-950 hover:border-orange-300 dark:hover:border-orange-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'timer', label: 'Timer', category: 'event' })}
-                                 title="Evento baseado em tempo">
-                              <Timer className="h-3 w-3 text-orange-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Timer</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-pink-50 dark:hover:bg-pink-950 hover:border-pink-300 dark:hover:border-pink-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'notification', label: 'Notificação', category: 'event' })}
-                                 title="Envio de notificação">
-                              <Bell className="h-3 w-3 text-pink-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Notificação</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-cyan-50 dark:hover:bg-cyan-950 hover:border-cyan-300 dark:hover:border-cyan-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'message', label: 'Mensagem', category: 'event' })}
-                                 title="Envio de mensagem">
-                              <MessageSquare className="h-3 w-3 text-cyan-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Mensagem</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-950 hover:border-amber-300 dark:hover:border-amber-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'webhook', label: 'Webhook', category: 'event' })}
-                                 title="Chamada de webhook">
-                              <Plug className="h-3 w-3 text-amber-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Webhook</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Conectores */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2 px-1">
-                            Conectores
-                          </h4>
-                          <div className="space-y-1">
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'condition', label: 'Condição', category: 'connector' })}
-                                 title="Conector condicional">
-                              <GitBranch className="h-3 w-3 text-slate-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Condição</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                            <div className="group p-2 border rounded cursor-grab flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-950 hover:border-gray-300 dark:hover:border-gray-600 transition-all w-full"
-                                 draggable
-                                 onDragStart={(e) => handleWorkflowDragStart(e, { type: 'loop', label: 'Loop', category: 'connector' })}
-                                 title="Loop de repetição">
-                              <RefreshCw className="h-3 w-3 text-gray-600 flex-shrink-0" />
-                              <span className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1">Loop</span>
-                              <GripVertical className="h-2 w-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Canvas do Workflow */}
-                <div className="flex-1 flex flex-col min-h-0">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-shrink-0 pb-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <CardTitle className="text-lg">Designer de Workflow</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                            {workflowNodes.length} elemento{workflowNodes.length !== 1 ? 's' : ''} • {workflowConnections.length} conexã{workflowConnections.length !== 1 ? 'ões' : 'o'}
-                          </div>
-                          
-                          {/* Controles de Linha */}
-                          <div className="flex items-center gap-1 bg-gray-50 dark:bg-gray-800 rounded p-1">
-                            <Button
-                              size="sm"
-                              variant={connectionLineStyle === 'straight' ? 'default' : 'ghost'}
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setConnectionLineStyle('straight')}
-                              title="Linhas retas"
-                            >
-                              ⎯
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={connectionLineStyle === 'curved' ? 'default' : 'ghost'}
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setConnectionLineStyle('curved')}
-                              title="Linhas curvas"
-                            >
-                              ⤴
-                            </Button>
-                            <div className="w-px h-4 bg-gray-300 dark:bg-gray-600"></div>
-                            <Button
-                              size="sm"
-                              variant={connectionLineType === 'solid' ? 'default' : 'ghost'}
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setConnectionLineType('solid')}
-                              title="Linha contínua"
-                            >
-                              ——
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={connectionLineType === 'dashed' ? 'default' : 'ghost'}
-                              className="h-6 px-2 text-xs"
-                              onClick={() => setConnectionLineType('dashed')}
-                              title="Linha tracejada"
-                            >
-                              ⋯⋯
-                            </Button>
-                          </div>
-                          {isConnecting && (
-                            <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full animate-pulse">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs font-medium">Modo Conexão</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-4 w-4 p-0 hover:bg-blue-200 dark:hover:bg-blue-800"
-                                onClick={cancelConnection}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <Button size="sm" variant="outline">
-                            <PlayCircle className="h-4 w-4 mr-1" />
-                            Simular
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Eye className="h-4 w-4 mr-1" />
-                            Validar
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => setWorkflowNodes([])}>
-                            <RotateCcw className="h-4 w-4 mr-1" />
-                            Limpar
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Controles do Canvas */}
-                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border">
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className="text-gray-600 dark:text-gray-400">Controles:</span>
-                          <Badge variant="secondary">Arrastar para mover</Badge>
-                          <Badge variant="secondary">Clique para selecionar</Badge>
-                          <Badge variant="secondary">Del para excluir</Badge>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="h-6 w-6 p-0"
-                            onClick={() => setCanvasScale(prev => Math.max(0.25, prev - 0.25))}
-                            title="Zoom Out"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Select 
-                            value={(canvasScale * 100).toString()} 
-                            onValueChange={(value) => setCanvasScale(parseInt(value) / 100)}
-                          >
-                            <SelectTrigger className="w-20 h-6 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="25">25%</SelectItem>
-                              <SelectItem value="50">50%</SelectItem>
-                              <SelectItem value="75">75%</SelectItem>
-                              <SelectItem value="100">100%</SelectItem>
-                              <SelectItem value="125">125%</SelectItem>
-                              <SelectItem value="150">150%</SelectItem>
-                              <SelectItem value="200">200%</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="h-6 w-6 p-0"
-                            onClick={() => setCanvasScale(prev => Math.min(2, prev + 0.25))}
-                            title="Zoom In"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 p-4">
-                      <div className="relative w-full bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden"
-                           onDrop={handleWorkflowCanvasDrop}
-                           onDragOver={handleWorkflowCanvasDragOver}
-                           style={{ 
-                             height: '600px',
-                             minHeight: '600px',
-                             maxHeight: '600px'
-                           }}>
-                        
-                        {workflowNodes.length === 0 ? (
-                          <div className="flex items-center justify-center h-full">
-                            <div className="text-center text-gray-500 dark:text-gray-400">
-                              <GitBranch className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                              <h4 className="text-lg font-medium mb-2">Canvas de Workflow</h4>
-                              <p className="text-sm mb-4">
-                                {selectedTemplate 
-                                  ? 'Workflow pré-configurado carregado. Personalize conforme necessário.'
-                                  : 'Arraste elementos da paleta para criar seu workflow'
-                                }
-                              </p>
-                              {selectedTemplate && (
-                                <Button 
-                                  onClick={() => loadTemplate(selectedTemplate)}
-                                  className="mt-2"
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Recarregar Template
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="w-full h-full overflow-auto">
-                            <div 
-                              className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-default'}`}
-                              style={{ 
-                                width: '2000px', 
-                                height: '1500px',
-                                transform: `scale(${canvasScale})`,
-                                transformOrigin: '0 0'
-                              }}
-                              onMouseMove={handleCanvasMouseMove}
-                              onMouseUp={handleCanvasMouseUp}
-                              onMouseLeave={handleCanvasMouseUp}
-                            >
-                            {/* Renderizar nós do workflow */}
-                            {renderWorkflowNodes()}
-
-                            
-                            {/* Renderizar conexões do workflow */}
-                            <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 5 }}>
-                              {workflowConnections.map((connection) => {
-                                const sourceNode = workflowNodes.find(n => n.id === connection.source);
-                                const targetNode = workflowNodes.find(n => n.id === connection.target);
-                                
-                                if (!sourceNode || !targetNode) return null;
-                                
-                                const connectionPoints = getConnectionPoints(sourceNode, targetNode);
-                                const sourcePoint = connectionPoints.source;
-                                const targetPoint = connectionPoints.target;
-                                
-                                const strokeDashArray = connectionLineType === 'dashed' ? '8,4' : 'none';
-                                
-                                const markerEnd = connectionLineType === 'dashed' ? 'url(#arrowhead-dashed)' : 'url(#arrowhead)';
-                                
-                                return (
-                                  <g key={connection.id}>
-                                    {connectionLineStyle === 'straight' ? (
-                                      <line
-                                        x1={sourcePoint.x}
-                                        y1={sourcePoint.y}
-                                        x2={targetPoint.x}
-                                        y2={targetPoint.y}
-                                        stroke="#6366f1"
-                                        strokeWidth="3"
-                                        strokeDasharray={strokeDashArray}
-                                        markerEnd={markerEnd}
-                                        strokeLinecap="round"
-                                      />
-                                    ) : (
-                                      <path
-                                        d={`M ${sourcePoint.x} ${sourcePoint.y} Q ${(sourcePoint.x + targetPoint.x) / 2} ${sourcePoint.y - 50} ${targetPoint.x} ${targetPoint.y}`}
-                                        fill="none"
-                                        stroke="#6366f1"
-                                        strokeWidth="3"
-                                        strokeDasharray={strokeDashArray}
-                                        markerEnd={markerEnd}
-                                        strokeLinecap="round"
-                                      />
-                                    )}
-                                    {connection.label && (
-                                      <text
-                                        x={(sourcePoint.x + targetPoint.x) / 2}
-                                        y={(sourcePoint.y + targetPoint.y) / 2 - 15}
-                                        fill="#6366f1"
-                                        fontSize="12"
-                                        fontWeight="600"
-                                        textAnchor="middle"
-                                        className="pointer-events-auto cursor-pointer"
-                                        style={{ 
-                                          filter: 'drop-shadow(1px 1px 2px rgba(255,255,255,0.9))',
-                                          stroke: '#ffffff',
-                                          strokeWidth: '3px',
-                                          paintOrder: 'stroke fill'
-                                        }}
-                                      >
-                                        {connection.label}
-                                      </text>
-                                    )}
-                                  </g>
-                                );
-                              })}
-                              
-                              {/* Arrow marker definition - improved visibility */}
-                              <defs>
-                                <marker
-                                  id="arrowhead"
-                                  markerWidth="12"
-                                  markerHeight="8"
-                                  refX="10"
-                                  refY="4"
-                                  orient="auto"
-                                  markerUnits="strokeWidth"
-                                >
-                                  <path
-                                    d="M0,0 L0,8 L12,4 z"
-                                    fill="#6366f1"
-                                    stroke="#6366f1"
-                                    strokeWidth="1"
-                                  />
-                                </marker>
-                                <marker
-                                  id="arrowhead-dashed"
-                                  markerWidth="12"
-                                  markerHeight="8"
-                                  refX="10"
-                                  refY="4"
-                                  orient="auto"
-                                  markerUnits="strokeWidth"
-                                >
-                                  <path
-                                    d="M0,0 L0,8 L12,4 z"
-                                    fill="#6366f1"
-                                    stroke="#6366f1"
-                                    strokeWidth="1"
-                                  />
-                                </marker>
-                              </defs>
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Propriedades do Nó Selecionado */}
-                <div className="w-64 flex-shrink-0 min-h-0">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader className="flex-shrink-0 pb-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        Propriedades
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                      {selectedWorkflowNode ? (
-                        <div className="space-y-3 pr-2">
-                          {/* Informações básicas do nó */}
-                          <div className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className={`w-2 h-2 rounded-full ${
-                                selectedWorkflowNode.type === 'start' ? 'bg-green-500' :
-                                selectedWorkflowNode.type === 'end' ? 'bg-red-500' :
-                                selectedWorkflowNode.type === 'decision' ? 'bg-yellow-500' :
-                                selectedWorkflowNode.type === 'parallel' ? 'bg-purple-500' :
-                                'bg-blue-500'
-                              }`}></div>
-                              <span className="text-xs font-medium">Tipo: {selectedWorkflowNode.type}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">ID: {selectedWorkflowNode.id}</div>
-                          </div>
-
-                          {/* Nome do nó */}
-                          <div>
-                            <Label className="text-xs font-semibold">Nome do Elemento</Label>
-                            <Input
-                              value={selectedWorkflowNode.properties?.name || selectedWorkflowNode.label}
-                              onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'name', e.target.value)}
-                              className="h-8 text-xs mt-1"
-                              placeholder="Nome do elemento"
-                            />
-                          </div>
-
-                          {/* Descrição */}
-                          <div>
-                            <Label className="text-xs font-semibold">Descrição</Label>
-                            <Textarea
-                              value={selectedWorkflowNode.properties?.description || ''}
-                              onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'description', e.target.value)}
-                              className="h-12 text-xs mt-1 resize-none"
-                              placeholder="Descrição do elemento..."
-                            />
-                          </div>
-
-                          {/* Propriedades específicas por tipo */}
-
-                          {/* Elementos de Controle */}
-                          {selectedWorkflowNode.type === 'start' && (
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Tipo de Gatilho</Label>
-                                <Select 
-                                  value={selectedWorkflowNode.properties?.trigger || 'manual'}
-                                  onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'trigger', value)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs mt-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="manual">Manual</SelectItem>
-                                    <SelectItem value="automatic">Automático</SelectItem>
-                                    <SelectItem value="scheduled">Agendado</SelectItem>
-                                    <SelectItem value="event">Por Evento</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedWorkflowNode.type === 'decision' && (
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Condição</Label>
-                                <Textarea
-                                  value={selectedWorkflowNode.properties?.condition || ''}
-                                  onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'condition', e.target.value)}
-                                  className="h-12 text-xs mt-1 resize-none"
-                                  placeholder="Expressão condicional..."
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label className="text-xs font-semibold">Label Verdadeiro</Label>
-                                  <Input
-                                    value={selectedWorkflowNode.properties?.trueLabel || 'Sim'}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'trueLabel', e.target.value)}
-                                    className="h-7 text-xs mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold">Label Falso</Label>
-                                  <Input
-                                    value={selectedWorkflowNode.properties?.falseLabel || 'Não'}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'falseLabel', e.target.value)}
-                                    className="h-7 text-xs mt-1"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {selectedWorkflowNode.type === 'parallel' && (
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Número de Branches</Label>
-                                <Input
-                                  type="number"
-                                  value={selectedWorkflowNode.properties?.branches || 2}
-                                  onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'branches', Number(e.target.value))}
-                                  className="h-7 text-xs mt-1"
-                                  min="2"
-                                  max="10"
-                                />
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="waitAll"
-                                  checked={selectedWorkflowNode.properties?.waitAll || false}
-                                  onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'waitAll', e.target.checked)}
-                                  className="h-3 w-3"
-                                />
-                                <Label htmlFor="waitAll" className="text-xs">Aguardar todos os branches</Label>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Tarefas */}
-                          {['user_task', 'auto_task', 'approval', 'review', 'escalation'].includes(selectedWorkflowNode.type) && (
-                            <div className="space-y-2">
-                              {selectedWorkflowNode.type !== 'auto_task' && (
-                                <div>
-                                  <Label className="text-xs font-semibold">Responsável</Label>
-                                  <Select 
-                                    value={selectedWorkflowNode.properties?.assignee || ''}
-                                    onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'assignee', value)}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs mt-1">
-                                      <SelectValue placeholder="Selecionar responsável" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="respondent">Respondente</SelectItem>
-                                      <SelectItem value="auditor">Auditor</SelectItem>
-                                      <SelectItem value="manager">Gestor</SelectItem>
-                                      <SelectItem value="admin">Administrador</SelectItem>
-                                      <SelectItem value="custom">Personalizado</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-
-                              <div>
-                                <Label className="text-xs font-semibold">Prioridade</Label>
-                                <Select 
-                                  value={selectedWorkflowNode.properties?.priority || 'medium'}
-                                  onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'priority', value)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs mt-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="low">Baixa</SelectItem>
-                                    <SelectItem value="medium">Média</SelectItem>
-                                    <SelectItem value="high">Alta</SelectItem>
-                                    <SelectItem value="critical">Crítica</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              {selectedWorkflowNode.type !== 'auto_task' && (
-                                <div>
-                                  <Label className="text-xs font-semibold">Prazo (dias)</Label>
-                                  <Input
-                                    type="number"
-                                    value={selectedWorkflowNode.properties?.dueDays || ''}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'dueDays', Number(e.target.value))}
-                                    className="h-7 text-xs mt-1"
-                                    min="1"
-                                    placeholder="Ex: 3"
-                                  />
-                                </div>
-                              )}
-
-                              {selectedWorkflowNode.type === 'auto_task' && (
-                                <div>
-                                  <Label className="text-xs font-semibold">Script/Ação</Label>
-                                  <Textarea
-                                    value={selectedWorkflowNode.properties?.script || ''}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'script', e.target.value)}
-                                    className="h-16 text-xs mt-1 resize-none"
-                                    placeholder="Código ou ação a executar..."
-                                  />
-                                </div>
-                              )}
-
-                              {selectedWorkflowNode.type === 'escalation' && (
-                                <div>
-                                  <Label className="text-xs font-semibold">Nível de Escalação</Label>
-                                  <Input
-                                    type="number"
-                                    value={selectedWorkflowNode.properties?.level || 1}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'level', Number(e.target.value))}
-                                    className="h-7 text-xs mt-1"
-                                    min="1"
-                                    max="5"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Eventos */}
-                          {selectedWorkflowNode.type === 'timer' && (
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label className="text-xs font-semibold">Duração</Label>
-                                  <Input
-                                    type="number"
-                                    value={selectedWorkflowNode.properties?.duration || 60}
-                                    onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'duration', Number(e.target.value))}
-                                    className="h-7 text-xs mt-1"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs font-semibold">Unidade</Label>
-                                  <Select 
-                                    value={selectedWorkflowNode.properties?.unit || 'minutes'}
-                                    onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'unit', value)}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs mt-1">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="seconds">Segundos</SelectItem>
-                                      <SelectItem value="minutes">Minutos</SelectItem>
-                                      <SelectItem value="hours">Horas</SelectItem>
-                                      <SelectItem value="days">Dias</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {['notification', 'message'].includes(selectedWorkflowNode.type) && (
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs font-semibold">Mensagem</Label>
-                                <Textarea
-                                  value={selectedWorkflowNode.properties?.message || ''}
-                                  onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'message', e.target.value)}
-                                  className="h-16 text-xs mt-1 resize-none"
-                                  placeholder="Conteúdo da mensagem..."
-                                />
-                              </div>
-                              {selectedWorkflowNode.type === 'message' && (
-                                <div>
-                                  <Label className="text-xs font-semibold">Canal</Label>
-                                  <Select 
-                                    value={selectedWorkflowNode.properties?.channel || 'email'}
-                                    onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'channel', value)}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs mt-1">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="email">Email</SelectItem>
-                                      <SelectItem value="sms">SMS</SelectItem>
-                                      <SelectItem value="push">Push</SelectItem>
-                                      <SelectItem value="slack">Slack</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {selectedWorkflowNode.type === 'webhook' && (
-                            <div className="space-y-2">
-                              <div>
-                                <Label className="text-xs font-semibold">URL</Label>
-                                <Input
-                                  value={selectedWorkflowNode.properties?.url || ''}
-                                  onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'url', e.target.value)}
-                                  className="h-7 text-xs mt-1"
-                                  placeholder="https://api.exemplo.com/webhook"
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs font-semibold">Método</Label>
-                                <Select 
-                                  value={selectedWorkflowNode.properties?.method || 'POST'}
-                                  onValueChange={(value) => updateNodeProperty(selectedWorkflowNode.id, 'method', value)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs mt-1">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="GET">GET</SelectItem>
-                                    <SelectItem value="POST">POST</SelectItem>
-                                    <SelectItem value="PUT">PUT</SelectItem>
-                                    <SelectItem value="PATCH">PATCH</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Configurações gerais */}
-                          <div className="space-y-1.5 pt-2 border-t">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="active"
-                                checked={selectedWorkflowNode.properties?.active !== false}
-                                onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'active', e.target.checked)}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor="active" className="text-xs">Ativo</Label>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="required"
-                                checked={selectedWorkflowNode.properties?.required || false}
-                                onChange={(e) => updateNodeProperty(selectedWorkflowNode.id, 'required', e.target.checked)}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor="required" className="text-xs">Obrigatório</Label>
-                            </div>
-                          </div>
-                          
-                          {/* Botão de remoção */}
-                          <div className="pt-3 border-t">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteWorkflowNode(selectedWorkflowNode.id)}
-                              className="w-full h-7 text-xs"
-                            >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Remover Elemento
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Settings className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                            Nenhum elemento selecionado
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            Clique em um elemento no canvas para editar suas propriedades
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* CAMADA 3: Analytics & Dashboard */}
-            <TabsContent value="analytics" className="space-y-6 h-full">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                
-                {/* Painel de KPIs */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Gauge className="h-5 w-5" />
-                        KPIs do Processo
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-600">85%</div>
-                          <div className="text-sm text-blue-800 dark:text-blue-400">Taxa de Conclusão</div>
-                        </div>
-                        <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg">
-                          <div className="text-2xl font-bold text-green-600">3.2d</div>
-                          <div className="text-sm text-green-800 dark:text-green-400">Tempo Médio</div>
-                        </div>
-                        <div className="p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-                          <div className="text-2xl font-bold text-yellow-600">92%</div>
-                          <div className="text-sm text-yellow-800 dark:text-yellow-400">SLA Compliance</div>
-                        </div>
-                        <div className="p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
-                          <div className="text-2xl font-bold text-purple-600">4.6/5</div>
-                          <div className="text-sm text-purple-800 dark:text-purple-400">Satisfação</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Professional Grid */}
+                  <CanvasGrid scale={canvasScale} offset={canvasOffset} />
                   
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <BarChart className="h-5 w-5" />
-                        Gráficos de Performance
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Processos Concluídos</span>
-                          <span className="text-sm text-gray-600">156 / 180</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: '87%' }}></div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Dentro do Prazo</span>
-                          <span className="text-sm text-gray-600">134 / 156</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-green-600 h-2 rounded-full" style={{ width: '86%' }}></div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Sem Retrabalho</span>
-                          <span className="text-sm text-gray-600">128 / 156</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '82%' }}></div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Painel de Configuração de Dashboards */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5" />
-                        Configurar Dashboard
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium">Métricas Principais</Label>
-                        <div className="mt-2 space-y-2">
-                          {[
-                            { id: 'completion_rate', label: 'Taxa de Conclusão', enabled: true },
-                            { id: 'average_time', label: 'Tempo Médio de Conclusão', enabled: true },
-                            { id: 'sla_compliance', label: 'Conformidade com SLA', enabled: true },
-                            { id: 'user_satisfaction', label: 'Satisfação do Usuário', enabled: false },
-                            { id: 'error_rate', label: 'Taxa de Erros', enabled: false },
-                            { id: 'rework_rate', label: 'Taxa de Retrabalho', enabled: true },
-                          ].map((metric) => (
-                            <div key={metric.id} className="flex items-center justify-between">
-                              <Label className="text-sm">{metric.label}</Label>
-                              <Switch checked={metric.enabled} />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium">Tipos de Gráficos</Label>
-                        <div className="mt-2 grid grid-cols-3 gap-2">
-                          <Button variant="outline" size="sm" className="flex flex-col items-center gap-1 h-16">
-                            <BarChart className="h-4 w-4" />
-                            <span className="text-xs">Barras</span>
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex flex-col items-center gap-1 h-16">
-                            <LineChart className="h-4 w-4" />
-                            <span className="text-xs">Linhas</span>
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex flex-col items-center gap-1 h-16">
-                            <PieChart className="h-4 w-4" />
-                            <span className="text-xs">Pizza</span>
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-sm font-medium">Período de Análise</Label>
-                        <Select>
-                          <SelectTrigger className="mt-2">
-                            <SelectValue placeholder="Selecionar período" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                            <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                            <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                            <SelectItem value="1y">Último ano</SelectItem>
-                            <SelectItem value="custom">Período personalizado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <Button className="w-full">
-                        <Save className="h-4 w-4 mr-2" />
-                        Salvar Configuração do Dashboard
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  {/* Canvas Content */}
+                  <div
+                    className="absolute inset-0 transition-transform duration-100"
+                    style={{
+                      transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${canvasScale})`
+                    }}
+                  >
+                    {/* Render Nodes */}
+                    {renderWorkflowNodes()}
+                    
+                    {/* Render Connections */}
+                    {renderConnections()}
+                  </div>
                   
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5" />
-                        Alertas e Notificações
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950 rounded">
-                          <div>
-                            <div className="font-medium text-sm">SLA em Risco</div>
-                            <div className="text-xs text-gray-600">Quando processo exceder 80% do prazo</div>
-                          </div>
-                          <Switch checked />
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950 rounded">
-                          <div>
-                            <div className="font-medium text-sm">Baixa Performance</div>
-                            <div className="text-xs text-gray-600">Taxa de conclusão abaixo de 70%</div>
-                          </div>
-                          <Switch checked />
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950 rounded">
-                          <div>
-                            <div className="font-medium text-sm">Meta Atingida</div>
-                            <div className="text-xs text-gray-600">100% de conclusão em um período</div>
-                          </div>
-                          <Switch />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* CAMADA 4: Sistema de Relatórios */}
-            <TabsContent value="reports" className="space-y-6 h-full">
-              <div className="h-full flex gap-6">
-                
-                {/* Lista de Relatórios Disponíveis */}
-                <div className="w-80 flex-shrink-0">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Relatórios Disponíveis
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="overflow-auto">
-                      <div className="space-y-4">
-                        
-                        {/* Relatórios Operacionais */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                            Operacionais
-                          </h4>
-                          <div className="space-y-2">
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'process_status' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('process_status')}
-                            >
-                              <div className="font-medium text-sm">Status dos Processos</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Visão atual de todos os processos</div>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'performance_user' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('performance_user')}
-                            >
-                              <div className="font-medium text-sm">Performance por Usuário</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Métricas individuais dos participantes</div>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'bottlenecks' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('bottlenecks')}
-                            >
-                              <div className="font-medium text-sm">Bottlenecks Identificados</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Pontos de gargalo no fluxo</div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Relatórios Analíticos */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                            Analíticos
-                          </h4>
-                          <div className="space-y-2">
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'trends' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('trends')}
-                            >
-                              <div className="font-medium text-sm">Tendências Históricas</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Análise temporal dos dados</div>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'comparison' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('comparison')}
-                            >
-                              <div className="font-medium text-sm">Comparação entre Períodos</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Evolução da performance</div>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'forecast' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('forecast')}
-                            >
-                              <div className="font-medium text-sm">Previsão de Demanda</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Projeções baseadas em histórico</div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Relatórios de Compliance */}
-                        <div>
-                          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">
-                            Compliance
-                          </h4>
-                          <div className="space-y-2">
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'audit' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : 'bg-blue-50 dark:bg-blue-950'}`}
-                              onClick={() => generateReport('audit')}
-                            >
-                              <div className="font-medium text-sm">Relatório de Auditoria</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Documentação completa para auditores</div>
-                              <Badge className="mt-1 text-xs">Recomendado</Badge>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'compliance' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('compliance')}
-                            >
-                              <div className="font-medium text-sm">Conformidade Regulatória</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Atendimento à regulamentações</div>
-                            </div>
-                            <div 
-                              className={`p-3 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${selectedReport === 'activity_log' ? 'bg-blue-50 dark:bg-blue-950 border-blue-300' : ''}`}
-                              onClick={() => generateReport('activity_log')}
-                            >
-                              <div className="font-medium text-sm">Log de Ações</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300">Rastro completo de atividades</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Builder de Relatórios */}
-                <div className="flex-1">
-                  <Card className="h-full">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Report Builder</CardTitle>
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            disabled={!reportData || isGeneratingReport}
-                            onClick={() => reportData && toast.success('Preview disponível abaixo')}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            {isGeneratingReport ? 'Gerando...' : 'Preview'}
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            disabled={!reportData}
-                            onClick={() => exportReport(reportFilters.outputFormat)}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            Export
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="h-full overflow-auto">
-                      <div className="space-y-6">
-                        
-                        {/* Configurações do Relatório */}
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium">Nome do Relatório</Label>
-                              <Input 
-                                placeholder="Ex: Relatório de Performance Mensal" 
-                                className="mt-1"
-                                value={reportFilters.reportName}
-                                onChange={(e) => setReportFilters(prev => ({...prev, reportName: e.target.value}))}
-                              />
-                            </div>
-                            
-                            <div>
-                              <Label className="text-sm font-medium">Tipo de Relatório</Label>
-                              <Select value={reportFilters.reportType} onValueChange={(value) => setReportFilters(prev => ({...prev, reportType: value}))}>
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue placeholder="Selecionar tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="operational">Operacional</SelectItem>
-                                  <SelectItem value="analytical">Analítico</SelectItem>
-                                  <SelectItem value="compliance">Compliance</SelectItem>
-                                  <SelectItem value="executive">Executivo</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            
-                            <div>
-                              <Label className="text-sm font-medium">Formato de Saída</Label>
-                              <div className="mt-2 flex gap-2">
-                                <Button 
-                                  variant={reportFilters.outputFormat === 'pdf' ? 'default' : 'outline'} 
-                                  size="sm"
-                                  onClick={() => setReportFilters(prev => ({...prev, outputFormat: 'pdf'}))}
-                                >
-                                  PDF
-                                </Button>
-                                <Button 
-                                  variant={reportFilters.outputFormat === 'excel' ? 'default' : 'outline'} 
-                                  size="sm"
-                                  onClick={() => setReportFilters(prev => ({...prev, outputFormat: 'excel'}))}
-                                >
-                                  Excel
-                                </Button>
-                                <Button 
-                                  variant={reportFilters.outputFormat === 'word' ? 'default' : 'outline'} 
-                                  size="sm"
-                                  onClick={() => setReportFilters(prev => ({...prev, outputFormat: 'word'}))}
-                                >
-                                  Word
-                                </Button>
-                                <Button 
-                                  variant={reportFilters.outputFormat === 'html' ? 'default' : 'outline'} 
-                                  size="sm"
-                                  onClick={() => setReportFilters(prev => ({...prev, outputFormat: 'html'}))}
-                                >
-                                  HTML
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-sm font-medium">Período de Dados</Label>
-                              <div className="mt-1 grid grid-cols-2 gap-2">
-                                <Input 
-                                  type="date" 
-                                  value={reportFilters.startDate}
-                                  onChange={(e) => setReportFilters(prev => ({...prev, startDate: e.target.value}))}
-                                />
-                                <Input 
-                                  type="date" 
-                                  value={reportFilters.endDate}
-                                  onChange={(e) => setReportFilters(prev => ({...prev, endDate: e.target.value}))}
-                                />
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <Label className="text-sm font-medium">Filtros</Label>
-                              <div className="mt-2 space-y-2">
-                                <Select value={reportFilters.department} onValueChange={(value) => setReportFilters(prev => ({...prev, department: value}))}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Por departamento" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    <SelectItem value="it">TI</SelectItem>
-                                    <SelectItem value="finance">Financeiro</SelectItem>
-                                    <SelectItem value="hr">RH</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                
-                                <Select value={reportFilters.status} onValueChange={(value) => setReportFilters(prev => ({...prev, status: value}))}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Por status" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="all">Todos</SelectItem>
-                                    <SelectItem value="completed">Concluídos</SelectItem>
-                                    <SelectItem value="in_progress">Em Andamento</SelectItem>
-                                    <SelectItem value="overdue">Atrasados</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <Label className="text-sm font-medium">Agendamento</Label>
-                              <Select value={reportFilters.schedule} onValueChange={(value) => setReportFilters(prev => ({...prev, schedule: value}))}>
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue placeholder="Manual" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="manual">Manual</SelectItem>
-                                  <SelectItem value="daily">Diário</SelectItem>
-                                  <SelectItem value="weekly">Semanal</SelectItem>
-                                  <SelectItem value="monthly">Mensal</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Seções do Relatório */}
-                        <div>
-                          <Label className="text-sm font-medium">Seções do Relatório</Label>
-                          <div className="mt-2 space-y-2">
-                            {[
-                              { id: 'summary', label: 'Resumo Executivo' },
-                              { id: 'kpis', label: 'Indicadores Principais' },
-                              { id: 'details', label: 'Detalhamento dos Dados' },
-                              { id: 'trends', label: 'Análise de Tendências' },
-                              { id: 'recommendations', label: 'Recomendações' },
-                              { id: 'appendix', label: 'Apêndices' },
-                            ].map((section) => (
-                              <div key={section.id} className="flex items-center justify-between p-2 border rounded">
-                                <Label className="text-sm">{section.label}</Label>
-                                <Switch 
-                                  checked={reportFilters.sections[section.id] || false} 
-                                  onCheckedChange={(checked) => 
-                                    setReportFilters(prev => ({
-                                      ...prev, 
-                                      sections: {
-                                        ...prev.sections,
-                                        [section.id]: checked
-                                      }
-                                    }))
-                                  }
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Preview do Relatório */}
-                        <div>
-                          <Label className="text-sm font-medium">Preview</Label>
-                          <div className="mt-2 p-6 border rounded-lg bg-white dark:bg-gray-800">
-                            {reportData ? (
-                              <div>
-                                <div className="text-center mb-6">
-                                  <h2 className="text-xl font-bold">{reportData.title}</h2>
-                                  <p className="text-gray-600 dark:text-gray-300">
-                                    Gerado em: {new Date().toLocaleDateString('pt-BR')}
-                                  </p>
-                                </div>
-                                
-                                {reportData.summary && (
-                                  <div className="space-y-4">
-                                    {typeof reportData.summary === 'object' ? (
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {Object.entries(reportData.summary).map(([key, value]) => (
-                                          <div key={key} className="text-center p-3 bg-blue-50 dark:bg-blue-950 rounded">
-                                            <div className="text-xl font-bold text-blue-600">{String(value)}</div>
-                                            <div className="text-sm capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <p className="text-gray-600 dark:text-gray-300">{reportData.summary}</p>
-                                    )}
-                                    
-                                    {reportData.recommendations && (
-                                      <div>
-                                        <h3 className="font-semibold mb-2">Recomendações:</h3>
-                                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                          {reportData.recommendations.map((rec, index) => (
-                                            <li key={index}>{rec}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-
-                                    {reportData.bottlenecks && (
-                                      <div>
-                                        <h3 className="font-semibold mb-2">Principais Gargalos:</h3>
-                                        <div className="space-y-2">
-                                          {reportData.bottlenecks.map((bottleneck, index) => (
-                                            <div key={index} className="p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
-                                              <div className="font-medium">{bottleneck.stage}</div>
-                                              <div className="text-sm text-gray-600 dark:text-gray-300">
-                                                Tempo médio: {bottleneck.averageTime} | {bottleneck.suggestion}
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {reportData.complianceChecks && (
-                                      <div>
-                                        <h3 className="font-semibold mb-2">Verificações de Conformidade:</h3>
-                                        <div className="space-y-2">
-                                          {Object.entries(reportData.complianceChecks).map(([check, status]) => (
-                                            <div key={check} className="flex items-center justify-between p-2 border rounded">
-                                              <span className="capitalize">{check.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                              <Badge variant={String(status) === 'Passed' ? 'default' : 'destructive'}>
-                                                {String(status)}
-                                              </Badge>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                                }
-                              </div>
-                            ) : (
-                              <div className="text-center py-8">
-                                <div className="text-xl font-bold">Preview do Relatório</div>
-                                <p className="text-gray-600 dark:text-gray-300 mt-2">
-                                  Selecione um tipo de relatório na lista à esquerda para visualizar o preview
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* CAMADA 5: Sistema de Integrações */}
-            <TabsContent value="integrations" className="space-y-6 h-full">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
-                
-                {/* Integrações Disponíveis */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Network className="h-5 w-5" />
-                        Integrações Disponíveis
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        
-                        {/* Notificações */}
-                        <div>
-                          <h4 className="font-semibold text-sm mb-3">Notificações</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Mail className="h-5 w-5 text-blue-600" />
-                                <div>
-                                  <div className="font-medium text-sm">Email SMTP</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Notificações por email</div>
-                                </div>
-                              </div>
-                              <Switch 
-                                checked={integrationSettings.notifications.email.enabled} 
-                                onCheckedChange={() => toggleIntegration('notifications', 'email')}
-                              />
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <MessageSquare className="h-5 w-5 text-green-600" />
-                                <div>
-                                  <div className="font-medium text-sm">WhatsApp Business</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Mensagens instantâneas</div>
-                                </div>
-                              </div>
-                              <Switch 
-                                checked={integrationSettings.notifications.whatsapp.enabled} 
-                                onCheckedChange={() => toggleIntegration('notifications', 'whatsapp')}
-                              />
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Bell className="h-5 w-5 text-purple-600" />
-                                <div>
-                                  <div className="font-medium text-sm">Push Notifications</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Notificações no navegador</div>
-                                </div>
-                              </div>
-                              <Switch 
-                                checked={integrationSettings.notifications.push.enabled} 
-                                onCheckedChange={() => toggleIntegration('notifications', 'push')}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Sistemas Externos */}
-                        <div>
-                          <h4 className="font-semibold text-sm mb-3">Sistemas Externos</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Database className="h-5 w-5 text-blue-600" />
-                                <div>
-                                  <div className="font-medium text-sm">ERP Integration</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">SAP, Oracle, Dynamics</div>
-                                </div>
-                              </div>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => configureIntegration('systems', 'erp')}
-                              >
-                                Configurar
-                              </Button>
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Users className="h-5 w-5 text-yellow-600" />
-                                <div>
-                                  <div className="font-medium text-sm">Active Directory</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Sincronização de usuários</div>
-                                </div>
-                              </div>
-                              <Switch 
-                                checked={integrationSettings.systems.activeDirectory.enabled} 
-                                onCheckedChange={() => toggleIntegration('systems', 'activeDirectory')}
-                              />
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <BarChart3 className="h-5 w-5 text-green-600" />
-                                <div>
-                                  <div className="font-medium text-sm">BI Tools</div>
-                                  <div className="text-xs text-gray-600 dark:text-gray-300">Tableau, Power BI</div>
-                                </div>
-                              </div>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => configureIntegration('systems', 'biTools')}
-                              >
-                                Configurar
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* APIs e Webhooks */}
-                        <div>
-                          <h4 className="font-semibold text-sm mb-3">APIs e Webhooks</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Globe className="h-5 w-5 text-indigo-600" />
-                                <div>
-                                  <div className="font-medium text-sm">REST API</div>
-                                  <div className="text-xs text-gray-600">Acesso programático completo</div>
-                                </div>
-                              </div>
-                              <Badge className="text-xs bg-green-100 text-green-800">Ativo</Badge>
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Zap className="h-5 w-5 text-orange-600" />
-                                <div>
-                                  <div className="font-medium text-sm">Webhooks</div>
-                                  <div className="text-xs text-gray-600">Eventos em tempo real</div>
-                                </div>
-                              </div>
-                              <Button size="sm" variant="outline">Gerenciar</Button>
-                            </div>
-                            
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <Sparkles className="h-5 w-5 text-purple-600" />
-                                <div>
-                                  <div className="font-medium text-sm">Zapier</div>
-                                  <div className="text-xs text-gray-600">1000+ integrações automáticas</div>
-                                </div>
-                              </div>
-                              <Switch />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                {/* Configuração de Integrações */}
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Settings className="h-5 w-5" />
-                        Configurar Integração
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      
-                      {/* Configuração de Email */}
-                      <div>
-                        <h4 className="font-semibold text-sm mb-3">Configuração de Email</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-sm">Servidor SMTP</Label>
-                            <Input placeholder="smtp.company.com" className="mt-1" />
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-sm">Porta</Label>
-                              <Input placeholder="587" className="mt-1" />
-                            </div>
-                            <div>
-                              <Label className="text-sm">Segurança</Label>
-                              <Select>
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue placeholder="TLS" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="tls">TLS</SelectItem>
-                                  <SelectItem value="ssl">SSL</SelectItem>
-                                  <SelectItem value="none">Nenhuma</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-sm">Usuário</Label>
-                              <Input placeholder="sistema@company.com" className="mt-1" />
-                            </div>
-                            <div>
-                              <Label className="text-sm">Senha</Label>
-                              <Input type="password" placeholder="••••••••" className="mt-1" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Templates de Mensagem */}
-                      <div>
-                        <h4 className="font-semibold text-sm mb-3">Templates de Mensagem</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-sm">Processo Iniciado</Label>
-                            <Textarea 
-                              placeholder="Olá {nome}, um novo processo foi iniciado: {processo}..."
-                              rows={3}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Tarefa Atribuída</Label>
-                            <Textarea 
-                              placeholder="Você tem uma nova tarefa: {tarefa}. Prazo: {prazo}..."
-                              rows={3}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Processo Concluído</Label>
-                            <Textarea 
-                              placeholder="O processo {processo} foi concluído com sucesso..."
-                              rows={3}
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Configuração de Webhooks */}
-                      <div>
-                        <h4 className="font-semibold text-sm mb-3">Webhooks</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-sm">URL do Endpoint</Label>
-                            <Input placeholder="https://api.company.com/webhook" className="mt-1" />
-                          </div>
-                          <div>
-                            <Label className="text-sm">Eventos</Label>
-                            <div className="mt-2 space-y-2">
-                              {[
-                                { id: 'process_started', label: 'Processo Iniciado' },
-                                { id: 'task_assigned', label: 'Tarefa Atribuída' },
-                                { id: 'task_completed', label: 'Tarefa Concluída' },
-                                { id: 'process_completed', label: 'Processo Concluído' },
-                                { id: 'sla_warning', label: 'Alerta de SLA' },
-                              ].map((event) => (
-                                <div key={event.id} className="flex items-center space-x-2">
-                                  <input type="checkbox" id={event.id} className="rounded" />
-                                  <label htmlFor={event.id} className="text-sm">{event.label}</label>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label className="text-sm">Método HTTP</Label>
-                              <Select>
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue placeholder="POST" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="post">POST</SelectItem>
-                                  <SelectItem value="put">PUT</SelectItem>
-                                  <SelectItem value="patch">PATCH</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label className="text-sm">Content-Type</Label>
-                              <Select>
-                                <SelectTrigger className="mt-1">
-                                  <SelectValue placeholder="JSON" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="json">application/json</SelectItem>
-                                  <SelectItem value="form">application/x-www-form-urlencoded</SelectItem>
-                                  <SelectItem value="xml">application/xml</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-3">
-                        <Button className="flex-1">
-                          <Save className="h-4 w-4 mr-2" />
-                          Salvar Configuração
-                        </Button>
-                        <Button variant="outline">
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Testar
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* CAMADA 6: Documentação Completa */}
-            <TabsContent value="documentation" className="space-y-6 h-full">
-              <div className="max-w-6xl mx-auto">
-                
-                {/* Header da Documentação */}
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white">
-                      <BookOpen className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Documentação Completa</h1>
-                      <p className="text-lg text-gray-600 dark:text-gray-300">Guia definitivo para criar processos profissionais</p>
+                  {/* Canvas Controls */}
+                  <CanvasControls
+                    scale={canvasScale}
+                    onScaleChange={setCanvasScale}
+                    onReset={resetCanvas}
+                    onFitToScreen={fitToScreen}
+                  />
+                  
+                  {/* Canvas Info */}
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg">
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>Elementos: {workflowNodes.length}</span>
+                      <span>Conexões: {workflowConnections.length}</span>
+                      <span>Zoom: {Math.round(canvasScale * 100)}%</span>
                     </div>
                   </div>
-                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-1">
-                    Passo a Passo Detalhado
-                  </Badge>
                 </div>
-
-                {/* Índice de Navegação Rápida */}
-                <Card className="mb-8">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Info className="h-5 w-5" />
-                      Índice de Navegação Rápida
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <a href="#step-1" className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200 dark:border-blue-700">
-                        <Layout className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="font-medium text-gray-900 dark:text-gray-100">1. Templates</span>
-                      </a>
-                      <a href="#step-2" className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors border border-green-200 dark:border-green-700">
-                        <Edit className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <span className="font-medium text-gray-900 dark:text-gray-100">2. Formulários</span>
-                      </a>
-                      <a href="#step-3" className="flex items-center gap-2 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors border border-purple-200 dark:border-purple-700">
-                        <Workflow className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                        <span className="font-medium text-gray-900 dark:text-gray-100">3. Workflows</span>
-                      </a>
-                      <a href="#step-4" className="flex items-center gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors border border-orange-200 dark:border-orange-700">
-                        <BarChart3 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                        <span className="font-medium text-gray-900 dark:text-gray-100">4. Finalizar</span>
-                      </a>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* PASSO 1: Templates */}
-                <div id="step-1" className="mb-12">
-                  <Card>
-                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/40 dark:to-indigo-900/40 dark:border-b dark:border-blue-700">
-                      <CardTitle className="text-2xl flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
-                        <Layout className="h-6 w-6 text-blue-600" />
-                        Seleção de Template
-                      </CardTitle>
-                      <p className="text-gray-600 dark:text-gray-300 mt-2">Escolha um template pré-configurado ou crie do zero</p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      
-                      {/* Templates Disponíveis */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-blue-600" />
-                          Templates Pré-configurados
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Avaliação de Compliance Básica</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Para avaliações de conformidade regulatória (LGPD, SOX, ISO27001)</p>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              • 8 campos pré-configurados • Workflow de 4 etapas • KPIs de conformidade
-                            </div>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Avaliação de Riscos</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Processo completo de identificação e avaliação de riscos</p>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              • Matriz de riscos • Análise de impacto • Planos de ação
-                            </div>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Checklist de Auditoria</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Para auditorias internas e externas com evidências</p>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              • Checklist dinâmico • Upload de evidências • Relatórios automáticos
-                            </div>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Settings className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Template Personalizado</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Comece do zero para necessidades específicas</p>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              • Canvas em branco • Máxima flexibilidade • Configuração completa
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 p-4">
-                        <div className="flex items-start gap-2">
-                          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-blue-900 dark:text-blue-100">Dica Importante</h4>
-                            <p className="text-blue-800 dark:text-blue-200 text-sm mt-1">
-                              Escolha o template que mais se aproxima do seu objetivo. Você poderá personalizar completamente 
-                              todos os campos, workflows e configurações nas próximas etapas.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* PASSO 2: Form Builder */}
-                <div id="step-2" className="mb-12">
-                  <Card>
-                    <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/40 dark:to-emerald-900/40 dark:border-b dark:border-green-700">
-                      <CardTitle className="text-2xl flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
-                        <Edit className="h-6 w-6 text-green-600" />
-                        Form Builder - Construção de Formulários
-                      </CardTitle>
-                      <p className="text-gray-600 dark:text-gray-300 mt-2">Crie formulários poderosos com drag & drop</p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      
-                      {/* Tipos de Campos */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Grid className="h-5 w-5 text-green-600" />
-                          Tipos de Campos Disponíveis
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          
-                          {/* Campos de Texto */}
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">📝 Campos de Texto</h4>
-                            
-                            <div className="space-y-2">
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Texto Simples</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Para nomes, títulos, descrições curtas</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de comprimento ✓ Máscaras</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Número</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Valores numéricos, moeda, percentuais</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Min/Max ✓ Casas decimais</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Senha</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Campo protegido para senhas</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Criptografado ✓ Força da senha</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">URL</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Links, endereços web, referências</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de URL</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Área de Texto</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Para textos longos, observações detalhadas</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Redimensionável ✓ Contador de caracteres</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Email</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Validação automática de formato de email</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação automática</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Telefone</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Com máscara de formatação automática</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Máscara brasileira</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Campos de Seleção */}
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">☑️ Campos de Seleção</h4>
-                            
-                            <div className="space-y-2">
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Lista Suspensa (Select)</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Uma opção entre várias disponíveis</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Busca ✓ Opções dinâmicas</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Radio Buttons</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção única exclusiva visível</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Ideal para 2-5 opções</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Checkboxes</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção múltipla independente</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de mínimo/máximo</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Switch (Liga/Desliga)</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Para opções binárias (Sim/Não)</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Estados visuais claros</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Dropdown Avançado</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Lista suspensa com recursos extras</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Multi-seleção ✓ Filtros</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Campos Especiais */}
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100 border-b dark:border-gray-600 pb-1">⭐ Campos Especiais</h4>
-                            
-                            <div className="space-y-2">
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Data / Data-Hora</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Seletor de datas com calendário</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Validação de período</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Avaliação (Rating)</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Sistema de estrelas para avaliações</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ 1-5 estrelas configurável</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Slider</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Controle deslizante para valores numéricos</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Min/Max configurável</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Upload de Arquivo</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Para anexar documentos e evidências</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Múltiplos tipos ✓ Tamanho limitado</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Hora</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Seletor de hora (HH:MM)</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Formato 24h ou 12h</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Data e Hora</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Combina data e hora em um campo</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Timestamp completo</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Upload de Imagem</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Fotos, capturas, diagramas</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Preview ✓ Redimensionamento</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Faixa (Range)</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Seleção de faixa de valores</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Duplo controle deslizante</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Seletor de Cor</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Escolha de cores hex/RGB</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Palette ✓ Histórico</div>
-                              </div>
-                              
-                              <div className="border rounded p-2 bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
-                                <div className="font-medium text-sm dark:text-gray-100">Tags</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">Múltiplas etiquetas personalizadas</div>
-                                <div className="text-xs text-blue-600 dark:text-blue-400">✓ Autocomplete ✓ Cores customizadas</div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Campos de Workflow Especializado */}
-                        <div className="mt-8">
-                          <h4 className="font-semibold text-lg text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                            Campos de Workflow Especializado
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            
-                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
-                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Aprovação</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Campo especializado de workflow</div>
-                              <div className="text-xs text-green-600 dark:text-green-400 mt-2">✓ Aprovado/Rejeitado ✓ Observações</div>
-                            </div>
-                            
-                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
-                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Responsável</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Atribuição de usuários/equipes</div>
-                              <div className="text-xs text-purple-600 dark:text-purple-400 mt-2">✓ Busca usuários ✓ Notificações</div>
-                            </div>
-                            
-                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
-                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Prioridade</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Nível de urgência/importância</div>
-                              <div className="text-xs text-red-600 dark:text-red-400 mt-2">✓ Baixa/Média/Alta/Crítica</div>
-                            </div>
-                            
-                            <div className="border rounded-lg p-3 bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm">
-                              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">Status</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">Estado atual do processo</div>
-                              <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">✓ Workflow automático ✓ Cores</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Layout e Organização */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Columns className="h-5 w-5 text-green-600" />
-                          Layout e Organização
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <h4 className="font-medium">🏗️ Sistema de Linhas e Colunas</h4>
-                            <ul className="text-sm space-y-1 text-gray-700 dark:text-gray-300">
-                              <li>• <strong>Linhas:</strong> Organizem os campos horizontalmente</li>
-                              <li>• <strong>1 Coluna:</strong> Campo ocupa toda a largura</li>
-                              <li>• <strong>2 Colunas:</strong> Dois campos lado a lado (50% cada)</li>
-                              <li>• <strong>3 Colunas:</strong> Três campos (33% cada)</li>
-                              <li>• <strong>4 Colunas:</strong> Quatro campos (25% cada)</li>
-                            </ul>
-                            <div className="bg-green-50 p-3 rounded">
-                              <div className="text-xs font-medium text-green-800">💡 Dica de Layout</div>
-                              <div className="text-xs text-green-700">
-                                Use 1 coluna para textos longos, 2 colunas para dados relacionados, 
-                                3-4 colunas para dados compactos como datas e números.
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">🎨 Alturas Disponíveis</h4>
-                            <ul className="text-sm space-y-1 text-gray-700 dark:text-gray-300">
-                              <li>• <strong>Pequena:</strong> Para campos simples (texto, data)</li>
-                              <li>• <strong>Média:</strong> Para seleções e avaliações</li>
-                              <li>• <strong>Grande:</strong> Para áreas de texto</li>
-                              <li>• <strong>Extra Grande:</strong> Para uploads e conteúdo especial</li>
-                            </ul>
-                            <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-700">
-                              <div className="text-xs font-medium text-green-800 dark:text-green-200">⚡ Dica de UX</div>
-                              <div className="text-xs text-green-700 dark:text-green-300">
-                                Mantenha altura consistente em campos relacionados para 
-                                melhor experiência visual do usuário.
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Guia de Uso dos Campos */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
-                        <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                          <Info className="h-5 w-5" />
-                          💡 Guia de Seleção de Campos
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-2">
-                            <div className="text-blue-800 dark:text-blue-200"><strong>Para Dados Básicos:</strong></div>
-                            <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs ml-4">
-                              <li>• <strong>Texto:</strong> Nome da empresa, título do projeto</li>
-                              <li>• <strong>Número:</strong> Orçamento, quantidade, percentual</li>
-                              <li>• <strong>Email:</strong> Contato principal, responsável técnico</li>
-                              <li>• <strong>Telefone:</strong> Contato comercial, emergência</li>
-                              <li>• <strong>URL:</strong> Site da empresa, documentação online</li>
-                            </ul>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="text-blue-800 dark:text-blue-200"><strong>Para Avaliações:</strong></div>
-                            <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs ml-4">
-                              <li>• <strong>Rating:</strong> Nível de conformidade, satisfação</li>
-                              <li>• <strong>Slider:</strong> Probabilidade de risco (0-100%)</li>
-                              <li>• <strong>Select:</strong> Status (Aprovado/Pendente/Rejeitado)</li>
-                              <li>• <strong>Radio:</strong> Possui DPO? (Sim/Não/Terceirizado)</li>
-                              <li>• <strong>Checkbox:</strong> Bases legais aplicáveis (múltiplas)</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Validações */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-600" />
-                          Sistema de Validações
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="border rounded p-3 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
-                            <h4 className="font-medium text-red-800 dark:text-red-200 flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4" />
-                              Validações Obrigatórias
-                            </h4>
-                            <ul className="text-sm text-red-700 dark:text-red-300 mt-2 space-y-1">
-                              <li>• Campo obrigatório (não pode ficar vazio)</li>
-                              <li>• Comprimento mínimo/máximo de texto</li>
-                              <li>• Valores mínimo/máximo para números</li>
-                              <li>• Seleção mínima/máxima de opções</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="border rounded p-3 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
-                            <h4 className="font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                              <Settings className="h-4 w-4" />
-                              Validações Avançadas
-                            </h4>
-                            <ul className="text-sm text-blue-700 dark:text-blue-300 mt-2 space-y-1">
-                              <li>• Expressões regulares (regex)</li>
-                              <li>• Validação de formato (CPF, CNPJ)</li>
-                              <li>• Comparação entre campos</li>
-                              <li>• Validação condicional (depende de outro campo)</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="border rounded p-3 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
-                            <h4 className="font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4" />
-                              Mensagens Personalizadas
-                            </h4>
-                            <ul className="text-sm text-green-700 dark:text-green-300 mt-2 space-y-1">
-                              <li>• Mensagens de erro customizadas</li>
-                              <li>• Dicas de preenchimento (placeholder)</li>
-                              <li>• Textos de ajuda contextuais</li>
-                              <li>• Feedback visual em tempo real</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-400 dark:border-green-600 p-4">
-                        <div className="flex items-start gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-green-900 dark:text-green-100">Como Usar o Form Builder</h4>
-                            <ol className="text-green-800 dark:text-green-200 text-sm mt-1 space-y-1 list-decimal list-inside">
-                              <li>Arraste campos da paleta lateral para o canvas</li>
-                              <li>Configure propriedades clicando no campo adicionado</li>
-                              <li>Organize o layout usando o sistema de linhas/colunas</li>
-                              <li>Adicione validações necessárias para cada campo</li>
-                              <li>Use o Preview para testar o formulário antes de salvar</li>
-                            </ol>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* PASSO 3: Workflow */}
-                <div id="step-3" className="mb-12">
-                  <Card>
-                    <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/40 dark:to-indigo-900/40 dark:border-b dark:border-purple-700">
-                      <CardTitle className="text-2xl flex items-center gap-3">
-                        <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
-                        <Workflow className="h-6 w-6 text-purple-600" />
-                        Workflow Engine - Fluxo de Processos
-                      </CardTitle>
-                      <p className="text-gray-600 dark:text-gray-300 mt-2">Crie fluxos de trabalho visuais e automações inteligentes</p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      
-                      {/* Tipos de Nós */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <GitBranch className="h-5 w-5 text-purple-600" />
-                          Tipos de Nós do Workflow
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          
-                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <PlayCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó de Início (Start)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Marco inicial do processo</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-green-700 dark:text-green-300"><strong>Quando usar:</strong> Todo processo deve começar com este nó</div>
-                              <div className="text-green-700 dark:text-green-300"><strong>Configurações:</strong> Apenas nome e descrição</div>
-                              <div className="text-green-700 dark:text-green-300"><strong>Conexões:</strong> Sempre conecta a próxima atividade</div>
-                            </div>
-                          </div>
-
-                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó de Tarefa (Task)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Atividade que requer ação humana</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-blue-700 dark:text-blue-300"><strong>Quando usar:</strong> Preenchimento, revisão, aprovação</div>
-                              <div className="text-blue-700 dark:text-blue-300"><strong>Configurações:</strong> Responsável, prazo, prioridade</div>
-                              <div className="text-blue-700 dark:text-blue-300"><strong>Tipos:</strong> Formulário, aprovação, revisão</div>
-                            </div>
-                          </div>
-
-                          <div className="border rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/30 dark:border-yellow-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <GitBranch className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó de Decisão (Decision)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Ponto de escolha baseado em condições</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Quando usar:</strong> Aprovado/Rejeitado, Score &gt; 80</div>
-                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Configurações:</strong> Condições lógicas, regras</div>
-                              <div className="text-yellow-700 dark:text-yellow-300"><strong>Conexões:</strong> Múltiplas saídas possíveis</div>
-                            </div>
-                          </div>
-
-                          <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó Paralelo (Parallel)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Executa múltiplas tarefas simultaneamente</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-purple-700 dark:text-purple-300"><strong>Quando usar:</strong> Revisões independentes simultâneas</div>
-                              <div className="text-purple-700 dark:text-purple-300"><strong>Configurações:</strong> Lista de tarefas paralelas</div>
-                              <div className="text-purple-700 dark:text-purple-300"><strong>Sincronização:</strong> Aguarda conclusão de todas</div>
-                            </div>
-                          </div>
-
-                          <div className="border rounded-lg p-4 bg-orange-50 dark:bg-orange-900/30 dark:border-orange-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Timer className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó de Temporizador (Timer)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Pausa o processo por período determinado</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-orange-700 dark:text-orange-300"><strong>Quando usar:</strong> Aguardar resposta, período de análise</div>
-                              <div className="text-orange-700 dark:text-orange-300"><strong>Configurações:</strong> Duração, unidade de tempo</div>
-                              <div className="text-orange-700 dark:text-orange-300"><strong>Ações:</strong> Notificações de lembrete</div>
-                            </div>
-                          </div>
-
-                          <div className="border rounded-lg p-4 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <CheckCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Nó de Fim (End)</span>
-                            </h4>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">Marco final do processo</p>
-                            <div className="mt-3 space-y-1 text-xs">
-                              <div className="text-red-700 dark:text-red-300"><strong>Quando usar:</strong> Conclusão de qualquer caminho do processo</div>
-                              <div className="text-red-700 dark:text-red-300"><strong>Configurações:</strong> Mensagem final, relatórios</div>
-                              <div className="text-red-700 dark:text-red-300"><strong>Ações:</strong> Notificações de conclusão</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Configurações Avançadas */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Settings className="h-5 w-5 text-purple-600" />
-                          Configurações Avançadas de Workflow
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <h4 className="font-medium">👥 Atribuição de Responsáveis</h4>
-                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
-                              <li className="flex items-start gap-2">
-                                <Circle className="h-3 w-3 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Por Papel:</strong> Auditor, Compliance Officer, Gestor de Riscos
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Por Usuário:</strong> Nome específico do responsável
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Por Grupo:</strong> Equipe de auditoria, departamento
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Circle className="h-3 w-3 text-blue-600 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Dinâmico:</strong> Com base em dados do formulário
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">⏰ Gestão de Prazos e SLAs</h4>
-                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
-                              <li className="flex items-start gap-2">
-                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Prazos:</strong> 1d, 3d, 1w, 2w, 1m (dias/semanas/meses)
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Prioridades:</strong> Baixa, Média, Alta, Crítica
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Lembretes:</strong> 50%, 80%, 100% do prazo
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400 mt-1 flex-shrink-0" />
-                                <div>
-                                  <strong>Escalação:</strong> Automática para supervisor
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Condições e Regras */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Zap className="h-5 w-5 text-purple-600" />
-                          Condições e Regras de Negócio
-                        </h3>
-                        
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                          <h4 className="font-medium mb-3 text-gray-900 dark:text-gray-100">💡 Exemplos de Condições Práticas</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-green-400 dark:border-green-500">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Score de Conformidade ≥ 80%</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Processo aprovado automaticamente</div>
-                              </div>
-                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-red-400 dark:border-red-500">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Riscos Críticos Identificados</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Escalação imediata para CISO</div>
-                              </div>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-blue-400 dark:border-blue-500">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Primeiro Processo da Empresa</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Revisão detalhada obrigatória</div>
-                              </div>
-                              <div className="bg-white dark:bg-gray-800 rounded p-3 border-l-4 border-yellow-400 dark:border-yellow-500">
-                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">Valor do Projeto &gt; R$ 100.000</div>
-                                <div className="text-xs text-gray-600 dark:text-gray-300">➜ Aprovação dupla necessária</div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-400 dark:border-purple-600 p-4">
-                        <div className="flex items-start gap-2">
-                          <Workflow className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-purple-900 dark:text-purple-100">Boas Práticas para Workflows</h4>
-                            <ul className="text-purple-800 dark:text-purple-200 text-sm mt-1 space-y-1">
-                              <li>• <strong>Mantenha simples:</strong> Evite workflows muito complexos inicialmente</li>
-                              <li>• <strong>Defina responsáveis claros:</strong> Cada tarefa deve ter um dono específico</li>
-                              <li>• <strong>Configure prazos realistas:</strong> Considere a carga de trabalho das equipes</li>
-                              <li>• <strong>Use condições objetivas:</strong> Evite critérios subjetivos nas decisões</li>
-                              <li>• <strong>Teste antes de usar:</strong> Execute um processo piloto para validar o fluxo</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* PASSO 4: Finalização */}
-                <div id="step-4" className="mb-12">
-                  <Card>
-                    <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/40 dark:to-red-900/40 dark:border-b dark:border-orange-700">
-                      <CardTitle className="text-2xl flex items-center gap-3">
-                        <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
-                        <Award className="h-6 w-6 text-orange-600" />
-                        Analytics, Reports e Finalização
-                      </CardTitle>
-                      <p className="text-gray-600 dark:text-gray-300 mt-2">Configure métricas, relatórios e integrações</p>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      
-                      {/* Analytics e KPIs */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <TrendingUp className="h-5 w-5 text-orange-600" />
-                          Analytics e KPIs Essenciais
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">📊 KPIs de Performance</h4>
-                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
-                              <li>• Taxa de conclusão dos processos</li>
-                              <li>• Tempo médio de execução</li>
-                              <li>• Processos dentro do prazo (SLA)</li>
-                              <li>• Backlog de processos pendentes</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">🎯 KPIs de Qualidade</h4>
-                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
-                              <li>• Score médio de conformidade</li>
-                              <li>• Número de não-conformidades</li>
-                              <li>• Taxa de rejeição/retrabalho</li>
-                              <li>• Satisfação dos stakeholders</li>
-                            </ul>
-                          </div>
-                          
-                          <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
-                            <h4 className="font-medium text-gray-900 dark:text-gray-100">⚡ KPIs de Eficiência</h4>
-                            <ul className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-1">
-                              <li>• Automação vs. manual</li>
-                              <li>• Custo por processo executado</li>
-                              <li>• Produtividade por responsável</li>
-                              <li>• ROI dos processos de compliance</li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tipos de Relatórios */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <FileText className="h-5 w-5 text-orange-600" />
-                          Tipos de Relatórios Disponíveis
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <h4 className="font-medium">📈 Relatórios Executivos</h4>
-                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
-                              <li className="flex items-start gap-2">
-                                <BarChart className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Dashboard Executivo:</strong> Visão geral com principais KPIs
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <PieChart className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Status dos Processos:</strong> Em andamento, concluídos, atrasados
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <LineChart className="h-4 w-4 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Tendências:</strong> Evolução mensal dos indicadores
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <h4 className="font-medium">📋 Relatórios Operacionais</h4>
-                            <ul className="text-sm space-y-2 text-gray-700 dark:text-gray-300">
-                              <li className="flex items-start gap-2">
-                                <CheckSquare className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Log de Atividades:</strong> Histórico detalhado de cada processo
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <Users className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Performance por Usuário:</strong> Produtividade individual
-                                </div>
-                              </li>
-                              <li className="flex items-start gap-2">
-                                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <strong>Exceções e Problemas:</strong> Processos com issues
-                                </div>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Integrações */}
-                      <div className="space-y-4">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          <Plug className="h-5 w-5 text-orange-600" />
-                          Integrações e Automações
-                        </h3>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="border rounded p-3 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Email</span>
-                            </h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                              Notificações automáticas, lembretes de prazo, relatórios por email
-                            </p>
-                          </div>
-                          
-                          <div className="border rounded p-3 bg-green-50 dark:bg-green-900/30 dark:border-green-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Bell className="h-4 w-4 text-green-600 dark:text-green-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Webhooks</span>
-                            </h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                              Integração com sistemas externos via APIs REST
-                            </p>
-                          </div>
-                          
-                          <div className="border rounded p-3 bg-purple-50 dark:bg-purple-900/30 dark:border-purple-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                              <span className="text-gray-900 dark:text-gray-100">APIs</span>
-                            </h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                              Sincronização bidirecional de dados com ERPs
-                            </p>
-                          </div>
-                          
-                          <div className="border rounded p-3 bg-orange-50 dark:bg-orange-900/30 dark:border-orange-700">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                              <span className="text-gray-900 dark:text-gray-100">Documentos</span>
-                            </h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                              Geração automática de PDFs e documentos Word
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 dark:border-orange-600 p-4">
-                        <div className="flex items-start gap-2">
-                          <Award className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-orange-900 dark:text-orange-100">Checklist Final - Antes de Salvar</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                              <div>
-                                <h5 className="font-medium text-orange-800 dark:text-orange-200 text-sm">✅ Formulário</h5>
-                                <ul className="text-orange-700 dark:text-orange-300 text-xs space-y-1 mt-1">
-                                  <li>□ Todos os campos necessários adicionados</li>
-                                  <li>□ Validações configuradas corretamente</li>
-                                  <li>□ Layout organizado e responsivo</li>
-                                  <li>□ Preview testado com dados reais</li>
-                                </ul>
-                              </div>
-                              <div>
-                                <h5 className="font-medium text-orange-800 dark:text-orange-200 text-sm">✅ Workflow</h5>
-                                <ul className="text-orange-700 dark:text-orange-300 text-xs space-y-1 mt-1">
-                                  <li>□ Fluxo completo (início → fim)</li>
-                                  <li>□ Responsáveis definidos em cada tarefa</li>
-                                  <li>□ Prazos e prioridades configurados</li>
-                                  <li>□ Condições de decisão testadas</li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Dicas Finais e Melhores Práticas */}
-                <Card className="mb-8">
-                  <CardHeader className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/40 dark:to-blue-900/40 dark:border-b dark:border-indigo-700">
-                    <CardTitle className="text-xl flex items-center gap-3">
-                      <Sparkles className="h-6 w-6 text-indigo-600" />
-                      Dicas Finais e Melhores Práticas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h3 className="font-semibold text-green-800 dark:text-green-200 flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5" />
-                          ✅ Faça Sempre
-                        </h3>
-                        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                          <li className="flex items-start gap-2">
-                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
-                            <strong>Teste antes de usar em produção:</strong> Execute um processo piloto completo
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
-                            <strong>Documente decisões:</strong> Explique por que certas configurações foram escolhidas
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
-                            <strong>Colete feedback:</strong> Pergunte aos usuários sobre dificuldades
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
-                            <strong>Versione os processos:</strong> Mantenha histórico de mudanças
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <Circle className="h-2 w-2 text-green-600 dark:text-green-400 mt-2 flex-shrink-0" />
-                            <strong>Monitore KPIs:</strong> Acompanhe a eficácia dos processos criados
-                          </li>
-                        </ul>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <h3 className="font-semibold text-red-800 dark:text-red-200 flex items-center gap-2">
-                          <X className="h-5 w-5" />
-                          ❌ Evite
-                        </h3>
-                        <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                          <li className="flex items-start gap-2">
-                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
-                            <strong>Workflows muito complexos:</strong> Comece simples e evolua gradualmente
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
-                            <strong>Campos obrigatórios em excesso:</strong> Só marque como obrigatório o essencial
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
-                            <strong>Prazos irreais:</strong> Considere feriados e carga de trabalho
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
-                            <strong>Responsáveis indefinidos:</strong> Toda tarefa precisa de um dono claro
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <X className="h-3 w-3 text-red-600 dark:text-red-400 mt-1 flex-shrink-0" />
-                            <strong>Ignorar feedback:</strong> Usuários são a melhor fonte de melhorias
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Casos de Uso Comuns */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Boxes className="h-5 w-5 text-blue-600" />
-                      Casos de Uso Comuns - Exemplos Práticos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <h4 className="font-medium">🛡️ Processo de Compliance LGPD</h4>
-                        <div className="text-sm bg-gray-50 dark:bg-gray-800 dark:border dark:border-gray-700 rounded p-3">
-                          <div className="font-medium mb-2 text-gray-900 dark:text-gray-100">Formulário recomendado:</div>
-                          <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                            <li>• Nome da empresa (texto obrigatório)</li>
-                            <li>• Porte da empresa (select)</li>
-                            <li>• Bases legais utilizadas (checkbox múltiplo)</li>
-                            <li>• Possui DPO? (radio sim/não/terceirizado)</li>
-                            <li>• Volume de dados (slider 0-1M)</li>
-                            <li>• Relatório de impacto (upload arquivo)</li>
-                          </ul>
-                          <div className="font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100">Workflow sugerido:</div>
-                          <div className="text-xs text-gray-700 dark:text-gray-300">
-                            Início → Preenchimento (Empresa) → Análise (DPO) → 
-                            Decisão (Conforme?) → Aprovação ou Plano de Ação → Fim
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <h4 className="font-medium">🔍 Auditoria Interna Anual</h4>
-                        <div className="text-sm bg-gray-50 dark:bg-gray-800 dark:border dark:border-gray-700 rounded p-3">
-                          <div className="font-medium mb-2 text-gray-900 dark:text-gray-100">Formulário recomendado:</div>
-                          <ul className="space-y-1 text-xs text-gray-700 dark:text-gray-300">
-                            <li>• Área auditada (select departamentos)</li>
-                            <li>• Período da auditoria (date range)</li>
-                            <li>• Checklist de conformidade (checkbox)</li>
-                            <li>• Evidências encontradas (file upload)</li>
-                            <li>• Score de conformidade (rating 1-5)</li>
-                            <li>• Observações gerais (textarea)</li>
-                          </ul>
-                          <div className="font-medium mt-3 mb-2 text-gray-900 dark:text-gray-100">Workflow sugerido:</div>
-                          <div className="text-xs text-gray-700 dark:text-gray-300">
-                            Início → Planejamento (Auditor) → Execução (Auditor) → 
-                            Revisão (Auditor Sênior) → Relatório → Plano Ação → Fim
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
               </div>
-            </TabsContent>
-          </Tabs>
+            </React.Fragment>
+          )}
         </div>
       </div>
-      
-      {/* Modal de Preview do Formulário */}
-      <FormPreviewModal
-        isOpen={isFormPreviewOpen}
-        onClose={() => setIsFormPreviewOpen(false)}
-        formFields={formFields}
-        formRows={formRows}
-        processName={processName}
-        processDescription={processDescription}
-      />
     </div>
   );
 };

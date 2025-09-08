@@ -38,24 +38,22 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Importar seções
-import { UserManagementSection } from './sections/UserManagementSection';
-import { SecurityConfigSection } from './sections/SecurityConfigSection';
-import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
-import { SSOConfigSection } from './sections/SSOConfigSection';
-import { MFAConfigSection } from './sections/MFAConfigSection';
-import { EmailDomainSection } from './sections/EmailDomainSection';
-import { ImpossibleTravelSection } from './sections/ImpossibleTravelSection';
-import { SessionManagementSection } from './sections/SessionManagementSection';
-import { ActivityLogsSection } from './sections/ActivityLogsSection';
-import { BackupDataSection } from './sections/BackupDataSection';
-import { DataExportSection } from './sections/DataExportSection';
-import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
-import { CryptoKeysSection } from './sections/CryptoKeysSection';
+// Importar seções - COMENTADOS PARA DEBUG
+// import { UserManagementSection } from './sections/UserManagementSection';
+// import { SecurityConfigSection } from './sections/SecurityConfigSection';
+// import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
+// import { SSOConfigSection } from './sections/SSOConfigSection';
+// import { MFAConfigSection } from './sections/MFAConfigSection';
+// import { EmailDomainSection } from './sections/EmailDomainSection';
+// import { ImpossibleTravelSection } from './sections/ImpossibleTravelSection';
+// import { SessionManagementSection } from './sections/SessionManagementSection';
+// import { ActivityLogsSection } from './sections/ActivityLogsSection';
+// import { BackupDataSection } from './sections/BackupDataSection';
+// import { DataExportSection } from './sections/DataExportSection';
+// import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
+// import { CryptoKeysSection } from './sections/CryptoKeysSection';
 
-// Componentes compartilhados
-import { TenantGuard } from './shared/TenantGuard';
-import { SettingsMetrics } from './shared/SettingsMetrics';
+// Componentes compartilhados removidos temporariamente
 
 interface TenantInfo {
   id: string;
@@ -93,7 +91,7 @@ interface AvailableTenant {
   created_at: string;
 }
 
-export const TenantSettingsPage: React.FC = () => {
+const TenantSettingsPage: React.FC = () => {
   const { user, tenant } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
@@ -111,44 +109,24 @@ export const TenantSettingsPage: React.FC = () => {
   const isTenantAdmin = user?.role === 'tenant_admin' || user?.role === 'admin';
   const hasAccess = isPlatformAdmin || isTenantAdmin;
   
-  // Debug de permissões
-  console.log('🔐 [TENANT SETTINGS] Permissões do usuário:', {
-    isPlatformAdmin,
-    isTenantAdmin,
-    hasAccess,
-    userRole: user?.role,
-    userRoles: user?.roles,
-    userIsPlatformAdmin: user?.isPlatformAdmin,
-    tenantId: tenant?.id
-  });
+  // Debug de permissões removido para evitar erros
   
   // Determinar tenant atual (própria tenant ou selecionada pelo super admin)
   const currentTenantId = isPlatformAdmin ? selectedTenantId : tenant?.id || '';
 
   useEffect(() => {
-    console.log('🔄 [TENANT SETTINGS] useEffect executado:', {
-      isPlatformAdmin,
-      isTenantAdmin,
-      tenant: tenant?.id,
-      user: user?.email
-    });
     
     if (isPlatformAdmin) {
-      console.log('👑 [TENANT SETTINGS] Usuário é Platform Admin - carregando todas as tenants');
       loadAvailableTenants();
     } else if (isTenantAdmin && tenant) {
-      console.log('💼 [TENANT SETTINGS] Usuário é Tenant Admin - carregando tenant própria');
       setSelectedTenantId(tenant.id);
       loadTenantInfo(tenant.id);
       loadMetrics(tenant.id);
-    } else {
-      console.log('⚠️ [TENANT SETTINGS] Usuário sem permissões adequadas');
     }
   }, [isPlatformAdmin, isTenantAdmin, tenant]);
   
   useEffect(() => {
     if (currentTenantId) {
-      console.log('🎯 [TENANT SETTINGS] Carregando dados para tenant:', currentTenantId);
       loadTenantInfo(currentTenantId);
       loadMetrics(currentTenantId);
     }
@@ -157,7 +135,6 @@ export const TenantSettingsPage: React.FC = () => {
   const loadAvailableTenants = async () => {
     try {
       setLoadingTenants(true);
-      console.log('🔍 [TENANT SETTINGS] Iniciando carregamento de tenants...');
       
       // Carregar todas as tenants disponíveis (apenas para platform admin)
       const { data: tenants, error } = await supabase
@@ -167,7 +144,6 @@ export const TenantSettingsPage: React.FC = () => {
         .order('name');
         
       if (error) {
-        console.warn('⚠️ [TENANT SETTINGS] Erro ao carregar tenants:', error.message);
         
         // Tentar carregar da tabela profiles como fallback
         const { data: profilesData, error: profilesError } = await supabase
@@ -202,13 +178,11 @@ export const TenantSettingsPage: React.FC = () => {
               setSelectedTenantId(realTenants[0].id);
             }
             
-            console.log(`✅ [TENANT SETTINGS] Carregadas ${realTenants.length} tenants via profiles`);
             return;
           }
         }
         
         // Último fallback para dados mock apenas se não conseguir carregar nada
-        console.warn('⚠️ [TENANT SETTINGS] Usando dados mock como último recurso');
         const mockTenants: AvailableTenant[] = [
           {
             id: 'demo-tenant',
@@ -241,11 +215,9 @@ export const TenantSettingsPage: React.FC = () => {
           setSelectedTenantId(realTenants[0].id);
         }
         
-        console.log(`✅ [TENANT SETTINGS] Carregadas ${realTenants.length} tenants da tabela oficial`);
-        console.log('📊 [TENANT SETTINGS] Tenants carregadas:', realTenants.map(t => ({ id: t.id, name: t.name })));
+
       }
     } catch (error) {
-      console.error('❌ [TENANT SETTINGS] Erro inesperado ao carregar tenants:', error);
       toast.error('Erro ao carregar lista de organizações');
     } finally {
       setLoadingTenants(false);
@@ -257,7 +229,6 @@ export const TenantSettingsPage: React.FC = () => {
     
     try {
       setIsLoading(true);
-      console.log('📊 [TENANT SETTINGS] Carregando informações da tenant:', tenantId);
       
       // Buscar informações reais da tenant no banco
       const { data: tenantData, error: tenantError } = await supabase
@@ -267,7 +238,6 @@ export const TenantSettingsPage: React.FC = () => {
         .single();
         
       if (tenantError) {
-        console.error('❌ [TENANT SETTINGS] Erro ao carregar tenant:', tenantError);
         toast.error('Erro ao carregar informações da organização');
         return;
       }
@@ -286,17 +256,16 @@ export const TenantSettingsPage: React.FC = () => {
         max_users: tenantData.max_users || 10,
         current_users: tenantData.current_users_count || 0,
         created_at: tenantData.created_at || new Date().toISOString(),
-        settings: tenantData.settings || {
-          security_level: 'standard',
-          features_enabled: ['audit_logs'],
-          compliance_frameworks: []
+        settings: {
+          security_level: (tenantData.settings?.security_level as 'basic' | 'standard' | 'advanced') || 'standard',
+          features_enabled: Array.isArray(tenantData.settings?.features_enabled) ? tenantData.settings.features_enabled : ['audit_logs'],
+          compliance_frameworks: Array.isArray(tenantData.settings?.compliance_frameworks) ? tenantData.settings.compliance_frameworks : []
         }
       };
       
-      console.log('✅ [TENANT SETTINGS] Informações da tenant carregadas:', realTenantInfo);
+
       setTenantInfo(realTenantInfo);
     } catch (error) {
-      console.error('❌ [TENANT SETTINGS] Erro inesperado ao carregar tenant:', error);
       toast.error('Erro ao carregar configurações da organização');
     } finally {
       setIsLoading(false);
@@ -307,7 +276,7 @@ export const TenantSettingsPage: React.FC = () => {
     if (!tenantId) return;
     
     try {
-      console.log('📊 [TENANT SETTINGS] Carregando métricas para tenant:', tenantId);
+      
       
       // Carregar dados reais do banco de dados
       const promises = [
@@ -394,10 +363,9 @@ export const TenantSettingsPage: React.FC = () => {
         suspiciousActivities
       };
       
-      console.log('✅ [TENANT SETTINGS] Métricas reais carregadas:', realMetrics);
+
       setMetrics(realMetrics);
     } catch (error) {
-      console.error('❌ [TENANT SETTINGS] Erro ao carregar métricas:', error);
       
       // Fallback com dados mínimos em caso de erro
       const fallbackMetrics: SettingsMetrics = {
@@ -521,7 +489,7 @@ export const TenantSettingsPage: React.FC = () => {
                 {tenantInfo.subscription_plan}
               </Badge>
               <span className="text-muted-foreground">
-                {tenantInfo.current_users}/{tenantInfo.max_users} usuários
+                {String(tenantInfo.current_users)}/{String(tenantInfo.max_users)} usuários
               </span>
               {isPlatformAdmin && (
                 <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs border border-orange-200 dark:border-orange-700">
@@ -559,7 +527,7 @@ export const TenantSettingsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
-                  <p className="text-2xl font-bold">{metrics.activeUsers}</p>
+                  <p className="text-2xl font-bold">{String(metrics.activeUsers)}</p>
                 </div>
                 <Users className="h-8 w-8 text-blue-500" />
               </div>
@@ -571,7 +539,7 @@ export const TenantSettingsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Score de Segurança</p>
-                  <p className="text-2xl font-bold">{metrics.securityScore}%</p>
+                  <p className="text-2xl font-bold">{String(metrics.securityScore)}%</p>
                 </div>
                 <Shield className="h-8 w-8 text-green-500" />
               </div>
@@ -583,7 +551,7 @@ export const TenantSettingsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Sessões Ativas</p>
-                  <p className="text-2xl font-bold">{metrics.activeSessions}</p>
+                  <p className="text-2xl font-bold">{String(metrics.activeSessions)}</p>
                 </div>
                 <Activity className="h-8 w-8 text-purple-500" />
               </div>
@@ -595,7 +563,7 @@ export const TenantSettingsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Armazenamento</p>
-                  <p className="text-2xl font-bold">{metrics.storageUsed}GB</p>
+                  <p className="text-2xl font-bold">{String(metrics.storageUsed)}GB</p>
                 </div>
                 <Database className="h-8 w-8 text-orange-500" />
               </div>
@@ -609,7 +577,7 @@ export const TenantSettingsPage: React.FC = () => {
         <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
           <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
           <AlertDescription className="text-orange-800 dark:text-orange-200">
-            <strong>Atenção:</strong> {metrics.suspiciousActivities} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
+            <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
             <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
               Ver detalhes
             </Button>
@@ -671,7 +639,7 @@ export const TenantSettingsPage: React.FC = () => {
                       variant="secondary" 
                       className="mt-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
                     >
-                      {metrics?.totalUsers} usuários
+                      {String(metrics?.totalUsers || 0)} usuários
                     </Badge>
                   </div>
                 </div>
@@ -691,7 +659,7 @@ export const TenantSettingsPage: React.FC = () => {
                       variant="secondary" 
                       className="mt-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-200 dark:border-green-700"
                     >
-                      Score: {metrics?.securityScore}%
+                      Score: {String(metrics?.securityScore || 0)}%
                     </Badge>
                   </div>
                 </div>
@@ -711,7 +679,7 @@ export const TenantSettingsPage: React.FC = () => {
                       variant="secondary" 
                       className="mt-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
                     >
-                      {metrics?.storageUsed}GB usado
+                      {String(metrics?.storageUsed || 0)}GB usado
                     </Badge>
                   </div>
                 </div>
@@ -730,19 +698,19 @@ export const TenantSettingsPage: React.FC = () => {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{metrics?.activeUsers}</div>
+                  <div className="text-2xl font-bold text-green-600">{String(metrics?.activeUsers || 0)}</div>
                   <div className="text-sm text-muted-foreground">Usuários Ativos</div>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{metrics?.activeSessions}</div>
+                  <div className="text-2xl font-bold text-blue-600">{String(metrics?.activeSessions || 0)}</div>
                   <div className="text-sm text-muted-foreground">Sessões Ativas</div>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{metrics?.securityScore}%</div>
+                  <div className="text-2xl font-bold text-purple-600">{String(metrics?.securityScore || 0)}%</div>
                   <div className="text-sm text-muted-foreground">Score de Segurança</div>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{metrics?.storageUsed}GB</div>
+                  <div className="text-2xl font-bold text-orange-600">{String(metrics?.storageUsed || 0)}GB</div>
                   <div className="text-sm text-muted-foreground">Armazenamento Usado</div>
                 </div>
               </div>
@@ -750,89 +718,60 @@ export const TenantSettingsPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Placeholder para outras tabs */}
+        {/* Placeholder para outras tabs - COMENTADOS PARA DEBUG */}
         {/* Gerenciamento de Usuários */}
         <TabsContent value="users">
-          <UserManagementSection 
-            tenantId={currentTenantId}
-            onUserChange={() => loadMetrics(currentTenantId)}
-            onSettingsChange={() => setHasUnsavedChanges(true)}
-          />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Gerenciamento de Usuários</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
+          </div>
         </TabsContent>
 
         <TabsContent value="security">
-          <div className="space-y-6">
-            <SecurityConfigSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <MFAConfigSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <EmailDomainSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <ImpossibleTravelSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <SessionManagementSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Configurações de Segurança</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
           </div>
         </TabsContent>
 
         <TabsContent value="risk-matrix">
-          <RiskMatrixConfigSection 
-            tenantId={currentTenantId}
-            onSettingsChange={() => setHasUnsavedChanges(true)}
-          />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Matriz de Risco</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
+          </div>
         </TabsContent>
 
         <TabsContent value="sso">
-          <SSOConfigSection 
-            tenantId={currentTenantId}
-            onSettingsChange={() => setHasUnsavedChanges(true)}
-          />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">SSO</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
+          </div>
         </TabsContent>
 
         <TabsContent value="data">
-          <div className="space-y-6">
-            <BackupDataSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <DataExportSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Backup e Dados</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
           </div>
         </TabsContent>
 
         <TabsContent value="encryption">
-          <div className="space-y-6">
-            <EncryptionConfigSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
-            <CryptoKeysSection 
-              tenantId={currentTenantId}
-              onSettingsChange={() => setHasUnsavedChanges(true)}
-            />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Criptografia</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
           </div>
         </TabsContent>
 
         <TabsContent value="logs">
-          <ActivityLogsSection 
-            tenantId={currentTenantId}
-          />
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Logs de Atividade</h3>
+            <p>Seção temporáriamente desabilitada para debug.</p>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
   );
 };
 
+export { TenantSettingsPage };
 export default TenantSettingsPage;

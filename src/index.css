@@ -607,6 +607,99 @@
     transition: all 0.2s ease !important;
   }
 
+  /* Professional Workflow Canvas Styles */
+  .workflow-canvas {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    position: relative;
+  }
+
+  .workflow-canvas::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: 
+      radial-gradient(circle at 2px 2px, rgba(0,0,0,0.05) 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+
+  .workflow-node {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    filter: drop-shadow(0 10px 15px -3px rgba(0, 0, 0, 0.1)) 
+            drop-shadow(0 4px 6px -2px rgba(0, 0, 0, 0.05));
+  }
+
+  .workflow-node:hover {
+    filter: drop-shadow(0 25px 25px -5px rgba(0, 0, 0, 0.25)) 
+            drop-shadow(0 10px 10px -5px rgba(0, 0, 0, 0.04));
+    transform: translateY(-2px) scale(1.02) !important;
+  }
+
+  .workflow-node-selected {
+    filter: drop-shadow(0 25px 25px -5px rgba(59, 130, 246, 0.25)) 
+            drop-shadow(0 10px 10px -5px rgba(59, 130, 246, 0.1));
+    animation: node-selected-pulse 2s ease-in-out infinite;
+    transform: scale(1.05) !important;
+  }
+
+  @keyframes node-selected-pulse {
+    0%, 100% {
+      transform: scale(1.05);
+      filter: drop-shadow(0 25px 25px -5px rgba(59, 130, 246, 0.25)) 
+              drop-shadow(0 10px 10px -5px rgba(59, 130, 246, 0.1));
+    }
+    50% {
+      transform: scale(1.08);
+      filter: drop-shadow(0 30px 30px -5px rgba(59, 130, 246, 0.35)) 
+              drop-shadow(0 15px 15px -5px rgba(59, 130, 246, 0.15));
+    }
+  }
+
+  @keyframes animate-in {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-top-2 {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -20px);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  .animate-in {
+    animation: animate-in 0.3s ease-out;
+  }
+
+  .slide-in-from-top-2 {
+    animation: slide-in-from-top-2 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Border width utilities */
+  .border-3 {
+    border-width: 3px;
+  }
+
+  /* Connection lines enhanced visibility */
+  .workflow-connection {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
   .dark [role="dialog"] input:focus,
   .dark [role="dialog"] textarea:focus,
   .dark [role="dialog"] select:focus,
@@ -1002,5 +1095,197 @@
   }
   50% {
     box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.6);
+  }
+}
+
+/* Canvas Layout Fixed Proportions - Prevents canvas expansion */
+@layer utilities {
+  .canvas-layout-fixed {
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+    width: 100%;
+  }
+  
+  .canvas-sidebar-left {
+    width: 12rem; /* w-48 */
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  
+  .canvas-main-area {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+  }
+  
+  .canvas-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    max-width: none !important;
+  }
+  
+  .canvas-sidebar-right {
+    width: 16rem; /* w-64 */
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  
+  /* Prevent max-width containers from interfering */
+  .canvas-content .max-w-6xl,
+  .canvas-content .max-w-5xl,
+  .canvas-content .max-w-4xl {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Stabilize drag and drop areas */
+  .drag-drop-stable {
+    transition: all 200ms ease;
+    will-change: auto;
+  }
+  
+  .drag-drop-stable:not(.dragging) {
+    contain: layout style;
+  }
+  
+  /* Grid Layout Fixes for Form Builder */
+  .form-builder-grid {
+    display: grid !important;
+    grid-template-columns: 176px 1fr 256px !important;
+    overflow: hidden !important;
+    gap: 1.5rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  .form-builder-grid > * {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    max-width: 100% !important;
+  }
+  
+  /* Force canvas center area to respect container */
+  .form-builder-grid > div:nth-child(2) {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .form-builder-grid > div:nth-child(2) * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Prevent internal grids from expanding */
+  .form-builder-grid .grid[style*="gridTemplateColumns"] {
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  .form-builder-grid .grid[style*="gridTemplateColumns"] > * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+  
+  /* Prevent flexbox from interfering with grid */
+  .form-builder-grid .flex-1 {
+    flex: none !important;
+  }
+  
+  .form-builder-grid .flex-shrink-0 {
+    flex-shrink: 0 !important;
+  }
+  
+  /* Nuclear option: force all children to respect boundaries */
+  .form-builder-grid * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* ================ WORKFLOW ENGINE GRID LAYOUT ================ */
+  /* Completely rewrite workflow layout to prevent expansion */
+  .workflow-engine-grid {
+    display: grid !important;
+    grid-template-columns: 224px 1fr 256px !important;
+    grid-template-rows: 1fr !important;
+    overflow: hidden !important;
+    gap: 1rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    contain: layout size style !important;
+  }
+  
+  /* Workflow Sidebar (Elements Palette) */
+  .workflow-sidebar {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    width: 224px !important;
+    max-width: 224px !important;
+    min-width: 224px !important;
+    overflow: hidden !important;
+    contain: layout size !important;
+  }
+  
+  /* Workflow Canvas (Center Area) */
+  .workflow-canvas {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    contain: layout size style !important;
+  }
+  
+  /* Workflow Properties (Right Sidebar) */
+  .workflow-properties {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    width: 256px !important;
+    max-width: 256px !important;
+    min-width: 256px !important;
+    overflow: hidden !important;
+    contain: layout size !important;
+  }
+  
+  /* Force all workflow canvas content to respect boundaries */
+  .workflow-canvas * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Specifically target the problematic canvas div */
+  .workflow-canvas .relative.w-full.bg-gray-50,
+  .workflow-canvas [style*="height: 600px"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    contain: layout size !important;
+    overflow: hidden !important;
+  }
+  
+  /* Force center content alignment without expansion */
+  .workflow-canvas .flex.items-center.justify-center.h-full {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    contain: layout size !important;
+  }
+  
+  /* Nuclear option for workflow: prevent ALL expansion */
+  .workflow-engine-grid * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Additional containment for workflow nodes and elements */
+  .workflow-engine-grid .text-center.text-gray-500,
+  .workflow-engine-grid .text-center {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
   }
 }

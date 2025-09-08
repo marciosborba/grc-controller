@@ -174,12 +174,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       });
       
       console.log(`✅ [USER MANAGEMENT] Carregados ${realUsers.length} usuários reais`);
-      console.log('📊 [USER MANAGEMENT] Usuários:', realUsers.map(u => ({ 
-        name: u.full_name, 
-        email: u.email, 
-        role: u.role, 
-        status: u.status 
-      })));
+      console.log('📊 [USER MANAGEMENT] Usuários carregados:', realUsers.length);
       
       setUsers(realUsers);
     } catch (error) {
@@ -334,7 +329,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       onUserChange();
       onSettingsChange();
       
-      console.log(`✅ [USER MANAGEMENT] Status alterado para ${newStatus} (simulado):`, user.email);
+      console.log(`✅ [USER MANAGEMENT] Status alterado para ${newStatus} (simulado) para usuário:`, user.email);
       toast.success(`Usuário ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso (simulado)`);
     } catch (error) {
       console.error('❌ [USER MANAGEMENT] Erro ao atualizar status:', error);
