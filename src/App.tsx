@@ -93,6 +93,9 @@ const UserProfilePage = lazy(() => import("@/components/profile/UserProfilePage"
 const NotificationsPage = lazy(() => import("@/components/notifications/NotificationsPage").then(module => ({ default: module.NotificationsPage })));
 const HelpPage = lazy(() => import("./pages/HelpPage"));
 
+// Tenant Settings module
+const TenantSettingsPage = lazy(() => import("@/components/tenant-settings/TenantSettingsPage").then(module => ({ default: module.TenantSettingsPage })));
+
 // Public vendor assessment
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
 
@@ -573,6 +576,11 @@ const App = () => (
                   <Route path="settings/general" element={
                     <Suspense fallback={<PageLoader />}>
                       <GeneralSettingsPage />
+                    </Suspense>
+                  } />
+                  <Route path="tenant-settings" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <TenantSettingsPage />
                     </Suspense>
                   } />
                   

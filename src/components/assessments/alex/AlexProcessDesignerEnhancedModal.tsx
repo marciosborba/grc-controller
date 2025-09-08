@@ -175,6 +175,10 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
   const [connectionLineType, setConnectionLineType] = useState<'solid' | 'dashed'>('solid');
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   
   // Estados para Relatórios
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
@@ -1415,7 +1419,12 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
     }
   }, []);
 
-  const getNodeSize = useCallback((type: string) => {
+  const getNodeSize = useCallback((type: string, node?: any) => {
+    // Use the node's actual size if it has been resized, otherwise use default size
+    if (node && node.size) {
+      return { width: `${node.size.width}px`, height: `${node.size.height}px` };
+    }
+    
     switch (type) {
       case 'start': case 'end': return { width: '100px', height: '100px' };
       case 'decision': return { width: '120px', height: '120px' };
@@ -1553,18 +1562,120 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
   }, []);
 
   const getNodeCenter = useCallback((node: any) => {
-    const size = 
-      node.type === 'start' || node.type === 'end' ? { width: 100, height: 100 } :
-      node.type === 'decision' ? { width: 120, height: 120 } :
-      node.type === 'task' ? { width: 150, height: 80 } :
-      node.type === 'parallel' ? { width: 140, height: 60 } :
-      { width: 150, height: 80 };
+    // Use the node's actual size if it has been resized, otherwise use default size
+    let size;
+    if (node.size) {
+      size = { width: node.size.width, height: node.size.height };
+    } else {
+      size = 
+        node.type === 'start' || node.type === 'end' ? { width: 100, height: 100 } :
+        node.type === 'decision' ? { width: 120, height: 120 } :
+        node.type === 'task' ? { width: 150, height: 80 } :
+        node.type === 'parallel' ? { width: 140, height: 60 } :
+        { width: 150, height: 80 };
+    }
     
     return {
       x: node.position.x + size.width / 2,
       y: node.position.y + size.height / 2
     };
   }, []);
+
+  // Calculate connection points on the edge of nodes for better visual appearance
+  const getConnectionPoints = useCallback((sourceNode: any, targetNode: any) => {
+    const sourceCenter = getNodeCenter(sourceNode);
+    const targetCenter = getNodeCenter(targetNode);
+    
+    // Get node sizes
+    let sourceSize, targetSize;
+    if (sourceNode.size) {
+      sourceSize = { width: sourceNode.size.width, height: sourceNode.size.height };
+    } else {
+      sourceSize = 
+        sourceNode.type === 'start' || sourceNode.type === 'end' ? { width: 100, height: 100 } :
+        sourceNode.type === 'decision' ? { width: 120, height: 120 } :
+        sourceNode.type === 'task' ? { width: 150, height: 80 } :
+        sourceNode.type === 'parallel' ? { width: 140, height: 60 } :
+        { width: 150, height: 80 };
+    }
+    
+    if (targetNode.size) {
+      targetSize = { width: targetNode.size.width, height: targetNode.size.height };
+    } else {
+      targetSize = 
+        targetNode.type === 'start' || targetNode.type === 'end' ? { width: 100, height: 100 } :
+        targetNode.type === 'decision' ? { width: 120, height: 120 } :
+        targetNode.type === 'task' ? { width: 150, height: 80 } :
+        targetNode.type === 'parallel' ? { width: 140, height: 60 } :
+        { width: 150, height: 80 };
+    }
+    
+    // Calculate the angle between nodes
+    const dx = targetCenter.x - sourceCenter.x;
+    const dy = targetCenter.y - sourceCenter.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance === 0) {
+      return {
+        source: sourceCenter,
+        target: targetCenter
+      };
+    }
+    
+    const angle = Math.atan2(dy, dx);
+    
+    // Calculate connection points on the edge of each node
+    let sourceX, sourceY, targetX, targetY;
+    
+    if (sourceNode.type === 'start' || sourceNode.type === 'end') {
+      // Circular nodes - connect from edge
+      const sourceRadius = sourceSize.width / 2;
+      sourceX = sourceCenter.x + (sourceRadius * Math.cos(angle));
+      sourceY = sourceCenter.y + (sourceRadius * Math.sin(angle));
+    } else {
+      // Rectangular nodes - find intersection with rectangle edge
+      const halfWidth = sourceSize.width / 2;
+      const halfHeight = sourceSize.height / 2;
+      
+      // Calculate which edge the line intersects
+      if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
+        // Line exits through left or right edge
+        sourceX = sourceCenter.x + (dx > 0 ? halfWidth : -halfWidth);
+        sourceY = sourceCenter.y + (dy * halfWidth / Math.abs(dx));
+      } else {
+        // Line exits through top or bottom edge
+        sourceX = sourceCenter.x + (dx * halfHeight / Math.abs(dy));
+        sourceY = sourceCenter.y + (dy > 0 ? halfHeight : -halfHeight);
+      }
+    }
+    
+    if (targetNode.type === 'start' || targetNode.type === 'end') {
+      // Circular nodes - connect to edge
+      const targetRadius = targetSize.width / 2;
+      targetX = targetCenter.x - (targetRadius * Math.cos(angle));
+      targetY = targetCenter.y - (targetRadius * Math.sin(angle));
+    } else {
+      // Rectangular nodes - find intersection with rectangle edge
+      const halfWidth = targetSize.width / 2;
+      const halfHeight = targetSize.height / 2;
+      
+      // Calculate which edge the line intersects (from opposite direction)
+      if (Math.abs(dx) / halfWidth > Math.abs(dy) / halfHeight) {
+        // Line enters through left or right edge
+        targetX = targetCenter.x + (dx > 0 ? -halfWidth : halfWidth);
+        targetY = targetCenter.y - (dy * halfWidth / Math.abs(dx));
+      } else {
+        // Line enters through top or bottom edge
+        targetX = targetCenter.x - (dx * halfHeight / Math.abs(dy));
+        targetY = targetCenter.y + (dy > 0 ? -halfHeight : halfHeight);
+      }
+    }
+    
+    return {
+      source: { x: sourceX, y: sourceY },
+      target: { x: targetX, y: targetY }
+    };
+  }, [getNodeCenter]);
 
   const getNodeStateClasses = useCallback((node: any) => {
     if (selectedWorkflowNode?.id === node.id) {
@@ -1606,30 +1717,91 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
     });
   }, [isConnecting]);
 
-  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !selectedWorkflowNode) return;
-    
-    const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const newX = e.clientX - canvasRect.left - dragOffset.x;
-    const newY = e.clientY - canvasRect.top - dragOffset.y;
-    
-    // Constrain within canvas bounds
-    const constrainedX = Math.max(0, Math.min(newX, canvasRect.width - 150));
-    const constrainedY = Math.max(0, Math.min(newY, canvasRect.height - 100));
-    
-    updateWorkflowNode(selectedWorkflowNode.id, {
-      position: { x: constrainedX, y: constrainedY }
-    });
-  }, [isDragging, selectedWorkflowNode, dragOffset, updateWorkflowNode]);
 
   const handleCanvasMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
     setDragOffset({ x: 0, y: 0 });
   }, []);
 
+  // Resize handling for nodes
+  const handleResizeStart = useCallback((e: React.MouseEvent, nodeId: string, handle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    setResizeHandle(handle);
+    setSelectedWorkflowNode(workflowNodes.find(n => n.id === nodeId) || null);
+  }, [workflowNodes]);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDragging && selectedWorkflowNode) {
+      const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const newX = (e.clientX - canvasRect.left - dragOffset.x) / canvasScale;
+      const newY = (e.clientY - canvasRect.top - dragOffset.y) / canvasScale;
+      
+      // Constrain within expanded canvas bounds
+      const constrainedX = Math.max(0, Math.min(newX, 2000));
+      const constrainedY = Math.max(0, Math.min(newY, 1500));
+      
+      updateWorkflowNode(selectedWorkflowNode.id, {
+        position: { x: constrainedX, y: constrainedY }
+      });
+    } else if (isResizing && selectedWorkflowNode && resizeHandle) {
+      const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const mouseX = (e.clientX - canvasRect.left) / canvasScale;
+      const mouseY = (e.clientY - canvasRect.top) / canvasScale;
+      
+      const currentSize = getNodeSize(selectedWorkflowNode.type);
+      const currentWidth = parseInt(currentSize.width);
+      const currentHeight = parseInt(currentSize.height);
+      
+      let newWidth = currentWidth;
+      let newHeight = currentHeight;
+      
+      switch (resizeHandle) {
+        case 'se': // southeast
+          newWidth = Math.max(80, mouseX - selectedWorkflowNode.position.x);
+          newHeight = Math.max(40, mouseY - selectedWorkflowNode.position.y);
+          break;
+        case 'sw': // southwest
+          newWidth = Math.max(80, selectedWorkflowNode.position.x + currentWidth - mouseX);
+          newHeight = Math.max(40, mouseY - selectedWorkflowNode.position.y);
+          if (newWidth !== currentWidth) {
+            updateWorkflowNode(selectedWorkflowNode.id, {
+              position: { ...selectedWorkflowNode.position, x: mouseX }
+            });
+          }
+          break;
+        case 'ne': // northeast
+          newWidth = Math.max(80, mouseX - selectedWorkflowNode.position.x);
+          newHeight = Math.max(40, selectedWorkflowNode.position.y + currentHeight - mouseY);
+          if (newHeight !== currentHeight) {
+            updateWorkflowNode(selectedWorkflowNode.id, {
+              position: { ...selectedWorkflowNode.position, y: mouseY }
+            });
+          }
+          break;
+        case 'nw': // northwest
+          newWidth = Math.max(80, selectedWorkflowNode.position.x + currentWidth - mouseX);
+          newHeight = Math.max(40, selectedWorkflowNode.position.y + currentHeight - mouseY);
+          if (newWidth !== currentWidth || newHeight !== currentHeight) {
+            updateWorkflowNode(selectedWorkflowNode.id, {
+              position: { x: mouseX, y: mouseY }
+            });
+          }
+          break;
+      }
+      
+      updateWorkflowNode(selectedWorkflowNode.id, {
+        size: { width: newWidth, height: newHeight }
+      });
+    }
+  }, [isDragging, isResizing, selectedWorkflowNode, dragOffset, resizeHandle, canvasScale, updateWorkflowNode, getNodeSize]);
+
   const renderWorkflowNodes = useCallback(() => {
     return workflowNodes.map((node) => {
-      const nodeSize = getNodeSize(node.type);
+      const nodeSize = getNodeSize(node.type, node);
       
       return (
         <div
@@ -1718,13 +1890,44 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
             </Button>
           </div>
         )}
+        
+        {/* Resize handles - appear only when node is selected */}
+        {selectedWorkflowNode?.id === node.id && (
+          <div>
+            {/* Corner resize handles */}
+            <div
+              className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-se-resize z-30 hover:bg-blue-600"
+              onMouseDown={(e) => handleResizeStart(e, node.id, 'se')}
+              title="Redimensionar"
+              style={{ borderRadius: '0 0 3px 0' }}
+            />
+            <div
+              className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-nw-resize z-30 hover:bg-blue-600"
+              onMouseDown={(e) => handleResizeStart(e, node.id, 'nw')}
+              title="Redimensionar"
+              style={{ borderRadius: '3px 0 0 0' }}
+            />
+            <div
+              className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-ne-resize z-30 hover:bg-blue-600"
+              onMouseDown={(e) => handleResizeStart(e, node.id, 'ne')}
+              title="Redimensionar"
+              style={{ borderRadius: '0 3px 0 0' }}
+            />
+            <div
+              className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-sw-resize z-30 hover:bg-blue-600"
+              onMouseDown={(e) => handleResizeStart(e, node.id, 'sw')}
+              title="Redimensionar"
+              style={{ borderRadius: '0 0 0 3px' }}
+            />
+          </div>
+        )}
       </div>
       );
     });
   }, [
     workflowNodes, getNodeSize, getNodeShape, getNodeStateClasses, getNodeTypeClasses,
     isDragging, handleWorkflowNodeClick, handleNodeMouseDown, selectedWorkflowNode,
-    isConnecting, connectionSource, startConnection, deleteWorkflowNode
+    isConnecting, connectionSource, startConnection, deleteWorkflowNode, handleResizeStart
   ]);
 
   // Drag and Drop functions moved above renderWorkflowNodes
@@ -1782,21 +1985,7 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
           
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
-              {selectedTemplate && (
-                <Badge className={`${
-                  selectedTemplate.category === 'compliance' ? 'bg-blue-100 text-blue-800' :
-                  selectedTemplate.category === 'risk' ? 'bg-red-100 text-red-800' :
-                  selectedTemplate.category === 'audit' ? 'bg-green-100 text-green-800' :
-                  selectedTemplate.category === 'incident' ? 'bg-orange-100 text-orange-800' :
-                  selectedTemplate.category === 'policy' ? 'bg-purple-100 text-purple-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {selectedTemplate.category}
-                </Badge>
-              )}
-              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
-                v5.0.0 Template-Driven
-              </Badge>
+              {/* Badge elements removed as requested */}
             </div>
             {hasUnsavedChanges && (
               <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
@@ -3183,25 +3372,53 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                           <Badge variant="secondary">Del para excluir</Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Select defaultValue="100">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setCanvasScale(prev => Math.max(0.25, prev - 0.25))}
+                            title="Zoom Out"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Select 
+                            value={(canvasScale * 100).toString()} 
+                            onValueChange={(value) => setCanvasScale(parseInt(value) / 100)}
+                          >
                             <SelectTrigger className="w-20 h-6 text-xs">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="25">25%</SelectItem>
                               <SelectItem value="50">50%</SelectItem>
                               <SelectItem value="75">75%</SelectItem>
                               <SelectItem value="100">100%</SelectItem>
                               <SelectItem value="125">125%</SelectItem>
                               <SelectItem value="150">150%</SelectItem>
+                              <SelectItem value="200">200%</SelectItem>
                             </SelectContent>
                           </Select>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setCanvasScale(prev => Math.min(2, prev + 0.25))}
+                            title="Zoom In"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 min-h-0 p-4">
-                      <div className="relative w-full h-full bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 min-h-[600px] overflow-hidden"
+                      <div className="relative w-full bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 overflow-hidden"
                            onDrop={handleWorkflowCanvasDrop}
-                           onDragOver={handleWorkflowCanvasDragOver}>
+                           onDragOver={handleWorkflowCanvasDragOver}
+                           style={{ 
+                             height: '600px',
+                             minHeight: '600px',
+                             maxHeight: '600px'
+                           }}>
                         
                         {workflowNodes.length === 0 ? (
                           <div className="flex items-center justify-center h-full">
@@ -3226,12 +3443,19 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                             </div>
                           </div>
                         ) : (
-                          <div 
-                            className={`relative w-full h-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-default'}`}
-                            onMouseMove={handleCanvasMouseMove}
-                            onMouseUp={handleCanvasMouseUp}
-                            onMouseLeave={handleCanvasMouseUp}
-                          >
+                          <div className="w-full h-full overflow-auto">
+                            <div 
+                              className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-default'}`}
+                              style={{ 
+                                width: '2000px', 
+                                height: '1500px',
+                                transform: `scale(${canvasScale})`,
+                                transformOrigin: '0 0'
+                              }}
+                              onMouseMove={handleCanvasMouseMove}
+                              onMouseUp={handleCanvasMouseUp}
+                              onMouseLeave={handleCanvasMouseUp}
+                            >
                             {/* Renderizar nós do workflow */}
                             {renderWorkflowNodes()}
 
@@ -3244,44 +3468,54 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                 
                                 if (!sourceNode || !targetNode) return null;
                                 
-                                const sourceCenter = getNodeCenter(sourceNode);
-                                const targetCenter = getNodeCenter(targetNode);
+                                const connectionPoints = getConnectionPoints(sourceNode, targetNode);
+                                const sourcePoint = connectionPoints.source;
+                                const targetPoint = connectionPoints.target;
                                 
                                 const strokeDashArray = connectionLineType === 'dashed' ? '8,4' : 'none';
+                                
+                                const markerEnd = connectionLineType === 'dashed' ? 'url(#arrowhead-dashed)' : 'url(#arrowhead)';
                                 
                                 return (
                                   <g key={connection.id}>
                                     {connectionLineStyle === 'straight' ? (
                                       <line
-                                        x1={sourceCenter.x}
-                                        y1={sourceCenter.y}
-                                        x2={targetCenter.x}
-                                        y2={targetCenter.y}
+                                        x1={sourcePoint.x}
+                                        y1={sourcePoint.y}
+                                        x2={targetPoint.x}
+                                        y2={targetPoint.y}
                                         stroke="#6366f1"
-                                        strokeWidth="2"
+                                        strokeWidth="3"
                                         strokeDasharray={strokeDashArray}
-                                        markerEnd="url(#arrowhead)"
+                                        markerEnd={markerEnd}
+                                        strokeLinecap="round"
                                       />
                                     ) : (
                                       <path
-                                        d={`M ${sourceCenter.x} ${sourceCenter.y} Q ${(sourceCenter.x + targetCenter.x) / 2} ${sourceCenter.y - 50} ${targetCenter.x} ${targetCenter.y}`}
+                                        d={`M ${sourcePoint.x} ${sourcePoint.y} Q ${(sourcePoint.x + targetPoint.x) / 2} ${sourcePoint.y - 50} ${targetPoint.x} ${targetPoint.y}`}
                                         fill="none"
                                         stroke="#6366f1"
-                                        strokeWidth="2"
+                                        strokeWidth="3"
                                         strokeDasharray={strokeDashArray}
-                                        markerEnd="url(#arrowhead)"
+                                        markerEnd={markerEnd}
+                                        strokeLinecap="round"
                                       />
                                     )}
                                     {connection.label && (
                                       <text
-                                        x={(sourceCenter.x + targetCenter.x) / 2}
-                                        y={(sourceCenter.y + targetCenter.y) / 2 - 10}
+                                        x={(sourcePoint.x + targetPoint.x) / 2}
+                                        y={(sourcePoint.y + targetPoint.y) / 2 - 15}
                                         fill="#6366f1"
-                                        fontSize="11"
-                                        fontWeight="500"
+                                        fontSize="12"
+                                        fontWeight="600"
                                         textAnchor="middle"
                                         className="pointer-events-auto cursor-pointer"
-                                        style={{ filter: 'drop-shadow(1px 1px 1px rgba(255,255,255,0.8))' }}
+                                        style={{ 
+                                          filter: 'drop-shadow(1px 1px 2px rgba(255,255,255,0.9))',
+                                          stroke: '#ffffff',
+                                          strokeWidth: '3px',
+                                          paintOrder: 'stroke fill'
+                                        }}
                                       >
                                         {connection.label}
                                       </text>
@@ -3290,19 +3524,38 @@ const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhancedModa
                                 );
                               })}
                               
-                              {/* Arrow marker definition */}
+                              {/* Arrow marker definition - improved visibility */}
                               <defs>
                                 <marker
                                   id="arrowhead"
-                                  markerWidth="10"
-                                  markerHeight="7"
-                                  refX="9"
-                                  refY="3.5"
+                                  markerWidth="12"
+                                  markerHeight="8"
+                                  refX="10"
+                                  refY="4"
                                   orient="auto"
+                                  markerUnits="strokeWidth"
                                 >
-                                  <polygon
-                                    points="0 0, 10 3.5, 0 7"
+                                  <path
+                                    d="M0,0 L0,8 L12,4 z"
                                     fill="#6366f1"
+                                    stroke="#6366f1"
+                                    strokeWidth="1"
+                                  />
+                                </marker>
+                                <marker
+                                  id="arrowhead-dashed"
+                                  markerWidth="12"
+                                  markerHeight="8"
+                                  refX="10"
+                                  refY="4"
+                                  orient="auto"
+                                  markerUnits="strokeWidth"
+                                >
+                                  <path
+                                    d="M0,0 L0,8 L12,4 z"
+                                    fill="#6366f1"
+                                    stroke="#6366f1"
+                                    strokeWidth="1"
                                   />
                                 </marker>
                               </defs>

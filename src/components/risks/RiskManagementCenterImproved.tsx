@@ -421,7 +421,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-6 flex flex-col items-center space-y-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden border-2"
+                    className="h-auto p-6 flex flex-col items-center space-y-3 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg group relative overflow-hidden border-0"
                     onClick={action.action}
                     style={{ 
                       position: 'relative',
@@ -467,7 +467,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg group relative overflow-hidden border-0"
                     onClick={action.action}
                     style={{ 
                       position: 'relative',
@@ -510,7 +510,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   <Button
                     key={action.id}
                     variant="outline"
-                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg group relative overflow-hidden border-0"
                     onClick={action.action}
                     style={{ 
                       position: 'relative',

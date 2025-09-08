@@ -61,11 +61,11 @@ const navigationItems = [{
       description: 'Denúncias e questões éticas'
     },
     {
-      title: 'Usuários',
-      url: '/settings',
+      title: 'Configurações',
+      url: '/tenant-settings',
       icon: Settings,
-      permissions: ['admin', 'users.read'],
-      description: 'Gestão de usuários'
+      permissions: ['tenant_admin', 'admin', 'platform_admin'],
+      description: 'Configurações da organização'
     },
     {
       title: 'Conformidade',
