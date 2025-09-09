@@ -81,7 +81,10 @@ import {
   Sparkles,
   Cpu,
   CloudDownload,
-  Star
+  Star,
+  BookOpen,
+  Heart,
+  AlertCircle
 } from 'lucide-react';
 
 import { useProcessManagement } from '@/hooks/useProcessManagement';
@@ -102,6 +105,11 @@ interface WorkflowNode {
       textColor?: string;
       borderWidth?: number;
       borderRadius?: number;
+      opacity?: number;
+      rotation?: number;
+      shadow?: string;
+      animation?: string;
+      theme?: string;
     };
   };
 }
@@ -519,14 +527,14 @@ const FormBuilderSection: React.FC<{
   return (
     <div className="flex flex-1 h-full">
       {/* Field Types Palette */}
-      <div className="w-80 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Tipos de Campo</h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Arraste ou clique para adicionar</p>
+      <div className="w-64 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-bold text-foreground">Tipos de Campo</h3>
+          <p className="text-xs text-muted-foreground">Arraste ou clique para adicionar</p>
         </div>
         
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-6">
+        <ScrollArea className="flex-1 p-3">
+          <div className="space-y-4">
             {/* Agrupar por categoria */}
             {Object.entries(
               fieldTypes.reduce((acc, field) => {
@@ -559,17 +567,17 @@ const FormBuilderSection: React.FC<{
               };
 
               return (
-                <div key={category} className="space-y-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                <div key={category} className="space-y-2">
+                  <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
                     {categoryLabels[category] || category}
                   </h4>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {fields.map(({ type, label, icon: Icon, description }) => (
                       <div
                         key={type}
-                        className={`group relative cursor-move p-3 rounded-lg bg-gradient-to-br ${categoryColors[category] || categoryColors.basic}
+                        className={`group relative cursor-move p-2 rounded-md bg-gradient-to-br ${categoryColors[category] || categoryColors.basic}
                                    border border-gray-200/50 dark:border-gray-700/50
-                                   hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200
+                                   hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200
                                    hover:scale-105 active:scale-95`}
                         onClick={() => addField(type)}
                         draggable
@@ -579,14 +587,13 @@ const FormBuilderSection: React.FC<{
                         }}
                         title={description + ' - Clique ou arraste para o grid'}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-md 
+                        <div className="flex items-center gap-1.5">
+                          <div className="p-1.5 bg-white/80 dark:bg-gray-800/80 rounded-sm 
                                        group-hover:bg-white dark:group-hover:bg-gray-700 transition-colors">
-                            <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                            <Icon className="w-3 h-3 text-gray-700 dark:text-gray-300" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 block truncate">{label}</span>
-                            <span className="text-xs text-gray-600 dark:text-gray-400 block truncate">{description}</span>
+                            <span className="text-xs font-medium text-gray-900 dark:text-gray-100 block truncate leading-tight">{label}</span>
                           </div>
                         </div>
                       </div>
@@ -602,7 +609,7 @@ const FormBuilderSection: React.FC<{
       {/* Form Preview Area */}
       <div className="flex-1 flex flex-col">
         {/* Form Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-background">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-background">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-bold text-foreground">Preview do Formulário</h3>
@@ -1700,20 +1707,20 @@ const NodePalette: React.FC<{
   ];
 
   return (
-    <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Elementos</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Arraste para o canvas</p>
+    <div className="w-52 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg font-bold text-foreground">Elementos</h3>
+        <p className="text-xs text-muted-foreground">Arraste para o canvas</p>
       </div>
       
-      <ScrollArea className="flex-1 p-4">
-        <div className="grid grid-cols-2 gap-3">
+      <ScrollArea className="flex-1 p-3">
+        <div className="grid grid-cols-2 gap-2">
           {nodeTypes.map(({ type, label, icon: Icon, color }) => (
             <div
               key={type}
-              className={`relative group cursor-pointer p-3 rounded-xl bg-gradient-to-br ${color} 
-                         hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg
-                         hover:shadow-xl border border-white/20`}
+              className={`relative group cursor-pointer p-2 rounded-lg bg-gradient-to-br ${color} 
+                         hover:scale-105 active:scale-95 transition-all duration-200 shadow-md
+                         hover:shadow-lg border border-white/20`}
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData('application/reactflow', JSON.stringify({ type }));
@@ -1728,14 +1735,14 @@ const NodePalette: React.FC<{
               title={`Adicionar ${label}`}
             >
               <div className="flex flex-col items-center text-white">
-                <div className="p-2 bg-white/20 rounded-lg mb-2 backdrop-blur-sm">
-                  <Icon className="w-5 h-5" />
+                <div className="p-1.5 bg-white/20 rounded-md mb-1.5 backdrop-blur-sm">
+                  <Icon className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-medium text-center leading-tight">{label}</span>
               </div>
               
               {/* Hover effect */}
-              <div className="absolute inset-0 bg-white/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <div className="absolute inset-0 bg-white/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
             </div>
           ))}
         </div>
@@ -1753,6 +1760,7 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
   onSave
 }) => {
   // Main state
+  const [showInitialChoice, setShowInitialChoice] = useState(true);
   const [currentStep, setCurrentStep] = useState<'form-builder' | 'workflow-designer'>('form-builder');
   const [isMaximized, setIsMaximized] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1778,11 +1786,28 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
   const [selectedWorkflowNode, setSelectedWorkflowNode] = useState<WorkflowNode | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  
+  // Node configuration modal state
+  const [showNodeConfig, setShowNodeConfig] = useState(false);
+  const [configuratingNode, setConfiguratingNode] = useState<WorkflowNode | null>(null);
+  const [nodeConfigData, setNodeConfigData] = useState<{
+    label: string;
+    description: string;
+    properties: Record<string, any>;
+  }>({
+    label: '',
+    description: '',
+    properties: {}
+  });
 
   // Connection state
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionSource, setConnectionSource] = useState<WorkflowNode | null>(null);
   const [tempConnection, setTempConnection] = useState<{ start: { x: number; y: number }; end: { x: number; y: number } } | null>(null);
+  
+  // Node dragging state
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [draggedNode, setDraggedNode] = useState<WorkflowNode | null>(null);
 
   // Form state
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -1818,16 +1843,16 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
     customData?: Partial<WorkflowNode['data']>
   ): WorkflowNode => {
     const nodeDefaults = {
-      start: { width: 120, height: 120, label: 'Início' },
-      end: { width: 120, height: 80, label: 'Fim' },
-      task: { width: 160, height: 100, label: 'Nova Tarefa' },
-      decision: { width: 120, height: 120, label: 'Decisão' },
-      parallel: { width: 180, height: 80, label: 'Processo Paralelo' },
-      timer: { width: 140, height: 90, label: 'Timer' },
-      notification: { width: 150, height: 90, label: 'Notificação' },
-      process: { width: 160, height: 100, label: 'Processo' },
-      database: { width: 140, height: 100, label: 'Base de Dados' },
-      integration: { width: 160, height: 90, label: 'Integração' }
+      start: { width: 80, height: 80, label: 'Início' },
+      end: { width: 80, height: 60, label: 'Fim' },
+      task: { width: 110, height: 70, label: 'Nova Tarefa' },
+      decision: { width: 80, height: 80, label: 'Decisão' },
+      parallel: { width: 120, height: 60, label: 'Processo Paralelo' },
+      timer: { width: 100, height: 65, label: 'Timer' },
+      notification: { width: 105, height: 65, label: 'Notificação' },
+      process: { width: 120, height: 70, label: 'Processo' },
+      database: { width: 90, height: 65, label: 'Base de Dados' },
+      integration: { width: 110, height: 65, label: 'Integração' }
     };
 
     const defaults = nodeDefaults[type];
@@ -1861,7 +1886,7 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
       setIsPanning(true);
       setPanStart({ x: e.clientX - canvasOffset.x, y: e.clientY - canvasOffset.y });
       e.preventDefault();
-    } else if (e.target === e.currentTarget) {
+    } else if (e.target === e.currentTarget && !isDraggingNode) {
       // Clicked on empty canvas
       setSelectedWorkflowNode(null);
       if (isConnecting) {
@@ -1870,7 +1895,25 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
         setTempConnection(null);
       }
     }
-  }, [canvasOffset, isConnecting]);
+  }, [canvasOffset, isConnecting, isDraggingNode]);
+
+  // Node mouse move handler (must be declared before handleCanvasMouseMove)
+  const handleNodeMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isDraggingNode && draggedNode && canvasRef.current) {
+      const canvasRect = canvasRef.current.getBoundingClientRect();
+      const newX = (e.clientX - canvasRect.left - canvasOffset.x) / canvasScale - dragOffset.x;
+      const newY = (e.clientY - canvasRect.top - canvasOffset.y) / canvasScale - dragOffset.y;
+      
+      // Update node position
+      setWorkflowNodes(prevNodes =>
+        prevNodes.map(node =>
+          node.id === draggedNode.id
+            ? { ...node, position: { x: Math.max(0, newX), y: Math.max(0, newY) } }
+            : node
+        )
+      );
+    }
+  }, [isDraggingNode, draggedNode, canvasRef, canvasOffset, canvasScale, dragOffset]);
 
   const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning) {
@@ -1878,6 +1921,11 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
         x: e.clientX - panStart.x,
         y: e.clientY - panStart.y
       });
+    }
+    
+    // Handle node dragging
+    if (isDraggingNode) {
+      handleNodeMouseMove(e);
     }
     
     if (isConnecting && connectionSource && canvasRef.current) {
@@ -1893,11 +1941,72 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
         end: { x: canvasX, y: canvasY }
       });
     }
-  }, [isPanning, panStart, isConnecting, connectionSource, canvasOffset, canvasScale]);
+  }, [isPanning, panStart, isDraggingNode, handleNodeMouseMove, isConnecting, connectionSource, canvasOffset, canvasScale]);
+
+  // Canvas drag and drop handlers
+  const handleCanvasDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    
+    try {
+      const nodeDataStr = e.dataTransfer.getData('application/reactflow');
+      if (nodeDataStr) {
+        const nodeData = JSON.parse(nodeDataStr);
+        const canvasRect = canvasRef.current?.getBoundingClientRect();
+        
+        if (canvasRect) {
+          // Calculate position relative to canvas with zoom and pan offset
+          const x = (e.clientX - canvasRect.left - canvasOffset.x) / canvasScale;
+          const y = (e.clientY - canvasRect.top - canvasOffset.y) / canvasScale;
+          
+          addNode(nodeData.type as WorkflowNode['type'], { x, y });
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing dropped node data:', error);
+    }
+  }, [canvasRef, canvasOffset, canvasScale, addNode]);
+
+  // Node dragging handlers
+  const handleNodeMouseDown = useCallback((e: React.MouseEvent, node: WorkflowNode) => {
+    e.stopPropagation();
+    
+    // Don't start dragging if we're connecting
+    if (isConnecting) {
+      handleNodeClick(node);
+      return;
+    }
+    
+    const canvasRect = canvasRef.current?.getBoundingClientRect();
+    if (canvasRect) {
+      const nodeX = (e.clientX - canvasRect.left - canvasOffset.x) / canvasScale;
+      const nodeY = (e.clientY - canvasRect.top - canvasOffset.y) / canvasScale;
+      
+      setIsDraggingNode(true);
+      setDraggedNode(node);
+      setDragOffset({
+        x: nodeX - node.position.x,
+        y: nodeY - node.position.y
+      });
+      setSelectedWorkflowNode(node);
+    }
+  }, [isConnecting, canvasRef, canvasOffset, canvasScale]);
+
+
+  const handleNodeMouseUp = useCallback(() => {
+    setIsDraggingNode(false);
+    setDraggedNode(null);
+    setDragOffset({ x: 0, y: 0 });
+  }, []);
 
   const handleCanvasMouseUp = useCallback(() => {
     setIsPanning(false);
-  }, []);
+    handleNodeMouseUp();
+  }, [handleNodeMouseUp]);
 
   // Professional Node Interaction System
   const handleNodeClick = useCallback((node: WorkflowNode) => {
@@ -1933,12 +2042,15 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
   }, []);
 
   const deleteNode = useCallback((nodeId: string) => {
-    setWorkflowNodes(prev => prev.filter(node => node.id !== nodeId));
-    setWorkflowConnections(prev => prev.filter(conn => conn.source !== nodeId && conn.target !== nodeId));
-    setSelectedWorkflowNode(null);
-    setHasUnsavedChanges(true);
-    toast.success('Elemento removido');
-  }, []);
+    const nodeToDelete = workflowNodes.find(n => n.id === nodeId);
+    if (nodeToDelete) {
+      setWorkflowNodes(prev => prev.filter(node => node.id !== nodeId));
+      setWorkflowConnections(prev => prev.filter(conn => conn.source !== nodeId && conn.target !== nodeId));
+      setSelectedWorkflowNode(null);
+      setHasUnsavedChanges(true);
+      toast.success(`${nodeToDelete.data.label} removido`);
+    }
+  }, [workflowNodes]);
 
   // Canvas controls
   const handleZoom = useCallback((delta: number) => {
@@ -2105,9 +2217,12 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
             height: `${node.size.height}px`,
             transform: `scale(${isSelected ? 1.05 : 1})`,
           }}
+          onMouseDown={(e) => handleNodeMouseDown(e, node)}
           onClick={(e) => {
             e.stopPropagation();
-            handleNodeClick(node);
+            if (!isDraggingNode) {
+              handleNodeClick(node);
+            }
           }}
         >
           {/* Glow effect */}
@@ -2115,11 +2230,34 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                           blur-lg opacity-20 scale-110 ${nodeStyles.glow}`}></div>
           
           {/* Main node */}
-          <div className={`relative w-full h-full bg-gradient-to-br ${nodeStyles.gradient} 
-                          border-3 ${nodeStyles.border} ${nodeStyles.shape} 
-                          shadow-2xl ${nodeStyles.glow} backdrop-blur-sm 
-                          flex flex-col items-center justify-center text-white
-                          ${isSelected ? 'ring-4 ring-white/50' : 'hover:ring-2 hover:ring-white/30'}`}>
+          <div className={`
+              ${node.data.style?.animation === 'pulse' ? 'animate-pulse' :
+                node.data.style?.animation === 'bounce' ? 'animate-bounce' :
+                node.data.style?.animation === 'spin' ? 'animate-spin' : ''} 
+              relative w-full h-full ${nodeStyles.shape}
+              ${!node.data.style ? `bg-gradient-to-br ${nodeStyles.gradient} border-3 ${nodeStyles.border}` : ''} 
+              shadow-2xl ${nodeStyles.glow} backdrop-blur-sm 
+              flex flex-col items-center justify-center text-white
+              ${isSelected ? 'ring-4 ring-white/50' : 'hover:ring-2 hover:ring-white/30'}
+            `}
+            style={node.data.style ? {
+              backgroundColor: node.data.style.backgroundColor,
+              borderColor: node.data.style.borderColor,
+              borderWidth: `${node.data.style.borderWidth}px`,
+              borderRadius: `${node.data.style.borderRadius}px`,
+              borderStyle: 'solid',
+              color: node.data.style.textColor,
+              opacity: node.data.style.opacity || 1,
+              transform: `rotate(${node.data.style.rotation || 0}deg)`,
+              boxShadow: {
+                'none': 'none',
+                'small': '0 1px 3px rgba(0,0,0,0.1)',
+                'medium': '0 4px 6px rgba(0,0,0,0.1)',
+                'large': '0 10px 15px rgba(0,0,0,0.1)',
+                'glow': `0 0 20px ${node.data.style.backgroundColor}40`
+              }[node.data.style.shadow || 'none']
+            } : {}}>
+            {/* Removed duplicate className - animation styles already applied */}
             
             {/* Content */}
             <div className={`flex flex-col items-center justify-center p-3 ${isDecision ? 'transform -rotate-45' : ''}`}>
@@ -2151,61 +2289,78 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
             </div>
           </div>
 
+          {/* Connection anchor points */}
+          <div className={`absolute inset-0 pointer-events-none ${isSelected || isConnecting ? 'opacity-100' : 'opacity-0 group-hover:opacity-75'} transition-opacity duration-200`}>
+            {/* Top connection point */}
+            <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-green-400 border border-white rounded-full shadow-sm"></div>
+            {/* Bottom connection point */}
+            <div className="absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-green-400 border border-white rounded-full shadow-sm"></div>
+            {/* Left connection point */}
+            <div className="absolute top-1/2 -left-1.5 transform -translate-y-1/2 w-3 h-3 bg-green-400 border border-white rounded-full shadow-sm"></div>
+            {/* Right connection point */}
+            <div className="absolute top-1/2 -right-1.5 transform -translate-y-1/2 w-3 h-3 bg-green-400 border border-white rounded-full shadow-sm"></div>
+          </div>
+
           {/* Professional Action Toolbar */}
-          {isSelected && (
-            <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 
-                           bg-white/95 backdrop-blur-xl rounded-2xl px-4 py-3 
-                           shadow-2xl border border-white/20 flex items-center gap-3
-                           animate-in slide-in-from-top-2 duration-500">
+          {selectedWorkflowNode?.id === node.id && (
+            <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 
+                           bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg px-1.5 py-1.5 
+                           shadow-lg border border-white/20 dark:border-gray-600/20 flex items-center gap-1.5
+                           animate-in slide-in-from-top-1 duration-200">
               
               <Button
                 size="sm"
                 variant="ghost"
-                className={`h-10 w-10 p-0 rounded-xl transition-all duration-200 ${
+                className={`h-6 w-6 p-0 rounded-md transition-all duration-200 ${
                   isConnecting && connectionSource?.id === node.id 
-                    ? 'bg-orange-500 hover:bg-orange-600' 
+                    ? 'bg-orange-500 hover:bg-orange-600 animate-pulse' 
                     : 'bg-blue-500 hover:bg-blue-600'
-                } text-white hover:scale-110 shadow-lg`}
+                } text-white hover:scale-105 shadow-sm`}
                 onClick={(e) => {
                   e.stopPropagation();
                   startConnection(node);
                 }}
-                title="Conectar elemento"
+                title={isConnecting && connectionSource?.id === node.id ? "Clique em outro nó para conectar" : "Iniciar conexão"}
               >
                 {isConnecting && connectionSource?.id === node.id ? (
-                  <Target className="h-5 w-5" />
+                  <Target className="h-3 w-3" />
                 ) : (
-                  <Link2 className="h-5 w-5" />
+                  <Link2 className="h-3 w-3" />
                 )}
               </Button>
               
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-10 w-10 p-0 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl 
-                          hover:scale-110 transition-all duration-200 shadow-lg"
+                className="h-6 w-6 p-0 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-md 
+                          hover:scale-105 transition-all duration-200 shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // Future: Open configuration panel
-                  toast.info('Configuração em desenvolvimento');
+                  setConfiguratingNode(node);
+                  setNodeConfigData({
+                    label: node.data.label,
+                    description: node.data.description || '',
+                    properties: node.data.properties || {}
+                  });
+                  setShowNodeConfig(true);
                 }}
                 title="Configurar elemento"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-3 w-3" />
               </Button>
               
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-10 w-10 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-xl 
-                          hover:scale-110 transition-all duration-200 shadow-lg"
+                className="h-6 w-6 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-md 
+                          hover:scale-105 transition-all duration-200 shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteNode(node.id);
                 }}
                 title="Remover elemento"
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           )}
@@ -2238,25 +2393,36 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
         <defs>
           <marker
             id="arrowhead"
-            markerWidth="12"
-            markerHeight="8"
-            refX="11"
-            refY="4"
+            markerWidth="16"
+            markerHeight="12"
+            refX="14"
+            refY="6"
             orient="auto"
-            className="fill-current text-blue-500"
+            fill="#3b82f6"
           >
-            <polygon points="0 0, 12 4, 0 8" />
+            <path d="M0,0 L0,12 L16,6 z" />
           </marker>
           <marker
             id="arrowhead-temp"
-            markerWidth="12"
-            markerHeight="8"
-            refX="11"
-            refY="4"
+            markerWidth="16"
+            markerHeight="12"
+            refX="14"
+            refY="6"
             orient="auto"
-            className="fill-current text-amber-500"
+            fill="#f59e0b"
           >
-            <polygon points="0 0, 12 4, 0 8" />
+            <path d="M0,0 L0,12 L16,6 z" />
+          </marker>
+          <marker
+            id="arrowhead-dark"
+            markerWidth="16"
+            markerHeight="12"
+            refX="14"
+            refY="6"
+            orient="auto"
+            fill="#60a5fa"
+          >
+            <path d="M0,0 L0,12 L16,6 z" />
           </marker>
         </defs>
         
@@ -2284,8 +2450,8 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
 
           const isTemp = connection.id === 'temp';
           const strokeColor = isTemp ? '#f59e0b' : (connection.style?.strokeColor || '#3b82f6');
-          const strokeWidth = isTemp ? 3 : (connection.style?.strokeWidth || 2);
-          const strokeDasharray = isTemp ? '10,5' : connection.style?.strokeDasharray;
+          const strokeWidth = isTemp ? 4 : (connection.style?.strokeWidth || 3);
+          const strokeDasharray = isTemp ? '8,4' : connection.style?.strokeDasharray;
           const markerId = isTemp ? 'arrowhead-temp' : 'arrowhead';
 
           return (
@@ -2294,8 +2460,9 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
               <line
                 x1={sourcePoint.x} y1={sourcePoint.y}
                 x2={targetPoint.x} y2={targetPoint.y}
-                stroke="white" strokeWidth={strokeWidth + 4}
-                strokeLinecap="round" opacity="0.3"
+                stroke="rgba(255,255,255,0.8)" strokeWidth={strokeWidth + 2}
+                strokeLinecap="round"
+                className="dark:stroke-gray-800"
               />
               
               {/* Main connection line */}
@@ -2307,7 +2474,7 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                 strokeDasharray={strokeDasharray}
                 strokeLinecap="round"
                 markerEnd={`url(#${markerId})`}
-                className={connection.style?.animated ? 'animate-pulse' : ''}
+                className={`${connection.style?.animated ? 'animate-pulse' : ''} drop-shadow-sm`}
               />
               
               {/* Connection label */}
@@ -2344,7 +2511,14 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
       formFields,
       formRows: [],
       workflowNodes,
-      workflowConnections
+      workflowConnections,
+      analytics: processConfigData.analytics,
+      integrations: {
+        ...processConfigData.integrations,
+        automation_config: processConfigData.automation,
+        security_config: processConfigData.security,
+        workflow_settings: processConfigData.workflow_settings
+      }
     };
 
     try {
@@ -2368,6 +2542,1756 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
       toast.error('Erro ao salvar processo');
     }
   }, [processName, formFields, workflowNodes, workflowConnections, mode, processId, saveProcess, updateProcess, onSave]);
+
+  // Save node configuration handler
+  const saveNodeConfiguration = useCallback(() => {
+    if (!configuratingNode) return;
+
+    const updatedNode: WorkflowNode = {
+      ...configuratingNode,
+      data: {
+        ...configuratingNode.data,
+        label: nodeConfigData.label,
+        description: nodeConfigData.description,
+        properties: nodeConfigData.properties
+      }
+    };
+
+    setWorkflowNodes(prev => prev.map(node => 
+      node.id === configuratingNode.id ? updatedNode : node
+    ));
+
+    if (selectedWorkflowNode?.id === configuratingNode.id) {
+      setSelectedWorkflowNode(updatedNode);
+    }
+
+    setShowNodeConfig(false);
+    setConfiguratingNode(null);
+    setHasUnsavedChanges(true);
+    toast.success('Configuração do elemento salva');
+  }, [configuratingNode, nodeConfigData, selectedWorkflowNode?.id]);
+
+  // Process and workflow configuration state
+  const [showProcessConfig, setShowProcessConfig] = useState(false);
+  const [processConfigData, setProcessConfigData] = useState({
+    analytics: { enabled: false, kpis: [], reports: [] },
+    automation: { 
+      notifications_enabled: true, 
+      auto_assignment: false, 
+      webhook_triggers: [], 
+      ai_assistance: false 
+    },
+    security: { 
+      encryption_required: false, 
+      access_level: 'internal', 
+      audit_trail: true,
+      data_retention_days: 2555,
+      pii_handling: 'encrypt' 
+    },
+    integrations: {},
+    workflow_settings: {
+      parallel_execution: false,
+      timeout_minutes: 60,
+      retry_attempts: 3,
+      escalation_enabled: false
+    }
+  });
+
+  // Node configuration modal
+  const NodeConfigurationModal = useCallback(() => {
+    if (!showNodeConfig || !configuratingNode) return null;
+
+    const nodeTypeConfig = {
+      start: { label: 'Início', description: 'Define o início do processo', icon: Play },
+      end: { label: 'Fim', description: 'Define o fim do processo', icon: Square },
+      task: { label: 'Tarefa', description: 'Representa uma atividade ou tarefa', icon: CheckCircle },
+      decision: { label: 'Decisão', description: 'Ponto de decisão com múltiplas saídas', icon: GitBranch },
+      parallel: { label: 'Paralelo', description: 'Execução paralela de tarefas', icon: GitMerge },
+      timer: { label: 'Timer', description: 'Aguarda por um tempo específico', icon: Timer },
+      notification: { label: 'Notificação', description: 'Envia notificações ou alertas', icon: Bell },
+      process: { label: 'Processo', description: 'Subprocesso ou processo integrado', icon: Settings },
+      database: { label: 'Database', description: 'Operações de banco de dados', icon: Database },
+      integration: { label: 'Integração', description: 'Integração com sistemas externos', icon: Link2 }
+    };
+
+    const config = nodeTypeConfig[configuratingNode.type];
+
+    return (
+      <Dialog open={showNodeConfig} onOpenChange={setShowNodeConfig}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <config.icon className="h-5 w-5 text-blue-600" />
+              Configuração do Elemento: {config.label}
+            </DialogTitle>
+            <DialogDescription>
+              {config.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="basic">Básico</TabsTrigger>
+              <TabsTrigger value="properties">Propriedades</TabsTrigger>
+              <TabsTrigger value="templates">Templates</TabsTrigger>
+              <TabsTrigger value="advanced">Avançado</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="basic" className="space-y-4">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="nodeLabel">Nome do Elemento</Label>
+                    <Input
+                      id="nodeLabel"
+                      value={nodeConfigData.label}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        label: e.target.value
+                      }))}
+                      placeholder="Digite o nome do elemento"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="nodeType">Tipo</Label>
+                    <Input
+                      id="nodeType"
+                      value={config.label}
+                      disabled
+                      className="bg-muted"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nodeDescription">Descrição</Label>
+                  <Textarea
+                    id="nodeDescription"
+                    value={nodeConfigData.description}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      description: e.target.value
+                    }))}
+                    placeholder="Digite a descrição do elemento"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+
+            <TabsContent value="properties" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Propriedades Específicas
+                </h3>
+
+                {/* Type-specific Properties */}
+                {configuratingNode.type === 'task' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades da Tarefa</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="taskPriority">Prioridade</Label>
+                    <Select
+                      value={nodeConfigData.properties.priority || 'medium'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, priority: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="urgent">Urgente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taskDuration">Duração Estimada</Label>
+                    <Input
+                      id="taskDuration"
+                      value={nodeConfigData.properties.duration || ''}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, duration: e.target.value }
+                      }))}
+                      placeholder="Ex: 2 horas, 1 dia"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taskAssignee">Responsável</Label>
+                  <Input
+                    id="taskAssignee"
+                    value={nodeConfigData.properties.assignee || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, assignee: e.target.value }
+                    }))}
+                    placeholder="Nome ou cargo do responsável"
+                  />
+                </div>
+                  </div>
+                )}
+
+                {configuratingNode.type === 'decision' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades da Decisão</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="decisionCondition">Condição de Decisão</Label>
+                  <Textarea
+                    id="decisionCondition"
+                    value={nodeConfigData.properties.condition || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, condition: e.target.value }
+                    }))}
+                    placeholder="Ex: Se valor > 1000, então..."
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="decisionRules">Regras de Negócio</Label>
+                  <Textarea
+                    id="decisionRules"
+                    value={nodeConfigData.properties.rules || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, rules: e.target.value }
+                    }))}
+                    placeholder="Descreva as regras de negócio"
+                    rows={3}
+                  />
+                </div>
+                  </div>
+                )}
+
+                {configuratingNode.type === 'timer' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades do Timer</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="timerDuration">Duração</Label>
+                    <Input
+                      id="timerDuration"
+                      value={nodeConfigData.properties.timerDuration || ''}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, timerDuration: e.target.value }
+                      }))}
+                      placeholder="Ex: 30 minutos, 2 horas"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="timerType">Tipo de Timer</Label>
+                    <Select
+                      value={nodeConfigData.properties.timerType || 'fixed'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, timerType: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fixed">Fixo</SelectItem>
+                        <SelectItem value="recurring">Recorrente</SelectItem>
+                        <SelectItem value="conditional">Condicional</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                  </div>
+                )}
+
+                {configuratingNode.type === 'notification' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades da Notificação</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="notificationType">Tipo de Notificação</Label>
+                    <Select
+                      value={nodeConfigData.properties.notificationType || 'email'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, notificationType: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="sms">SMS</SelectItem>
+                        <SelectItem value="push">Push Notification</SelectItem>
+                        <SelectItem value="system">Sistema</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notificationRecipients">Destinatários</Label>
+                    <Input
+                      id="notificationRecipients"
+                      value={nodeConfigData.properties.recipients || ''}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, recipients: e.target.value }
+                      }))}
+                      placeholder="Ex: admin@empresa.com, gerente@empresa.com"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notificationMessage">Mensagem</Label>
+                  <Textarea
+                    id="notificationMessage"
+                    value={nodeConfigData.properties.message || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, message: e.target.value }
+                    }))}
+                    placeholder="Digite a mensagem da notificação"
+                    rows={3}
+                  />
+                </div>
+                  </div>
+                )}
+
+                {configuratingNode.type === 'database' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades do Database</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dbOperation">Operação</Label>
+                    <Select
+                      value={nodeConfigData.properties.operation || 'select'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, operation: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="select">Consultar</SelectItem>
+                        <SelectItem value="insert">Inserir</SelectItem>
+                        <SelectItem value="update">Atualizar</SelectItem>
+                        <SelectItem value="delete">Excluir</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dbTable">Tabela</Label>
+                    <Input
+                      id="dbTable"
+                      value={nodeConfigData.properties.table || ''}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, table: e.target.value }
+                      }))}
+                      placeholder="Nome da tabela"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dbQuery">Query/Comando</Label>
+                  <Textarea
+                    id="dbQuery"
+                    value={nodeConfigData.properties.query || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, query: e.target.value }
+                    }))}
+                    placeholder="SQL ou comando do banco de dados"
+                    rows={4}
+                  />
+                </div>
+                  </div>
+                )}
+
+                {configuratingNode.type === 'integration' && (
+                  <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Propriedades da Integração</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="integrationEndpoint">Endpoint/URL</Label>
+                    <Input
+                      id="integrationEndpoint"
+                      value={nodeConfigData.properties.endpoint || ''}
+                      onChange={(e) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, endpoint: e.target.value }
+                      }))}
+                      placeholder="https://api.sistema.com/endpoint"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="integrationMethod">Método HTTP</Label>
+                    <Select
+                      value={nodeConfigData.properties.method || 'GET'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, method: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GET">GET</SelectItem>
+                        <SelectItem value="POST">POST</SelectItem>
+                        <SelectItem value="PUT">PUT</SelectItem>
+                        <SelectItem value="DELETE">DELETE</SelectItem>
+                        <SelectItem value="PATCH">PATCH</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="integrationHeaders">Headers (JSON)</Label>
+                  <Textarea
+                    id="integrationHeaders"
+                    value={nodeConfigData.properties.headers || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, headers: e.target.value }
+                    }))}
+                    placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                    rows={3}
+                  />
+                </div>
+                  </div>
+                )}
+
+                {/* Propriedades para elementos Start e End */}
+                {(configuratingNode.type === 'start' || configuratingNode.type === 'end') && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Propriedades do {configuratingNode.type === 'start' ? 'Início' : 'Fim'}</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="triggerCondition">Condição de Trigger</Label>
+                      <Textarea
+                        id="triggerCondition"
+                        value={nodeConfigData.properties.triggerCondition || ''}
+                        onChange={(e) => setNodeConfigData(prev => ({
+                          ...prev,
+                          properties: { ...prev.properties, triggerCondition: e.target.value }
+                        }))}
+                        placeholder="Ex: Quando formulário for submetido, Ao receber documento..."
+                        rows={2}
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="autoTrigger">Trigger Automático</Label>
+                        <Switch
+                          checked={nodeConfigData.properties.autoTrigger || false}
+                          onCheckedChange={(checked) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, autoTrigger: checked }
+                          }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="requiresApproval">Requer Aprovação</Label>
+                        <Switch
+                          checked={nodeConfigData.properties.requiresApproval || false}
+                          onCheckedChange={(checked) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, requiresApproval: checked }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Propriedades para Parallel */}
+                {configuratingNode.type === 'parallel' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Propriedades do Processo Paralelo</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="maxConcurrency">Máximo de Processos Simultâneos</Label>
+                        <Input
+                          id="maxConcurrency"
+                          type="number"
+                          value={nodeConfigData.properties.maxConcurrency || 3}
+                          onChange={(e) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, maxConcurrency: parseInt(e.target.value) }
+                          }))}
+                          min={1}
+                          max={10}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="waitForAll">Aguardar Todas as Tarefas</Label>
+                        <Switch
+                          checked={nodeConfigData.properties.waitForAll || true}
+                          onCheckedChange={(checked) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, waitForAll: checked }
+                          }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="parallelTasks">Tarefas Paralelas (uma por linha)</Label>
+                      <Textarea
+                        id="parallelTasks"
+                        value={nodeConfigData.properties.parallelTasks?.join('\n') || ''}
+                        onChange={(e) => setNodeConfigData(prev => ({
+                          ...prev,
+                          properties: { 
+                            ...prev.properties, 
+                            parallelTasks: e.target.value.split('\n').filter(task => task.trim())
+                          }
+                        }))}
+                        placeholder="Tarefa A&#10;Tarefa B&#10;Tarefa C"
+                        rows={4}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Propriedades para Process */}
+                {configuratingNode.type === 'process' && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Propriedades do Subprocesso</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="subprocessType">Tipo de Subprocesso</Label>
+                        <Select
+                          value={nodeConfigData.properties.subprocessType || 'embedded'}
+                          onValueChange={(value) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, subprocessType: value }
+                          }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="embedded">Embutido</SelectItem>
+                            <SelectItem value="call_activity">Atividade de Chamada</SelectItem>
+                            <SelectItem value="event_subprocess">Subprocesso de Evento</SelectItem>
+                            <SelectItem value="transaction">Transação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="processId">ID do Processo</Label>
+                        <Input
+                          id="processId"
+                          value={nodeConfigData.properties.processId || ''}
+                          onChange={(e) => setNodeConfigData(prev => ({
+                            ...prev,
+                            properties: { ...prev.properties, processId: e.target.value }
+                          }))}
+                          placeholder="process_001"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="inputParameters">Parâmetros de Entrada (JSON)</Label>
+                      <Textarea
+                        id="inputParameters"
+                        value={nodeConfigData.properties.inputParameters || ''}
+                        onChange={(e) => setNodeConfigData(prev => ({
+                          ...prev,
+                          properties: { ...prev.properties, inputParameters: e.target.value }
+                        }))}
+                        placeholder='{"param1": "value1", "param2": "value2"}'
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback para tipos sem propriedades específicas */}
+                {!['task', 'decision', 'timer', 'notification', 'database', 'integration', 'start', 'end', 'parallel', 'process'].includes(configuratingNode.type) && (
+                  <div className="space-y-4">
+                    <div className="text-center py-8">
+                      <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        Propriedades Genéricas
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        Este tipo de elemento não possui propriedades específicas configuráveis
+                      </p>
+                      <div className="space-y-2">
+                        <Label>Configurações Personalizadas</Label>
+                        <Textarea
+                          placeholder='{"custom_property": "value", "other_config": true}'
+                          value={JSON.stringify(nodeConfigData.properties || {}, null, 2)}
+                          onChange={(e) => {
+                            try {
+                              const parsed = JSON.parse(e.target.value);
+                              setNodeConfigData(prev => ({
+                                ...prev,
+                                properties: parsed
+                              }));
+                            } catch (err) {
+                              // Invalid JSON, ignore for now
+                            }
+                          }}
+                          rows={4}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="templates" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Biblioteca de Templates
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Selecione um template pré-configurado e customize de acordo com suas necessidades.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Template: Processo de Auditoria */}
+                  <div className="border rounded-lg p-4 hover:border-blue-300 cursor-pointer group"
+                       onClick={() => {
+                         const auditTemplate = {
+                           name: 'Processo de Auditoria Interna',
+                           description: 'Template completo para auditoria interna com todas as etapas',
+                           formFields: [
+                             {
+                               id: 'audit_title',
+                               type: 'text' as const,
+                               label: 'Título da Auditoria',
+                               required: true,
+                               placeholder: 'Ex: Auditoria de Controles de TI'
+                             },
+                             {
+                               id: 'audit_scope',
+                               type: 'textarea' as const,
+                               label: 'Escopo da Auditoria',
+                               required: true,
+                               placeholder: 'Descreva o escopo detalhado...'
+                             },
+                             {
+                               id: 'auditor',
+                               type: 'select' as const,
+                               label: 'Auditor Responsável',
+                               required: true,
+                               options: ['Auditor Sênior', 'Auditor Pleno', 'Auditor Júnior']
+                             },
+                             {
+                               id: 'deadline',
+                               type: 'date' as const,
+                               label: 'Data Limite',
+                               required: true
+                             }
+                           ],
+                           workflowNodes: [
+                             {
+                               id: 'start-audit',
+                               type: 'start' as const,
+                               position: { x: 100, y: 100 },
+                               size: { width: 80, height: 80 },
+                               data: {
+                                 label: 'Início da Auditoria',
+                                 description: 'Ponto de partida do processo de auditoria',
+                                 properties: {
+                                   trigger_type: 'manual',
+                                   notification_enabled: true
+                                 }
+                               }
+                             },
+                             {
+                               id: 'planning-task',
+                               type: 'task' as const,
+                               position: { x: 250, y: 100 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Planejamento',
+                                 description: 'Elaboração do plano de auditoria',
+                                 properties: {
+                                   priority: 'high',
+                                   duration: '3 dias',
+                                   assignee: 'Auditor Responsável',
+                                   checklist: ['Definir objetivos', 'Identificar riscos', 'Preparar cronograma'],
+                                   resources: ['Documentos anteriores', 'Normas aplicáveis']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'approval-decision',
+                               type: 'decision' as const,
+                               position: { x: 420, y: 100 },
+                               size: { width: 100, height: 100 },
+                               data: {
+                                 label: 'Aprovação do Plano',
+                                 description: 'Decisão sobre aprovação do plano de auditoria',
+                                 properties: {
+                                   conditions: ['Plano completo', 'Recursos disponíveis', 'Cronograma viável'],
+                                   criteria: 'Aprovação da gerência',
+                                   timeout: '2 dias',
+                                   fallback_action: 'Retornar para planejamento'
+                                 }
+                               }
+                             },
+                             {
+                               id: 'execution-task',
+                               type: 'task' as const,
+                               position: { x: 580, y: 100 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Execução',
+                                 description: 'Execução dos testes e procedimentos de auditoria',
+                                 properties: {
+                                   priority: 'medium',
+                                   duration: '5 dias',
+                                   assignee: 'Equipe de Auditoria',
+                                   checklist: ['Coletar evidências', 'Executar testes', 'Documentar achados'],
+                                   resources: ['Sistemas auditados', 'Documentação', 'Ferramentas de teste']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'reporting-task',
+                               type: 'task' as const,
+                               position: { x: 750, y: 100 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Relatório',
+                                 description: 'Elaboração do relatório de auditoria',
+                                 properties: {
+                                   priority: 'high',
+                                   duration: '2 dias',
+                                   assignee: 'Auditor Responsável',
+                                   checklist: ['Consolidar achados', 'Redigir recomendações', 'Revisar relatório'],
+                                   resources: ['Template de relatório', 'Evidências coletadas']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'end-audit',
+                               type: 'end' as const,
+                               position: { x: 920, y: 100 },
+                               size: { width: 80, height: 80 },
+                               data: {
+                                 label: 'Fim da Auditoria',
+                                 description: 'Conclusão do processo de auditoria',
+                                 properties: {
+                                   completion_actions: ['Arquivar documentos', 'Notificar stakeholders'],
+                                   notification_enabled: true
+                                 }
+                               }
+                             }
+                           ],
+                           workflowConnections: [
+                             { id: 'c1', source: 'start-audit', target: 'planning-task', type: 'default' as const, label: 'Iniciar' },
+                             { id: 'c2', source: 'planning-task', target: 'approval-decision', type: 'default' as const, label: 'Plano Pronto' },
+                             { id: 'c3', source: 'approval-decision', target: 'execution-task', type: 'default' as const, label: 'Aprovado' },
+                             { id: 'c4', source: 'approval-decision', target: 'planning-task', type: 'default' as const, label: 'Rejeitado' },
+                             { id: 'c5', source: 'execution-task', target: 'reporting-task', type: 'default' as const, label: 'Execução Concluída' },
+                             { id: 'c6', source: 'reporting-task', target: 'end-audit', type: 'default' as const, label: 'Relatório Finalizado' }
+                           ]
+                         };
+                         
+                         // Aplicar template
+                         setProcessName(auditTemplate.name);
+                         setFormFields(auditTemplate.formFields);
+                         setWorkflowNodes(auditTemplate.workflowNodes);
+                         setWorkflowConnections(auditTemplate.workflowConnections);
+                         setHasUnsavedChanges(true);
+                         toast.success('Template "Processo de Auditoria" aplicado com sucesso!');
+                       }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm group-hover:text-blue-600">
+                          Processo de Auditoria Interna
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Template completo com planejamento, execução e relatório. Inclui 4 campos de formulário e 6 elementos de workflow.
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">Auditoria</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Controles</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Template: Gestão de Riscos */}
+                  <div className="border rounded-lg p-4 hover:border-green-300 cursor-pointer group"
+                       onClick={() => {
+                         const riskTemplate = {
+                           name: 'Processo de Gestão de Riscos',
+                           description: 'Template para identificação, avaliação e tratamento de riscos',
+                           formFields: [
+                             {
+                               id: 'risk_title',
+                               type: 'text' as const,
+                               label: 'Nome do Risco',
+                               required: true,
+                               placeholder: 'Ex: Risco de Segurança da Informação'
+                             },
+                             {
+                               id: 'risk_category',
+                               type: 'select' as const,
+                               label: 'Categoria',
+                               required: true,
+                               options: ['Operacional', 'Financeiro', 'Estratégico', 'Compliance', 'Tecnológico']
+                             },
+                             {
+                               id: 'risk_impact',
+                               type: 'number' as const,
+                               label: 'Impacto (1-5)',
+                               required: true,
+                               placeholder: '1'
+                             },
+                             {
+                               id: 'risk_likelihood',
+                               type: 'number' as const,
+                               label: 'Probabilidade (1-5)',
+                               required: true,
+                               placeholder: '1'
+                             }
+                           ],
+                           workflowNodes: [
+                             {
+                               id: 'start-risk',
+                               type: 'start' as const,
+                               position: { x: 100, y: 150 },
+                               size: { width: 80, height: 80 },
+                               data: {
+                                 label: 'Identificação',
+                                 description: 'Início do processo de gestão de riscos',
+                                 properties: { trigger_type: 'event', notification_enabled: true }
+                               }
+                             },
+                             {
+                               id: 'assessment-task',
+                               type: 'task' as const,
+                               position: { x: 250, y: 150 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Avaliação',
+                                 description: 'Análise e avaliação do risco identificado',
+                                 properties: {
+                                   priority: 'high',
+                                   duration: '2 dias',
+                                   assignee: 'Analista de Riscos',
+                                   checklist: ['Avaliar impacto', 'Calcular probabilidade', 'Classificar risco'],
+                                   resources: ['Matriz de riscos', 'Histórico de ocorrências']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'risk-level-decision',
+                               type: 'decision' as const,
+                               position: { x: 420, y: 150 },
+                               size: { width: 100, height: 100 },
+                               data: {
+                                 label: 'Nível de Risco',
+                                 description: 'Classificação do nível de risco',
+                                 properties: {
+                                   conditions: ['Impacto x Probabilidade >= 15', 'Risco crítico'],
+                                   criteria: 'Alto risco requer aprovação',
+                                   timeout: '1 dia',
+                                   fallback_action: 'Escalação automática'
+                                 }
+                               }
+                             },
+                             {
+                               id: 'treatment-task',
+                               type: 'task' as const,
+                               position: { x: 580, y: 150 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Tratamento',
+                                 description: 'Implementação de ações de tratamento',
+                                 properties: {
+                                   priority: 'medium',
+                                   duration: '7 dias',
+                                   assignee: 'Responsável pelo Processo',
+                                   checklist: ['Definir ações', 'Implementar controles', 'Monitorar eficácia'],
+                                   resources: ['Plano de ação', 'Orçamento aprovado']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'monitoring-timer',
+                               type: 'timer' as const,
+                               position: { x: 750, y: 150 },
+                               size: { width: 100, height: 80 },
+                               data: {
+                                 label: 'Monitoramento',
+                                 description: 'Acompanhamento periódico do risco',
+                                 properties: {
+                                   duration: '30 dias',
+                                   timer_type: 'recurring',
+                                   recurrence: 'monthly',
+                                   actions: ['Revisar controles', 'Atualizar avaliação']
+                                 }
+                               }
+                             }
+                           ],
+                           workflowConnections: [
+                             { id: 'r1', source: 'start-risk', target: 'assessment-task', type: 'default' as const, label: 'Identificado' },
+                             { id: 'r2', source: 'assessment-task', target: 'risk-level-decision', type: 'default' as const, label: 'Avaliado' },
+                             { id: 'r3', source: 'risk-level-decision', target: 'treatment-task', type: 'default' as const, label: 'Alto Risco' },
+                             { id: 'r4', source: 'risk-level-decision', target: 'monitoring-timer', type: 'default' as const, label: 'Baixo Risco' },
+                             { id: 'r5', source: 'treatment-task', target: 'monitoring-timer', type: 'default' as const, label: 'Tratado' }
+                           ]
+                         };
+                         
+                         setProcessName(riskTemplate.name);
+                         setFormFields(riskTemplate.formFields);
+                         setWorkflowNodes(riskTemplate.workflowNodes);
+                         setWorkflowConnections(riskTemplate.workflowConnections);
+                         setHasUnsavedChanges(true);
+                         toast.success('Template "Gestão de Riscos" aplicado com sucesso!');
+                       }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                        <AlertCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm group-hover:text-green-600">
+                          Processo de Gestão de Riscos
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Workflow para identificar, avaliar e tratar riscos. Inclui 4 campos e 5 elementos com timer de monitoramento.
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">Riscos</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Monitoramento</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Template: Aprovação de Documentos */}
+                  <div className="border rounded-lg p-4 hover:border-purple-300 cursor-pointer group"
+                       onClick={() => {
+                         const approvalTemplate = {
+                           name: 'Processo de Aprovação de Documentos',
+                           description: 'Template para fluxo de aprovação com múltiplos níveis',
+                           formFields: [
+                             {
+                               id: 'document_title',
+                               type: 'text' as const,
+                               label: 'Título do Documento',
+                               required: true,
+                               placeholder: 'Ex: Política de Segurança da Informação'
+                             },
+                             {
+                               id: 'document_type',
+                               type: 'select' as const,
+                               label: 'Tipo de Documento',
+                               required: true,
+                               options: ['Política', 'Procedimento', 'Norma', 'Manual', 'Instrução']
+                             },
+                             {
+                               id: 'author',
+                               type: 'text' as const,
+                               label: 'Autor',
+                               required: true,
+                               placeholder: 'Nome do autor'
+                             },
+                             {
+                               id: 'priority',
+                               type: 'select' as const,
+                               label: 'Prioridade',
+                               required: true,
+                               options: ['Baixa', 'Normal', 'Alta', 'Crítica']
+                             }
+                           ],
+                           workflowNodes: [
+                             {
+                               id: 'start-approval',
+                               type: 'start' as const,
+                               position: { x: 100, y: 200 },
+                               size: { width: 80, height: 80 },
+                               data: {
+                                 label: 'Submissão',
+                                 description: 'Documento submetido para aprovação',
+                                 properties: { trigger_type: 'manual', notification_enabled: true }
+                               }
+                             },
+                             {
+                               id: 'review-task',
+                               type: 'task' as const,
+                               position: { x: 250, y: 200 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Revisão Técnica',
+                                 description: 'Revisão técnica do conteúdo',
+                                 properties: {
+                                   priority: 'medium',
+                                   duration: '3 dias',
+                                   assignee: 'Revisor Técnico',
+                                   checklist: ['Verificar conteúdo', 'Validar referências', 'Revisar formatação'],
+                                   resources: ['Padrões da empresa', 'Templates aprovados']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'manager-decision',
+                               type: 'decision' as const,
+                               position: { x: 420, y: 200 },
+                               size: { width: 100, height: 100 },
+                               data: {
+                                 label: 'Aprovação Gerencial',
+                                 description: 'Decisão do gerente responsável',
+                                 properties: {
+                                   conditions: ['Revisão técnica OK', 'Conteúdo adequado'],
+                                   criteria: 'Aprovação do gerente',
+                                   timeout: '5 dias',
+                                   fallback_action: 'Escalar para direção'
+                                 }
+                               }
+                             },
+                             {
+                               id: 'director-decision',
+                               type: 'decision' as const,
+                               position: { x: 580, y: 120 },
+                               size: { width: 100, height: 100 },
+                               data: {
+                                 label: 'Aprovação Diretoria',
+                                 description: 'Aprovação final da diretoria (documentos críticos)',
+                                 properties: {
+                                   conditions: ['Prioridade >= Alta', 'Impacto organizacional'],
+                                   criteria: 'Aprovação da diretoria',
+                                   timeout: '7 dias',
+                                   fallback_action: 'Reunião de comitê'
+                                 }
+                               }
+                             },
+                             {
+                               id: 'publish-task',
+                               type: 'task' as const,
+                               position: { x: 750, y: 200 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Publicação',
+                                 description: 'Publicação e divulgação do documento',
+                                 properties: {
+                                   priority: 'high',
+                                   duration: '1 dia',
+                                   assignee: 'Administrador de Documentos',
+                                   checklist: ['Publicar no portal', 'Notificar usuários', 'Arquivar versão anterior'],
+                                   resources: ['Sistema de gestão documental', 'Lista de distribuição']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'notification',
+                               type: 'notification' as const,
+                               position: { x: 920, y: 200 },
+                               size: { width: 100, height: 80 },
+                               data: {
+                                 label: 'Notificação',
+                                 description: 'Notificação de documento aprovado',
+                                 properties: {
+                                   recipients: ['Autor', 'Gestores', 'Usuários finais'],
+                                   template: 'document_approved',
+                                   channel: 'email',
+                                   urgency: 'normal'
+                                 }
+                               }
+                             }
+                           ],
+                           workflowConnections: [
+                             { id: 'a1', source: 'start-approval', target: 'review-task', type: 'default' as const, label: 'Submetido' },
+                             { id: 'a2', source: 'review-task', target: 'manager-decision', type: 'default' as const, label: 'Revisado' },
+                             { id: 'a3', source: 'manager-decision', target: 'director-decision', type: 'default' as const, label: 'Crítico' },
+                             { id: 'a4', source: 'manager-decision', target: 'publish-task', type: 'default' as const, label: 'Aprovado Normal' },
+                             { id: 'a5', source: 'director-decision', target: 'publish-task', type: 'default' as const, label: 'Aprovado Crítico' },
+                             { id: 'a6', source: 'publish-task', target: 'notification', type: 'default' as const, label: 'Publicado' },
+                             { id: 'a7', source: 'manager-decision', target: 'review-task', type: 'default' as const, label: 'Rejeitado' },
+                             { id: 'a8', source: 'director-decision', target: 'review-task', type: 'default' as const, label: 'Rejeitado' }
+                           ]
+                         };
+                         
+                         setProcessName(approvalTemplate.name);
+                         setFormFields(approvalTemplate.formFields);
+                         setWorkflowNodes(approvalTemplate.workflowNodes);
+                         setWorkflowConnections(approvalTemplate.workflowConnections);
+                         setHasUnsavedChanges(true);
+                         toast.success('Template "Aprovação de Documentos" aplicado com sucesso!');
+                       }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                        <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm group-hover:text-purple-600">
+                          Processo de Aprovação de Documentos
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Fluxo completo com múltiplos níveis de aprovação. Inclui 4 campos e 6 elementos com notificações automáticas.
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Documentos</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Aprovação</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Template: Onboarding de Funcionários */}
+                  <div className="border rounded-lg p-4 hover:border-orange-300 cursor-pointer group"
+                       onClick={() => {
+                         const onboardingTemplate = {
+                           name: 'Processo de Onboarding de Funcionários',
+                           description: 'Template para integração de novos funcionários',
+                           formFields: [
+                             {
+                               id: 'employee_name',
+                               type: 'text' as const,
+                               label: 'Nome do Funcionário',
+                               required: true,
+                               placeholder: 'Nome completo'
+                             },
+                             {
+                               id: 'department',
+                               type: 'select' as const,
+                               label: 'Departamento',
+                               required: true,
+                               options: ['TI', 'RH', 'Financeiro', 'Comercial', 'Operações', 'Auditoria']
+                             },
+                             {
+                               id: 'position',
+                               type: 'text' as const,
+                               label: 'Cargo',
+                               required: true,
+                               placeholder: 'Ex: Analista de Sistemas'
+                             },
+                             {
+                               id: 'start_date',
+                               type: 'date' as const,
+                               label: 'Data de Início',
+                               required: true
+                             },
+                             {
+                               id: 'manager',
+                               type: 'text' as const,
+                               label: 'Gestor Direto',
+                               required: true,
+                               placeholder: 'Nome do gestor'
+                             }
+                           ],
+                           workflowNodes: [
+                             {
+                               id: 'start-onboarding',
+                               type: 'start' as const,
+                               position: { x: 100, y: 250 },
+                               size: { width: 80, height: 80 },
+                               data: {
+                                 label: 'Admissão',
+                                 description: 'Início do processo de onboarding',
+                                 properties: { trigger_type: 'manual', notification_enabled: true }
+                               }
+                             },
+                             {
+                               id: 'hr-setup',
+                               type: 'parallel' as const,
+                               position: { x: 250, y: 250 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Preparação RH',
+                                 description: 'Atividades paralelas do RH',
+                                 properties: {
+                                   parallel_tasks: [
+                                     'Preparar documentos',
+                                     'Configurar sistemas',
+                                     'Solicitar equipamentos'
+                                   ],
+                                   sync_required: true
+                                 }
+                               }
+                             },
+                             {
+                               id: 'it-setup',
+                               type: 'task' as const,
+                               position: { x: 420, y: 180 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Configuração TI',
+                                 description: 'Setup de sistemas e acessos',
+                                 properties: {
+                                   priority: 'high',
+                                   duration: '2 dias',
+                                   assignee: 'Equipe de TI',
+                                   checklist: ['Criar usuário AD', 'Configurar email', 'Instalar software', 'Definir permissões'],
+                                   resources: ['Lista de sistemas', 'Perfil de acesso por cargo']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'welcome-task',
+                               type: 'task' as const,
+                               position: { x: 420, y: 320 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Boas-vindas',
+                                 description: 'Recepção e apresentação da empresa',
+                                 properties: {
+                                   priority: 'medium',
+                                   duration: '1 dia',
+                                   assignee: 'Gestor Direto',
+                                   checklist: ['Tour pela empresa', 'Apresentar equipe', 'Explicar cultura', 'Entregar kit'],
+                                   resources: ['Kit de boas-vindas', 'Apresentação da empresa']
+                                 }
+                               }
+                             },
+                             {
+                               id: 'training-integration',
+                               type: 'integration' as const,
+                               position: { x: 580, y: 250 },
+                               size: { width: 120, height: 80 },
+                               data: {
+                                 label: 'Sistema de Treinamento',
+                                 description: 'Integração com plataforma de treinamento',
+                                 properties: {
+                                   endpoint: '/api/training/enroll',
+                                   method: 'POST',
+                                   authentication: 'bearer_token',
+                                   headers: { 'Content-Type': 'application/json' },
+                                   timeout: 30000
+                                 }
+                               }
+                             },
+                             {
+                               id: 'followup-timer',
+                               type: 'timer' as const,
+                               position: { x: 750, y: 250 },
+                               size: { width: 100, height: 80 },
+                               data: {
+                                 label: 'Follow-up',
+                                 description: 'Acompanhamento periódico',
+                                 properties: {
+                                   duration: '7 dias',
+                                   timer_type: 'recurring',
+                                   recurrence: 'weekly',
+                                   actions: ['Verificar adaptação', 'Coletar feedback', 'Ajustar processo']
+                                 }
+                               }
+                             }
+                           ],
+                           workflowConnections: [
+                             { id: 'o1', source: 'start-onboarding', target: 'hr-setup', type: 'default' as const, label: 'Admitido' },
+                             { id: 'o2', source: 'hr-setup', target: 'it-setup', type: 'default' as const, label: 'Preparação TI' },
+                             { id: 'o3', source: 'hr-setup', target: 'welcome-task', type: 'default' as const, label: 'Boas-vindas' },
+                             { id: 'o4', source: 'it-setup', target: 'training-integration', type: 'default' as const, label: 'Setup Completo' },
+                             { id: 'o5', source: 'welcome-task', target: 'training-integration', type: 'default' as const, label: 'Integrado' },
+                             { id: 'o6', source: 'training-integration', target: 'followup-timer', type: 'default' as const, label: 'Treinamento Iniciado' }
+                           ]
+                         };
+                         
+                         setProcessName(onboardingTemplate.name);
+                         setFormFields(onboardingTemplate.formFields);
+                         setWorkflowNodes(onboardingTemplate.workflowNodes);
+                         setWorkflowConnections(onboardingTemplate.workflowConnections);
+                         setHasUnsavedChanges(true);
+                         toast.success('Template "Onboarding de Funcionários" aplicado com sucesso!');
+                       }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                        <Users className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm group-hover:text-orange-600">
+                          Processo de Onboarding de Funcionários
+                        </h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Processo completo de integração com atividades paralelas. Inclui 5 campos e 6 elementos com integrações automáticas.
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">RH</span>
+                          <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Integração</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-200 mb-2">
+                    💡 Como usar os templates
+                  </h4>
+                  <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                    <li>• Clique em qualquer template para aplicá-lo instantaneamente</li>
+                    <li>• Todos os campos do formulário e elementos do workflow serão preenchidos</li>
+                    <li>• Você pode editar e customizar qualquer parte após aplicar o template</li>
+                    <li>• Use as abas "Propriedades" e "Avançado" para personalizar cada elemento</li>
+                    <li>• Salve o processo após as customizações para persistir no banco de dados</li>
+                  </ul>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="advanced" className="space-y-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Configurações Avançadas
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>ID do Elemento</Label>
+                    <Input
+                      value={configuratingNode.id}
+                      disabled
+                      className="bg-muted font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Posição (X, Y)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={configuratingNode.position.x}
+                        disabled
+                        className="bg-muted"
+                      />
+                      <Input
+                        type="number"
+                        value={configuratingNode.position.y}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Largura x Altura</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={configuratingNode.size.width}
+                        disabled
+                        className="bg-muted"
+                      />
+                      <Input
+                        type="number"
+                        value={configuratingNode.size.height}
+                        disabled
+                        className="bg-muted"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado</Label>
+                    <Select
+                      value={nodeConfigData.properties.status || 'active'}
+                      onValueChange={(value) => setNodeConfigData(prev => ({
+                        ...prev,
+                        properties: { ...prev.properties, status: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Ativo</SelectItem>
+                        <SelectItem value="inactive">Inativo</SelectItem>
+                        <SelectItem value="disabled">Desabilitado</SelectItem>
+                        <SelectItem value="deprecated">Descontinuado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Metadados Personalizados</Label>
+                  <Textarea
+                    placeholder='{"custom_field": "value", "metadata": {}}'
+                    value={JSON.stringify(nodeConfigData.properties.metadata || {}, null, 2)}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(e.target.value);
+                        setNodeConfigData(prev => ({
+                          ...prev,
+                          properties: { ...prev.properties, metadata: parsed }
+                        }));
+                      } catch (err) {
+                        // Invalid JSON, ignore for now
+                      }
+                    }}
+                    rows={4}
+                    className="font-mono text-sm"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Documentação/Notas</Label>
+                  <Textarea
+                    placeholder="Adicione documentação, notas técnicas ou instruções específicas para este elemento..."
+                    value={nodeConfigData.properties.documentation || ''}
+                    onChange={(e) => setNodeConfigData(prev => ({
+                      ...prev,
+                      properties: { ...prev.properties, documentation: e.target.value }
+                    }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNodeConfig(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={saveNodeConfiguration}>
+              Salvar Configuração
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }, [showNodeConfig, configuratingNode, nodeConfigData, saveNodeConfiguration]);
+
+  // Process Configuration Modal
+  const ProcessConfigurationModal = useCallback(() => {
+    if (!showProcessConfig) return null;
+
+    return (
+      <Dialog open={showProcessConfig} onOpenChange={setShowProcessConfig}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-blue-600" />
+              Configurações Avançadas do Processo
+            </DialogTitle>
+            <DialogDescription>
+              Configure analytics, automação, segurança, integrações e configurações de workflow
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="analytics" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              <TabsTrigger value="automation">Automação</TabsTrigger>
+              <TabsTrigger value="security">Segurança</TabsTrigger>
+              <TabsTrigger value="integrations">Integrações</TabsTrigger>
+              <TabsTrigger value="workflow">Workflow</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="analytics" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.analytics.enabled}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      analytics: { ...prev.analytics, enabled: checked }
+                    }))}
+                  />
+                  <Label>Habilitar Analytics</Label>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>KPIs de Acompanhamento</Label>
+                  <Textarea
+                    placeholder="Ex: Tempo médio de processamento, Taxa de aprovação, Número de rejeições..."
+                    value={processConfigData.analytics.kpis.join('\n')}
+                    onChange={(e) => setProcessConfigData(prev => ({
+                      ...prev,
+                      analytics: { 
+                        ...prev.analytics, 
+                        kpis: e.target.value.split('\n').filter(kpi => kpi.trim())
+                      }
+                    }))}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Relatórios Automáticos</Label>
+                  <Textarea
+                    placeholder="Ex: Relatório Diário, Relatório Semanal, Dashboard Executivo..."
+                    value={processConfigData.analytics.reports.join('\n')}
+                    onChange={(e) => setProcessConfigData(prev => ({
+                      ...prev,
+                      analytics: { 
+                        ...prev.analytics, 
+                        reports: e.target.value.split('\n').filter(report => report.trim())
+                      }
+                    }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="automation" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.automation.notifications_enabled}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      automation: { ...prev.automation, notifications_enabled: checked }
+                    }))}
+                  />
+                  <Label>Notificações Automáticas</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.automation.auto_assignment}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      automation: { ...prev.automation, auto_assignment: checked }
+                    }))}
+                  />
+                  <Label>Atribuição Automática</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.automation.ai_assistance}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      automation: { ...prev.automation, ai_assistance: checked }
+                    }))}
+                  />
+                  <Label>Assistência de IA</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Webhooks (URLs)</Label>
+                  <Textarea
+                    placeholder="Ex: https://api.sistema.com/webhook1..."
+                    value={processConfigData.automation.webhook_triggers.join('\n')}
+                    onChange={(e) => setProcessConfigData(prev => ({
+                      ...prev,
+                      automation: { 
+                        ...prev.automation, 
+                        webhook_triggers: e.target.value.split('\n').filter(url => url.trim())
+                      }
+                    }))}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="security" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.security.encryption_required}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      security: { ...prev.security, encryption_required: checked }
+                    }))}
+                  />
+                  <Label>Criptografia Obrigatória</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.security.audit_trail}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      security: { ...prev.security, audit_trail: checked }
+                    }))}
+                  />
+                  <Label>Trilha de Auditoria</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nível de Acesso</Label>
+                  <Select
+                    value={processConfigData.security.access_level}
+                    onValueChange={(value) => setProcessConfigData(prev => ({
+                      ...prev,
+                      security: { ...prev.security, access_level: value }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">Público</SelectItem>
+                      <SelectItem value="internal">Interno</SelectItem>
+                      <SelectItem value="confidential">Confidencial</SelectItem>
+                      <SelectItem value="restricted">Restrito</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Retenção de Dados (dias): {processConfigData.security.data_retention_days}</Label>
+                  <Slider
+                    value={[processConfigData.security.data_retention_days]}
+                    onValueChange={(value) => setProcessConfigData(prev => ({
+                      ...prev,
+                      security: { ...prev.security, data_retention_days: value[0] }
+                    }))}
+                    min={30}
+                    max={3650}
+                    step={30}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tratamento de PII</Label>
+                  <Select
+                    value={processConfigData.security.pii_handling}
+                    onValueChange={(value) => setProcessConfigData(prev => ({
+                      ...prev,
+                      security: { ...prev.security, pii_handling: value }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum PII</SelectItem>
+                      <SelectItem value="mask">Mascarar</SelectItem>
+                      <SelectItem value="encrypt">Criptografar</SelectItem>
+                      <SelectItem value="anonymize">Anonimizar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="integrations" className="space-y-4">
+              <div className="space-y-4">
+                <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-lg">
+                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Integrações</h3>
+                  <p className="text-gray-500 mb-4">Configure integrações com sistemas externos</p>
+                  
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Nome da integração"
+                      className="mb-2"
+                    />
+                    <Input
+                      placeholder="Endpoint/URL da API"
+                      className="mb-2"
+                    />
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Tipo de autenticação" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        <SelectItem value="api-key">API Key</SelectItem>
+                        <SelectItem value="bearer">Bearer Token</SelectItem>
+                        <SelectItem value="basic">Basic Auth</SelectItem>
+                        <SelectItem value="oauth">OAuth 2.0</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Integração
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="workflow" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.workflow_settings.parallel_execution}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      workflow_settings: { ...prev.workflow_settings, parallel_execution: checked }
+                    }))}
+                  />
+                  <Label>Execução Paralela</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={processConfigData.workflow_settings.escalation_enabled}
+                    onCheckedChange={(checked) => setProcessConfigData(prev => ({
+                      ...prev,
+                      workflow_settings: { ...prev.workflow_settings, escalation_enabled: checked }
+                    }))}
+                  />
+                  <Label>Escalação Automática</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Timeout (minutos): {processConfigData.workflow_settings.timeout_minutes}</Label>
+                  <Slider
+                    value={[processConfigData.workflow_settings.timeout_minutes]}
+                    onValueChange={(value) => setProcessConfigData(prev => ({
+                      ...prev,
+                      workflow_settings: { ...prev.workflow_settings, timeout_minutes: value[0] }
+                    }))}
+                    min={5}
+                    max={1440}
+                    step={5}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Tentativas de Retry: {processConfigData.workflow_settings.retry_attempts}</Label>
+                  <Slider
+                    value={[processConfigData.workflow_settings.retry_attempts]}
+                    onValueChange={(value) => setProcessConfigData(prev => ({
+                      ...prev,
+                      workflow_settings: { ...prev.workflow_settings, retry_attempts: value[0] }
+                    }))}
+                    min={0}
+                    max={10}
+                    step={1}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProcessConfig(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => {
+              setHasUnsavedChanges(true);
+              setShowProcessConfig(false);
+              toast.success('Configurações do processo atualizadas');
+            }}>
+              Salvar Configurações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }, [showProcessConfig, processConfigData]);
 
   if (!isOpen) return null;
 
@@ -2425,6 +4349,16 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
             <Button 
               variant="ghost" 
               size="sm"
+              onClick={() => setShowProcessConfig(true)}
+              className="text-white hover:bg-white/10"
+              title="Configurações Avançadas do Processo"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm"
               onClick={() => setIsMaximized(!isMaximized)}
               className="text-white hover:bg-white/10"
               title={isMaximized ? "Restaurar" : "Maximizar"}
@@ -2462,23 +4396,23 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
           </div>
         </div>
 
-        {/* Step Navigation */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        {/* Step Navigation - Dark Mode Fixed */}
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-8">
             {/* Step 1 */}
             <div className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-300 ${
               currentStep === 'form-builder' 
-                ? 'bg-blue-100 text-blue-700 shadow-md' 
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 shadow-md' 
                 : formFields.length > 0 
-                  ? 'bg-green-100 text-green-700 cursor-pointer hover:bg-green-200' 
-                  : 'bg-gray-100 text-gray-500 cursor-pointer hover:bg-gray-200'
+                  ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 cursor-pointer hover:bg-green-200 dark:hover:bg-green-800' 
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
             }`} onClick={() => setCurrentStep('form-builder')}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 currentStep === 'form-builder' 
                   ? 'bg-blue-500 text-white' 
                   : formFields.length > 0 
                     ? 'bg-green-500 text-white' 
-                    : 'bg-gray-300 text-gray-600'
+                    : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
               }`}>
                 {formFields.length > 0 ? '✓' : '1'}
               </div>
@@ -2491,17 +4425,17 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
             </div>
             
             {/* Arrow */}
-            <div className="text-gray-400">
+            <div className="text-gray-400 dark:text-gray-500">
               <ChevronRight className="w-5 h-5" />
             </div>
             
             {/* Step 2 */}
             <div className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all duration-300 ${
               currentStep === 'workflow-designer' 
-                ? 'bg-blue-100 text-blue-700 shadow-md' 
+                ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 shadow-md' 
                 : formFields.length > 0 
-                  ? 'bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200' 
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600' 
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`} onClick={() => {
               if (formFields.length > 0) {
                 setCurrentStep('workflow-designer');
@@ -2513,13 +4447,13 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                   : workflowNodes.length > 0 
                     ? 'bg-green-500 text-white' 
                     : formFields.length > 0 
-                      ? 'bg-gray-300 text-gray-600' 
-                      : 'bg-gray-200 text-gray-400'
+                      ? 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300' 
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
               }`}>
                 {workflowNodes.length > 0 ? '✓' : '2'}
               </div>
               <div>
-                <p className={`font-medium ${formFields.length === 0 ? 'text-gray-400' : ''}`}>
+                <p className={`font-medium ${formFields.length === 0 ? 'text-gray-400 dark:text-gray-500' : ''}`}>
                   Designer de Workflow
                 </p>
                 <p className="text-xs opacity-75">
@@ -2537,23 +4471,1251 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
 
         {/* Main Content Area */}
         <div className="flex h-[calc(100%-160px)]">
-          {/* Step 1: Form Builder */}
-          {currentStep === 'form-builder' && (
-            <FormBuilderSection 
-              formFields={formFields}
-              setFormFields={setFormFields}
-              editingField={editingField}
-              setEditingField={setEditingField}
-              showFieldModal={showFieldModal}
-              setShowFieldModal={setShowFieldModal}
-              selectedFieldType={selectedFieldType}
-              setSelectedFieldType={setSelectedFieldType}
-              setHasUnsavedChanges={setHasUnsavedChanges}
-              setCurrentStep={setCurrentStep}
-              gridConfig={formGridConfig}
-              setGridConfig={setFormGridConfig}
-            />
-          )}
+          {/* Initial Choice Screen - Template Library */}
+          {showInitialChoice ? (
+            <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto p-6">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-4 shadow-lg">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    Como você gostaria de começar?
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                    Escolha entre usar um template profissional pré-configurado ou criar um processo completamente do zero.
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8">
+                  {/* Template Library */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500 rounded-lg">
+                          <BookOpen className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Biblioteca de Templates
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Templates prontos e testados para começar rapidamente
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <ScrollArea className="h-96">
+                      <div className="p-6 space-y-4">
+                        {/* Template: Auditoria Interna Completa */}
+                        <div className="border rounded-lg p-4 hover:border-blue-300 cursor-pointer group"
+                             onClick={() => {
+                               const auditTemplate = {
+                                 name: 'Auditoria Interna ISO 27001 - Processo Completo',
+                                 description: 'Processo completo de auditoria interna baseado em ISO 27001 com múltiplos formulários integrados',
+                                 formFields: [
+                                   // Formulário de Planejamento da Auditoria
+                                   { id: 'audit_title', type: 'text' as const, label: 'Título da Auditoria', required: true, placeholder: 'Ex: Auditoria Interna ISO 27001 - Segurança da Informação' },
+                                   { id: 'audit_code', type: 'text' as const, label: 'Código da Auditoria', required: true, placeholder: 'AUD-ISO27001-2024-001' },
+                                   { id: 'audit_scope', type: 'textarea' as const, label: 'Escopo e Objetivos', required: true, placeholder: 'Avaliar a conformidade dos controles de segurança da informação conforme ISO 27001:2013...' },
+                                   { id: 'audit_criteria', type: 'textarea' as const, label: 'Critérios de Auditoria', required: true, placeholder: 'ISO 27001:2013, Política de SI da empresa, procedimentos internos...' },
+                                   { id: 'lead_auditor', type: 'text' as const, label: 'Auditor Líder', required: true, placeholder: 'Nome do auditor líder certificado' },
+                                   { id: 'audit_team', type: 'textarea' as const, label: 'Equipe de Auditoria', required: true, placeholder: 'Lista dos auditores e suas responsabilidades' },
+                                   { id: 'audit_date_start', type: 'date' as const, label: 'Data de Início', required: true },
+                                   { id: 'audit_date_end', type: 'date' as const, label: 'Data de Término', required: true },
+                                   { id: 'auditee_department', type: 'select' as const, label: 'Departamento Auditado', required: true, options: ['TI', 'Segurança', 'RH', 'Financeiro', 'Operações', 'Jurídico', 'Todos'] },
+                                   { id: 'audit_type', type: 'select' as const, label: 'Tipo de Auditoria', required: true, options: ['Inicial', 'Seguimento', 'Especial', 'Recertificação'] },
+                                   
+                                   // Formulário de Evidências e Achados
+                                   { id: 'evidence_collected', type: 'textarea' as const, label: 'Evidências Coletadas', required: false, placeholder: 'Documentos, registros, observações...' },
+                                   { id: 'nonconformities', type: 'textarea' as const, label: 'Não Conformidades Identificadas', required: false, placeholder: 'Descrição detalhada das não conformidades...' },
+                                   { id: 'observations', type: 'textarea' as const, label: 'Observações e Oportunidades de Melhoria', required: false, placeholder: 'Pontos de atenção e sugestões...' },
+                                   { id: 'positive_findings', type: 'textarea' as const, label: 'Pontos Fortes Identificados', required: false, placeholder: 'Boas práticas e controles eficazes...' },
+                                   
+                                   // Formulário de Avaliação e Conclusão
+                                   { id: 'overall_assessment', type: 'select' as const, label: 'Avaliação Geral', required: false, options: ['Conforme', 'Conforme com observações', 'Não conforme menor', 'Não conforme maior'] },
+                                   { id: 'risk_level', type: 'select' as const, label: 'Nível de Risco Global', required: false, options: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Crítico'] },
+                                   { id: 'action_plan_required', type: 'select' as const, label: 'Plano de Ação Necessário', required: false, options: ['Sim', 'Não'] },
+                                   { id: 'followup_date', type: 'date' as const, label: 'Data de Follow-up', required: false },
+                                   { id: 'certification_impact', type: 'select' as const, label: 'Impacto na Certificação', required: false, options: ['Nenhum', 'Menor', 'Moderado', 'Significativo', 'Crítico'] }
+                                 ],
+                                 workflowNodes: [
+                                   // Início do processo
+                                   {
+                                     id: 'start-audit-process',
+                                     type: 'start' as const,
+                                     position: { x: 50, y: 200 },
+                                     size: { width: 100, height: 80 },
+                                     data: {
+                                       label: 'Solicitação de Auditoria',
+                                       description: 'Início do processo - Solicitação aprovada pelo programa de auditoria',
+                                       properties: { 
+                                         trigger_type: 'scheduled',
+                                         notification_enabled: true,
+                                         responsible: 'Coordenador de Auditoria',
+                                         sla: '1 dia'
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Fase 1: Planejamento Detalhado
+                                   {
+                                     id: 'detailed-planning',
+                                     type: 'task' as const,
+                                     position: { x: 200, y: 200 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Planejamento Detalhado',
+                                       description: 'Elaboração do plano de auditoria detalhado',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '3-5 dias',
+                                         assignee: 'Auditor Líder',
+                                         form_fields: ['audit_title', 'audit_code', 'audit_scope', 'audit_criteria', 'lead_auditor', 'audit_team'],
+                                         checklist: [
+                                           'Definir escopo detalhado',
+                                           'Selecionar equipe de auditoria',
+                                           'Elaborar programa de auditoria',
+                                           'Preparar checklists específicos',
+                                           'Agendar reunião de abertura'
+                                         ],
+                                         resources: ['ISO 27001:2013', 'Programa anual de auditorias', 'Auditorias anteriores'],
+                                         deliverables: ['Plano de auditoria aprovado', 'Checklists de auditoria', 'Cronograma detalhado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Fase 2: Reunião de Abertura
+                                   {
+                                     id: 'opening-meeting',
+                                     type: 'task' as const,
+                                     position: { x: 390, y: 200 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Reunião de Abertura',
+                                       description: 'Apresentação do plano e alinhamento com auditados',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '2 horas',
+                                         assignee: 'Auditor Líder + Equipe',
+                                         form_fields: ['auditee_department', 'audit_type'],
+                                         checklist: [
+                                           'Apresentar equipe de auditoria',
+                                           'Confirmar escopo e cronograma',
+                                           'Esclarecer metodologia',
+                                           'Definir pontos focais',
+                                           'Documentar participantes'
+                                         ],
+                                         resources: ['Apresentação do plano', 'Lista de participantes'],
+                                         deliverables: ['Ata da reunião de abertura', 'Cronograma confirmado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Fase 3: Execução da Auditoria (Paralelo)
+                                   {
+                                     id: 'document-review',
+                                     type: 'task' as const,
+                                     position: { x: 580, y: 120 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Análise Documental',
+                                       description: 'Revisão de políticas, procedimentos e registros',
+                                       properties: {
+                                         priority: 'critical',
+                                         duration: '2-3 dias',
+                                         assignee: 'Equipe de Auditoria',
+                                         form_fields: ['evidence_collected'],
+                                         checklist: [
+                                           'Revisar política de segurança',
+                                           'Analisar procedimentos',
+                                           'Verificar registros de incidentes',
+                                           'Validar controles documentados',
+                                           'Registrar evidências'
+                                         ],
+                                         resources: ['Sistema documental', 'Registros de segurança'],
+                                         deliverables: ['Lista de evidências coletadas', 'Análise de gaps']
+                                       }
+                                     }
+                                   },
+                                   
+                                   {
+                                     id: 'interviews-observations',
+                                     type: 'task' as const,
+                                     position: { x: 580, y: 280 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Entrevistas e Observações',
+                                       description: 'Entrevistas com responsáveis e observação de processos',
+                                       properties: {
+                                         priority: 'critical',
+                                         duration: '3-4 dias',
+                                         assignee: 'Equipe de Auditoria',
+                                         form_fields: ['observations', 'positive_findings'],
+                                         checklist: [
+                                           'Entrevistar gestores de TI',
+                                           'Observar controles físicos',
+                                           'Testar controles técnicos',
+                                           'Verificar conscientização',
+                                           'Validar procedimentos na prática'
+                                         ],
+                                         resources: ['Roteiro de entrevistas', 'Ferramentas de teste'],
+                                         deliverables: ['Relatórios de entrevista', 'Registros de observação']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Consolidação dos Achados
+                                   {
+                                     id: 'findings-consolidation',
+                                     type: 'task' as const,
+                                     position: { x: 770, y: 200 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Consolidação de Achados',
+                                       description: 'Análise e classificação de todos os achados',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1-2 dias',
+                                         assignee: 'Auditor Líder',
+                                         form_fields: ['nonconformities', 'overall_assessment', 'risk_level'],
+                                         checklist: [
+                                           'Consolidar todas as evidências',
+                                           'Classificar não conformidades',
+                                           'Avaliar impacto nos objetivos',
+                                           'Preparar matriz de achados',
+                                           'Validar com equipe'
+                                         ],
+                                         resources: ['Evidências coletadas', 'Critérios ISO 27001'],
+                                         deliverables: ['Matriz de achados classificados', 'Avaliação de impacto']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Decisão sobre Conformidade
+                                   {
+                                     id: 'conformity-decision',
+                                     type: 'decision' as const,
+                                     position: { x: 960, y: 200 },
+                                     size: { width: 120, height: 120 },
+                                     data: {
+                                       label: 'Avaliação de Conformidade',
+                                       description: 'Decisão sobre o nível de conformidade encontrado',
+                                       properties: {
+                                         conditions: [
+                                           'Não conformidades críticas identificadas',
+                                           'Múltiplas não conformidades menores',
+                                           'Apenas observações identificadas',
+                                           'Plena conformidade'
+                                         ],
+                                         criteria: 'Classificação segundo ISO 19011',
+                                         timeout: '1 dia',
+                                         fallback_action: 'Reunião de equipe para decisão',
+                                         responsible: 'Auditor Líder'
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Caminhos baseados na decisão
+                                   {
+                                     id: 'action-plan-required',
+                                     type: 'task' as const,
+                                     position: { x: 1130, y: 120 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Plano de Ação Requerido',
+                                       description: 'Definição de ações corretivas necessárias',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1 dia',
+                                         assignee: 'Auditado + Auditor Líder',
+                                         form_fields: ['action_plan_required', 'followup_date'],
+                                         checklist: [
+                                           'Definir ações corretivas',
+                                           'Estabelecer prazos',
+                                           'Nomear responsáveis',
+                                           'Definir critérios de verificação',
+                                           'Agendar follow-up'
+                                         ],
+                                         resources: ['Template plano de ação'],
+                                         deliverables: ['Plano de ação aprovado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   {
+                                     id: 'continuous-improvement',
+                                     type: 'task' as const,
+                                     position: { x: 1130, y: 280 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Melhoria Contínua',
+                                       description: 'Identificação de oportunidades de melhoria',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '1 dia',
+                                         assignee: 'Auditado',
+                                         form_fields: ['certification_impact'],
+                                         checklist: [
+                                           'Revisar oportunidades identificadas',
+                                           'Priorizar melhorias',
+                                           'Incorporar ao plano estratégico',
+                                           'Definir indicadores',
+                                           'Comunicar boas práticas'
+                                         ],
+                                         resources: ['Relatório de oportunidades'],
+                                         deliverables: ['Plano de melhorias']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Reunião de Encerramento
+                                   {
+                                     id: 'closing-meeting',
+                                     type: 'task' as const,
+                                     position: { x: 1320, y: 200 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Reunião de Encerramento',
+                                       description: 'Apresentação dos resultados finais',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '2 horas',
+                                         assignee: 'Auditor Líder + Equipe',
+                                         checklist: [
+                                           'Apresentar achados finais',
+                                           'Explicar classificações',
+                                           'Discutir planos de ação',
+                                           'Esclarecer próximos passos',
+                                           'Obter concordância formal'
+                                         ],
+                                         resources: ['Apresentação dos resultados'],
+                                         deliverables: ['Ata de encerramento assinada']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Relatório Final
+                                   {
+                                     id: 'final-report',
+                                     type: 'task' as const,
+                                     position: { x: 1510, y: 200 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Relatório Final',
+                                       description: 'Elaboração e aprovação do relatório final',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '3-5 dias',
+                                         assignee: 'Auditor Líder',
+                                         checklist: [
+                                           'Consolidar todos os achados',
+                                           'Redigir relatório completo',
+                                           'Incluir evidências',
+                                           'Revisar tecnicamente',
+                                           'Obter aprovação final'
+                                         ],
+                                         resources: ['Template relatório ISO 27001'],
+                                         deliverables: ['Relatório final aprovado', 'Certificado de auditoria']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Notificação e Arquivamento
+                                   {
+                                     id: 'notification-filing',
+                                     type: 'notification' as const,
+                                     position: { x: 1700, y: 200 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Notificação e Arquivo',
+                                       description: 'Distribuição do relatório e arquivamento',
+                                       properties: {
+                                         recipients: ['Direção', 'Auditados', 'Comitê de SI', 'Organismo Certificador'],
+                                         template: 'audit_completion_report',
+                                         channel: 'email_secure',
+                                         urgency: 'high',
+                                         retention_period: '3 anos'
+                                       }
+                                     }
+                                   }
+                                 ],
+                                 workflowConnections: [
+                                   // Fluxo principal sequencial
+                                   { id: 'conn1', source: 'start-audit-process', target: 'detailed-planning', type: 'default' as const, label: 'Aprovado' },
+                                   { id: 'conn2', source: 'detailed-planning', target: 'opening-meeting', type: 'default' as const, label: 'Plano Aprovado' },
+                                   
+                                   // Bifurcação para execução paralela
+                                   { id: 'conn3a', source: 'opening-meeting', target: 'document-review', type: 'default' as const, label: 'Iniciar Análise Documental' },
+                                   { id: 'conn3b', source: 'opening-meeting', target: 'interviews-observations', type: 'default' as const, label: 'Iniciar Entrevistas' },
+                                   
+                                   // Convergência para consolidação
+                                   { id: 'conn4a', source: 'document-review', target: 'findings-consolidation', type: 'default' as const, label: 'Evidências Coletadas' },
+                                   { id: 'conn4b', source: 'interviews-observations', target: 'findings-consolidation', type: 'default' as const, label: 'Observações Completas' },
+                                   
+                                   // Decisão de conformidade
+                                   { id: 'conn5', source: 'findings-consolidation', target: 'conformity-decision', type: 'default' as const, label: 'Achados Consolidados' },
+                                   
+                                   // Caminhos condicionais
+                                   { id: 'conn6a', source: 'conformity-decision', target: 'action-plan-required', type: 'default' as const, label: 'Não Conformidades Críticas' },
+                                   { id: 'conn6b', source: 'conformity-decision', target: 'continuous-improvement', type: 'default' as const, label: 'Apenas Observações' },
+                                   
+                                   // Convergência para encerramento
+                                   { id: 'conn7a', source: 'action-plan-required', target: 'closing-meeting', type: 'default' as const, label: 'Plano Acordado' },
+                                   { id: 'conn7b', source: 'continuous-improvement', target: 'closing-meeting', type: 'default' as const, label: 'Melhorias Definidas' },
+                                   
+                                   // Finalização
+                                   { id: 'conn8', source: 'closing-meeting', target: 'final-report', type: 'default' as const, label: 'Reunião Concluída' },
+                                   { id: 'conn9', source: 'final-report', target: 'notification-filing', type: 'default' as const, label: 'Relatório Aprovado' }
+                                 ]
+                               };
+                               
+                               setProcessName(auditTemplate.name);
+                               setFormFields(auditTemplate.formFields);
+                               setWorkflowNodes(auditTemplate.workflowNodes);
+                               setWorkflowConnections(auditTemplate.workflowConnections);
+                               setShowInitialChoice(false);
+                               setHasUnsavedChanges(true);
+                               toast.success('Template "Auditoria Interna ISO 27001" aplicado com sucesso!');
+                             }}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm group-hover:text-blue-600">
+                                Auditoria Interna ISO 27001 - Processo Completo
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Processo profissional completo baseado em ISO 19011. Inclui 18 campos integrados e 13 elementos de workflow com execução paralela e decisões condicionais.
+                              </p>
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">ISO 27001</span>
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">Auditoria</span>
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Compliance</span>
+                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Profissional</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Template: Gestão de Riscos ISO 31000 Completa */}
+                        <div className="border rounded-lg p-4 hover:border-red-300 cursor-pointer group"
+                             onClick={() => {
+                               const riskTemplate = {
+                                 name: 'Gestão de Riscos ISO 31000 - Processo Empresarial Completo',
+                                 description: 'Processo completo de gestão de riscos baseado em ISO 31000 com múltiplos formulários e análise quantitativa',
+                                 formFields: [
+                                   // Formulário de Identificação do Risco
+                                   { id: 'risk_id', type: 'text' as const, label: 'ID do Risco', required: true, placeholder: 'RSK-OP-2024-001' },
+                                   { id: 'risk_title', type: 'text' as const, label: 'Título do Risco', required: true, placeholder: 'Ex: Indisponibilidade do Sistema ERP Crítico' },
+                                   { id: 'risk_category', type: 'select' as const, label: 'Categoria do Risco', required: true, options: ['Operacional', 'Estratégico', 'Financeiro', 'Compliance', 'Tecnológico', 'Reputacional', 'Legal'] },
+                                   { id: 'risk_description', type: 'textarea' as const, label: 'Descrição Detalhada', required: true, placeholder: 'Descrição completa do evento de risco, suas causas potenciais e contexto...' },
+                                   { id: 'risk_source', type: 'select' as const, label: 'Fonte do Risco', required: true, options: ['Interna - Processo', 'Interna - Pessoa', 'Interna - Sistema', 'Externa - Fornecedor', 'Externa - Regulatória', 'Externa - Mercado', 'Externa - Natural'] },
+                                   { id: 'business_process', type: 'text' as const, label: 'Processo de Negócio Afetado', required: true, placeholder: 'Ex: Vendas, Produção, Logística...' },
+                                   { id: 'identified_by', type: 'text' as const, label: 'Identificado Por', required: true, placeholder: 'Nome e cargo do identificador' },
+                                   { id: 'identification_date', type: 'date' as const, label: 'Data de Identificação', required: true },
+                                   
+                                   // Formulário de Análise Qualitativa
+                                   { id: 'probability_qualitative', type: 'select' as const, label: 'Probabilidade (Qualitativa)', required: true, options: ['Muito Baixa (0-5%)', 'Baixa (6-25%)', 'Média (26-50%)', 'Alta (51-75%)', 'Muito Alta (76-100%)'] },
+                                   { id: 'impact_financial', type: 'select' as const, label: 'Impacto Financeiro', required: true, options: ['< R$ 10k', 'R$ 10k - R$ 100k', 'R$ 100k - R$ 1M', 'R$ 1M - R$ 10M', '> R$ 10M'] },
+                                   { id: 'impact_operational', type: 'select' as const, label: 'Impacto Operacional', required: true, options: ['Mínimo', 'Menor', 'Moderado', 'Maior', 'Severo'] },
+                                   { id: 'impact_reputational', type: 'select' as const, label: 'Impacto Reputacional', required: true, options: ['Nenhum', 'Local', 'Regional', 'Nacional', 'Internacional'] },
+                                   { id: 'impact_regulatory', type: 'select' as const, label: 'Impacto Regulatório', required: true, options: ['Nenhum', 'Advertência', 'Multa Menor', 'Multa Significativa', 'Perda de Licença'] },
+                                   
+                                   // Formulário de Análise Quantitativa (quando aplicável)
+                                   { id: 'annual_loss_expectancy', type: 'number' as const, label: 'Expectativa de Perda Anual (R$)', required: false, placeholder: '0' },
+                                   { id: 'maximum_loss_potential', type: 'number' as const, label: 'Potencial de Perda Máxima (R$)', required: false, placeholder: '0' },
+                                   { id: 'frequency_historical', type: 'text' as const, label: 'Frequência Histórica', required: false, placeholder: 'Ex: 2 vezes nos últimos 5 anos' },
+                                   
+                                   // Formulário de Avaliação de Controles Existentes
+                                   { id: 'existing_controls', type: 'textarea' as const, label: 'Controles Existentes', required: false, placeholder: 'Lista e descrição dos controles já implementados...' },
+                                   { id: 'control_effectiveness', type: 'select' as const, label: 'Eficácia dos Controles', required: false, options: ['Inexistente', 'Fraca', 'Adequada', 'Forte', 'Muito Forte'] },
+                                   
+                                   // Formulário de Tratamento do Risco
+                                   { id: 'treatment_strategy', type: 'select' as const, label: 'Estratégia de Tratamento', required: false, options: ['Evitar', 'Mitigar', 'Transferir', 'Aceitar'] },
+                                   { id: 'action_plan', type: 'textarea' as const, label: 'Plano de Ação', required: false, placeholder: 'Ações específicas para tratar o risco...' },
+                                   { id: 'risk_owner', type: 'text' as const, label: 'Proprietário do Risco', required: true, placeholder: 'Gestor responsável pelo processo afetado' },
+                                   { id: 'action_owner', type: 'text' as const, label: 'Responsável pelas Ações', required: false, placeholder: 'Pessoa responsável por implementar as ações' },
+                                   { id: 'target_date', type: 'date' as const, label: 'Data Alvo para Conclusão', required: false },
+                                   { id: 'budget_required', type: 'number' as const, label: 'Orçamento Necessário (R$)', required: false, placeholder: '0' },
+                                   
+                                   // Formulário de Monitoramento
+                                   { id: 'kri_indicators', type: 'textarea' as const, label: 'Indicadores Chave de Risco (KRIs)', required: false, placeholder: 'Lista de KRIs para monitoramento...' },
+                                   { id: 'review_frequency', type: 'select' as const, label: 'Frequência de Revisão', required: false, options: ['Semanal', 'Mensal', 'Trimestral', 'Semestral', 'Anual'] },
+                                   { id: 'next_review_date', type: 'date' as const, label: 'Próxima Revisão', required: false },
+                                   { id: 'risk_appetite_limit', type: 'text' as const, label: 'Limite de Apetite ao Risco', required: false, placeholder: 'Limites definidos pela organização' }
+                                 ],
+                                 workflowNodes: [
+                                   // Início - Identificação
+                                   {
+                                     id: 'risk-identification-start',
+                                     type: 'start' as const,
+                                     position: { x: 50, y: 250 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Identificação de Risco',
+                                       description: 'Novo risco identificado no ambiente de negócio',
+                                       properties: { 
+                                         trigger_type: 'event_continuous',
+                                         notification_enabled: true,
+                                         responsible: 'Qualquer colaborador',
+                                         sla: 'Imediato'
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Registro Inicial
+                                   {
+                                     id: 'initial-registration',
+                                     type: 'task' as const,
+                                     position: { x: 220, y: 250 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Registro Inicial',
+                                       description: 'Captura das informações básicas do risco',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1 hora',
+                                         assignee: 'Identificador + Gestor do Processo',
+                                         form_fields: ['risk_id', 'risk_title', 'risk_category', 'risk_description', 'risk_source', 'business_process', 'identified_by', 'identification_date'],
+                                         checklist: [
+                                           'Descrever o risco claramente',
+                                           'Identificar processo afetado',
+                                           'Classificar categoria inicial',
+                                           'Definir ID único do risco',
+                                           'Registrar fonte e contexto'
+                                         ],
+                                         resources: ['Taxonomia de riscos', 'Registro de riscos central'],
+                                         deliverables: ['Ficha inicial do risco preenchida']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Triagem Inicial
+                                   {
+                                     id: 'initial-triage',
+                                     type: 'decision' as const,
+                                     position: { x: 410, y: 250 },
+                                     size: { width: 120, height: 120 },
+                                     data: {
+                                       label: 'Triagem de Criticidade',
+                                       description: 'Avaliação inicial de criticidade para priorização',
+                                       properties: {
+                                         conditions: [
+                                           'Risco crítico - análise imediata',
+                                           'Risco significativo - análise prioritária',
+                                           'Risco baixo - análise programada'
+                                         ],
+                                         criteria: 'Avaliação preliminar de impacto e urgência',
+                                         timeout: '4 horas',
+                                         fallback_action: 'Escalar para comitê de riscos',
+                                         responsible: 'Coordenador de Riscos'
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Análise Qualitativa Detalhada
+                                   {
+                                     id: 'qualitative-analysis',
+                                     type: 'task' as const,
+                                     position: { x: 580, y: 150 },
+                                     size: { width: 150, height: 110 },
+                                     data: {
+                                       label: 'Análise Qualitativa',
+                                       description: 'Avaliação detalhada de probabilidade e impactos',
+                                       properties: {
+                                         priority: 'critical',
+                                         duration: '1-2 dias',
+                                         assignee: 'Analista de Riscos + Especialista do Processo',
+                                         form_fields: ['probability_qualitative', 'impact_financial', 'impact_operational', 'impact_reputational', 'impact_regulatory'],
+                                         checklist: [
+                                           'Avaliar probabilidade com dados históricos',
+                                           'Quantificar impacto financeiro',
+                                           'Analisar impacto operacional',
+                                           'Avaliar consequências reputacionais',
+                                           'Verificar implicações regulatórias',
+                                           'Calcular score de risco qualitativo'
+                                         ],
+                                         resources: ['Matriz de probabilidade/impacto', 'Base histórica de eventos', 'Critérios de impacto'],
+                                         deliverables: ['Score de risco qualitativo', 'Mapa de calor atualizado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Análise Quantitativa (para riscos significativos)
+                                   {
+                                     id: 'quantitative-analysis',
+                                     type: 'task' as const,
+                                     position: { x: 580, y: 350 },
+                                     size: { width: 150, height: 110 },
+                                     data: {
+                                       label: 'Análise Quantitativa',
+                                       description: 'Modelagem estatística e análise financeira detalhada',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '2-5 dias',
+                                         assignee: 'Especialista Quantitativo + Analista Financeiro',
+                                         form_fields: ['annual_loss_expectancy', 'maximum_loss_potential', 'frequency_historical'],
+                                         checklist: [
+                                           'Modelar distribuição de perdas',
+                                           'Calcular VaR (Value at Risk)',
+                                           'Determinar ALE (Annual Loss Expectancy)',
+                                           'Estimar MLP (Maximum Loss Potential)',
+                                           'Realizar análise de sensibilidade',
+                                           'Validar modelos com dados históricos'
+                                         ],
+                                         resources: ['Ferramentas estatísticas', 'Dados históricos de perdas', 'Modelos de risco'],
+                                         deliverables: ['Modelo quantitativo de risco', 'Relatório de análise estatística']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Avaliação de Controles
+                                   {
+                                     id: 'control-assessment',
+                                     type: 'task' as const,
+                                     position: { x: 780, y: 250 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Avaliação de Controles',
+                                       description: 'Análise da eficácia dos controles existentes',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1-2 dias',
+                                         assignee: 'Auditor Interno + Gestor do Processo',
+                                         form_fields: ['existing_controls', 'control_effectiveness'],
+                                         checklist: [
+                                           'Mapear controles preventivos',
+                                           'Identificar controles detectivos',
+                                           'Avaliar controles corretivos',
+                                           'Testar eficácia dos controles',
+                                           'Identificar gaps de controle',
+                                           'Calcular risco residual'
+                                         ],
+                                         resources: ['Matriz de controles', 'Procedimentos de teste', 'Framework de controles'],
+                                         deliverables: ['Matriz de controles avaliada', 'Score de eficácia', 'Risco residual calculado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Decisão de Tratamento
+                                   {
+                                     id: 'treatment-decision',
+                                     type: 'decision' as const,
+                                     position: { x: 970, y: 250 },
+                                     size: { width: 120, height: 120 },
+                                     data: {
+                                       label: 'Estratégia de Tratamento',
+                                       description: 'Decisão sobre como tratar o risco residual',
+                                       properties: {
+                                         conditions: [
+                                           'Evitar - Eliminar atividade',
+                                           'Mitigar - Reduzir probabilidade/impacto',
+                                           'Transferir - Seguros/outsourcing',
+                                           'Aceitar - Dentro do apetite'
+                                         ],
+                                         criteria: 'Apetite ao risco vs custo/benefício',
+                                         timeout: '2 dias',
+                                         fallback_action: 'Reunião do comitê executivo',
+                                         responsible: 'Proprietário do Risco + Comitê'
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Implementação de Ações (Mitigar)
+                                   {
+                                     id: 'action-implementation',
+                                     type: 'task' as const,
+                                     position: { x: 1160, y: 120 },
+                                     size: { width: 150, height: 110 },
+                                     data: {
+                                       label: 'Implementação de Ações',
+                                       description: 'Execução do plano de tratamento do risco',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '30-180 dias',
+                                         assignee: 'Responsável pelas Ações + Equipe',
+                                         form_fields: ['treatment_strategy', 'action_plan', 'action_owner', 'target_date', 'budget_required'],
+                                         checklist: [
+                                           'Elaborar plano detalhado de ações',
+                                           'Alocar recursos necessários',
+                                           'Definir cronograma de implementação',
+                                           'Estabelecer marcos de controle',
+                                           'Implementar controles adicionais',
+                                           'Validar eficácia das ações'
+                                         ],
+                                         resources: ['Orçamento aprovado', 'Equipe de projeto', 'Fornecedores especializados'],
+                                         deliverables: ['Controles implementados', 'Relatório de eficácia', 'Risco residual atualizado']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Transferência de Risco
+                                   {
+                                     id: 'risk-transfer',
+                                     type: 'task' as const,
+                                     position: { x: 1160, y: 280 },
+                                     size: { width: 150, height: 110 },
+                                     data: {
+                                       label: 'Transferência de Risco',
+                                       description: 'Implementação de mecanismos de transferência',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '15-60 dias',
+                                         assignee: 'Gestor de Seguros + Jurídico',
+                                         checklist: [
+                                           'Avaliar opções de seguros',
+                                           'Negociar contratos de transferência',
+                                           'Implementar cláusulas de proteção',
+                                           'Estabelecer SLAs com terceiros',
+                                           'Monitorar performance de terceiros'
+                                         ],
+                                         resources: ['Corretores de seguro', 'Assessoria jurídica', 'Fornecedores qualificados'],
+                                         deliverables: ['Contratos de transferência', 'Apólices de seguro', 'Acordos de SLA']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Aceitação Formal
+                                   {
+                                     id: 'risk-acceptance',
+                                     type: 'task' as const,
+                                     position: { x: 1160, y: 430 },
+                                     size: { width: 150, height: 110 },
+                                     data: {
+                                       label: 'Aceitação Formal',
+                                       description: 'Formalização da aceitação do risco residual',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '1-2 dias',
+                                         assignee: 'Proprietário do Risco + Direção',
+                                         checklist: [
+                                           'Documentar justificativa da aceitação',
+                                           'Obter aprovação da direção',
+                                           'Estabelecer limites de monitoramento',
+                                           'Definir gatilhos de reavaliação',
+                                           'Comunicar decisão aos stakeholders'
+                                         ],
+                                         resources: ['Template de aceitação', 'Política de riscos'],
+                                         deliverables: ['Termo de aceitação assinado', 'Limites documentados']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Monitoramento Contínuo
+                                   {
+                                     id: 'continuous-monitoring',
+                                     type: 'task' as const,
+                                     position: { x: 1360, y: 250 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Monitoramento Contínuo',
+                                       description: 'Acompanhamento sistemático do risco e controles',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: 'Contínuo',
+                                         assignee: 'Proprietário do Risco + Analista',
+                                         form_fields: ['kri_indicators', 'review_frequency', 'next_review_date', 'risk_appetite_limit'],
+                                         checklist: [
+                                           'Monitorar KRIs estabelecidos',
+                                           'Acompanhar eficácia dos controles',
+                                           'Verificar mudanças no contexto',
+                                           'Atualizar avaliação periodicamente',
+                                           'Reportar status à direção',
+                                           'Identificar novos riscos emergentes'
+                                         ],
+                                         resources: ['Dashboard de riscos', 'Sistema de monitoramento', 'Relatórios automatizados'],
+                                         deliverables: ['Relatórios de monitoramento', 'Alertas de limite', 'Atualizações de status']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Revisão e Atualização
+                                   {
+                                     id: 'review-update',
+                                     type: 'task' as const,
+                                     position: { x: 1550, y: 250 },
+                                     size: { width: 140, height: 100 },
+                                     data: {
+                                       label: 'Revisão Periódica',
+                                       description: 'Revisão formal e atualização do registro',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '1-2 dias',
+                                         assignee: 'Analista de Riscos + Proprietário',
+                                         checklist: [
+                                           'Revisar todas as informações do risco',
+                                           'Atualizar avaliações se necessário',
+                                           'Verificar eficácia das ações',
+                                           'Ajustar estratégia se necessário',
+                                           'Documentar mudanças',
+                                           'Agendar próxima revisão'
+                                         ],
+                                         resources: ['Histórico do risco', 'Dados atualizados'],
+                                         deliverables: ['Registro atualizado', 'Novas recomendações']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // Comunicação e Reporte
+                                   {
+                                     id: 'communication-reporting',
+                                     type: 'notification' as const,
+                                     position: { x: 1740, y: 250 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Comunicação e Reporte',
+                                       description: 'Comunicação sistemática sobre o status do risco',
+                                       properties: {
+                                         recipients: ['Proprietário do Risco', 'Comitê de Riscos', 'Direção', 'Stakeholders Afetados'],
+                                         template: 'risk_status_report',
+                                         channel: 'email_dashboard',
+                                         urgency: 'medium',
+                                         frequency: 'Conforme definido',
+                                         escalation_rules: 'Alertas automáticos para desvios'
+                                       }
+                                     }
+                                   }
+                                 ],
+                                 workflowConnections: [
+                                   // Fluxo principal de identificação
+                                   { id: 'risk-conn1', source: 'risk-identification-start', target: 'initial-registration', type: 'default' as const, label: 'Risco Identificado' },
+                                   { id: 'risk-conn2', source: 'initial-registration', target: 'initial-triage', type: 'default' as const, label: 'Registrado' },
+                                   
+                                   // Bifurcação para análises
+                                   { id: 'risk-conn3a', source: 'initial-triage', target: 'qualitative-analysis', type: 'default' as const, label: 'Todos os Riscos' },
+                                   { id: 'risk-conn3b', source: 'initial-triage', target: 'quantitative-analysis', type: 'default' as const, label: 'Riscos Significativos' },
+                                   
+                                   // Convergência para avaliação de controles
+                                   { id: 'risk-conn4a', source: 'qualitative-analysis', target: 'control-assessment', type: 'default' as const, label: 'Análise Qualitativa Completa' },
+                                   { id: 'risk-conn4b', source: 'quantitative-analysis', target: 'control-assessment', type: 'default' as const, label: 'Análise Quantitativa Completa' },
+                                   
+                                   // Decisão de tratamento
+                                   { id: 'risk-conn5', source: 'control-assessment', target: 'treatment-decision', type: 'default' as const, label: 'Controles Avaliados' },
+                                   
+                                   // Caminhos de tratamento
+                                   { id: 'risk-conn6a', source: 'treatment-decision', target: 'action-implementation', type: 'default' as const, label: 'Mitigar' },
+                                   { id: 'risk-conn6b', source: 'treatment-decision', target: 'risk-transfer', type: 'default' as const, label: 'Transferir' },
+                                   { id: 'risk-conn6c', source: 'treatment-decision', target: 'risk-acceptance', type: 'default' as const, label: 'Aceitar' },
+                                   
+                                   // Convergência para monitoramento
+                                   { id: 'risk-conn7a', source: 'action-implementation', target: 'continuous-monitoring', type: 'default' as const, label: 'Ações Implementadas' },
+                                   { id: 'risk-conn7b', source: 'risk-transfer', target: 'continuous-monitoring', type: 'default' as const, label: 'Transferência Efetuada' },
+                                   { id: 'risk-conn7c', source: 'risk-acceptance', target: 'continuous-monitoring', type: 'default' as const, label: 'Aceitação Formalizada' },
+                                   
+                                   // Ciclo de revisão
+                                   { id: 'risk-conn8', source: 'continuous-monitoring', target: 'review-update', type: 'default' as const, label: 'Período de Revisão' },
+                                   { id: 'risk-conn9', source: 'review-update', target: 'communication-reporting', type: 'default' as const, label: 'Revisão Completa' },
+                                   
+                                   // Ciclo contínuo
+                                   { id: 'risk-conn10', source: 'communication-reporting', target: 'continuous-monitoring', type: 'default' as const, label: 'Continuar Monitoramento' },
+                                   { id: 'risk-conn11', source: 'review-update', target: 'treatment-decision', type: 'default' as const, label: 'Requer Nova Estratégia' }
+                                 ]
+                               };
+                               
+                               setProcessName(riskTemplate.name);
+                               setFormFields(riskTemplate.formFields);
+                               setWorkflowNodes(riskTemplate.workflowNodes);
+                               setWorkflowConnections(riskTemplate.workflowConnections);
+                               setShowInitialChoice(false);
+                               setHasUnsavedChanges(true);
+                               toast.success('Template "Gestão de Riscos ISO 31000" aplicado com sucesso!');
+                             }}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm group-hover:text-red-600">
+                                Gestão de Riscos ISO 31000 - Processo Empresarial Completo
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Framework completo baseado em ISO 31000 com análise quantitativa e qualitativa. Inclui 26 campos integrados, 15 elementos de workflow com execução paralela, decisões condicionais e ciclos de revisão.
+                              </p>
+                              <div className="flex gap-2 mt-2 flex-wrap">
+                                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs rounded">ISO 31000</span>
+                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Quantitativo</span>
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Enterprise</span>
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">Profissional</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Template: Aprovação de Documentos */}
+                        <div className="border rounded-lg p-4 hover:border-purple-300 cursor-pointer group"
+                             onClick={() => {
+                               const approvalTemplate = {
+                                 name: 'Processo de Aprovação de Documentos',
+                                 description: 'Template para aprovação de políticas e procedimentos',
+                                 formFields: [
+                                   {
+                                     id: 'document_title',
+                                     type: 'text' as const,
+                                     label: 'Título do Documento',
+                                     required: true,
+                                     placeholder: 'Ex: Política de Segurança da Informação'
+                                   },
+                                   {
+                                     id: 'document_type',
+                                     type: 'select' as const,
+                                     label: 'Tipo de Documento',
+                                     required: true,
+                                     options: ['Política', 'Procedimento', 'Norma', 'Manual', 'Instrução']
+                                   },
+                                   {
+                                     id: 'author',
+                                     type: 'text' as const,
+                                     label: 'Autor',
+                                     required: true,
+                                     placeholder: 'Nome do autor'
+                                   },
+                                   {
+                                     id: 'priority',
+                                     type: 'select' as const,
+                                     label: 'Prioridade',
+                                     required: true,
+                                     options: ['Baixa', 'Normal', 'Alta', 'Crítica']
+                                   }
+                                 ],
+                                 workflowNodes: [
+                                   {
+                                     id: 'start-approval',
+                                     type: 'start' as const,
+                                     position: { x: 100, y: 200 },
+                                     size: { width: 80, height: 80 },
+                                     data: {
+                                       label: 'Submissão',
+                                       description: 'Documento submetido para aprovação',
+                                       properties: { trigger_type: 'manual', notification_enabled: true }
+                                     }
+                                   },
+                                   {
+                                     id: 'review-task',
+                                     type: 'task' as const,
+                                     position: { x: 250, y: 200 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Revisão Técnica',
+                                       description: 'Revisão técnica do conteúdo',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '3 dias',
+                                         assignee: 'Revisor Técnico',
+                                         checklist: ['Verificar conteúdo', 'Validar referências', 'Revisar formatação'],
+                                         resources: ['Padrões da empresa', 'Templates aprovados']
+                                       }
+                                     }
+                                   },
+                                   {
+                                     id: 'manager-decision',
+                                     type: 'decision' as const,
+                                     position: { x: 420, y: 200 },
+                                     size: { width: 100, height: 100 },
+                                     data: {
+                                       label: 'Aprovação Gerencial',
+                                       description: 'Decisão do gerente responsável',
+                                       properties: {
+                                         conditions: ['Revisão técnica OK', 'Conteúdo adequado'],
+                                         criteria: 'Aprovação do gerente',
+                                         timeout: '5 dias',
+                                         fallback_action: 'Escalar para direção'
+                                       }
+                                     }
+                                   },
+                                   {
+                                     id: 'publish-task',
+                                     type: 'task' as const,
+                                     position: { x: 590, y: 200 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Publicação',
+                                       description: 'Publicação e divulgação do documento',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1 dia',
+                                         assignee: 'Administrador de Documentos',
+                                         checklist: ['Publicar no portal', 'Notificar usuários', 'Arquivar versão anterior'],
+                                         resources: ['Sistema de gestão documental', 'Lista de distribuição']
+                                       }
+                                     }
+                                   }
+                                 ],
+                                 workflowConnections: [
+                                   { id: 'a1', source: 'start-approval', target: 'review-task', type: 'default' as const, label: 'Submetido' },
+                                   { id: 'a2', source: 'review-task', target: 'manager-decision', type: 'default' as const, label: 'Revisado' },
+                                   { id: 'a3', source: 'manager-decision', target: 'publish-task', type: 'default' as const, label: 'Aprovado' },
+                                   { id: 'a4', source: 'manager-decision', target: 'review-task', type: 'default' as const, label: 'Rejeitado' }
+                                 ]
+                               };
+                               
+                               setProcessName(approvalTemplate.name);
+                               setFormFields(approvalTemplate.formFields);
+                               setWorkflowNodes(approvalTemplate.workflowNodes);
+                               setWorkflowConnections(approvalTemplate.workflowConnections);
+                               setShowInitialChoice(false);
+                               setHasUnsavedChanges(true);
+                               toast.success('Template "Aprovação de Documentos" aplicado com sucesso!');
+                             }}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                              <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm group-hover:text-purple-600">
+                                Processo de Aprovação de Documentos
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Fluxo de aprovação com múltiplos níveis. Inclui 4 campos e 4 elementos com notificações.
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Documentos</span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Aprovação</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Template: Onboarding */}
+                        <div className="border rounded-lg p-4 hover:border-green-300 cursor-pointer group"
+                             onClick={() => {
+                               const onboardingTemplate = {
+                                 name: 'Processo de Onboarding de Funcionários',
+                                 description: 'Template para integração de novos funcionários',
+                                 formFields: [
+                                   {
+                                     id: 'employee_name',
+                                     type: 'text' as const,
+                                     label: 'Nome do Funcionário',
+                                     required: true,
+                                     placeholder: 'Nome completo'
+                                   },
+                                   {
+                                     id: 'department',
+                                     type: 'select' as const,
+                                     label: 'Departamento',
+                                     required: true,
+                                     options: ['TI', 'RH', 'Financeiro', 'Comercial', 'Operações', 'Auditoria']
+                                   },
+                                   {
+                                     id: 'position',
+                                     type: 'text' as const,
+                                     label: 'Cargo',
+                                     required: true,
+                                     placeholder: 'Ex: Analista de Sistemas'
+                                   },
+                                   {
+                                     id: 'start_date',
+                                     type: 'date' as const,
+                                     label: 'Data de Início',
+                                     required: true
+                                   },
+                                   {
+                                     id: 'manager',
+                                     type: 'text' as const,
+                                     label: 'Gestor Direto',
+                                     required: true,
+                                     placeholder: 'Nome do gestor'
+                                   }
+                                 ],
+                                 workflowNodes: [
+                                   {
+                                     id: 'start-onboarding',
+                                     type: 'start' as const,
+                                     position: { x: 100, y: 180 },
+                                     size: { width: 80, height: 80 },
+                                     data: {
+                                       label: 'Novo Funcionário',
+                                       description: 'Início do processo de integração',
+                                       properties: { trigger_type: 'manual', notification_enabled: true }
+                                     }
+                                   },
+                                   {
+                                     id: 'documentation-task',
+                                     type: 'task' as const,
+                                     position: { x: 250, y: 180 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Documentação',
+                                       description: 'Preparar documentação necessária',
+                                       properties: {
+                                         priority: 'high',
+                                         duration: '1 dia',
+                                         assignee: 'RH',
+                                         checklist: ['Contrato de trabalho', 'Termo de confidencialidade', 'Políticas da empresa'],
+                                         resources: ['Templates contratuais', 'Políticas atualizadas']
+                                       }
+                                     }
+                                   },
+                                   {
+                                     id: 'setup-task',
+                                     type: 'task' as const,
+                                     position: { x: 420, y: 180 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Setup Inicial',
+                                       description: 'Configurar acesso e recursos',
+                                       properties: {
+                                         priority: 'critical',
+                                         duration: '2 dias',
+                                         assignee: 'TI',
+                                         checklist: ['Criar usuário', 'Configurar email', 'Instalar softwares', 'Definir permissões'],
+                                         resources: ['Servidor de domínio', 'Licenças de software']
+                                       }
+                                     }
+                                   },
+                                   {
+                                     id: 'training-task',
+                                     type: 'task' as const,
+                                     position: { x: 590, y: 180 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Treinamento',
+                                       description: 'Treinamento inicial e apresentações',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '5 dias',
+                                         assignee: 'Gestor Direto',
+                                         checklist: ['Apresentar equipe', 'Explicar processos', 'Tour pelas instalações'],
+                                         resources: ['Materiais de treinamento', 'Plano de integração']
+                                       }
+                                     }
+                                   },
+                                   {
+                                     id: 'evaluation-task',
+                                     type: 'task' as const,
+                                     position: { x: 760, y: 180 },
+                                     size: { width: 120, height: 80 },
+                                     data: {
+                                       label: 'Avaliação',
+                                       description: 'Avaliação do período de experiência',
+                                       properties: {
+                                         priority: 'medium',
+                                         duration: '90 dias',
+                                         assignee: 'Gestor Direto + RH',
+                                         checklist: ['Avaliar desempenho', 'Coletar feedback', 'Definir próximos passos'],
+                                         resources: ['Formulário de avaliação', 'Métricas de desempenho']
+                                       }
+                                     }
+                                   }
+                                 ],
+                                 workflowConnections: [
+                                   { id: 'o1', source: 'start-onboarding', target: 'documentation-task', type: 'default' as const, label: 'Contratado' },
+                                   { id: 'o2', source: 'documentation-task', target: 'setup-task', type: 'default' as const, label: 'Documentado' },
+                                   { id: 'o3', source: 'setup-task', target: 'training-task', type: 'default' as const, label: 'Configurado' },
+                                   { id: 'o4', source: 'training-task', target: 'evaluation-task', type: 'default' as const, label: 'Treinado' }
+                                 ]
+                               };
+                               
+                               setProcessName(onboardingTemplate.name);
+                               setFormFields(onboardingTemplate.formFields);
+                               setWorkflowNodes(onboardingTemplate.workflowNodes);
+                               setWorkflowConnections(onboardingTemplate.workflowConnections);
+                               setShowInitialChoice(false);
+                               setHasUnsavedChanges(true);
+                               toast.success('Template "Onboarding de Funcionários" aplicado com sucesso!');
+                             }}>
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                              <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm group-hover:text-green-600">
+                                Processo de Onboarding de Funcionários
+                              </h4>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Integração completa de novos funcionários. Inclui 5 campos e 5 elementos com avaliação.
+                              </p>
+                              <div className="flex gap-2 mt-2">
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">RH</span>
+                                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs rounded">Onboarding</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </ScrollArea>
+                  </div>
+                  
+                  {/* Create from Scratch */}
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500 rounded-lg">
+                          <PenTool className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Criar do Zero
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Construa um processo personalizado desde o início
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-6">
+                      <div className="space-y-6">
+                        <div className="text-center py-8">
+                          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/50 dark:to-teal-900/50 rounded-full flex items-center justify-center">
+                            <Sparkles className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                            Construção Personalizada
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                            Crie um processo único para suas necessidades específicas usando nosso designer avançado
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                              <Layout className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
+                              <div className="font-medium">Form Builder</div>
+                              <div className="text-xs text-muted-foreground">Campos customizados</div>
+                            </div>
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                              <GitBranch className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
+                              <div className="font-medium">Workflow</div>
+                              <div className="text-xs text-muted-foreground">Fluxos complexos</div>
+                            </div>
+                          </div>
+                          
+                          <Button 
+                            onClick={() => setShowInitialChoice(false)}
+                            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-8 py-3 rounded-lg font-medium"
+                          >
+                            <PenTool className="w-4 h-4 mr-2" />
+                            Começar do Zero
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Step 1: Form Builder */}
+              {currentStep === 'form-builder' && (
+                <FormBuilderSection 
+                  formFields={formFields}
+                  setFormFields={setFormFields}
+                  editingField={editingField}
+                  setEditingField={setEditingField}
+                  showFieldModal={showFieldModal}
+                  setShowFieldModal={setShowFieldModal}
+                  selectedFieldType={selectedFieldType}
+                  setSelectedFieldType={setSelectedFieldType}
+                  setHasUnsavedChanges={setHasUnsavedChanges}
+                  setCurrentStep={setCurrentStep}
+                  gridConfig={formGridConfig}
+                  setGridConfig={setFormGridConfig}
+                />
+              )}
           
           {/* Step 2: Workflow Designer */}
           {currentStep === 'workflow-designer' && (
@@ -2562,13 +5724,15 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
               <NodePalette onNodeAdd={addNode} />
               
               {/* Professional Canvas */}
-              <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
+              <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
                 <div
                   ref={canvasRef}
                   className="w-full h-full relative cursor-grab active:cursor-grabbing"
                   onMouseDown={handleCanvasMouseDown}
                   onMouseMove={handleCanvasMouseMove}
                   onMouseUp={handleCanvasMouseUp}
+                  onDragOver={handleCanvasDragOver}
+                  onDrop={handleCanvasDrop}
                   onWheel={(e) => {
                     e.preventDefault();
                     const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -2600,20 +5764,41 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                     onFitToScreen={fitToScreen}
                   />
                   
+                  {/* Connection Mode Indicator */}
+                  {isConnecting && connectionSource && (
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white px-6 py-3 rounded-full shadow-lg animate-bounce">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5" />
+                        <span className="font-medium">Clique em outro elemento para conectar</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Canvas Info */}
-                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg">
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-lg px-4 py-2 shadow-lg">
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
                       <span>Elementos: {workflowNodes.length}</span>
                       <span>Conexões: {workflowConnections.length}</span>
                       <span>Zoom: {Math.round(canvasScale * 100)}%</span>
+                      {isConnecting && (
+                        <span className="text-orange-500 animate-pulse">● Conectando</span>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             </React.Fragment>
           )}
+            </>
+          )}
         </div>
       </div>
+      
+      {/* Node Configuration Modal */}
+      <NodeConfigurationModal />
+      
+      {/* Process Configuration Modal */}
+      <ProcessConfigurationModal />
     </div>
   );
 };
