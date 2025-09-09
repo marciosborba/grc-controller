@@ -83,11 +83,11 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
   const [config, setConfig] = useState<RiskMatrixConfig>({
     dimensions: {
       probability: [
-        { id: '1', name: 'Muito Baixa', value: 1, description: 'Evento muito improvável', percentage: '< 5%' },
-        { id: '2', name: 'Baixa', value: 2, description: 'Evento improvável', percentage: '5-25%' },
-        { id: '3', name: 'Média', value: 3, description: 'Evento possível', percentage: '25-50%' },
-        { id: '4', name: 'Alta', value: 4, description: 'Evento provável', percentage: '50-75%' },
-        { id: '5', name: 'Muito Alta', value: 5, description: 'Evento muito provável', percentage: '> 75%' }
+        { id: '1', name: 'Raro', value: 1, description: 'Evento muito improvável', percentage: '< 5%' },
+        { id: '2', name: 'Improvavel', value: 2, description: 'Evento improvável', percentage: '5-25%' },
+        { id: '3', name: 'Possivel', value: 3, description: 'Evento possível', percentage: '25-50%' },
+        { id: '4', name: 'Provavel', value: 4, description: 'Evento provável', percentage: '50-75%' },
+        { id: '5', name: 'Quase Certo', value: 5, description: 'Evento muito provável', percentage: '> 75%' }
       ],
       impact: [
         { 
@@ -99,7 +99,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         },
         { 
           id: '2', 
-          name: 'Baixo', 
+          name: 'Menor', 
           value: 2, 
           description: 'Impacto limitado nas operações',
           examples: ['Atraso de 1-3 dias', 'Custo R$ 1.000-10.000']
@@ -113,14 +113,14 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         },
         { 
           id: '4', 
-          name: 'Alto', 
+          name: 'Maior', 
           value: 4, 
           description: 'Impacto severo nas operações',
           examples: ['Atraso de 1 mês', 'Custo R$ 100.000-1M']
         },
         { 
           id: '5', 
-          name: 'Catastrófico', 
+          name: 'Catastrofico', 
           value: 5, 
           description: 'Impacto crítico nas operações',
           examples: ['Atraso > 1 mês', 'Custo > R$ 1M']
@@ -128,8 +128,8 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       ]
     },
     riskLevels: [
-      { id: '1', name: 'Muito Baixo', value: 1, color: '#22c55e', description: 'Risco aceitável' },
-      { id: '2', name: 'Baixo', value: 2, color: '#84cc16', description: 'Risco tolerável' },
+      { id: '1', name: 'Muito Baixo', value: 1, color: '#3b82f6', description: 'Risco aceitável' },
+      { id: '2', name: 'Baixo', value: 2, color: '#22c55e', description: 'Risco tolerável' },
       { id: '3', name: 'Médio', value: 3, color: '#eab308', description: 'Risco que requer atenção' },
       { id: '4', name: 'Alto', value: 4, color: '#f97316', description: 'Risco que requer ação imediata' },
       { id: '5', name: 'Muito Alto', value: 5, color: '#ef4444', description: 'Risco inaceitável' }
@@ -250,55 +250,149 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
     const probabilityLevels = config.dimensions.probability.slice(0, size);
     const impactLevels = config.dimensions.impact.slice(0, size);
 
+    // Função para obter cor baseada no valor de risco (padronizada com TenantCard)
+    const getRiskColor = (riskValue: number, matrixSize: string) => {
+      if (matrixSize === '5x5') {
+        // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-16), Muito Alto (17-25)
+        if (riskValue >= 17) return '#ef4444'; // Muito Alto - Vermelho
+        else if (riskValue >= 9) return '#f97316'; // Alto - Laranja
+        else if (riskValue >= 5) return '#eab308'; // Médio - Amarelo
+        else if (riskValue >= 3) return '#22c55e'; // Baixo - Verde
+        else return '#3b82f6'; // Muito Baixo - Azul
+      } else {
+        // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-9), Muito Alto (10-16)
+        if (riskValue >= 10) return '#ef4444'; // Muito Alto - Vermelho
+        else if (riskValue >= 7) return '#f97316'; // Alto - Laranja
+        else if (riskValue >= 3) return '#eab308'; // Médio - Amarelo
+        else return '#22c55e'; // Baixo - Verde
+      }
+    };
+
+    // Função para obter nome do nível de risco
+    const getRiskLevelName = (riskValue: number, matrixSize: string) => {
+      if (matrixSize === '5x5') {
+        if (riskValue >= 17) return 'Muito Alto';
+        else if (riskValue >= 9) return 'Alto';
+        else if (riskValue >= 5) return 'Médio';
+        else if (riskValue >= 3) return 'Baixo';
+        else return 'Muito Baixo';
+      } else {
+        if (riskValue >= 10) return 'Muito Alto';
+        else if (riskValue >= 7) return 'Alto';
+        else if (riskValue >= 3) return 'Médio';
+        else return 'Baixo';
+      }
+    };
+
     return (
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300">
-          <thead>
-            <tr>
-              <th className="border border-gray-300 p-2 bg-gray-50 text-xs font-medium">
-                Probabilidade / Impacto
-              </th>
-              {impactLevels.map(impact => (
-                <th key={impact.id} className="border border-gray-300 p-2 bg-gray-50 text-xs font-medium">
-                  {impact.name}
-                  <br />
-                  <span className="text-xs text-muted-foreground">({String(impact.value)})</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {probabilityLevels.map(probability => (
-              <tr key={probability.id}>
-                <td className="border border-gray-300 p-2 bg-gray-50 text-xs font-medium">
-                  {probability.name}
-                  <br />
-                  <span className="text-xs text-muted-foreground">({String(probability.value)})</span>
-                </td>
-                {impactLevels.map(impact => {
-                  const riskValue = calculateRiskLevel(probability.value, impact.value);
-                  const riskLevel = getRiskLevelForValue(riskValue);
-                  
-                  return (
-                    <td 
-                      key={`${probability.id}-${impact.id}`}
-                      className="border border-gray-300 p-2 text-center text-xs"
-                      style={{ backgroundColor: riskLevel.color + '20' }}
-                    >
-                      <div className="font-medium">{String(riskValue)}</div>
-                      <div 
-                        className="text-xs px-1 py-0.5 rounded text-white"
-                        style={{ backgroundColor: riskLevel.color }}
-                      >
-                        {riskLevel.name}
+        <div className="max-w-4xl mx-auto">
+          {/* Matriz Container */}
+          <div className="inline-block">
+            <div className="flex">
+              <div className="flex flex-col justify-center items-center mr-4">
+                <div className="text-sm font-medium text-foreground dark:text-foreground transform -rotate-90 whitespace-nowrap">
+                  IMPACTO
+                </div>
+              </div>
+              
+              <div className="space-y-0">
+                {/* Y-axis numbers (Impact) */}
+                <div className="flex">
+                  <div className="flex flex-col space-y-0 mr-2">
+                    {Array.from({ length: size }, (_, i) => (
+                      <div key={i} className="h-12 w-12 flex items-center justify-center text-sm font-medium text-foreground dark:text-foreground">
+                        {size - i}
                       </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    ))}
+                  </div>
+                  
+                  {/* Grid Matrix */}
+                  <div className={`grid grid-rows-${size} gap-0 border-2 border-border shadow-lg rounded-lg overflow-hidden`}>
+                    {Array.from({ length: size }, (_, rowIndex) => (
+                      <div key={rowIndex} className={`grid grid-cols-${size} gap-0`}>
+                        {Array.from({ length: size }, (_, colIndex) => {
+                          const probability = colIndex + 1;
+                          const impact = size - rowIndex;
+                          const riskValue = probability * impact;
+                          const backgroundColor = getRiskColor(riskValue, config.settings.matrixSize);
+                          const levelName = getRiskLevelName(riskValue, config.settings.matrixSize);
+                          
+                          return (
+                            <div
+                              key={colIndex}
+                              className="h-12 w-12 border border-white flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                              style={{ backgroundColor }}
+                              title={`Probabilidade: ${probability}, Impacto: ${impact}, Risco: ${levelName} (${riskValue})`}
+                            >
+                              <span className="text-sm font-bold text-white drop-shadow-lg">
+                                {riskValue}
+                              </span>
+                              <span className="text-[10px] text-white/90 font-medium">
+                                {levelName.split(' ')[0]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* X-axis numbers (Probability) */}
+                <div className="flex justify-center mt-2">
+                  <div className="flex space-x-0 ml-14">
+                    {Array.from({ length: size }, (_, i) => (
+                      <div key={i} className="h-8 w-12 flex items-center justify-center text-sm font-medium text-foreground dark:text-foreground">
+                        {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="text-center mt-2">
+                  <div className="text-sm font-medium text-foreground dark:text-foreground">PROBABILIDADE</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Legenda Padronizada */}
+          <div className="mt-6">
+            <h4 className="text-sm font-medium text-foreground dark:text-foreground mb-3">Legenda dos Níveis de Risco:</h4>
+            <div className="flex flex-wrap justify-center gap-3 text-sm">
+              {(
+                config.settings.matrixSize === '5x5' ? [
+                  { level: 'Muito Baixo', color: '#3b82f6', range: '1-2' },
+                  { level: 'Baixo', color: '#22c55e', range: '3-4' },
+                  { level: 'Médio', color: '#eab308', range: '5-8' },
+                  { level: 'Alto', color: '#f97316', range: '9-16' },
+                  { level: 'Muito Alto', color: '#ef4444', range: '17-25' }
+                ] : [
+                  { level: 'Baixo', color: '#22c55e', range: '1-2' },
+                  { level: 'Médio', color: '#eab308', range: '3-6' },
+                  { level: 'Alto', color: '#f97316', range: '7-9' },
+                  { level: 'Muito Alto', color: '#ef4444', range: '10-16' }
+                ]
+              ).map(({ level, color, range }) => (
+                <div key={level} className="flex items-center space-x-2 bg-card dark:bg-card border border-border px-3 py-2 rounded-lg shadow-sm">
+                  <div className="w-4 h-4 rounded border border-border" style={{ backgroundColor: color }}></div>
+                  <span className="font-medium text-foreground dark:text-foreground">{level}</span>
+                  <span className="text-xs text-muted-foreground dark:text-muted-foreground">({range})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+              Matriz {config.settings.matrixSize} - {size * size} combinações possíveis
+            </p>
+            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
+              {config.settings.matrixSize === '5x5' ? '5 níveis de risco (incluindo Muito Baixo)' : '4 níveis de risco'}
+            </p>
+          </div>
+        </div>
       </div>
     );
   };

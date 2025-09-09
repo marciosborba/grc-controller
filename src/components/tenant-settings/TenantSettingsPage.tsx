@@ -38,10 +38,10 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-// Importar seções - COMENTADOS PARA DEBUG
-// import { UserManagementSection } from './sections/UserManagementSection';
+// Importar seções
+import { UserManagementSection } from './sections/UserManagementSection';
 // import { SecurityConfigSection } from './sections/SecurityConfigSection';
-// import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
+import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 // import { SSOConfigSection } from './sections/SSOConfigSection';
 // import { MFAConfigSection } from './sections/MFAConfigSection';
 // import { EmailDomainSection } from './sections/EmailDomainSection';
@@ -721,10 +721,7 @@ const TenantSettingsPage: React.FC = () => {
         {/* Placeholder para outras tabs - COMENTADOS PARA DEBUG */}
         {/* Gerenciamento de Usuários */}
         <TabsContent value="users">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Gerenciamento de Usuários</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+          <UserManagementSection tenantId={currentTenantId} />
         </TabsContent>
 
         <TabsContent value="security">
@@ -735,10 +732,18 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="risk-matrix">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Matriz de Risco</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
+          {console.log('🎯 RENDERIZANDO ABA MATRIZ DE RISCO NO TENANT SETTINGS!')}
+          <div className="p-4 bg-green-100 border-2 border-green-500 rounded mb-4">
+            <h2 className="text-xl font-bold text-green-800">🎯 ABA MATRIZ DE RISCO ATIVA!</h2>
+            <p className="text-green-700">Componente carregado com sucesso no módulo Configurações!</p>
           </div>
+          <RiskMatrixConfigSection 
+            tenantId={currentTenantId} 
+            onSettingsChange={() => {
+              console.log('🎯 Configurações da matriz de risco alteradas');
+              setHasUnsavedChanges(true);
+            }} 
+          />
         </TabsContent>
 
         <TabsContent value="sso">

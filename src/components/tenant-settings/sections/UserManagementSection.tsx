@@ -60,14 +60,14 @@ interface User {
 
 interface UserManagementSectionProps {
   tenantId: string;
-  onUserChange: () => void;
-  onSettingsChange: () => void;
+  onUserChange?: () => void;
+  onSettingsChange?: () => void;
 }
 
 export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   tenantId,
-  onUserChange,
-  onSettingsChange
+  onUserChange = () => {},
+  onSettingsChange = () => {}
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +89,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     loadUsers();
   }, [tenantId]);
 
-  const loadUsers = async () => {
+    const loadUsers = async () => {
     try {
       setIsLoading(true);
       console.log('👥 [USER MANAGEMENT] Carregando usuários para tenant:', tenantId);
@@ -110,10 +110,10 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           full_name,
           phone,
           department,
-          position,
+          job_title,
           created_at,
-          roles,
-          is_active
+          is_active,
+          last_login_at
         `)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
@@ -124,8 +124,28 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         return;
       }
       
+      if (!profilesData || profilesData.length === 0) {
+        console.log('📋 [USER MANAGEMENT] Nenhum usuário encontrado para este tenant');
+        setUsers([]);
+        return;
+      }
+      
+      // Buscar roles dos usuários da tabela user_roles
+      const userIds = profilesData.map(p => p.user_id).filter(Boolean);
+      let userRolesData: any[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', userIds);
+          
+        if (!rolesError) {
+          userRolesData = rolesData || [];
+        }
+      }
+      
       // Buscar últimos logins dos usuários
-      const userIds = profilesData?.map(p => p.user_id).filter(Boolean) || [];
       let lastLoginsData: any[] = [];
       
       if (userIds.length > 0) {
@@ -143,21 +163,23 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       }
       
       // Processar dados dos usuários
-      const realUsers: User[] = (profilesData || []).map(profile => {
+      const realUsers: User[] = profilesData.map(profile => {
         // Encontrar último login do usuário
         const lastLogin = lastLoginsData.find(log => log.user_id === profile.user_id);
         
+        // Buscar roles do usuário
+        const userRoles = userRolesData.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role);
+        
         // Determinar role principal
         let role: User['role'] = 'user';
-        if (profile.roles && Array.isArray(profile.roles)) {
-          if (profile.roles.includes('tenant_admin')) role = 'tenant_admin';
-          else if (profile.roles.includes('admin')) role = 'admin';
-        }
+        if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
+        else if (userRoles.includes('admin')) role = 'admin';
+        else if (userRoles.includes('super_admin')) role = 'admin';
         
         // Determinar status
         let status: User['status'] = 'active';
         if (!profile.is_active) status = 'inactive';
-        else if (!lastLogin) status = 'pending'; // Nunca fez login
+        else if (!lastLogin && !profile.last_login_at) status = 'pending'; // Nunca fez login
         
         return {
           id: profile.id,
@@ -165,7 +187,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           full_name: profile.full_name || 'Usuário sem nome',
           role,
           status,
-          last_login: lastLogin?.created_at || null,
+          last_login: profile.last_login_at || lastLogin?.created_at || null,
           created_at: profile.created_at,
           department: profile.department || undefined,
           phone: profile.phone || undefined,
@@ -174,7 +196,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       });
       
       console.log(`✅ [USER MANAGEMENT] Carregados ${realUsers.length} usuários reais`);
-      console.log('📊 [USER MANAGEMENT] Usuários carregados:', realUsers.length);
+      console.log('📊 [USER MANAGEMENT] Usuários carregados:', realUsers);
       
       setUsers(realUsers);
     } catch (error) {
@@ -185,6 +207,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       setIsLoading(false);
     }
   };
+
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 

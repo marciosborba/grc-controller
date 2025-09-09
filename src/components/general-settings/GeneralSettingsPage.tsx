@@ -18,7 +18,8 @@ import {
   Key,
   Globe,
   Crown,
-  Palette
+  Palette,
+  Grid3x3
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
 import GlobalRulesSection from './sections/GlobalRulesSection';
 import { StaticColorController } from './sections/StaticColorController';
+import RiskMatrixConfigSection from './sections/RiskMatrixConfigSection';
 import DocumentationModal from './DocumentationModal';
 import CryptoFieldMappingConfig from '../admin/CryptoFieldMappingConfig';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
@@ -49,6 +51,14 @@ export const GeneralSettingsPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isDocumentationOpen, setIsDocumentationOpen] = useState(false);
+  
+  // Debug: Log quando o componente é renderizado
+  console.log('🏗️ GeneralSettingsPage renderizado!', {
+    activeTab,
+    user: user ? { id: user.id, tenantId: user.tenantId } : null,
+    timestamp: new Date().toISOString(),
+    url: window.location.pathname
+  });
   
   // Usar hook real para carregar dados
   const {
@@ -189,14 +199,24 @@ export const GeneralSettingsPage = () => {
         </Alert>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        console.log('🔄 Mudando aba para:', value);
+        if (value === 'risk-matrix') {
+          console.log('🎯 ABA MATRIZ SELECIONADA!');
+        }
+        setActiveTab(value);
+      }} className="space-y-6">
         <TabsList className={cn(
           "grid w-full",
           (user?.isPlatformAdmin || user?.role === 'admin') 
-            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-10" 
-            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-8"
+            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-11" 
+            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-9"
         )}>
           <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+          <TabsTrigger value="risk-matrix" className="text-xs sm:text-sm flex items-center gap-1">
+            <Grid3x3 className="h-3 w-3" />
+            Matriz
+          </TabsTrigger>
           {(user?.isPlatformAdmin || user?.role === 'admin') && (
             <TabsTrigger value="global-rules" className="text-xs sm:text-sm flex items-center gap-1">
               <Crown className="h-3 w-3" />
@@ -299,6 +319,28 @@ export const GeneralSettingsPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Risk Matrix Tab */}
+        <TabsContent value="risk-matrix">
+          {console.log('🎯 RENDERIZANDO ABA RISK-MATRIX!')}
+          <div className="space-y-6">
+            <div className="p-4 bg-green-100 border-2 border-green-500 rounded">
+              <h2 className="text-xl font-bold text-green-800">🎯 ABA MATRIZ RENDERIZADA!</h2>
+              <p className="text-green-700">Se você está vendo isso, a aba está funcionando!</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Grid3x3 className="h-6 w-6 text-primary" />
+              <div>
+                <h2 className="text-xl font-semibold">Configuração da Matriz de Risco</h2>
+                <p className="text-sm text-muted-foreground">
+                  Configure a matriz de risco padrão da sua organização (4x4 ou 5x5)
+                </p>
+              </div>
+            </div>
+            <Separator />
+            <RiskMatrixConfigSection />
+          </div>
         </TabsContent>
 
         {/* Global Rules Tab - Only for Platform Admins or System Admins */}

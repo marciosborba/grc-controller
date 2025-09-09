@@ -1052,6 +1052,14 @@ const FormBuilderSection: React.FC<{
                           const newStructure = {...rowStructure};
                           newStructure[rowNum] = (newStructure[rowNum] || 1) + 1;
                           setRowStructure(newStructure);
+                          
+                          // Update gridConfig to reflect the new structure
+                          const maxCols = Math.max(...Object.values(newStructure));
+                          setGridConfig(prev => ({
+                            ...prev,
+                            columns: maxCols
+                          }));
+                          
                           setHasUnsavedChanges(true);
                         }}
                         title={`Adicionar coluna à linha ${rowNum}`}
@@ -1075,6 +1083,13 @@ const FormBuilderSection: React.FC<{
                     const newStructure = {...rowStructure};
                     newStructure[nextRowNum] = 1;
                     setRowStructure(newStructure);
+                    
+                    // Update gridConfig to reflect the new structure
+                    setGridConfig(prev => ({
+                      ...prev,
+                      rows: Math.max(...Object.keys(newStructure).map(k => parseInt(k)))
+                    }));
+                    
                     setHasUnsavedChanges(true);
                   }}
                   title="Adicionar nova linha"
