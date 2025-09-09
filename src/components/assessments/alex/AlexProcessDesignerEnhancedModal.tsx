@@ -289,22 +289,22 @@ const FormBuilderSection: React.FC<{
     });
   }, [gridConfig.columns, gridConfig.rows]);
 
-  // Calculate flexible row structure based on fields
-  const calculateRowStructure = () => {
+  // Calculate minimum row structure required by fields only
+  const getMinimumRowStructure = () => {
     const structure: {[rowIndex: number]: number} = {};
     
-    // Start with minimum 1 row, 1 column
+    // Find maximum row from fields
     const maxRow = Math.max(1, formFields.reduce((max, field) => {
       const row = parseInt(field.gridRow || '1');
       return Math.max(max, row);
     }, 1));
     
-    // Initialize each row with 1 column minimum
+    // Initialize all rows with 1 column minimum
     for (let row = 1; row <= maxRow; row++) {
       structure[row] = 1;
     }
     
-    // Calculate actual columns needed per row based on fields
+    // Calculate minimum columns needed per row based on fields
     formFields.forEach(field => {
       const row = parseInt(field.gridRow || '1');
       const col = parseInt(field.gridColumn || '1');
@@ -316,21 +316,45 @@ const FormBuilderSection: React.FC<{
     return structure;
   };
 
-  // Update row structure when fields change
+  // Initialize row structure only when formFields change (no circular dependency)
   React.useEffect(() => {
-    const newStructure = calculateRowStructure();
-    setRowStructure(newStructure);
+    const minimumStructure = getMinimumRowStructure();
     
-    // Update gridConfig to match the flexible structure
-    const maxRows = Math.max(1, Object.keys(newStructure).length);
-    const maxCols = Math.max(1, ...Object.values(newStructure));
-    
-    setGridConfig(prev => ({
-      ...prev,
-      rows: maxRows,
-      columns: maxCols
-    }));
+    setRowStructure(prev => {
+      const newStructure = {...prev};
+      
+      // For each row in minimum structure, ensure we have at least that many columns
+      Object.keys(minimumStructure).forEach(rowKey => {
+        const rowNum = parseInt(rowKey);
+        const minCols = minimumStructure[rowNum];
+        newStructure[rowNum] = Math.max(newStructure[rowNum] || 1, minCols);
+      });
+      
+      // Remove rows that no longer have any fields and no manual columns
+      Object.keys(newStructure).forEach(rowKey => {
+        const rowNum = parseInt(rowKey);
+        if (!minimumStructure[rowNum] && newStructure[rowNum] === 1) {
+          delete newStructure[rowNum];
+        }
+      });
+      
+      return Object.keys(newStructure).length > 0 ? newStructure : {1: 1};
+    });
   }, [formFields]);
+  
+  // Update gridConfig when rowStructure changes
+  React.useEffect(() => {
+    if (Object.keys(rowStructure).length > 0) {
+      const maxRows = Math.max(1, Object.keys(rowStructure).length);
+      const maxCols = Math.max(1, ...Object.values(rowStructure));
+      
+      setGridConfig(prev => ({
+        ...prev,
+        rows: maxRows,
+        columns: maxCols
+      }));
+    }
+  }, [rowStructure]);
   
   const fieldTypes = [
     // Campos Básicos
@@ -591,88 +615,14 @@ const FormBuilderSection: React.FC<{
             </div>
             
             <div className="flex items-center gap-4 flex-wrap">
-              {/* Grid Configuration Controls */}
+              {/* Controles simplificados - linhas e colunas são gerenciadas automaticamente */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Colunas:</Label>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setGridConfig(prev => ({ ...prev, columns: Math.max(1, prev.columns - 1) }))}
-                    className="w-6 h-6 p-0"
-                    disabled={gridConfig.columns <= 1}
-                  >
-                    -
-                  </Button>
-                  <Input
-                    type="number"
-                    value={gridConfig.columns}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1;
-                      if (value >= 1 && value <= 50) {
-                        setGridConfig(prev => ({ ...prev, columns: value }));
-                      }
-                    }}
-                    className="w-16 h-8 text-center text-xs"
-                    min="1"
-                    max="50"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setGridConfig(prev => ({ ...prev, columns: Math.min(50, prev.columns + 1) }))}
-                    className="w-6 h-6 p-0"
-                    disabled={gridConfig.columns >= 50}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Linhas:</Label>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setGridConfig(prev => ({ ...prev, rows: Math.max(1, prev.rows - 1) }))}
-                    className="w-6 h-6 p-0"
-                    disabled={gridConfig.rows <= 1}
-                  >
-                    -
-                  </Button>
-                  <Input
-                    type="number"
-                    value={gridConfig.rows}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1;
-                      if (value >= 1 && value <= 100) {
-                        setGridConfig(prev => ({ ...prev, rows: value }));
-                      }
-                    }}
-                    className="w-16 h-8 text-center text-xs"
-                    min="1"
-                    max="100"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setGridConfig(prev => ({ ...prev, rows: Math.min(100, prev.rows + 1) }))}
-                    className="w-6 h-6 p-0"
-                    disabled={gridConfig.rows >= 100}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Gap:</Label>
+                <Label className="text-sm font-medium">Espaçamento:</Label>
                 <Select 
                   value={gridConfig.gap.toString()} 
                   onValueChange={(value) => setGridConfig(prev => ({ ...prev, gap: parseInt(value) }))}
                 >
-                  <SelectTrigger className="w-16 h-8">
+                  <SelectTrigger className="w-20 h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -692,10 +642,10 @@ const FormBuilderSection: React.FC<{
                   variant={showColumnControls ? "default" : "outline"}
                   onClick={() => setShowColumnControls(!showColumnControls)}
                   className="px-3 h-8 text-xs"
-                  title="Controles avançados de colunas"
+                  title="Controles avançados de largura"
                 >
                   <Settings className="w-3 h-3 mr-1" />
-                  Colunas
+                  Larguras
                 </Button>
               </div>
               
@@ -731,15 +681,16 @@ const FormBuilderSection: React.FC<{
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setColumnWidths(Array.from({ length: gridConfig.columns }, () => 1));
+                        const maxCols = Object.values(rowStructure).length > 0 ? Math.max(...Object.values(rowStructure)) : 1;
+                        setColumnWidths(Array.from({ length: maxCols }, () => 1));
                       }}
                       className="px-2 py-1 h-6 text-xs"
                     >
                       Reset
                     </Button>
                   </div>
-                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(gridConfig.columns, 12)}, 1fr)`}}>
-                    {Array.from({ length: gridConfig.columns }, (_, index) => (
+                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(Object.values(rowStructure).length > 0 ? Math.max(...Object.values(rowStructure)) : 1, 12)}, 1fr)`}}>
+                    {Array.from({ length: Object.values(rowStructure).length > 0 ? Math.max(...Object.values(rowStructure)) : 1 }, (_, index) => (
                       <div key={index} className="flex flex-col items-center">
                         <label className="text-xs text-gray-600 dark:text-gray-400 mb-1">C{index + 1}</label>
                         <input
@@ -772,15 +723,16 @@ const FormBuilderSection: React.FC<{
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setRowHeights(Array.from({ length: gridConfig.rows }, () => 1));
+                        const numRows = Math.max(Object.keys(rowStructure).length, 1);
+                        setRowHeights(Array.from({ length: numRows }, () => 1));
                       }}
                       className="px-2 py-1 h-6 text-xs"
                     >
                       Reset
                     </Button>
                   </div>
-                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(gridConfig.rows, 10)}, 1fr)`}}>
-                    {Array.from({ length: gridConfig.rows }, (_, index) => (
+                  <div className="grid gap-2" style={{gridTemplateColumns: `repeat(${Math.min(Math.max(Object.keys(rowStructure).length, 1), 10)}, 1fr)`}}>
+                    {Array.from({ length: Math.max(Object.keys(rowStructure).length, 1) }, (_, index) => (
                       <div key={index} className="flex flex-col items-center">
                         <label className="text-xs text-gray-600 dark:text-gray-400 mb-1">L{index + 1}</label>
                         <input
@@ -807,7 +759,7 @@ const FormBuilderSection: React.FC<{
                 
                 {/* Grid Info */}
                 <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-                  Grid: {gridConfig.columns}×{gridConfig.rows} • Total de células: {gridConfig.columns * gridConfig.rows}
+                  Estrutura: {Math.max(Object.keys(rowStructure).length, 1)} linha{Math.max(Object.keys(rowStructure).length, 1) !== 1 ? 's' : ''} • Máx. colunas: {Object.values(rowStructure).length > 0 ? Math.max(...Object.values(rowStructure)) : 1}
                 </div>
               </div>
             </div>
@@ -890,16 +842,130 @@ const FormBuilderSection: React.FC<{
                       
                       {/* Row Content */}
                       <div className="flex-1 grid gap-4" style={{
-                        gridTemplateColumns: `repeat(${columnsInRow}, 1fr)`
+                        gridTemplateColumns: columnsInRow > 1 && columnWidths.length > 0 
+                          ? Array.from({ length: columnsInRow }, (_, i) => `${columnWidths[i] || 1}fr`).join(' ')
+                          : `repeat(${columnsInRow}, 1fr)`,
+                        minHeight: rowHeights[rowNum - 1] 
+                          ? `${(rowHeights[rowNum - 1] * 120)}px` 
+                          : '120px'
                       }}>
                         {Array.from({ length: columnsInRow }, (_, colIndex) => {
                           const col = colIndex + 1;
-                          const hasField = formFields.some(field => 
+                          const fieldInPosition = formFields.find(field => 
                             parseInt(field.gridRow || '1') === rowNum && 
                             parseInt(field.gridColumn || '1') === col
                           );
                           
-                          if (hasField) return null;
+                          // If there's a field, render the field
+                          if (fieldInPosition) {
+                            return (
+                              <div
+                                key={fieldInPosition.id}
+                                className={`bg-card dark:bg-card/50 rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative min-h-[120px] cursor-move ${
+                                  draggedField?.id === fieldInPosition.id ? 'opacity-50 scale-95' : ''
+                                }`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, fieldInPosition)}
+                                onDragEnd={handleDragEnd}
+                              >
+                                {/* Drag Handle */}
+                                <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-70 transition-opacity">
+                                  <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                                </div>
+                                
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex items-start gap-3">
+                                    <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                                      {(() => {
+                                        const fieldType = fieldTypes.find(f => f.type === fieldInPosition.type);
+                                        const IconComponent = fieldType?.icon || Type;
+                                        return <IconComponent className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
+                                      })()}
+                                    </div>
+                                    <div>
+                                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">{fieldInPosition.label}</h4>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {fieldTypes.find(f => f.type === fieldInPosition.type)?.label}
+                                        {fieldInPosition.required && <span className="text-red-500 ml-1">*</span>}
+                                      </p>
+                                      {fieldInPosition.description && (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{fieldInPosition.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    {/* Grid Position Indicator */}
+                                    {fieldInPosition.gridRow && fieldInPosition.gridColumn && (
+                                      <div className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
+                                        L{fieldInPosition.gridRow}:C{fieldInPosition.gridColumn}
+                                      </div>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingField(fieldInPosition);
+                                        setShowFieldModal(true);
+                                      }}
+                                      className="h-8 w-8 p-0"
+                                      title="Editar campo"
+                                    >
+                                      <Settings className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setFormFields(prev => prev.filter(f => f.id !== fieldInPosition.id));
+                                        setHasUnsavedChanges(true);
+                                      }}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                      title="Remover campo"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {/* Field Preview */}
+                                <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {fieldInPosition.label}
+                                    {fieldInPosition.required && <span className="text-red-500 ml-1">*</span>}
+                                  </Label>
+                                  
+                                  {fieldInPosition.type === 'text' && (
+                                    <Input
+                                      placeholder={fieldInPosition.placeholder || 'Digite aqui...'}
+                                      disabled
+                                      className="mt-2"
+                                    />
+                                  )}
+                                  
+                                  {fieldInPosition.type === 'textarea' && (
+                                    <Textarea
+                                      placeholder={fieldInPosition.placeholder || 'Digite sua resposta aqui...'}
+                                      disabled
+                                      className="mt-2"
+                                    />
+                                  )}
+                                  
+                                  {fieldInPosition.type === 'select' && (
+                                    <Select disabled>
+                                      <SelectTrigger className="mt-2">
+                                        <SelectValue placeholder={fieldInPosition.placeholder || 'Selecione uma opção'} />
+                                      </SelectTrigger>
+                                    </Select>
+                                  )}
+                                  
+                                  {/* Add other field type previews as needed */}
+                                </div>
+                              </div>
+                            );
+                          }
+                          
+                          // If no field, render empty slot
                           
                           return (
                             <div
@@ -931,116 +997,6 @@ const FormBuilderSection: React.FC<{
                             </div>
                           );
                         })}
-                        
-                        {/* Render fields in this row */}
-                        {formFields
-                          .filter(field => parseInt(field.gridRow || '1') === rowNum)
-                          .sort((a, b) => parseInt(a.gridColumn || '1') - parseInt(b.gridColumn || '1'))
-                          .map((field) => (
-                            <div
-                              key={field.id}
-                              className={`bg-card dark:bg-card/50 rounded-xl border border-border p-4 shadow-sm hover:shadow-md transition-all duration-200 group relative min-h-[120px] cursor-move ${
-                                draggedField?.id === field.id ? 'opacity-50 scale-95' : ''
-                              }`}
-                              style={{
-                                gridColumn: parseInt(field.gridColumn || '1')
-                              }}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, field)}
-                              onDragEnd={handleDragEnd}
-                            >
-                              {/* Drag Handle */}
-                              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-70 transition-opacity">
-                                <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                              </div>
-                              
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                                    {(() => {
-                                      const fieldType = fieldTypes.find(f => f.type === field.type);
-                                      const IconComponent = fieldType?.icon || Type;
-                                      return <IconComponent className="w-5 h-5 text-blue-600 dark:text-blue-400" />;
-                                    })()}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">{field.label}</h4>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                                      {fieldTypes.find(f => f.type === field.type)?.label}
-                                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                                    </p>
-                                    {field.description && (
-                                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{field.description}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  {/* Grid Position Indicator */}
-                                  {field.gridRow && field.gridColumn && (
-                                    <div className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-400">
-                                      L{field.gridRow}:C{field.gridColumn}
-                                    </div>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setEditingField(field);
-                                      setShowFieldModal(true);
-                                    }}
-                                    className="h-8 w-8 p-0"
-                                    title="Editar campo"
-                                  >
-                                    <Settings className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => removeField(field.id)}
-                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                    title="Remover campo"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                              
-                              {/* Field Preview */}
-                              <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
-                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  {field.label}
-                                  {field.required && <span className="text-red-500 ml-1">*</span>}
-                                </Label>
-                                
-                                {field.type === 'text' && (
-                                  <Input
-                                    placeholder={field.placeholder || 'Digite aqui...'}
-                                    className="mt-2"
-                                    disabled
-                                  />
-                                )}
-                                
-                                {field.type === 'textarea' && (
-                                  <Textarea
-                                    placeholder={field.placeholder || 'Digite aqui...'}
-                                    className="mt-2"
-                                    disabled
-                                  />
-                                )}
-                                
-                                {field.type === 'select' && (
-                                  <Select disabled>
-                                    <SelectTrigger className="mt-2">
-                                      <SelectValue placeholder={field.placeholder || 'Selecione uma opção'} />
-                                    </SelectTrigger>
-                                  </Select>
-                                )}
-                                
-                                {/* Add other field type previews as needed */}
-                              </div>
-                            </div>
-                          ))}
                       </div>
                       
                       {/* Add Column Button */}
