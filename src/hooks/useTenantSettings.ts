@@ -4,12 +4,12 @@ import { useAuth} from '@/contexts/AuthContextOptimized';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
 
 export interface RiskMatrixConfig {
-  type: '4x4' | '5x5';
+  type: '3x3' | '4x4' | '5x5';
   risk_levels: {
     low: number[];
     medium: number[];
     high: number[];
-    critical: number[];
+    critical?: number[];
   };
   impact_labels: string[];
   likelihood_labels: string[];
@@ -38,9 +38,12 @@ export interface TenantSettings {
   supplier_questionnaire?: SupplierQuestionnaireConfig;
 }
 
-export const useTenantSettings = () => {
+export const useTenantSettings = (specificTenantId?: string) => {
   const { user } = useAuth();
   const { userTenantId } = useTenantSecurity();
+  
+  // Usar o tenantId específico se fornecido, senão usar o do usuário
+  const targetTenantId = specificTenantId || userTenantId;
 
   const {
     data: tenantSettings,
@@ -48,18 +51,18 @@ export const useTenantSettings = () => {
     error,
     refetch
   } = useQuery({
-    queryKey: ['tenant-settings', userTenantId],
+    queryKey: ['tenant-settings', targetTenantId],
     queryFn: async (): Promise<TenantSettings> => {
-      if (!userTenantId) {
+      if (!targetTenantId) {
         throw new Error('Tenant ID não encontrado');
       }
 
-      console.log('🔍 Fetching tenant settings for:', userTenantId);
+      console.log('🔍 Fetching tenant settings for:', targetTenantId);
 
       const { data, error } = await supabase
         .from('tenants')
         .select('settings')
-        .eq('id', userTenantId)
+        .eq('id', targetTenantId)
         .single();
 
       if (error) {
@@ -78,12 +81,12 @@ export const useTenantSettings = () => {
             type: '5x5',
             risk_levels: {
               low: [1, 2, 3, 5, 6],
-              medium: [4, 7, 8, 9, 10, 12],
-              high: [11, 13, 14, 15, 16, 18, 20],
-              critical: [17, 19, 21, 22, 23, 24, 25]
+              medium: [4, 7, 8, 9, 10, 11],
+              high: [12, 13, 14, 15, 16, 17, 18],
+              critical: [19, 20, 21, 22, 23, 24, 25]
             },
-            impact_labels: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'],
-            likelihood_labels: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto']
+            impact_labels: ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'],
+            likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável', 'Quase Certo']
           }
         };
       }
@@ -91,12 +94,18 @@ export const useTenantSettings = () => {
       // Se a configuração existe mas não tem o tipo definido, inferir baseado nas labels
       if (settings.risk_matrix && !settings.risk_matrix.type) {
         const labelCount = settings.risk_matrix.impact_labels?.length || 5;
-        settings.risk_matrix.type = labelCount === 4 ? '4x4' : '5x5';
+        if (labelCount === 3) {
+          settings.risk_matrix.type = '3x3';
+        } else if (labelCount === 4) {
+          settings.risk_matrix.type = '4x4';
+        } else {
+          settings.risk_matrix.type = '5x5';
+        }
       }
       
       return settings;
     },
-    enabled: !!user && !!userTenantId,
+    enabled: !!user && !!targetTenantId,
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 10 * 60 * 1000 // 10 minutos
   });
@@ -104,20 +113,29 @@ export const useTenantSettings = () => {
   // Função para calcular o nível de risco baseado na configuração do tenant
   const calculateRiskLevel = (probability: number, impact: number): 'Muito Baixo' | 'Baixo' | 'Médio' | 'Alto' | 'Muito Alto' | 'Crítico' => {
     if (!tenantSettings?.risk_matrix) {
-      // Fallback para 5x5 se não há configuração
+      // Fallback para 5x5 usando as faixas da matriz verdadeira
       const score = probability * impact;
-      if (score >= 20) return 'Muito Alto';
-      if (score >= 15) return 'Alto';
-      if (score >= 8) return 'Médio';
-      if (score >= 4) return 'Baixo';
+      if (score >= 19) return 'Muito Alto'; // critical: [19-25]
+      if (score >= 12) return 'Alto';       // high: [12-18]
+      if (score >= 4) return 'Médio';       // medium: [4,7-11]
+      if (score >= 1) return 'Baixo';       // low: [1-3,5-6]
       return 'Muito Baixo';
     }
 
     const { risk_matrix } = tenantSettings;
     const score = probability * impact;
 
-    if (risk_matrix.risk_levels.critical.includes(score)) {
-      return risk_matrix.type === '4x4' ? 'Crítico' : 'Muito Alto';
+    // Para matriz 3x3, não há nível crítico
+    if (risk_matrix.type === '3x3') {
+      if (risk_matrix.risk_levels.high.includes(score)) return 'Alto';
+      if (risk_matrix.risk_levels.medium.includes(score)) return 'Médio';
+      if (risk_matrix.risk_levels.low.includes(score)) return 'Baixo';
+      return 'Baixo';
+    }
+
+    // Para matrizes 4x4 e 5x5
+    if (risk_matrix.risk_levels.critical && risk_matrix.risk_levels.critical.includes(score)) {
+      return 'Crítico';
     }
     if (risk_matrix.risk_levels.high.includes(score)) return 'Alto';
     if (risk_matrix.risk_levels.medium.includes(score)) return 'Médio';
@@ -148,7 +166,9 @@ export const useTenantSettings = () => {
     }
 
     const { type } = tenantSettings.risk_matrix;
-    if (type === '4x4') {
+    if (type === '3x3') {
+      return { rows: 3, cols: 3 };
+    } else if (type === '4x4') {
       return { rows: 4, cols: 4 };
     }
     return { rows: 5, cols: 5 };
@@ -157,14 +177,16 @@ export const useTenantSettings = () => {
   // Função para obter os níveis de risco corretos
   const getRiskLevels = () => {
     if (!tenantSettings?.risk_matrix) {
-      return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
+      return ['Baixo', 'Médio', 'Alto', 'Crítico']; // Usar padrão 5x5 com Crítico
     }
 
     const { type } = tenantSettings.risk_matrix;
     if (type === '4x4') {
       return ['Baixo', 'Médio', 'Alto', 'Crítico'];
+    } else if (type === '3x3') {
+      return ['Baixo', 'Médio', 'Alto'];
     }
-    return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
+    return ['Baixo', 'Médio', 'Alto', 'Crítico']; // 5x5 também usa Crítico
   };
 
   // Função para obter configuração do questionário SI
@@ -329,7 +351,7 @@ export const useTenantSettings = () => {
 
   // Função para salvar configuração do questionário SI
   const saveSIQuestionnaireConfig = async (config: SIQuestionnaireConfig) => {
-    if (!userTenantId) {
+    if (!targetTenantId) {
       throw new Error('Tenant ID não encontrado');
     }
 
@@ -344,7 +366,7 @@ export const useTenantSettings = () => {
         settings: updatedSettings,
         updated_at: new Date().toISOString()
       })
-      .eq('id', userTenantId);
+      .eq('id', targetTenantId);
 
     if (error) {
       throw error;
@@ -356,7 +378,7 @@ export const useTenantSettings = () => {
 
   // Função para salvar configuração do questionário de Fornecedores
   const saveSupplierQuestionnaireConfig = async (config: SupplierQuestionnaireConfig) => {
-    if (!userTenantId) {
+    if (!targetTenantId) {
       throw new Error('Tenant ID não encontrado');
     }
 
@@ -371,7 +393,7 @@ export const useTenantSettings = () => {
         settings: updatedSettings,
         updated_at: new Date().toISOString()
       })
-      .eq('id', userTenantId);
+      .eq('id', targetTenantId);
 
     if (error) {
       throw error;

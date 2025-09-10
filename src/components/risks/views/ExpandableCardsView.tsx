@@ -198,7 +198,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         treatmentType: risk.treatmentType || 'Mitigar',
         treatment_rationale: risk.treatment_rationale || '',
         treatment_cost: risk.treatment_cost || '',
-        treatment_timeline: risk.treatment_timeline || '',
+        treatment_timeline: risk.treatment_timeline ? new Date(risk.treatment_timeline).toISOString().split('T')[0] : '',
         status: risk.status,
         assignedTo: risk.assignedTo || '',
         dueDate: risk.dueDate ? new Date(risk.dueDate).toISOString().split('T')[0] : '',
@@ -306,6 +306,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         
         // Tratamento
         treatmentType: formData.treatmentType,
+        treatment_rationale: formData.treatment_rationale,
+        treatment_cost: formData.treatment_cost,
+        treatment_timeline: formData.treatment_timeline,
         status: formData.status,
         actionPlan: formData.actionPlan,
         assignedTo: formData.assignedTo,
@@ -354,6 +357,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
       }
       if (formData.activity_1_due_date) {
         updateData.activity_1_due_date = new Date(formData.activity_1_due_date);
+      }
+      if (formData.treatment_timeline) {
+        updateData.treatment_timeline = new Date(formData.treatment_timeline);
       }
 
       // Calcular riskScore se probabilidade ou impacto mudaram
@@ -671,7 +677,24 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                           />
                         ) : (
                           <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {console.log('🔍 COMPONENTE - Risk:', { id: risk.id, name: risk.name, riskCode: risk.riskCode })}
+                            {console.log('🔍 COMPONENTE - Risk completo:', {
+                              id: risk.id, 
+                              name: risk.name, 
+                              riskCode: risk.riskCode,
+                              // Dados do plano de ação
+                              activity_1_name: risk.activity_1_name,
+                              activity_1_description: risk.activity_1_description,
+                              activity_1_responsible: risk.activity_1_responsible,
+                              // Dados de comunicação
+                              awareness_person_1_name: risk.awareness_person_1_name,
+                              approval_person_1_name: risk.approval_person_1_name,
+                              // Arrays relacionados
+                              risk_action_plans: risk.risk_action_plans?.length || 0,
+                              risk_stakeholders: risk.risk_stakeholders?.length || 0,
+                              // Dados de tratamento
+                              treatment_rationale: risk.treatment_rationale,
+                              monitoring_frequency: risk.monitoring_frequency
+                            })}
                             {risk.riskCode && (
                               <Badge variant="secondary" className="text-xs font-mono bg-blue-100 text-blue-800 border-blue-300">
                                 {risk.riskCode}
@@ -1557,12 +1580,13 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <Label className="text-sm font-medium mb-2 block">Cronograma</Label>
                               {isEditing ? (
                                 <Input
+                                  type="date"
                                   value={editForm.treatment_timeline || ''}
                                   onChange={(e) => updateEditForm(risk.id, 'treatment_timeline', e.target.value)}
-                                  placeholder="Ex: 3 meses, 6 semanas"
+                                  placeholder="Data de conclusão"
                                 />
                               ) : (
-                                <p className="text-sm">{risk.treatment_timeline || 'Não definido'}</p>
+                                <p className="text-sm">{formatDate(risk.treatment_timeline) || 'Não definido'}</p>
                               )}
                             </div>
                           </div>
@@ -1611,213 +1635,286 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             <h4 className="font-medium mb-3 flex items-center gap-2">
                               <Clipboard className="h-4 w-4" />
                               Atividades do Plano de Ação
+                              {risk.risk_action_plans && risk.risk_action_plans.length > 0 && (
+                                <Badge variant="secondary" className="ml-2">
+                                  {risk.risk_action_plans.length} atividade{risk.risk_action_plans.length > 1 ? 's' : ''}
+                                </Badge>
+                              )}
                             </h4>
                             
-                            {/* Lista de Atividades */}
+                            {/* Lista de Atividades das Tabelas Relacionadas */}
                             <div className="space-y-3">
-                              {/* Atividade 1 */}
-                              <div className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                  <div>
-                                    <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
-                                    {isEditing ? (
-                                      <Input
-                                        value={editForm.activity_1_name || ''}
-                                        onChange={(e) => updateEditForm(risk.id, 'activity_1_name', e.target.value)}
-                                        placeholder="Ex: Implementar controles de segurança"
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_name || 'Atividade não definida'}</p>
+                              {risk.risk_action_plans && risk.risk_action_plans.length > 0 ? (
+                                risk.risk_action_plans.map((actionPlan, index) => (
+                                  <div key={actionPlan.id || index} className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <Badge variant="outline" className="text-xs">
+                                        Atividade {index + 1}
+                                      </Badge>
+                                      <Badge variant="outline">
+                                        {actionPlan.priority === 'low' ? '🟢 Baixa' :
+                                         actionPlan.priority === 'medium' ? '🟡 Média' :
+                                         actionPlan.priority === 'high' ? '🟠 Alta' :
+                                         actionPlan.priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
+                                      </Badge>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                                          {actionPlan.activity_name || actionPlan.name || 'Atividade não definida'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Status</Label>
+                                        <Badge variant="outline">
+                                          {actionPlan.status === 'pending' ? '⏳ Pendente' :
+                                           actionPlan.status === 'in_progress' ? '🔄 Em Andamento' :
+                                           actionPlan.status === 'completed' ? '✅ Concluída' :
+                                           actionPlan.status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Responsável</Label>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                                          {actionPlan.responsible_name || actionPlan.responsible_person || 'Não atribuído'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">E-mail</Label>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                                          {actionPlan.responsible_email || 'Não informado'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Prazo</Label>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100">
+                                          {formatDate(actionPlan.due_date || actionPlan.target_date) || 'Não definido'}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    {(actionPlan.activity_description || actionPlan.description) && (
+                                      <div className="mb-3">
+                                        <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                          {actionPlan.activity_description || actionPlan.description}
+                                        </p>
+                                      </div>
                                     )}
                                   </div>
-                                  <div>
-                                    <Label className="text-sm font-medium mb-1 block">Prioridade</Label>
-                                    {isEditing ? (
-                                      <Select value={editForm.activity_1_priority || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_priority', value)}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="low">🟢 Baixa</SelectItem>
-                                          <SelectItem value="medium">🟡 Média</SelectItem>
-                                          <SelectItem value="high">🟠 Alta</SelectItem>
-                                          <SelectItem value="critical">🔴 Crítica</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    ) : (
+                                ))
+                              ) : (
+                                /* Fallback para campos diretos se não houver dados relacionados */
+                                risk.activity_1_name ? (
+                                  <div className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <Badge variant="outline" className="text-xs">
+                                        Atividade 1 (Campo Direto)
+                                      </Badge>
                                       <Badge variant="outline">
                                         {risk.activity_1_priority === 'low' ? '🟢 Baixa' :
                                          risk.activity_1_priority === 'medium' ? '🟡 Média' :
                                          risk.activity_1_priority === 'high' ? '🟠 Alta' :
                                          risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
                                       </Badge>
-                                    )}
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={editForm.activity_1_name || ''}
+                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_name', e.target.value)}
+                                            placeholder="Ex: Implementar controles de segurança"
+                                          />
+                                        ) : (
+                                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{risk.activity_1_name}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Status</Label>
+                                        {isEditing ? (
+                                          <Select value={editForm.activity_1_status || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_status', value)}>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="pending">⏳ Pendente</SelectItem>
+                                              <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
+                                              <SelectItem value="completed">✅ Concluída</SelectItem>
+                                              <SelectItem value="cancelled">❌ Cancelada</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <Badge variant="outline">
+                                            {risk.activity_1_status === 'pending' ? '⏳ Pendente' :
+                                             risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
+                                             risk.activity_1_status === 'completed' ? '✅ Concluída' :
+                                             risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Responsável</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={editForm.activity_1_responsible || ''}
+                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_responsible', e.target.value)}
+                                            placeholder="Nome do responsável"
+                                          />
+                                        ) : (
+                                          <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_responsible || 'Não atribuído'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">E-mail</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            value={editForm.activity_1_email || ''}
+                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_email', e.target.value)}
+                                            placeholder="email@empresa.com"
+                                          />
+                                        ) : (
+                                          <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_email || 'Não informado'}</p>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Prazo</Label>
+                                        {isEditing ? (
+                                          <Input
+                                            type="date"
+                                            value={editForm.activity_1_due_date || ''}
+                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_due_date', e.target.value)}
+                                          />
+                                        ) : (
+                                          <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(risk.activity_1_due_date) || 'Não definido'}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mb-3">
+                                      <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
+                                      {isEditing ? (
+                                        <Textarea
+                                          value={editForm.activity_1_description || ''}
+                                          onChange={(e) => updateEditForm(risk.id, 'activity_1_description', e.target.value)}
+                                          placeholder="Descreva detalhadamente esta atividade"
+                                          rows={2}
+                                        />
+                                      ) : (
+                                        <p className="text-sm text-muted-foreground">{risk.activity_1_description || 'Nenhuma descrição'}</p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                                  <div>
-                                    <Label className="text-sm font-medium mb-1 block">Responsável</Label>
-                                    {isEditing ? (
-                                      <Input
-                                        value={editForm.activity_1_responsible || ''}
-                                        onChange={(e) => updateEditForm(risk.id, 'activity_1_responsible', e.target.value)}
-                                        placeholder="Nome do responsável"
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_responsible || 'Não atribuído'}</p>
-                                    )}
+                                ) : (
+                                  /* Nenhum plano de ação encontrado */
+                                  <div className="text-center p-6 border-2 border-dashed border-muted-foreground/20 rounded">
+                                    <Clipboard className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                                    <p className="text-sm text-muted-foreground">
+                                      <strong>Nenhum plano de ação cadastrado</strong>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      Use o formulário de registro de riscos para adicionar atividades
+                                    </p>
                                   </div>
-                                  <div>
-                                    <Label className="text-sm font-medium mb-1 block">E-mail</Label>
-                                    {isEditing ? (
-                                      <Input
-                                        value={editForm.activity_1_email || ''}
-                                        onChange={(e) => updateEditForm(risk.id, 'activity_1_email', e.target.value)}
-                                        placeholder="email@empresa.com"
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_email || 'Não informado'}</p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <Label className="text-sm font-medium mb-1 block">Prazo</Label>
-                                    {isEditing ? (
-                                      <Input
-                                        type="date"
-                                        value={editForm.activity_1_due_date || ''}
-                                        onChange={(e) => updateEditForm(risk.id, 'activity_1_due_date', e.target.value)}
-                                      />
-                                    ) : (
-                                      <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(risk.activity_1_due_date) || 'Não definido'}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="mb-3">
-                                  <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
-                                  {isEditing ? (
-                                    <Textarea
-                                      value={editForm.activity_1_description || ''}
-                                      onChange={(e) => updateEditForm(risk.id, 'activity_1_description', e.target.value)}
-                                      placeholder="Descreva detalhadamente esta atividade"
-                                      rows={2}
-                                    />
-                                  ) : (
-                                    <p className="text-sm text-muted-foreground">{risk.activity_1_description || 'Nenhuma descrição'}</p>
-                                  )}
-                                </div>
-                                
-                                <div>
-                                  <Label className="text-sm font-medium mb-1 block">Status</Label>
-                                  {isEditing ? (
-                                    <Select value={editForm.activity_1_status || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_status', value)}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="pending">⏳ Pendente</SelectItem>
-                                        <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
-                                        <SelectItem value="completed">✅ Concluída</SelectItem>
-                                        <SelectItem value="cancelled">❌ Cancelada</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Badge variant="outline">
-                                      {risk.activity_1_status === 'pending' ? '⏳ Pendente' :
-                                       risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
-                                       risk.activity_1_status === 'completed' ? '✅ Concluída' :
-                                       risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Nota para adicionar mais atividades */}
-                              <div className="text-center p-4 border-2 border-dashed border-muted-foreground/20 rounded">
-                                <p className="text-sm text-muted-foreground">
-                                  💡 <strong>Dica:</strong> Para adicionar mais atividades, use o formulário completo de registro de riscos ou edite no banco de dados
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Responsável</Label>
-                              {isEditing ? (
-                                <Input
-                                  value={editForm.assignedTo || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'assignedTo', e.target.value)}
-                                  placeholder="Nome do responsável"
-                                />
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm">{risk.assignedTo || 'Não atribuído'}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Prazo para Conclusão</Label>
-                              {isEditing ? (
-                                <Input
-                                  type="date"
-                                  value={editForm.dueDate || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'dueDate', e.target.value)}
-                                />
-                              ) : (
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                                  <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
-                                    {formatDate(risk.dueDate) || 'Não definido'}
-                                  </span>
-                                </div>
+                                )
                               )}
                             </div>
                           </div>
 
-                          <div>
-                            <Label className="text-sm font-medium mb-2 block">Status do Plano</Label>
-                            {isEditing ? (
-                              <Select value={editForm.status || ''} onValueChange={(value) => updateEditForm(risk.id, 'status', value)}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {statusOptions.map(status => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Badge className={`${getStatusColor(risk.status)} text-xs`}>
-                                {risk.status}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Progresso visual */}
+                          {/* Resumo do Plano de Ação */}
                           <div className="border rounded-lg p-4 bg-card">
-                            <div className="flex justify-between items-center mb-2">
-                              <Label className="text-sm font-medium">Progresso das Ações</Label>
-                              <span className="text-sm text-muted-foreground">
-                                {risk.status === 'Fechado' ? '100%' : 
-                                 risk.status === 'Monitorado' ? '75%' :
-                                 risk.status === 'Em Tratamento' ? '50%' :
-                                 risk.status === 'Avaliado' ? '25%' : '0%'}
-                              </span>
+                            <h4 className="font-medium mb-3 flex items-center gap-2">
+                              <Activity className="h-4 w-4" />
+                              Resumo do Plano
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Responsável Geral</Label>
+                                {isEditing ? (
+                                  <Input
+                                    value={editForm.assignedTo || ''}
+                                    onChange={(e) => updateEditForm(risk.id, 'assignedTo', e.target.value)}
+                                    placeholder="Nome do responsável"
+                                  />
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm">{risk.assignedTo || 'Não atribuído'}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Prazo Geral</Label>
+                                {isEditing ? (
+                                  <Input
+                                    type="date"
+                                    value={editForm.dueDate || ''}
+                                    onChange={(e) => updateEditForm(risk.id, 'dueDate', e.target.value)}
+                                  />
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                                    <span className={`text-sm ${overdue ? 'text-red-600 font-medium' : ''}`}>
+                                      {formatDate(risk.dueDate) || 'Não definido'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className={`h-2 rounded-full transition-all ${
-                                  risk.status === 'Fechado' ? 'bg-green-500 w-full' :
-                                  risk.status === 'Monitorado' ? 'bg-blue-500 w-3/4' :
-                                  risk.status === 'Em Tratamento' ? 'bg-yellow-500 w-1/2' :
-                                  risk.status === 'Avaliado' ? 'bg-orange-500 w-1/4' : 'bg-gray-400 w-0'
-                                }`}
-                              />
+
+                            <div className="mt-4">
+                              <Label className="text-sm font-medium mb-2 block">Status do Plano</Label>
+                              {isEditing ? (
+                                <Select value={editForm.status || ''} onValueChange={(value) => updateEditForm(risk.id, 'status', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {statusOptions.map(status => (
+                                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge className={`${getStatusColor(risk.status)} text-xs`}>
+                                  {risk.status}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Progresso visual */}
+                            <div className="mt-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <Label className="text-sm font-medium">Progresso das Ações</Label>
+                                <span className="text-sm text-muted-foreground">
+                                  {risk.status === 'Fechado' ? '100%' : 
+                                   risk.status === 'Monitorado' ? '75%' :
+                                   risk.status === 'Em Tratamento' ? '50%' :
+                                   risk.status === 'Avaliado' ? '25%' : '0%'}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all ${
+                                    risk.status === 'Fechado' ? 'bg-green-500 w-full' :
+                                    risk.status === 'Monitorado' ? 'bg-blue-500 w-3/4' :
+                                    risk.status === 'Em Tratamento' ? 'bg-yellow-500 w-1/2' :
+                                    risk.status === 'Avaliado' ? 'bg-orange-500 w-1/4' : 'bg-gray-400 w-0'
+                                  }`}
+                                />
+                              </div>
                             </div>
                           </div>
                         </TabsContent>
@@ -2029,38 +2126,66 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             <Label className="text-sm font-medium mb-2 block">Indicadores de Monitoramento</Label>
                             {isEditing ? (
                               <Textarea
-                                value={editForm.indicators || ''}
-                                onChange={(e) => updateEditForm(risk.id, 'indicators', e.target.value)}
-                                placeholder="Defina os KPIs e métricas para monitorar este risco"
-                                rows={2}
+                                value={editForm.monitoring_indicators?.join('\n') || ''}
+                                onChange={(e) => updateEditForm(risk.id, 'monitoring_indicators', e.target.value.split('\n'))}
+                                placeholder="Defina os KPIs e métricas para monitorar este risco (um por linha)"
+                                rows={4}
                               />
                             ) : (
-                              <p className="text-sm text-muted-foreground">
-                                {risk.indicators || 'Nenhum indicador definido'}
-                              </p>
+                              <div className="text-sm text-muted-foreground">
+                                {risk.monitoring_indicators && risk.monitoring_indicators.length > 0 ? (
+                                  <ul className="list-disc list-inside space-y-1">
+                                    {risk.monitoring_indicators.map((indicator, index) => (
+                                      <li key={index}>{indicator}</li>
+                                    ))}
+                                  </ul>
+                                ) : (
+                                  'Nenhum indicador definido'
+                                )}
+                              </div>
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Frequência de Revisão</Label>
+                              <Label className="text-sm font-medium mb-2 block">Frequência de Monitoramento</Label>
                               {isEditing ? (
-                                <Select value={editForm.reviewFrequency || ''} onValueChange={(value) => updateEditForm(risk.id, 'reviewFrequency', value)}>
+                                <Select value={editForm.monitoring_frequency || ''} onValueChange={(value) => updateEditForm(risk.id, 'monitoring_frequency', value)}>
                                   <SelectTrigger>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="semanal">Semanal</SelectItem>
-                                    <SelectItem value="mensal">Mensal</SelectItem>
-                                    <SelectItem value="trimestral">Trimestral</SelectItem>
-                                    <SelectItem value="semestral">Semestral</SelectItem>
-                                    <SelectItem value="anual">Anual</SelectItem>
+                                    <SelectItem value="daily">Diário</SelectItem>
+                                    <SelectItem value="weekly">Semanal</SelectItem>
+                                    <SelectItem value="monthly">Mensal</SelectItem>
+                                    <SelectItem value="quarterly">Trimestral</SelectItem>
+                                    <SelectItem value="annually">Anual</SelectItem>
                                   </SelectContent>
                                 </Select>
                               ) : (
                                 <Badge variant="outline">
-                                  {risk.reviewFrequency || 'Não definido'}
+                                  {risk.monitoring_frequency === 'daily' ? 'Diário' :
+                                   risk.monitoring_frequency === 'weekly' ? 'Semanal' :
+                                   risk.monitoring_frequency === 'monthly' ? 'Mensal' :
+                                   risk.monitoring_frequency === 'quarterly' ? 'Trimestral' :
+                                   risk.monitoring_frequency === 'annually' ? 'Anual' :
+                                   risk.monitoring_frequency || 'Não definido'}
                                 </Badge>
+                              )}
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Responsável pelo Monitoramento</Label>
+                              {isEditing ? (
+                                <Input
+                                  value={editForm.monitoring_responsible || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'monitoring_responsible', e.target.value)}
+                                  placeholder="Nome do responsável"
+                                />
+                              ) : (
+                                <span className="text-sm">
+                                  {risk.monitoring_responsible || 'Não atribuído'}
+                                </span>
                               )}
                             </div>
 
@@ -2069,14 +2194,98 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               {isEditing ? (
                                 <Input
                                   type="date"
-                                  value={editForm.nextReview || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'nextReview', e.target.value)}
+                                  value={editForm.review_date || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'review_date', e.target.value)}
                                 />
                               ) : (
                                 <span className="text-sm">
-                                  {formatDate(risk.nextReview) || 'Não agendado'}
+                                  {formatDate(risk.review_date) || 'Não agendado'}
                                 </span>
                               )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="text-sm font-medium mb-2 block">Notas de Monitoramento</Label>
+                            {isEditing ? (
+                              <Textarea
+                                value={editForm.monitoring_notes || ''}
+                                onChange={(e) => updateEditForm(risk.id, 'monitoring_notes', e.target.value)}
+                                placeholder="Notas sobre o processo de monitoramento"
+                                rows={3}
+                              />
+                            ) : (
+                              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                {risk.monitoring_notes || 'Nenhuma nota de monitoramento'}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Risco Residual */}
+                          <div className="border rounded-lg p-4 bg-card">
+                            <h4 className="font-medium mb-3 flex items-center gap-2">
+                              <Shield className="h-4 w-4" />
+                              Risco Residual (Após Tratamento)
+                            </h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Impacto Residual</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.residual_impact?.toString() || ''} onValueChange={(value) => updateEditForm(risk.id, 'residual_impact', parseInt(value))}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1">1 - Muito Baixo</SelectItem>
+                                      <SelectItem value="2">2 - Baixo</SelectItem>
+                                      <SelectItem value="3">3 - Médio</SelectItem>
+                                      <SelectItem value="4">4 - Alto</SelectItem>
+                                      <SelectItem value="5">5 - Muito Alto</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {risk.residual_impact || 'N/A'}/5
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Probabilidade Residual</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.residual_likelihood?.toString() || ''} onValueChange={(value) => updateEditForm(risk.id, 'residual_likelihood', parseInt(value))}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="1">1 - Muito Baixa</SelectItem>
+                                      <SelectItem value="2">2 - Baixa</SelectItem>
+                                      <SelectItem value="3">3 - Média</SelectItem>
+                                      <SelectItem value="4">4 - Alta</SelectItem>
+                                      <SelectItem value="5">5 - Muito Alta</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {risk.residual_likelihood || 'N/A'}/5
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Score Residual</Label>
+                                <Badge className="text-lg px-3 py-1">
+                                  {risk.residual_score || (risk.residual_impact && risk.residual_likelihood ? risk.residual_impact * risk.residual_likelihood : 'N/A')}
+                                </Badge>
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Nível Residual</Label>
+                                <Badge className={`${getRiskLevelColor(risk.residual_risk_level || 'Médio')} text-xs`}>
+                                  {risk.residual_risk_level || 'Não calculado'}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
 
@@ -2204,3 +2413,6 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     </div>
   );
 };
+
+// Exportação default para compatibilidade
+export default ExpandableCardsView;

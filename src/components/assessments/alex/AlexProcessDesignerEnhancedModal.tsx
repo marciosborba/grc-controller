@@ -4508,404 +4508,322 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                     
                     <ScrollArea className="h-96">
                       <div className="p-6 space-y-4">
-                        {/* Template: Auditoria Interna Completa */}
-                        <div className="border rounded-lg p-4 hover:border-blue-300 cursor-pointer group"
+                        {/* Template: Gestão de Riscos - Processo Guiado Completo */}
+                        <div className="border rounded-lg p-4 hover:border-red-300 cursor-pointer group"
                              onClick={() => {
-                               const auditTemplate = {
-                                 name: 'Auditoria Interna ISO 27001 - Processo Completo',
-                                 description: 'Processo completo de auditoria interna baseado em ISO 27001 com múltiplos formulários integrados',
+                               const riskManagementTemplate = {
+                                 name: 'Gestão de Riscos - Processo Guiado Completo',
+                                 description: 'Sistema completo de gestão de riscos com 7 etapas integradas baseado no modelo Alex Risk',
                                  formFields: [
-                                   // Formulário de Planejamento da Auditoria
-                                   { id: 'audit_title', type: 'text' as const, label: 'Título da Auditoria', required: true, placeholder: 'Ex: Auditoria Interna ISO 27001 - Segurança da Informação' },
-                                   { id: 'audit_code', type: 'text' as const, label: 'Código da Auditoria', required: true, placeholder: 'AUD-ISO27001-2024-001' },
-                                   { id: 'audit_scope', type: 'textarea' as const, label: 'Escopo e Objetivos', required: true, placeholder: 'Avaliar a conformidade dos controles de segurança da informação conforme ISO 27001:2013...' },
-                                   { id: 'audit_criteria', type: 'textarea' as const, label: 'Critérios de Auditoria', required: true, placeholder: 'ISO 27001:2013, Política de SI da empresa, procedimentos internos...' },
-                                   { id: 'lead_auditor', type: 'text' as const, label: 'Auditor Líder', required: true, placeholder: 'Nome do auditor líder certificado' },
-                                   { id: 'audit_team', type: 'textarea' as const, label: 'Equipe de Auditoria', required: true, placeholder: 'Lista dos auditores e suas responsabilidades' },
-                                   { id: 'audit_date_start', type: 'date' as const, label: 'Data de Início', required: true },
-                                   { id: 'audit_date_end', type: 'date' as const, label: 'Data de Término', required: true },
-                                   { id: 'auditee_department', type: 'select' as const, label: 'Departamento Auditado', required: true, options: ['TI', 'Segurança', 'RH', 'Financeiro', 'Operações', 'Jurídico', 'Todos'] },
-                                   { id: 'audit_type', type: 'select' as const, label: 'Tipo de Auditoria', required: true, options: ['Inicial', 'Seguimento', 'Especial', 'Recertificação'] },
+                                   // ETAPA 1: IDENTIFICAÇÃO DO RISCO
+                                   { id: 'risk_title', type: 'text' as const, label: '📋 Título do Risco', required: true, placeholder: 'Ex: Falha no sistema de backup crítico', section: 'Etapa 1: Identificação' },
+                                   { id: 'risk_description', type: 'textarea' as const, label: '📝 Descrição Detalhada', required: true, placeholder: 'Descreva o evento de risco, suas causas e contexto...', section: 'Etapa 1: Identificação' },
+                                   { id: 'risk_category', type: 'select' as const, label: '🏷️ Categoria do Risco', required: true, options: ['Estratégico', 'Operacional', 'Financeiro', 'Compliance', 'Reputacional', 'Tecnológico', 'Ambiental', 'Segurança', 'Legal', 'Mercado'], section: 'Etapa 1: Identificação' },
+                                   { id: 'risk_source', type: 'select' as const, label: '📍 Fonte do Risco', required: true, options: ['Auditoria Interna', 'Auditoria Externa', 'Revisão de Compliance', 'Relatório de Incidente', 'Mudança Regulatória', 'Relato de Funcionário', 'Avaliação de Fornecedor'], section: 'Etapa 1: Identificação' },
+                                   { id: 'business_area', type: 'select' as const, label: '🏢 Área de Negócio Afetada', required: true, options: ['Governança', 'Financeiro', 'Operações', 'Tecnologia', 'Recursos Humanos', 'Jurídico', 'Compliance', 'Vendas', 'Marketing'], section: 'Etapa 1: Identificação' },
+                                   { id: 'identification_date', type: 'date' as const, label: '📅 Data de Identificação', required: true, section: 'Etapa 1: Identificação' },
                                    
-                                   // Formulário de Evidências e Achados
-                                   { id: 'evidence_collected', type: 'textarea' as const, label: 'Evidências Coletadas', required: false, placeholder: 'Documentos, registros, observações...' },
-                                   { id: 'nonconformities', type: 'textarea' as const, label: 'Não Conformidades Identificadas', required: false, placeholder: 'Descrição detalhada das não conformidades...' },
-                                   { id: 'observations', type: 'textarea' as const, label: 'Observações e Oportunidades de Melhoria', required: false, placeholder: 'Pontos de atenção e sugestões...' },
-                                   { id: 'positive_findings', type: 'textarea' as const, label: 'Pontos Fortes Identificados', required: false, placeholder: 'Boas práticas e controles eficazes...' },
+                                   // ETAPA 2: ANÁLISE DO RISCO
+                                   { id: 'analysis_methodology', type: 'select' as const, label: '🔬 Metodologia de Análise', required: true, options: ['Qualitativa (1-5)', 'Quantitativa (VaR)', 'Semi-Quantitativa', 'COSO ERM', 'ISO 31000'], section: 'Etapa 2: Análise' },
+                                   { id: 'impact_score', type: 'select' as const, label: '💥 Pontuação de Impacto', required: true, options: ['1 - Muito Baixo', '2 - Baixo', '3 - Médio', '4 - Alto', '5 - Muito Alto'], section: 'Etapa 2: Análise' },
+                                   { id: 'likelihood_score', type: 'select' as const, label: '🎯 Pontuação de Probabilidade', required: true, options: ['1 - Muito Baixa', '2 - Baixa', '3 - Média', '4 - Alta', '5 - Muito Alta'], section: 'Etapa 2: Análise' },
+                                   { id: 'risk_score', type: 'number' as const, label: '📊 Score do Risco (Calculado)', required: false, placeholder: 'Calculado automaticamente', section: 'Etapa 2: Análise' },
+                                   { id: 'risk_level', type: 'select' as const, label: '⚡ Nível do Risco', required: false, options: ['Baixo (1-8)', 'Médio (9-15)', 'Alto (16-20)', 'Crítico (21-25)'], section: 'Etapa 2: Análise' },
                                    
-                                   // Formulário de Avaliação e Conclusão
-                                   { id: 'overall_assessment', type: 'select' as const, label: 'Avaliação Geral', required: false, options: ['Conforme', 'Conforme com observações', 'Não conforme menor', 'Não conforme maior'] },
-                                   { id: 'risk_level', type: 'select' as const, label: 'Nível de Risco Global', required: false, options: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Crítico'] },
-                                   { id: 'action_plan_required', type: 'select' as const, label: 'Plano de Ação Necessário', required: false, options: ['Sim', 'Não'] },
-                                   { id: 'followup_date', type: 'date' as const, label: 'Data de Follow-up', required: false },
-                                   { id: 'certification_impact', type: 'select' as const, label: 'Impacto na Certificação', required: false, options: ['Nenhum', 'Menor', 'Moderado', 'Significativo', 'Crítico'] }
+                                   // ETAPA 3: CLASSIFICAÇÃO GUT
+                                   { id: 'gut_gravity', type: 'select' as const, label: '⚖️ Gravidade (GUT)', required: true, options: ['1 - Sem gravidade', '2 - Pouco grave', '3 - Grave', '4 - Muito grave', '5 - Extremamente grave'], section: 'Etapa 3: Classificação GUT' },
+                                   { id: 'gut_urgency', type: 'select' as const, label: '⏰ Urgência (GUT)', required: true, options: ['1 - Pode esperar', '2 - Pouco urgente', '3 - Urgente', '4 - Muito urgente', '5 - Extremamente urgente'], section: 'Etapa 3: Classificação GUT' },
+                                   { id: 'gut_tendency', type: 'select' as const, label: '📈 Tendência (GUT)', required: true, options: ['1 - Não vai piorar', '2 - Vai piorar a longo prazo', '3 - Vai piorar a médio prazo', '4 - Vai piorar a curto prazo', '5 - Vai piorar rapidamente'], section: 'Etapa 3: Classificação GUT' },
+                                   { id: 'gut_score', type: 'number' as const, label: '🎯 Score GUT (Calculado)', required: false, placeholder: 'Calculado automaticamente', section: 'Etapa 3: Classificação GUT' },
+                                   
+                                   // ETAPA 4: ESTRATÉGIA DE TRATAMENTO
+                                   { id: 'treatment_strategy', type: 'select' as const, label: '🛡️ Estratégia de Tratamento', required: true, options: ['Evitar', 'Mitigar', 'Transferir', 'Aceitar'], section: 'Etapa 4: Tratamento' },
+                                   { id: 'treatment_rationale', type: 'textarea' as const, label: '💭 Justificativa da Estratégia', required: true, placeholder: 'Explique por que esta estratégia foi escolhida...', section: 'Etapa 4: Tratamento' },
+                                   { id: 'treatment_cost', type: 'number' as const, label: '💰 Custo Estimado do Tratamento (R$)', required: false, placeholder: '0', section: 'Etapa 4: Tratamento' },
+                                   { id: 'treatment_timeline', type: 'text' as const, label: '⏱️ Prazo para Implementação', required: false, placeholder: 'Ex: 90 dias', section: 'Etapa 4: Tratamento' },
+                                   
+                                   // ETAPA 5: PLANO DE AÇÃO
+                                   { id: 'activity_1_name', type: 'text' as const, label: '📝 Nome da Atividade Principal', required: false, placeholder: 'Ex: Implementar backup redundante', section: 'Etapa 5: Plano de Ação' },
+                                   { id: 'activity_1_description', type: 'textarea' as const, label: '📄 Descrição da Atividade', required: false, placeholder: 'Descreva detalhadamente a atividade...', section: 'Etapa 5: Plano de Ação' },
+                                   { id: 'activity_1_responsible', type: 'text' as const, label: '👤 Responsável pela Atividade', required: false, placeholder: 'Nome do responsável', section: 'Etapa 5: Plano de Ação' },
+                                   { id: 'activity_1_email', type: 'email' as const, label: '📧 E-mail do Responsável', required: false, placeholder: 'email@empresa.com', section: 'Etapa 5: Plano de Ação' },
+                                   { id: 'activity_1_due_date', type: 'date' as const, label: '📅 Data de Vencimento', required: false, section: 'Etapa 5: Plano de Ação' },
+                                   { id: 'activity_1_priority', type: 'select' as const, label: '⚡ Prioridade', required: false, options: ['Baixa', 'Média', 'Alta', 'Crítica'], section: 'Etapa 5: Plano de Ação' },
+                                   
+                                   // ETAPA 6: COMUNICAÇÃO E STAKEHOLDERS
+                                   { id: 'approval_person_name', type: 'text' as const, label: '👨‍💼 Nome do Aprovador', required: true, placeholder: 'Nome do gestor aprovador', section: 'Etapa 6: Comunicação' },
+                                   { id: 'approval_person_position', type: 'text' as const, label: '💼 Cargo do Aprovador', required: true, placeholder: 'Ex: Diretor de Riscos', section: 'Etapa 6: Comunicação' },
+                                   { id: 'approval_person_email', type: 'email' as const, label: '📧 E-mail do Aprovador', required: true, placeholder: 'aprovador@empresa.com', section: 'Etapa 6: Comunicação' },
+                                   { id: 'awareness_person_name', type: 'text' as const, label: '👥 Nome para Ciência', required: false, placeholder: 'Nome da pessoa para ciência', section: 'Etapa 6: Comunicação' },
+                                   { id: 'awareness_person_email', type: 'email' as const, label: '📧 E-mail para Ciência', required: false, placeholder: 'ciencia@empresa.com', section: 'Etapa 6: Comunicação' },
+                                   
+                                   // ETAPA 7: MONITORAMENTO
+                                   { id: 'monitoring_frequency', type: 'select' as const, label: '📊 Frequência de Monitoramento', required: false, options: ['Semanal', 'Mensal', 'Trimestral', 'Semestral', 'Anual'], section: 'Etapa 7: Monitoramento' },
+                                   { id: 'monitoring_responsible', type: 'text' as const, label: '👤 Responsável pelo Monitoramento', required: false, placeholder: 'Nome do responsável', section: 'Etapa 7: Monitoramento' },
+                                   { id: 'residual_impact', type: 'select' as const, label: '📉 Impacto Residual', required: false, options: ['1 - Muito Baixo', '2 - Baixo', '3 - Médio', '4 - Alto', '5 - Muito Alto'], section: 'Etapa 7: Monitoramento' },
+                                   { id: 'residual_likelihood', type: 'select' as const, label: '📊 Probabilidade Residual', required: false, options: ['1 - Muito Baixa', '2 - Baixa', '3 - Média', '4 - Alta', '5 - Muito Alta'], section: 'Etapa 7: Monitoramento' },
+                                   { id: 'closure_criteria', type: 'textarea' as const, label: '✅ Critérios de Encerramento', required: false, placeholder: 'Defina os critérios para encerramento do risco...', section: 'Etapa 7: Monitoramento' },
+                                   { id: 'closure_date', type: 'date' as const, label: '📅 Data Prevista de Encerramento', required: false, section: 'Etapa 7: Monitoramento' }
                                  ],
                                  workflowNodes: [
-                                   // Início do processo
+                                   // ETAPA 1: IDENTIFICAÇÃO DO RISCO
                                    {
-                                     id: 'start-audit-process',
+                                     id: 'step1-identification',
                                      type: 'start' as const,
                                      position: { x: 50, y: 200 },
-                                     size: { width: 100, height: 80 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Solicitação de Auditoria',
-                                       description: 'Início do processo - Solicitação aprovada pelo programa de auditoria',
-                                       properties: { 
-                                         trigger_type: 'scheduled',
-                                         notification_enabled: true,
-                                         responsible: 'Coordenador de Auditoria',
-                                         sla: '1 dia'
-                                       }
-                                     }
-                                   },
-                                   
-                                   // Fase 1: Planejamento Detalhado
-                                   {
-                                     id: 'detailed-planning',
-                                     type: 'task' as const,
-                                     position: { x: 200, y: 200 },
-                                     size: { width: 140, height: 100 },
-                                     data: {
-                                       label: 'Planejamento Detalhado',
-                                       description: 'Elaboração do plano de auditoria detalhado',
+                                       label: '1️⃣ Identificação',
+                                       description: 'Dados básicos do risco: título, descrição, categoria, fonte',
                                        properties: {
-                                         priority: 'high',
-                                         duration: '3-5 dias',
-                                         assignee: 'Auditor Líder',
-                                         form_fields: ['audit_title', 'audit_code', 'audit_scope', 'audit_criteria', 'lead_auditor', 'audit_team'],
-                                         checklist: [
-                                           'Definir escopo detalhado',
-                                           'Selecionar equipe de auditoria',
-                                           'Elaborar programa de auditoria',
-                                           'Preparar checklists específicos',
-                                           'Agendar reunião de abertura'
-                                         ],
-                                         resources: ['ISO 27001:2013', 'Programa anual de auditorias', 'Auditorias anteriores'],
-                                         deliverables: ['Plano de auditoria aprovado', 'Checklists de auditoria', 'Cronograma detalhado']
+                                         step: 1,
+                                         form_fields: ['risk_title', 'risk_description', 'risk_category', 'risk_source', 'business_area', 'identification_date'],
+                                         validation_rules: ['risk_title required', 'risk_category required', 'risk_description required'],
+                                         wizard_component: 'Step1Identification',
+                                         progress_weight: 14.3,
+                                         icon: 'FileText',
+                                         color: 'blue',
+                                         responsible: 'Identificador do Risco',
+                                         sla: 'Imediato',
+                                         help_text: 'Preencha as informações básicas sobre o risco identificado'
                                        }
                                      }
                                    },
                                    
-                                   // Fase 2: Reunião de Abertura
+                                   // ETAPA 2: ANÁLISE DO RISCO
                                    {
-                                     id: 'opening-meeting',
+                                     id: 'step2-analysis',
+                                     type: 'task' as const,
+                                     position: { x: 220, y: 200 },
+                                     size: { width: 120, height: 100 },
+                                     data: {
+                                       label: '2️⃣ Análise',
+                                       description: 'Metodologia e avaliação: probabilidade, impacto, score do risco',
+                                       properties: {
+                                         step: 2,
+                                         form_fields: ['analysis_methodology', 'impact_score', 'likelihood_score', 'risk_score', 'risk_level'],
+                                         validation_rules: ['analysis_methodology required', 'impact_score required', 'likelihood_score required'],
+                                         wizard_component: 'Step2Analysis',
+                                         progress_weight: 14.3,
+                                         icon: 'BarChart3',
+                                         color: 'orange',
+                                         responsible: 'Analista de Riscos',
+                                         duration: '1-2 dias',
+                                         help_text: 'Analise qualitativa ou quantitativa do risco',
+                                         auto_calculate: ['risk_score = impact_score * likelihood_score', 'risk_level based on risk_score'],
+                                         methodology_options: ['COSO ERM', 'ISO 31000', 'Qualitativa (1-5)', 'Quantitativa (VaR)']
+                                       }
+                                     }
+                                   },
+                                   
+                                   // ETAPA 3: CLASSIFICAÇÃO GUT
+                                   {
+                                     id: 'step3-classification',
                                      type: 'task' as const,
                                      position: { x: 390, y: 200 },
-                                     size: { width: 140, height: 100 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Reunião de Abertura',
-                                       description: 'Apresentação do plano e alinhamento com auditados',
+                                       label: '3️⃣ Classificação',
+                                       description: 'Metodologia GUT: Gravidade, Urgência e Tendência',
                                        properties: {
-                                         priority: 'high',
-                                         duration: '2 horas',
-                                         assignee: 'Auditor Líder + Equipe',
-                                         form_fields: ['auditee_department', 'audit_type'],
-                                         checklist: [
-                                           'Apresentar equipe de auditoria',
-                                           'Confirmar escopo e cronograma',
-                                           'Esclarecer metodologia',
-                                           'Definir pontos focais',
-                                           'Documentar participantes'
-                                         ],
-                                         resources: ['Apresentação do plano', 'Lista de participantes'],
-                                         deliverables: ['Ata da reunião de abertura', 'Cronograma confirmado']
+                                         step: 3,
+                                         form_fields: ['gut_gravity', 'gut_urgency', 'gut_tendency', 'gut_score'],
+                                         validation_rules: ['gut_gravity required', 'gut_urgency required', 'gut_tendency required'],
+                                         wizard_component: 'Step3Classification',
+                                         progress_weight: 14.3,
+                                         icon: 'Target',
+                                         color: 'purple',
+                                         responsible: 'Analista de Riscos',
+                                         duration: '30 min',
+                                         help_text: 'Classifique o risco usando metodologia GUT',
+                                         auto_calculate: ['gut_score = gut_gravity * gut_urgency * gut_tendency'],
+                                         priority_ranges: ['1-64: Baixa', '65-100: Média', '101-125: Alta']
                                        }
                                      }
                                    },
                                    
-                                   // Fase 3: Execução da Auditoria (Paralelo)
+                                   // ETAPA 4: ESTRATÉGIA DE TRATAMENTO
                                    {
-                                     id: 'document-review',
+                                     id: 'step4-treatment',
                                      type: 'task' as const,
-                                     position: { x: 580, y: 120 },
-                                     size: { width: 140, height: 100 },
+                                     position: { x: 560, y: 200 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Análise Documental',
-                                       description: 'Revisão de políticas, procedimentos e registros',
+                                       label: '4️⃣ Tratamento',
+                                       description: 'Estratégia de resposta: evitar, mitigar, transferir ou aceitar',
                                        properties: {
-                                         priority: 'critical',
-                                         duration: '2-3 dias',
-                                         assignee: 'Equipe de Auditoria',
-                                         form_fields: ['evidence_collected'],
-                                         checklist: [
-                                           'Revisar política de segurança',
-                                           'Analisar procedimentos',
-                                           'Verificar registros de incidentes',
-                                           'Validar controles documentados',
-                                           'Registrar evidências'
-                                         ],
-                                         resources: ['Sistema documental', 'Registros de segurança'],
-                                         deliverables: ['Lista de evidências coletadas', 'Análise de gaps']
-                                       }
-                                     }
-                                   },
-                                   
-                                   {
-                                     id: 'interviews-observations',
-                                     type: 'task' as const,
-                                     position: { x: 580, y: 280 },
-                                     size: { width: 140, height: 100 },
-                                     data: {
-                                       label: 'Entrevistas e Observações',
-                                       description: 'Entrevistas com responsáveis e observação de processos',
-                                       properties: {
-                                         priority: 'critical',
-                                         duration: '3-4 dias',
-                                         assignee: 'Equipe de Auditoria',
-                                         form_fields: ['observations', 'positive_findings'],
-                                         checklist: [
-                                           'Entrevistar gestores de TI',
-                                           'Observar controles físicos',
-                                           'Testar controles técnicos',
-                                           'Verificar conscientização',
-                                           'Validar procedimentos na prática'
-                                         ],
-                                         resources: ['Roteiro de entrevistas', 'Ferramentas de teste'],
-                                         deliverables: ['Relatórios de entrevista', 'Registros de observação']
-                                       }
-                                     }
-                                   },
-                                   
-                                   // Consolidação dos Achados
-                                   {
-                                     id: 'findings-consolidation',
-                                     type: 'task' as const,
-                                     position: { x: 770, y: 200 },
-                                     size: { width: 140, height: 100 },
-                                     data: {
-                                       label: 'Consolidação de Achados',
-                                       description: 'Análise e classificação de todos os achados',
-                                       properties: {
-                                         priority: 'high',
+                                         step: 4,
+                                         form_fields: ['treatment_strategy', 'treatment_rationale', 'treatment_cost', 'treatment_timeline'],
+                                         validation_rules: ['treatment_strategy required', 'treatment_rationale required'],
+                                         wizard_component: 'Step4Treatment',
+                                         progress_weight: 14.3,
+                                         icon: 'Shield',
+                                         color: 'green',
+                                         responsible: 'Gestor de Riscos',
                                          duration: '1-2 dias',
-                                         assignee: 'Auditor Líder',
-                                         form_fields: ['nonconformities', 'overall_assessment', 'risk_level'],
-                                         checklist: [
-                                           'Consolidar todas as evidências',
-                                           'Classificar não conformidades',
-                                           'Avaliar impacto nos objetivos',
-                                           'Preparar matriz de achados',
-                                           'Validar com equipe'
-                                         ],
-                                         resources: ['Evidências coletadas', 'Critérios ISO 27001'],
-                                         deliverables: ['Matriz de achados classificados', 'Avaliação de impacto']
+                                         help_text: 'Defina a estratégia mais adequada para tratar o risco',
+                                         strategy_options: ['Evitar', 'Mitigar', 'Transferir', 'Aceitar'],
+                                         conditional_logic: 'Se Aceitar, pular para Etapa 6'
                                        }
                                      }
                                    },
                                    
-                                   // Decisão sobre Conformidade
+                                   // ETAPA 5: PLANO DE AÇÃO (Condicional)
                                    {
-                                     id: 'conformity-decision',
-                                     type: 'decision' as const,
-                                     position: { x: 960, y: 200 },
-                                     size: { width: 120, height: 120 },
-                                     data: {
-                                       label: 'Avaliação de Conformidade',
-                                       description: 'Decisão sobre o nível de conformidade encontrado',
-                                       properties: {
-                                         conditions: [
-                                           'Não conformidades críticas identificadas',
-                                           'Múltiplas não conformidades menores',
-                                           'Apenas observações identificadas',
-                                           'Plena conformidade'
-                                         ],
-                                         criteria: 'Classificação segundo ISO 19011',
-                                         timeout: '1 dia',
-                                         fallback_action: 'Reunião de equipe para decisão',
-                                         responsible: 'Auditor Líder'
-                                       }
-                                     }
-                                   },
-                                   
-                                   // Caminhos baseados na decisão
-                                   {
-                                     id: 'action-plan-required',
+                                     id: 'step5-action-plan',
                                      type: 'task' as const,
-                                     position: { x: 1130, y: 120 },
-                                     size: { width: 140, height: 100 },
+                                     position: { x: 730, y: 120 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Plano de Ação Requerido',
-                                       description: 'Definição de ações corretivas necessárias',
+                                       label: '5️⃣ Plano de Ação',
+                                       description: 'Atividades e responsáveis para implementar o tratamento',
                                        properties: {
-                                         priority: 'high',
-                                         duration: '1 dia',
-                                         assignee: 'Auditado + Auditor Líder',
-                                         form_fields: ['action_plan_required', 'followup_date'],
-                                         checklist: [
-                                           'Definir ações corretivas',
-                                           'Estabelecer prazos',
-                                           'Nomear responsáveis',
-                                           'Definir critérios de verificação',
-                                           'Agendar follow-up'
-                                         ],
-                                         resources: ['Template plano de ação'],
-                                         deliverables: ['Plano de ação aprovado']
+                                         step: 5,
+                                         form_fields: ['activity_1_name', 'activity_1_description', 'activity_1_responsible', 'activity_1_email', 'activity_1_due_date', 'activity_1_priority'],
+                                         validation_rules: [],
+                                         wizard_component: 'Step5ActionPlan',
+                                         progress_weight: 14.3,
+                                         icon: 'ClipboardList',
+                                         color: 'indigo',
+                                         responsible: 'Responsável pelas Ações',
+                                         duration: '1-3 dias',
+                                         help_text: 'Detalhe as atividades necessárias para tratar o risco',
+                                         conditional: 'Executa apenas se estratégia != Aceitar',
+                                         multiple_actions: true
                                        }
                                      }
                                    },
                                    
+                                   // ETAPA 6: COMUNICAÇÃO E STAKEHOLDERS
                                    {
-                                     id: 'continuous-improvement',
+                                     id: 'step6-communication',
                                      type: 'task' as const,
-                                     position: { x: 1130, y: 280 },
-                                     size: { width: 140, height: 100 },
+                                     position: { x: 730, y: 280 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Melhoria Contínua',
-                                       description: 'Identificação de oportunidades de melhoria',
+                                       label: '6️⃣ Comunicação',
+                                       description: 'Stakeholders e aprovação do registro de risco',
                                        properties: {
-                                         priority: 'medium',
-                                         duration: '1 dia',
-                                         assignee: 'Auditado',
-                                         form_fields: ['certification_impact'],
-                                         checklist: [
-                                           'Revisar oportunidades identificadas',
-                                           'Priorizar melhorias',
-                                           'Incorporar ao plano estratégico',
-                                           'Definir indicadores',
-                                           'Comunicar boas práticas'
-                                         ],
-                                         resources: ['Relatório de oportunidades'],
-                                         deliverables: ['Plano de melhorias']
+                                         step: 6,
+                                         form_fields: ['approval_person_name', 'approval_person_position', 'approval_person_email', 'awareness_person_name', 'awareness_person_email'],
+                                         validation_rules: ['approval_person_name required', 'approval_person_email required'],
+                                         wizard_component: 'Step6Communication',
+                                         progress_weight: 14.3,
+                                         icon: 'Users',
+                                         color: 'cyan',
+                                         responsible: 'Proprietário do Risco',
+                                         duration: '1-2 dias',
+                                         help_text: 'Defina quem deve aprovar e ser notificado sobre o risco',
+                                         notification_types: ['Aprovação', 'Ciência'],
+                                         auto_notify: true
                                        }
                                      }
                                    },
                                    
-                                   // Reunião de Encerramento
+                                   // ETAPA 7: MONITORAMENTO E ENCERRAMENTO
                                    {
-                                     id: 'closing-meeting',
+                                     id: 'step7-monitoring',
                                      type: 'task' as const,
-                                     position: { x: 1320, y: 200 },
-                                     size: { width: 140, height: 100 },
+                                     position: { x: 900, y: 200 },
+                                     size: { width: 120, height: 100 },
                                      data: {
-                                       label: 'Reunião de Encerramento',
-                                       description: 'Apresentação dos resultados finais',
+                                       label: '7️⃣ Monitoramento',
+                                       description: 'Acompanhamento e critérios de encerramento do risco',
                                        properties: {
-                                         priority: 'high',
-                                         duration: '2 horas',
-                                         assignee: 'Auditor Líder + Equipe',
-                                         checklist: [
-                                           'Apresentar achados finais',
-                                           'Explicar classificações',
-                                           'Discutir planos de ação',
-                                           'Esclarecer próximos passos',
-                                           'Obter concordância formal'
-                                         ],
-                                         resources: ['Apresentação dos resultados'],
-                                         deliverables: ['Ata de encerramento assinada']
+                                         step: 7,
+                                         form_fields: ['monitoring_frequency', 'monitoring_responsible', 'residual_impact', 'residual_likelihood', 'closure_criteria', 'closure_date'],
+                                         validation_rules: [],
+                                         wizard_component: 'Step7Monitoring',
+                                         progress_weight: 14.2,
+                                         icon: 'Eye',
+                                         color: 'gray',
+                                         responsible: 'Proprietário do Risco',
+                                         duration: 'Contínuo',
+                                         help_text: 'Configure como o risco será monitorado ao longo do tempo',
+                                         monitoring_options: ['Semanal', 'Mensal', 'Trimestral', 'Semestral', 'Anual'],
+                                         residual_calculation: true,
+                                         closure_automation: true
                                        }
                                      }
                                    },
                                    
-                                   // Relatório Final
+                                   // FINALIZAÇÃO: REGISTRO COMPLETO
                                    {
-                                     id: 'final-report',
-                                     type: 'task' as const,
-                                     position: { x: 1510, y: 200 },
-                                     size: { width: 140, height: 100 },
-                                     data: {
-                                       label: 'Relatório Final',
-                                       description: 'Elaboração e aprovação do relatório final',
-                                       properties: {
-                                         priority: 'high',
-                                         duration: '3-5 dias',
-                                         assignee: 'Auditor Líder',
-                                         checklist: [
-                                           'Consolidar todos os achados',
-                                           'Redigir relatório completo',
-                                           'Incluir evidências',
-                                           'Revisar tecnicamente',
-                                           'Obter aprovação final'
-                                         ],
-                                         resources: ['Template relatório ISO 27001'],
-                                         deliverables: ['Relatório final aprovado', 'Certificado de auditoria']
-                                       }
-                                     }
-                                   },
-                                   
-                                   // Notificação e Arquivamento
-                                   {
-                                     id: 'notification-filing',
+                                     id: 'completion-notification',
                                      type: 'notification' as const,
-                                     position: { x: 1700, y: 200 },
+                                     position: { x: 1070, y: 200 },
                                      size: { width: 120, height: 80 },
                                      data: {
-                                       label: 'Notificação e Arquivo',
-                                       description: 'Distribuição do relatório e arquivamento',
+                                       label: '✅ Registro Completo',
+                                       description: 'Notificação automática de conclusão do registro',
                                        properties: {
-                                         recipients: ['Direção', 'Auditados', 'Comitê de SI', 'Organismo Certificador'],
-                                         template: 'audit_completion_report',
-                                         channel: 'email_secure',
-                                         urgency: 'high',
-                                         retention_period: '3 anos'
+                                         recipients: ['Proprietário do Risco', 'Gestor da Área', 'Comitê de Riscos'],
+                                         template: 'risk_registration_complete',
+                                         channel: 'email_dashboard',
+                                         urgency: 'medium',
+                                         auto_trigger: true,
+                                         includes: ['Resumo do risco', 'Score calculado', 'Estratégia definida', 'Próximos passos'],
+                                         retention_period: '5 anos',
+                                         compliance_report: true
                                        }
                                      }
                                    }
                                  ],
                                  workflowConnections: [
-                                   // Fluxo principal sequencial
-                                   { id: 'conn1', source: 'start-audit-process', target: 'detailed-planning', type: 'default' as const, label: 'Aprovado' },
-                                   { id: 'conn2', source: 'detailed-planning', target: 'opening-meeting', type: 'default' as const, label: 'Plano Aprovado' },
+                                   // FLUXO SEQUENCIAL DO PROCESSO GUIADO DE RISCOS
+                                   { id: 'risk-conn-1', source: 'step1-identification', target: 'step2-analysis', type: 'default' as const, label: '1→ 2: Dados Básicos Completos' },
+                                   { id: 'risk-conn-2', source: 'step2-analysis', target: 'step3-classification', type: 'default' as const, label: '2→ 3: Análise Concluída' },
+                                   { id: 'risk-conn-3', source: 'step3-classification', target: 'step4-treatment', type: 'default' as const, label: '3→ 4: GUT Calculado' },
                                    
-                                   // Bifurcação para execução paralela
-                                   { id: 'conn3a', source: 'opening-meeting', target: 'document-review', type: 'default' as const, label: 'Iniciar Análise Documental' },
-                                   { id: 'conn3b', source: 'opening-meeting', target: 'interviews-observations', type: 'default' as const, label: 'Iniciar Entrevistas' },
+                                   // FLUXO CONDICIONAL BASEADO NA ESTRATÉGIA
+                                   { id: 'risk-conn-4a', source: 'step4-treatment', target: 'step5-action-plan', type: 'default' as const, label: '4→ 5: Mitigar/Evitar/Transferir' },
+                                   { id: 'risk-conn-4b', source: 'step4-treatment', target: 'step6-communication', type: 'default' as const, label: '4→ 6: Aceitar (Pular Plano)' },
                                    
-                                   // Convergência para consolidação
-                                   { id: 'conn4a', source: 'document-review', target: 'findings-consolidation', type: 'default' as const, label: 'Evidências Coletadas' },
-                                   { id: 'conn4b', source: 'interviews-observations', target: 'findings-consolidation', type: 'default' as const, label: 'Observações Completas' },
+                                   // CONVERGÊNCIA PARA COMUNICAÇÃO
+                                   { id: 'risk-conn-5', source: 'step5-action-plan', target: 'step6-communication', type: 'default' as const, label: '5→ 6: Plano Definido' },
                                    
-                                   // Decisão de conformidade
-                                   { id: 'conn5', source: 'findings-consolidation', target: 'conformity-decision', type: 'default' as const, label: 'Achados Consolidados' },
-                                   
-                                   // Caminhos condicionais
-                                   { id: 'conn6a', source: 'conformity-decision', target: 'action-plan-required', type: 'default' as const, label: 'Não Conformidades Críticas' },
-                                   { id: 'conn6b', source: 'conformity-decision', target: 'continuous-improvement', type: 'default' as const, label: 'Apenas Observações' },
-                                   
-                                   // Convergência para encerramento
-                                   { id: 'conn7a', source: 'action-plan-required', target: 'closing-meeting', type: 'default' as const, label: 'Plano Acordado' },
-                                   { id: 'conn7b', source: 'continuous-improvement', target: 'closing-meeting', type: 'default' as const, label: 'Melhorias Definidas' },
-                                   
-                                   // Finalização
-                                   { id: 'conn8', source: 'closing-meeting', target: 'final-report', type: 'default' as const, label: 'Reunião Concluída' },
-                                   { id: 'conn9', source: 'final-report', target: 'notification-filing', type: 'default' as const, label: 'Relatório Aprovado' }
+                                   // FINALIZAÇÃO DO PROCESSO
+                                   { id: 'risk-conn-6', source: 'step6-communication', target: 'step7-monitoring', type: 'default' as const, label: '6→ 7: Stakeholders Definidos' },
+                                   { id: 'risk-conn-7', source: 'step7-monitoring', target: 'completion-notification', type: 'default' as const, label: '7→ Fim: Registro Finalizado' }
                                  ]
                                };
                                
-                               setProcessName(auditTemplate.name);
-                               setFormFields(auditTemplate.formFields);
-                               setWorkflowNodes(auditTemplate.workflowNodes);
-                               setWorkflowConnections(auditTemplate.workflowConnections);
+                               setProcessName(riskManagementTemplate.name);
+                               setFormFields(riskManagementTemplate.formFields);
+                               setWorkflowNodes(riskManagementTemplate.workflowNodes);
+                               setWorkflowConnections(riskManagementTemplate.workflowConnections);
                                setShowInitialChoice(false);
                                setHasUnsavedChanges(true);
-                               toast.success('Template "Auditoria Interna ISO 27001" aplicado com sucesso!');
+                               toast.success('Template "Gestão de Riscos - Processo Guiado" aplicado com sucesso!');
                              }}>
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-semibold text-sm group-hover:text-blue-600">
-                                Auditoria Interna ISO 27001 - Processo Completo
+                              <h4 className="font-semibold text-sm group-hover:text-red-600">
+                                🧠 Gestão de Riscos - Processo Guiado Completo (Alex Risk)
                               </h4>
                               <p className="text-xs text-muted-foreground mt-1">
-                                Processo profissional completo baseado em ISO 19011. Inclui 18 campos integrados e 13 elementos de workflow com execução paralela e decisões condicionais.
+                                Sistema profissional de 7 etapas integradas baseado no wizard Alex Risk. Inclui 33 campos especializados, fluxos condicionais, cálculos automáticos e integração com biblioteca de riscos.
                               </p>
                               <div className="flex gap-2 mt-2 flex-wrap">
-                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">ISO 27001</span>
-                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">Auditoria</span>
-                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Compliance</span>
-                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Profissional</span>
+                                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs rounded">Alex Risk IA</span>
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Wizard Guiado</span>
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">7 Etapas</span>
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">Profissional</span>
+                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Multi-Formulários</span>
                               </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Template: Gestão de Riscos ISO 31000 Completa */}
-                        <div className="border rounded-lg p-4 hover:border-red-300 cursor-pointer group"
+                        {/* Template: Auditoria Interna - Processo Profissional Completo */}
+                        <div className="border rounded-lg p-4 hover:border-blue-300 cursor-pointer group"
                              onClick={() => {
-                               const riskTemplate = {
-                                 name: 'Gestão de Riscos ISO 31000 - Processo Empresarial Completo',
-                                 description: 'Processo completo de gestão de riscos baseado em ISO 31000 com múltiplos formulários e análise quantitativa',
+                               const auditTemplate = {
+                                 name: 'Auditoria Interna - Processo Profissional Completo',
+                                 description: 'Sistema completo de auditoria interna com workflow estruturado, múltiplos formulários integrados e conformidade ISO 19011',
                                  formFields: [
                                    // Formulário de Identificação do Risco
                                    { id: 'risk_id', type: 'text' as const, label: 'ID do Risco', required: true, placeholder: 'RSK-OP-2024-001' },
@@ -5315,30 +5233,31 @@ export const AlexProcessDesignerEnhancedModal: React.FC<AlexProcessDesignerEnhan
                                  ]
                                };
                                
-                               setProcessName(riskTemplate.name);
-                               setFormFields(riskTemplate.formFields);
-                               setWorkflowNodes(riskTemplate.workflowNodes);
-                               setWorkflowConnections(riskTemplate.workflowConnections);
+                               setProcessName(auditTemplate.name);
+                               setFormFields(auditTemplate.formFields);
+                               setWorkflowNodes(auditTemplate.workflowNodes);
+                               setWorkflowConnections(auditTemplate.workflowConnections);
                                setShowInitialChoice(false);
                                setHasUnsavedChanges(true);
-                               toast.success('Template "Gestão de Riscos ISO 31000" aplicado com sucesso!');
+                               toast.success('Template "Auditoria Interna Profissional" aplicado com sucesso!');
                              }}>
                           <div className="flex items-start gap-3">
-                            <div className="p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="flex-1">
-                              <h4 className="font-semibold text-sm group-hover:text-red-600">
-                                Gestão de Riscos ISO 31000 - Processo Empresarial Completo
+                              <h4 className="font-semibold text-sm group-hover:text-blue-600">
+                                🔍 Auditoria Interna - Processo Profissional Completo
                               </h4>
                               <p className="text-xs text-muted-foreground mt-1">
-                                Framework completo baseado em ISO 31000 com análise quantitativa e qualitativa. Inclui 26 campos integrados, 15 elementos de workflow com execução paralela, decisões condicionais e ciclos de revisão.
+                                Sistema completo de auditoria interna baseado em ISO 19011. Workflow estruturado com múltiplas fases, formulários especializados, coleta de evidências e relatórios automáticos.
                               </p>
                               <div className="flex gap-2 mt-2 flex-wrap">
-                                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-xs rounded">ISO 31000</span>
-                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Quantitativo</span>
-                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Enterprise</span>
-                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">Profissional</span>
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded">ISO 19011</span>
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-xs rounded">Auditoria</span>
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs rounded">Evidências</span>
+                                <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 text-xs rounded">Relatórios</span>
+                                <span className="px-2 py-1 bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 text-xs rounded">Profissional</span>
                               </div>
                             </div>
                           </div>

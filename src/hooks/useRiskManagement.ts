@@ -180,7 +180,14 @@ export const useRiskManagement = () => {
   } = useQuery({
     queryKey: ['risks', userTenantId],
     queryFn: async (): Promise<Risk[]> => {
+      console.log('🔍 [QUERY] Iniciando busca de riscos:', {
+        userTenantId,
+        hasUser: !!user,
+        userId: user?.id
+      });
+      
       if (!userTenantId) {
+        console.error('❌ [QUERY] Tenant ID não encontrado');
         await logActivity('invalid_access', {
           action: 'query_risks_without_tenant',
           reason: 'No tenant ID found'
@@ -188,8 +195,32 @@ export const useRiskManagement = () => {
         throw new Error('Acesso negado: tenant não identificado');
       }
 
-      // Buscar riscos com filtro por tenant - ALTERADO PARA risk_registrations
-      // Incluir todos os campos necessários para exibição completa
+      console.log('🔍 [QUERY] Executando query no Supabase...');
+      
+      // TESTE: Primeiro verificar se os campos existem na tabela
+      console.log('🔍 [QUERY] Testando existência dos campos do wizard...');
+      
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('risk_registrations')
+          .select('id, activity_1_name, awareness_person_1_name, treatment_rationale')
+          .limit(1);
+          
+        if (testError) {
+          console.error('❌ [QUERY] Erro ao testar campos:', testError.message);
+          if (testError.message.includes('column') && testError.message.includes('does not exist')) {
+            console.error('🚨 [QUERY] CAMPOS DO WIZARD NÃO EXISTEM NA TABELA!');
+            console.error('🚨 [QUERY] Execute o script EXECUTE_IN_SUPABASE.sql primeiro!');
+          }
+        } else {
+          console.log('✅ [QUERY] Campos do wizard existem na tabela');
+        }
+      } catch (err) {
+        console.error('❌ [QUERY] Erro no teste de campos:', err);
+      }
+      
+      // Buscar riscos com filtro por tenant - COM JOINs CORRETOS
+      // Usar nomes corretos das tabelas relacionadas
       const { data, error } = await supabase
         .from('risk_registrations')
         .select(`
@@ -198,25 +229,66 @@ export const useRiskManagement = () => {
             id,
             activity_name,
             activity_description,
-            responsible_person,
+            responsible_name,
             responsible_email,
+            due_date,
             priority,
             status,
-            due_date
+            created_at
           ),
           risk_stakeholders(
             id,
-            person_name,
-            person_position,
-            person_email,
-            stakeholder_type,
-            notification_status
+            name,
+            position,
+            email,
+            notification_type,
+            response_status
           )
         `)
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
 
+      console.log('🔍 [QUERY] Resultado da query:', {
+        hasData: !!data,
+        dataLength: data?.length || 0,
+        hasError: !!error,
+        error: error?.message
+      });
+      
+      // LOG ESPECÍFICO: Verificar registro 005092025
+      const targetRisk = data?.find(r => r.risk_code === '005092025' || r.id.includes('005092025') || r.risk_title?.includes('005092025'));
+      if (targetRisk) {
+        console.log('🎯 [SPECIFIC] Registro 005092025 encontrado:', {
+          id: targetRisk.id,
+          risk_code: targetRisk.risk_code,
+          risk_title: targetRisk.risk_title,
+          // Campos do plano de ação na tabela principal
+          activity_1_name: targetRisk.activity_1_name,
+          activity_1_description: targetRisk.activity_1_description,
+          activity_1_responsible: targetRisk.activity_1_responsible,
+          activity_1_email: targetRisk.activity_1_email,
+          // Campos de comunicação na tabela principal
+          awareness_person_1_name: targetRisk.awareness_person_1_name,
+          awareness_person_1_position: targetRisk.awareness_person_1_position,
+          awareness_person_1_email: targetRisk.awareness_person_1_email,
+          approval_person_1_name: targetRisk.approval_person_1_name,
+          approval_person_1_position: targetRisk.approval_person_1_position,
+          approval_person_1_email: targetRisk.approval_person_1_email,
+          // Arrays das tabelas relacionadas
+          risk_registration_action_plans_count: targetRisk.risk_registration_action_plans?.length || 0,
+          risk_stakeholders_count: targetRisk.risk_stakeholders?.length || 0,
+          // Dados de tratamento
+          treatment_rationale: targetRisk.treatment_rationale,
+          treatment_cost: targetRisk.treatment_cost,
+          treatment_timeline: targetRisk.treatment_timeline
+        });
+      } else {
+        console.log('⚠️ [SPECIFIC] Registro 005092025 NÃO encontrado na query');
+        console.log('🔍 [SPECIFIC] Códigos disponíveis:', data?.map(r => r.risk_code || r.id).slice(0, 10));
+      }
+
       if (error) {
+        console.error('❌ [QUERY] Erro na query:', error);
         await logActivity('security_violation', {
           action: 'query_risks_error',
           error: error.message
@@ -224,9 +296,25 @@ export const useRiskManagement = () => {
         throw error;
       }
 
+      console.log('🔍 [VALIDATION] Validando dados por tenant:', {
+        totalRecords: data?.length || 0,
+        userTenantId,
+        firstRecordTenantId: data?.[0]?.tenant_id
+      });
+      
       // Validar que todos os dados pertencem ao tenant correto
-      const validatedData = (data || []).filter(risk => {
-        if (risk.tenant_id !== userTenantId) {
+      const validatedData = (data || []).filter((risk, index) => {
+        const isValid = risk.tenant_id === userTenantId;
+        
+        console.log(`🔍 [VALIDATION] Registro ${index + 1}:`, {
+          riskId: risk.id,
+          riskTenantId: risk.tenant_id,
+          userTenantId,
+          isValid
+        });
+        
+        if (!isValid) {
+          console.warn(`⚠️ [VALIDATION] Registro ${index + 1} rejeitado por tenant diferente`);
           logActivity('cross_tenant_attempt', {
             action: 'risk_data_validation_failed',
             riskId: risk.id,
@@ -237,20 +325,52 @@ export const useRiskManagement = () => {
         }
         return true;
       });
+      
+      console.log('🔍 [VALIDATION] Resultado da validação:', {
+        originalCount: data?.length || 0,
+        validatedCount: validatedData.length,
+        filteredOut: (data?.length || 0) - validatedData.length
+      });
 
       // LOG TEMPORÁRIO: Verificar dados brutos do Supabase
       console.log('🔍 DADOS BRUTOS DO SUPABASE:', validatedData.map(r => ({
         id: r.id,
         risk_title: r.risk_title,
         risk_code: r.risk_code,
-        treatment_rationale: r.treatment_rationale,
+        treatment_rationale: r.treatment_rationale ? 'TEM DADOS' : 'VAZIO',
         activity_1_name: r.activity_1_name,
+        activity_1_description: r.activity_1_description ? 'TEM DADOS' : 'VAZIO',
         awareness_person_1_name: r.awareness_person_1_name,
-        monitoring_frequency: r.monitoring_frequency
+        monitoring_frequency: r.monitoring_frequency,
+        // Dados das tabelas relacionadas
+        risk_registration_action_plans: r.risk_registration_action_plans?.length || 0,
+        risk_stakeholders: r.risk_stakeholders?.length || 0
       })));
 
+      console.log('🔍 [TRANSFORM] Iniciando transformação de', validatedData.length, 'registros');
+      
       // Transformar dados do Supabase para o formato da aplicação
-      const transformedRisks = validatedData.map(transformSupabaseRiskToRisk);
+      const transformedRisks = validatedData.map((supabaseRisk, index) => {
+        console.log(`🔍 [TRANSFORM] Transformando registro ${index + 1}:`, {
+          id: supabaseRisk.id,
+          risk_title: supabaseRisk.risk_title,
+          status: supabaseRisk.status,
+          current_step: supabaseRisk.current_step
+        });
+        
+        try {
+          const transformed = transformSupabaseRiskToRisk(supabaseRisk);
+          console.log(`✅ [TRANSFORM] Registro ${index + 1} transformado com sucesso:`, {
+            id: transformed.id,
+            name: transformed.name,
+            status: transformed.status
+          });
+          return transformed;
+        } catch (error) {
+          console.error(`❌ [TRANSFORM] Erro ao transformar registro ${index + 1}:`, error);
+          throw error;
+        }
+      });
       
       // LOG TEMPORÁRIO: Verificar dados transformados
       console.log('🔍 DADOS TRANSFORMADOS:', transformedRisks.map(r => ({
@@ -263,13 +383,14 @@ export const useRiskManagement = () => {
         monitoring_frequency: r.monitoring_frequency
       })));
       
+      console.log('✅ [QUERY] Retornando', transformedRisks.length, 'riscos transformados');
       return transformedRisks;
     },
     enabled: !!user && !!userTenantId,
-    staleTime: 5 * 60 * 1000, // 5 minutos de cache
-    gcTime: 10 * 60 * 1000,   // 10 minutos na memória
-    refetchOnMount: false,    // Não refetch automático
-    refetchOnWindowFocus: false // Não refetch no foco
+    staleTime: 0, // TEMPORARIAMENTE DESABILITADO PARA DEBUG
+    gcTime: 0,    // TEMPORARIAMENTE DESABILITADO PARA DEBUG
+    refetchOnMount: true,     // TEMPORARIAMENTE HABILITADO PARA DEBUG
+    refetchOnWindowFocus: true // TEMPORARIAMENTE HABILITADO PARA DEBUG
   });
 
   // Query otimizada para métricas críticas - apenas dados essenciais
@@ -755,6 +876,14 @@ export const useRiskManagement = () => {
 
 
   const transformSupabaseRiskToRisk = (supabaseRisk: any): Risk => {
+    console.log('🔍 [TRANSFORM-DETAIL] Transformando risco:', {
+      id: supabaseRisk.id,
+      risk_title: supabaseRisk.risk_title,
+      status: supabaseRisk.status,
+      current_step: supabaseRisk.current_step,
+      hasRiskTitle: !!supabaseRisk.risk_title
+    });
+    
     // Usar descrição diretamente
     const description = supabaseRisk.risk_description || '';
     
@@ -766,6 +895,13 @@ export const useRiskManagement = () => {
     const impact = supabaseRisk.impact_score || 3;
     const riskScore = supabaseRisk.risk_score || (probability * impact);
     
+    console.log('🔍 [TRANSFORM-DETAIL] Dados calculados:', {
+      finalStatus,
+      probability,
+      impact,
+      riskScore
+    });
+    
     const transformedRisk = {
       id: supabaseRisk.id,
       riskCode: supabaseRisk.risk_code,
@@ -774,10 +910,22 @@ export const useRiskManagement = () => {
       category: supabaseRisk.risk_category || 'Operacional',
       probability: probability,
       impact: impact,
+      // ADICIONAR CAMPOS ORIGINAIS PARA COMPATIBILIDADE
+      impact_score: supabaseRisk.impact_score,
+      likelihood_score: supabaseRisk.likelihood_score,
+      risk_score: supabaseRisk.risk_score,
       riskScore: riskScore,
       riskLevel: mapRiskLevel(supabaseRisk.risk_level) || 'Médio',
       status: finalStatus,
       treatmentType: supabaseRisk.treatment_strategy || 'Mitigar',
+      // ADICIONAR CAMPOS ADICIONAIS PARA COMPATIBILIDADE TOTAL
+      risk_title: supabaseRisk.risk_title,
+      risk_description: supabaseRisk.risk_description,
+      risk_code: supabaseRisk.risk_code,
+      risk_level: supabaseRisk.risk_level,
+      treatment_strategy: supabaseRisk.treatment_strategy,
+      created_at: supabaseRisk.created_at,
+      updated_at: supabaseRisk.updated_at,
       owner: supabaseRisk.created_by || '',
       assignedTo: supabaseRisk.assigned_to || '',
       identifiedDate: supabaseRisk.identified_date ? new Date(supabaseRisk.identified_date) : new Date(supabaseRisk.created_at),
@@ -805,14 +953,18 @@ export const useRiskManagement = () => {
       // Dados de monitoramento
       monitoring_frequency: supabaseRisk.monitoring_frequency,
       monitoring_responsible: supabaseRisk.monitoring_responsible,
+      monitoring_indicators: supabaseRisk.monitoring_indicators,
+      monitoring_notes: supabaseRisk.monitoring_notes,
       residual_impact: supabaseRisk.residual_impact,
       residual_likelihood: supabaseRisk.residual_likelihood,
       residual_score: supabaseRisk.residual_score,
+      residual_risk_level: supabaseRisk.residual_risk_level,
       closure_criteria: supabaseRisk.closure_criteria,
       closure_notes: supabaseRisk.closure_notes,
       closure_date: supabaseRisk.closure_date ? new Date(supabaseRisk.closure_date) : undefined,
+      review_date: supabaseRisk.review_date ? new Date(supabaseRisk.review_date) : undefined,
       
-      // Dados de atividades do plano de ação
+      // Dados de atividades do plano de ação - CAMPOS DIRETOS DA TABELA PRINCIPAL
       activity_1_name: supabaseRisk.activity_1_name,
       activity_1_description: supabaseRisk.activity_1_description,
       activity_1_responsible: supabaseRisk.activity_1_responsible,
@@ -821,7 +973,7 @@ export const useRiskManagement = () => {
       activity_1_status: supabaseRisk.activity_1_status,
       activity_1_due_date: supabaseRisk.activity_1_due_date ? new Date(supabaseRisk.activity_1_due_date) : undefined,
       
-      // Dados de comunicação/stakeholders
+      // Dados de comunicação/stakeholders - CAMPOS DIRETOS DA TABELA PRINCIPAL
       awareness_person_1_name: supabaseRisk.awareness_person_1_name,
       awareness_person_1_position: supabaseRisk.awareness_person_1_position,
       awareness_person_1_email: supabaseRisk.awareness_person_1_email,
@@ -829,6 +981,10 @@ export const useRiskManagement = () => {
       approval_person_1_position: supabaseRisk.approval_person_1_position,
       approval_person_1_email: supabaseRisk.approval_person_1_email,
       approval_person_1_status: supabaseRisk.approval_person_1_status,
+      
+      // Arrays de dados relacionados (carregados via JOIN) - CORRIGIDO
+      risk_action_plans: supabaseRisk.risk_registration_action_plans || [],
+      risk_stakeholders: supabaseRisk.risk_stakeholders || [],
       
       analysisData: {
         gut_analysis: {

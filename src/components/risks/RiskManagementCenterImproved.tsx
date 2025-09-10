@@ -67,7 +67,7 @@ const ViewLoader = () => (
 // Temporariamente voltar aos imports síncronos para resolver erro crítico
 import { DashboardView } from './views/DashboardView';
 import { TableView } from './views/TableView';
-import { ExpandableCardsView } from './views/ExpandableCardsView';
+import ExpandableCardsView from './views/ExpandableCardsView';
 import { KanbanView } from './views/KanbanView';
 import { ProcessView } from './views/ProcessView';
 import { RiskMatrixView } from './views/RiskMatrixView';

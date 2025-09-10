@@ -88,6 +88,7 @@ export interface Risk {
   
   // Arrays de dados relacionados (carregados via JOIN)
   risk_registration_action_plans?: any[];
+  risk_action_plans?: any[]; // Tabela correta para action plans
   risk_stakeholders?: any[];
   
   // Gestão
@@ -437,12 +438,16 @@ export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   // Dados de monitoramento
   monitoring_frequency?: string;
   monitoring_responsible?: string;
+  monitoring_indicators?: string[];
+  monitoring_notes?: string;
   residual_impact?: number;
   residual_likelihood?: number;
   residual_score?: number;
+  residual_risk_level?: string;
   closure_criteria?: string;
   closure_notes?: string;
   closure_date?: Date;
+  review_date?: Date;
 }
 
 export interface CreateActivityRequest {

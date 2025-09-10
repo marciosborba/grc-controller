@@ -14,9 +14,14 @@ interface RiskMatrixViewProps {
 
 const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) => {
   const riskValue = impact * likelihood;
-  const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5';
+  const matrixType = tenantSettings?.risk_matrix?.type;
   
-  if (isMatrix5x5) {
+  if (matrixType === '3x3') {
+    // Matriz 3x3: Baixo (1-2), Médio (3-4), Alto (5-9)
+    if (riskValue >= 5) return 'bg-red-500 text-white'; // Alto (5-9) - VERMELHO
+    else if (riskValue >= 3) return 'bg-yellow-500 text-white'; // Médio (3-4) - AMARELO
+    else return 'bg-green-500 text-white'; // Baixo (1-2) - VERDE
+  } else if (matrixType === '5x5') {
     // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Crítico (20-25)
     if (riskValue >= 20) return 'bg-red-500 text-white'; // Crítico (20-25) - VERMELHO
     else if (riskValue >= 9) return 'bg-orange-500 text-white'; // Alto (9-19) - LARANJA
@@ -35,22 +40,54 @@ const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) =
 // Função para calcular o nível de risco consistente com as cores
 const calculateConsistentRiskLevel = (impact: number, likelihood: number, tenantSettings: any) => {
   const riskValue = impact * likelihood;
-  const isMatrix5x5 = tenantSettings?.risk_matrix?.type === '5x5';
   
-  if (isMatrix5x5) {
-    // Matriz 5x5: Muito Baixo (1-2), Baixo (3-4), Médio (5-8), Alto (9-19), Crítico (20-25)
-    if (riskValue >= 20) return 'Crítico';
-    else if (riskValue >= 9) return 'Alto';
-    else if (riskValue >= 5) return 'Médio';
-    else if (riskValue >= 3) return 'Baixo';
-    else return 'Muito Baixo';
-  } else {
-    // Matriz 4x4: Baixo (1-2), Médio (3-7), Alto (8-15), Crítico (16)
-    if (riskValue >= 16) return 'Crítico';
-    else if (riskValue >= 8) return 'Alto';
-    else if (riskValue >= 3) return 'Médio';
-    else return 'Baixo';
+  // console.log(`calculateConsistentRiskLevel: impact=${impact}, likelihood=${likelihood}, score=${riskValue}`);
+  // console.log('tenantSettings.risk_matrix:', tenantSettings?.risk_matrix);
+  
+  // Usar as faixas EXATAS da configuração salva (matriz verdadeira)
+  if (tenantSettings?.risk_matrix?.risk_levels) {
+    const { risk_levels } = tenantSettings.risk_matrix;
+    
+    // console.log('risk_levels:', risk_levels);
+    
+    // Verificar em qual faixa o valor se encaixa
+    if (risk_levels.critical && risk_levels.critical.includes(riskValue)) {
+      // console.log('Resultado: Crítico');
+      return 'Crítico';
+    }
+    if (risk_levels.high && risk_levels.high.includes(riskValue)) {
+      // console.log('Resultado: Alto');
+      return 'Alto';
+    }
+    if (risk_levels.medium && risk_levels.medium.includes(riskValue)) {
+      // console.log('Resultado: Médio');
+      return 'Médio';
+    }
+    if (risk_levels.low && risk_levels.low.includes(riskValue)) {
+      // console.log('Resultado: Baixo');
+      return 'Baixo';
+    }
+    
+    // Se não encontrou em nenhuma faixa, usar fallback baseado no tipo
+    const matrixType = tenantSettings.risk_matrix.type;
+    // console.log('Usando fallback para tipo:', matrixType);
+    if (matrixType === '3x3') {
+      const result = riskValue >= 5 ? 'Alto' : riskValue >= 3 ? 'Médio' : 'Baixo';
+      // console.log('Resultado fallback 3x3:', result);
+      return result;
+    } else if (matrixType === '5x5') {
+      return riskValue >= 17 ? 'Crítico' : riskValue >= 9 ? 'Alto' : riskValue >= 5 ? 'Médio' : riskValue >= 3 ? 'Baixo' : 'Muito Baixo';
+    } else {
+      return riskValue >= 11 ? 'Crítico' : riskValue >= 7 ? 'Alto' : riskValue >= 3 ? 'Médio' : 'Baixo';
+    }
   }
+  
+  // Fallback se não há configuração (usar padrão 4x4)
+  // console.log('Usando fallback padrão');
+  if (riskValue >= 11) return 'Crítico';
+  else if (riskValue >= 7) return 'Alto';
+  else if (riskValue >= 3) return 'Médio';
+  else return 'Baixo';
 };
 
 // Função para badges com lógica simples baseada no nível calculado
@@ -73,6 +110,38 @@ const getRiskBadgeStyle = (riskLevel: string) => {
   }
 };
 
+// Função para badges de estratégia de tratamento
+const getTreatmentBadgeStyle = (strategy: string) => {
+  switch (strategy?.toLowerCase()) {
+    case 'mitigate':
+      return { backgroundColor: '#3b82f6', color: '#ffffff', label: 'Mitigar' }; // Azul
+    case 'transfer':
+      return { backgroundColor: '#8b5cf6', color: '#ffffff', label: 'Transferir' }; // Roxo
+    case 'avoid':
+      return { backgroundColor: '#ef4444', color: '#ffffff', label: 'Evitar' }; // Vermelho
+    case 'accept':
+      return { backgroundColor: '#22c55e', color: '#ffffff', label: 'Aceitar' }; // Verde
+    default:
+      return { backgroundColor: '#6b7280', color: '#ffffff', label: 'Não Definido' }; // Cinza
+  }
+};
+
+// Função para badges de status
+const getStatusBadgeStyle = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'draft':
+      return { backgroundColor: '#6b7280', color: '#ffffff', label: 'Rascunho' }; // Cinza
+    case 'in_progress':
+      return { backgroundColor: '#f59e0b', color: '#ffffff', label: 'Em Andamento' }; // Amarelo
+    case 'completed':
+      return { backgroundColor: '#10b981', color: '#ffffff', label: 'Concluído' }; // Verde
+    case 'cancelled':
+      return { backgroundColor: '#ef4444', color: '#ffffff', label: 'Cancelado' }; // Vermelho
+    default:
+      return { backgroundColor: '#6b7280', color: '#ffffff', label: 'Desconhecido' }; // Cinza
+  }
+};
+
 export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
   risks,
   searchTerm = '',
@@ -86,10 +155,18 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
     calculateRiskLevel, 
     getMatrixLabels, 
     getMatrixDimensions,
-    getRiskLevels,
-    isMatrix4x4,
-    isMatrix5x5 
-  } = useTenantSettings();
+    getRiskLevels
+  } = useTenantSettings(); // Sem tenantId específico - usa o do usuário logado
+  
+  // DEBUG: Verificar se os dados estão chegando
+  console.log('🔍 RiskMatrixView - Dados recebidos:', {
+    risksLength: risks?.length || 0,
+    risks: risks?.slice(0, 3).map(r => ({ id: r.id, risk_title: r.risk_title, name: r.name })),
+    searchTerm,
+    filters,
+    settingsLoading,
+    tenantSettings: tenantSettings?.risk_matrix?.type
+  });
 
   // Criar níveis dinâmicos baseados na configuração da tenant
   const matrixLabels = useMemo(() => getMatrixLabels(), [tenantSettings]);
@@ -98,34 +175,23 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
 
   // Criar arrays de níveis dinâmicos
   const impactLevels = useMemo(() => {
-    return matrixLabels.impact.map((label, index) => {
-      // Definir labels customizados que progridem de baixo para cima
-      const getCustomLabel = (index: number, originalLength: number) => {
-        if (originalLength === 4) {
-          // Para matriz 4x4: index 0 = topo (level 4), index 3 = base (level 1)
-          switch(index) {
-            case 0: return 'Maior';         // Topo (level 4) - Vermelho
-            case 1: return 'Moderado';      // level 3 - Laranja
-            case 2: return 'Menor';         // level 2 - Amarelo
-            case 3: return 'Insignificante'; // Base (level 1) - Verde
-            default: return label;
-          }
-        } else {
-          // Para matriz 5x5: index 0 = topo (level 5), index 4 = base (level 1)
-          switch(index) {
-            case 0: return 'Maior';         // Topo (level 5) - Vermelho
-            case 1: return 'Alto';          // level 4 - Laranja
-            case 2: return 'Moderado';      // level 3 - Amarelo
-            case 3: return 'Menor';         // level 2 - Verde
-            case 4: return 'Insignificante'; // Base (level 1) - Azul
-            default: return label;
-          }
-        }
-      };
+    // Inverter a ordem dos labels para exibir de cima para baixo (Alto -> Baixo)
+    const reversedLabels = [...matrixLabels.impact].reverse();
+    
+    return reversedLabels.map((label, index) => {
+      // Para matriz 3x3: index 0 = Alto (level 3), index 1 = Médio (level 2), index 2 = Baixo (level 1)
+      const level = matrixLabels.impact.length - index;
       
-      // Definir cores baseadas no level (não no index)
-      const getImpactColor = (level: number, originalLength: number) => {
-        if (originalLength === 4) {
+      // Definir cores baseadas no level para matriz 3x3
+      const getImpactColor = (level: number, matrixType: string) => {
+        if (matrixType === '3x3') {
+          switch(level) {
+            case 1: return 'bg-green-500 text-white';    // Baixo (base)
+            case 2: return 'bg-yellow-500 text-white';   // Médio
+            case 3: return 'bg-red-500 text-white';      // Alto (topo)
+            default: return 'bg-gray-500 text-white';
+          }
+        } else if (matrixType === '4x4') {
           switch(level) {
             case 1: return 'bg-green-500 text-white';    // Insignificante (base)
             case 2: return 'bg-yellow-500 text-white';   // Menor
@@ -145,70 +211,203 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
         }
       };
       
-      const level = matrixLabels.impact.length - index; // MANTER lógica original da matriz (5,4,3,2,1)
-      
       return {
         level,
-        label: getCustomLabel(index, matrixLabels.impact.length),
-        color: getImpactColor(level, matrixLabels.impact.length)
+        label, // Usar o label EXATO da configuração
+        color: getImpactColor(level, tenantSettings?.risk_matrix?.type || '5x5')
       };
     });
-  }, [matrixLabels.impact]);
+  }, [matrixLabels.impact, tenantSettings?.risk_matrix?.type]);
 
   const likelihoodLevels = useMemo(() => {
     return matrixLabels.likelihood.map((label, index) => {
-      // Usar EXATAMENTE as mesmas cores dos labels de impacto (texto branco em todos)
-      const getLikelihoodColor = (index: number) => {
-        if (matrixLabels.likelihood.length === 4) {
-          // Para matriz 4x4: Baixo, Médio, Alto, Crítico (igual aos labels de impacto)
+      // Definir cores baseadas no tipo de matriz
+      const getLikelihoodColor = (index: number, matrixType: string) => {
+        if (matrixType === '3x3') {
+          // Para matriz 3x3: cores progressivas
+          switch(index) {
+            case 0: return 'bg-green-500 text-white';    // Raro
+            case 1: return 'bg-yellow-500 text-white';   // Possível
+            case 2: return 'bg-red-500 text-white';      // Provável
+            default: return 'bg-gray-500 text-white';
+          }
+        } else if (matrixType === '4x4') {
           switch(index) {
             case 0: return 'bg-green-500 text-white';    // Baixo
             case 1: return 'bg-yellow-500 text-white';   // Médio
             case 2: return 'bg-orange-500 text-white';   // Alto  
-            case 3: return 'bg-red-500 text-white';      // Crítico - VERMELHO
+            case 3: return 'bg-red-500 text-white';      // Crítico
             default: return 'bg-gray-500 text-white';
           }
         } else {
-          // Para matriz 5x5: Muito Baixo, Baixo, Médio, Alto, Muito Alto (igual aos labels de impacto)
+          // Para matriz 5x5
           switch(index) {
             case 0: return 'bg-blue-500 text-white';     // Muito Baixo
             case 1: return 'bg-green-500 text-white';    // Baixo
             case 2: return 'bg-yellow-500 text-white';   // Médio
             case 3: return 'bg-orange-500 text-white';   // Alto
-            case 4: return 'bg-red-500 text-white';      // Muito Alto - VERMELHO
+            case 4: return 'bg-red-500 text-white';      // Muito Alto
             default: return 'bg-gray-500 text-white';
           }
         }
       };
 
       return {
-        level: index + 1, // Ordem normal (1,2,3,4,5 ou 1,2,3,4)
-        label,
-        color: getLikelihoodColor(index)
+        level: index + 1, // Ordem normal (1,2,3 para 3x3)
+        label, // Usar o label EXATO da configuração
+        color: getLikelihoodColor(index, tenantSettings?.risk_matrix?.type || '5x5')
       };
     });
-  }, [matrixLabels.likelihood]);
+  }, [matrixLabels.likelihood, tenantSettings?.risk_matrix?.type]);
 
   // Filtrar e processar riscos
   const processedRisks = useMemo(() => {
-    if (settingsLoading) return [];
-    
-    return risks.filter(risk => {
-      if (searchTerm && !risk.name?.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      return true;
-    }).map(risk => {
-      // Usar os campos corretos da database: impact_assessment e likelihood_assessment
-      const impact = risk.impact_assessment || risk.impact_score || risk.impact || 1;
-      const likelihood = risk.likelihood_assessment || risk.likelihood_score || risk.likelihood || 1;
-      
-      return {
-        ...risk,
-        impact: Math.min(Math.max(impact, 1), matrixDimensions.rows), // Garantir que está dentro dos limites
-        likelihood: Math.min(Math.max(likelihood, 1), matrixDimensions.cols)
-      };
+    console.log('🔍 processedRisks - Iniciando processamento:', {
+      settingsLoading,
+      risksLength: risks?.length || 0,
+      firstRisk: risks?.[0]
     });
+    
+    if (settingsLoading) {
+      console.log('🔍 processedRisks - Settings ainda carregando, retornando array vazio');
+      return [];
+    }
+    
+    console.log('🔍 processedRisks - Processando', risks?.length || 0, 'riscos');
+      
+    const result = risks
+      .filter(risk => {
+        console.log('🔍 Filtrando risco:', {
+          id: risk.id,
+          risk_title: risk.risk_title,
+          name: risk.name,
+          risk_code: risk.risk_code,
+          status: risk.status,
+          hasAnyIdentifier: !!(risk.risk_title || risk.name || risk.risk_code)
+        });
+        
+        // FILTRO MUITO MAIS PERMISSIVO: aceitar qualquer risco que tenha pelo menos um identificador
+        const hasIdentifier = risk.risk_title || risk.name || risk.risk_code;
+        if (!hasIdentifier) {
+          console.log('🔍 Risco rejeitado - sem identificador:', risk.id);
+          return false;
+        }
+        
+        // Aplicar filtro de busca apenas se houver termo de busca
+        if (searchTerm && searchTerm.trim() !== '') {
+          const searchLower = searchTerm.toLowerCase();
+          const matchesTitle = risk.risk_title?.toLowerCase().includes(searchLower);
+          const matchesName = risk.name?.toLowerCase().includes(searchLower);
+          const matchesCode = risk.risk_code?.toLowerCase().includes(searchLower);
+          
+          if (!matchesTitle && !matchesName && !matchesCode) {
+            console.log('🔍 Risco rejeitado - não corresponde à busca:', risk.id);
+            return false;
+          }
+        }
+        
+        console.log('🔍 Risco aceito:', risk.id);
+        return true;
+      })
+      .map(risk => {
+        // Usar os campos corretos da database, SEM fallback que pode mascarar dados reais
+        const impact = risk.impact_score || risk.impact || 0;
+        const likelihood = risk.likelihood_score || risk.likelihood || risk.probability_score || 0;
+        
+        // Log especial para o risco Vazamento de Credenciais
+        if (risk.risk_title?.includes('Vazamento') || risk.risk_code === '005092025') {
+          console.log(`🎯 RISCO ESPECÍFICO - ${risk.risk_code} (${risk.risk_title}):`, {
+            raw_risk: risk,
+            impact_score: risk.impact_score,
+            likelihood_score: risk.likelihood_score,
+            impact: risk.impact,
+            likelihood: risk.likelihood,
+            probability_score: risk.probability_score,
+            calculated_impact: impact,
+            calculated_likelihood: likelihood,
+            calculated_score: impact * likelihood,
+            stored_risk_score: risk.risk_score,
+            risk_level: risk.risk_level
+          });
+        }
+        
+        console.log(`🔍 Processando risco ${risk.risk_code}:`, {
+          impact_score: risk.impact_score,
+          likelihood_score: risk.likelihood_score,
+          calculated_impact: impact,
+          calculated_likelihood: likelihood,
+          calculated_score: impact * likelihood,
+          stored_risk_score: risk.risk_score
+        });
+        
+        // Determinar o nome/título do risco
+        const riskName = risk.risk_title || risk.name || risk.title || `Risco ${risk.risk_code || risk.id}`;
+        const riskDescription = risk.risk_description || risk.description || 'Descrição não disponível';
+        
+        return {
+          ...risk,
+          // Garantir compatibilidade com todos os formatos
+          name: riskName,
+          title: riskName,
+          risk_title: riskName,
+          description: riskDescription,
+          risk_description: riskDescription,
+          // Usar valores reais ou 0 se não tiver
+          impact: impact > 0 ? Math.min(Math.max(impact, 1), matrixDimensions.rows) : 0,
+          likelihood: likelihood > 0 ? Math.min(Math.max(likelihood, 1), matrixDimensions.cols) : 0,
+          // Marcar se tem scores válidos (maiores que 0)
+          hasValidScores: impact > 0 && likelihood > 0,
+          // Adicionar campos para debug
+          _debug: {
+            original_impact_score: risk.impact_score,
+            original_likelihood_score: risk.likelihood_score,
+            calculated_impact: impact,
+            calculated_likelihood: likelihood,
+            has_valid: impact > 0 && likelihood > 0
+          }
+        };
+      })
+      .sort((a, b) => {
+        // Ordenar do mais recente para o mais antigo
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+    console.log('🔍 processedRisks - Resultado final:', {
+      totalProcessed: result.length,
+      risksWithTitle: result.filter(r => r.risk_title).length,
+      risksWithScores: result.filter(r => r.hasValidScores).length,
+      firstRisk: result[0] ? {
+        id: result[0].id,
+        risk_title: result[0].risk_title,
+        hasValidScores: result[0].hasValidScores,
+        debug: result[0]._debug
+      } : null
+    });
+    
+    // Log específico para Vazamento de Credenciais
+    const vazamentoRisk = result.find(r => r.risk_title?.includes('Vazamento') || r.risk_code === '005092025');
+    if (vazamentoRisk) {
+      console.log('🎯 RESULTADO FINAL - Vazamento de Credenciais:', {
+        risk_code: vazamentoRisk.risk_code,
+        risk_title: vazamentoRisk.risk_title,
+        impact: vazamentoRisk.impact,
+        likelihood: vazamentoRisk.likelihood,
+        hasValidScores: vazamentoRisk.hasValidScores,
+        debug: vazamentoRisk._debug
+      });
+    }
+    
+    // Log final para debug
+    console.log('🔍 processedRisks - Filtros aplicados:', {
+      originalCount: risks?.length || 0,
+      filteredCount: result.length,
+      hasSearchTerm: !!(searchTerm && searchTerm.trim()),
+      searchTerm: searchTerm
+    });
+    
+    return result;
   }, [risks, searchTerm, filters, settingsLoading, matrixDimensions]);
 
   // Estatísticas dos riscos
@@ -313,17 +512,45 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
           <div className="flex flex-wrap gap-2 mt-3 text-xs">
             <span className="text-sm font-medium">Legenda:</span>
             {(
-              tenantSettings?.risk_matrix?.type === '5x5' ? [
-                { level: 'Muito Baixo', color: 'bg-blue-500 text-white', range: '1-2' },
-                { level: 'Baixo', color: 'bg-green-500 text-white', range: '3-4' },
-                { level: 'Médio', color: 'bg-yellow-500 text-white', range: '5-8' },
-                { level: 'Alto', color: 'bg-orange-500 text-white', range: '9-19' },
-                { level: 'Crítico', color: 'bg-red-500 text-white', range: '20-25' }
-              ] : [
+              // Usar as faixas EXATAS da configuração salva (matriz verdadeira)
+              tenantSettings?.risk_matrix?.risk_levels ? [
+                {
+                  level: 'Baixo',
+                  color: 'bg-green-500 text-white',
+                  range: tenantSettings.risk_matrix.risk_levels.low.length > 0 
+                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.low)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.low)}`
+                    : '1-2'
+                },
+                {
+                  level: 'Médio',
+                  color: 'bg-yellow-500 text-white',
+                  range: tenantSettings.risk_matrix.risk_levels.medium.length > 0
+                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.medium)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.medium)}`
+                    : '3-6'
+                },
+                {
+                  level: 'Alto',
+                  color: 'bg-orange-500 text-white',
+                  range: tenantSettings.risk_matrix.risk_levels.high.length > 0
+                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.high)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.high)}`
+                    : '7-12'
+                },
+                ...(tenantSettings.risk_matrix.risk_levels.critical ? [{
+                  level: 'Crítico',
+                  color: 'bg-red-500 text-white',
+                  range: tenantSettings.risk_matrix.risk_levels.critical.length > 0
+                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.critical)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.critical)}`
+                    : '13-16'
+                }] : [])
+              ].filter(item => {
+                // Filtrar apenas os níveis que têm valores definidos
+                const levelKey = item.level.toLowerCase() as keyof typeof tenantSettings.risk_matrix.risk_levels;
+                return tenantSettings.risk_matrix.risk_levels[levelKey]?.length > 0;
+              }) : [
                 { level: 'Baixo', color: 'bg-green-500 text-white', range: '1-2' },
-                { level: 'Médio', color: 'bg-yellow-500 text-white', range: '3-7' },
-                { level: 'Alto', color: 'bg-orange-500 text-white', range: '8-15' },
-                { level: 'Crítico', color: 'bg-red-500 text-white', range: '16' }
+                { level: 'Médio', color: 'bg-yellow-500 text-white', range: '3-6' },
+                { level: 'Alto', color: 'bg-orange-500 text-white', range: '7-12' },
+                { level: 'Crítico', color: 'bg-red-500 text-white', range: '13-16' }
               ]
             ).map(({ level, color, range }) => (
               <span
@@ -425,23 +652,59 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {processedRisks.length === 0 ? (
-            <div className="text-center py-12 px-6 text-muted-foreground">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-                <AlertTriangle className="h-8 w-8 opacity-50" />
+          {(() => {
+            console.log('🔍 Renderizando lista de riscos:', {
+              processedRisksLength: processedRisks.length,
+              showingEmpty: processedRisks.length === 0
+            });
+            
+            return processedRisks.length === 0 ? (
+              <div className="text-center py-12 px-6 text-muted-foreground">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
+                  <AlertTriangle className="h-8 w-8 opacity-50" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Nenhum risco identificado</h3>
+                <p className="text-sm max-w-md mx-auto">
+                  Comece adicionando riscos ao seu sistema para visualizar a análise de risco na matriz
+                </p>
+                <div className="mt-4 p-4 bg-muted/30 rounded-lg text-xs">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Riscos originais: {risks?.length || 0}</p>
+                  <p>Settings loading: {String(settingsLoading)}</p>
+                  <p>Search term: "{searchTerm}"</p>
+                  <p>Tenant settings: {tenantSettings ? 'Carregado' : 'Não carregado'}</p>
+                  <p>Matrix type: {tenantSettings?.risk_matrix?.type || 'N/A'}</p>
+                  {risks && risks.length > 0 && (
+                    <div className="mt-2">
+                      <p><strong>Primeiros 3 riscos originais:</strong></p>
+                      {risks.slice(0, 3).map((risk, idx) => (
+                        <div key={idx} className="text-xs border-l-2 border-gray-300 pl-2 mb-1">
+                          <p>#{idx + 1} ID: {risk.id}</p>
+                          <p>Title: {risk.risk_title || 'N/A'}</p>
+                          <p>Name: {risk.name || 'N/A'}</p>
+                          <p>Code: {risk.risk_code || 'N/A'}</p>
+                          <p>Status: {risk.status || 'N/A'}</p>
+                          <p>Impact: {risk.impact_score || risk.impact || 'N/A'}</p>
+                          <p>Likelihood: {risk.likelihood_score || risk.likelihood || 'N/A'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">Nenhum risco identificado</h3>
-              <p className="text-sm max-w-md mx-auto">
-                Comece adicionando riscos ao seu sistema para visualizar a análise de risco na matriz
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {processedRisks.map((risk, index) => {
-                // Usar nossa função consistente em vez da do hook
-                const riskLevel = calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings);
-                const riskScore = risk.impact * risk.likelihood;
-                const riskColor = getRiskColor(risk.impact, risk.likelihood, tenantSettings);
+            ) : (
+              <div className="divide-y divide-border">
+                {(() => {
+                  console.log('🔍 Renderizando', processedRisks.length, 'riscos na lista');
+                  return null;
+                })()}
+                {processedRisks.map((risk, index) => {
+                // Calcular o nível de risco REAL baseado na matriz 3x3 configurada
+                const riskLevel = risk.hasValidScores ? calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings) : 'Sem Avaliação';
+                const riskScore = risk.hasValidScores ? risk.impact * risk.likelihood : 0;
+                const riskColor = risk.hasValidScores ? getRiskColor(risk.impact, risk.likelihood, tenantSettings) : 'bg-gray-500 text-white';
+                
+                // console.log(`Risco ${risk.risk_code}: Impact=${risk.impact}, Likelihood=${risk.likelihood}, Score=${riskScore}, Level=${riskLevel}, Saved=${risk.risk_level}`);
                 
                 
                 return (
@@ -457,7 +720,9 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                       <div className="flex-shrink-0 relative">
                         <div className={`w-10 h-10 rounded-xl ${riskColor} flex items-center justify-center shadow-sm
                                       group-hover:scale-110 transition-transform duration-200`}>
-                          <span className="text-white font-bold text-sm">{riskScore}</span>
+                          <span className="text-white font-bold text-sm">
+                            {risk.hasValidScores ? riskScore : '?'}
+                          </span>
                         </div>
                         <div className="absolute -bottom-1 -right-1">
                           <div className={`w-4 h-4 rounded-full ${riskColor} border-2 border-background
@@ -470,57 +735,108 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-4 mb-2">
-                          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary 
-                                       transition-colors duration-200 line-clamp-2">
-                            {risk.name || risk.title || `Risco ${index + 1}`}
-                          </h3>
-                          <div
-                            className="inline-flex items-center justify-center font-semibold text-xs px-3 py-1 rounded-md
-                                      group-hover:shadow-md transition-all duration-200"
-                            style={getRiskBadgeStyle(riskLevel)}
-                          >
-                            {riskLevel}
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-foreground group-hover:text-primary 
+                                         transition-colors duration-200 line-clamp-2">
+                              {risk.risk_title || `Risco ${index + 1}`}
+                            </h3>
+                            <div className="flex items-center gap-4 mt-1">
+                              {risk.risk_code && (
+                                <p className="text-sm text-muted-foreground font-mono">
+                                  Código: {risk.risk_code}
+                                </p>
+                              )}
+                              {risk.created_at && (
+                                <p className="text-sm text-muted-foreground">
+                                  Criado em: {new Date(risk.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {risk.hasValidScores ? (
+                              <div
+                                className="inline-flex items-center justify-center font-semibold text-xs px-3 py-1 rounded-md
+                                          group-hover:shadow-md transition-all duration-200"
+                                style={getRiskBadgeStyle(riskLevel)}
+                              >
+                                {riskLevel}
+                              </div>
+                            ) : (
+                              <div
+                                className="inline-flex items-center justify-center font-semibold text-xs px-3 py-1 rounded-md
+                                          group-hover:shadow-md transition-all duration-200"
+                                style={{ backgroundColor: '#6b7280', color: '#ffffff' }}
+                              >
+                                Sem Avaliação
+                              </div>
+                            )}
+                            {risk.treatment_strategy && (
+                              <div
+                                className="inline-flex items-center justify-center font-semibold text-xs px-3 py-1 rounded-md
+                                          group-hover:shadow-md transition-all duration-200"
+                                style={getTreatmentBadgeStyle(risk.treatment_strategy)}
+                              >
+                                {getTreatmentBadgeStyle(risk.treatment_strategy).label}
+                              </div>
+                            )}
+                            <div
+                              className="inline-flex items-center justify-center font-semibold text-xs px-3 py-1 rounded-md
+                                        group-hover:shadow-md transition-all duration-200"
+                              style={getStatusBadgeStyle(risk.status)}
+                            >
+                              {getStatusBadgeStyle(risk.status).label}
+                            </div>
                           </div>
                         </div>
 
                         <p className="text-muted-foreground mb-4 line-clamp-2 text-sm leading-relaxed">
-                          {risk.description || 'Descrição não disponível para este risco.'}
+                          {risk.risk_description || 'Descrição não disponível para este risco.'}
                         </p>
 
                         {/* Metrics Row */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2 text-sm">
-                              <div className="w-8 h-2 bg-gradient-to-r from-green-500 to-red-500 rounded-full">
-                                <div 
-                                  className="h-2 bg-foreground rounded-full transition-all duration-300"
-                                  style={{ width: `${(risk.impact / (tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5)) * 100}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-muted-foreground font-medium">
-                                Impacto <span className="font-semibold text-foreground">{risk.impact}</span>
-                              </span>
-                            </div>
+                          {risk.hasValidScores ? (
+                            <>
+                              <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <div className="w-8 h-2 bg-gradient-to-r from-green-500 to-red-500 rounded-full">
+                                    <div 
+                                      className="h-2 bg-foreground rounded-full transition-all duration-300"
+                                      style={{ width: `${(risk.impact / matrixDimensions.rows) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-muted-foreground font-medium">
+                                    Impacto <span className="font-semibold text-foreground">{risk.impact}</span>
+                                  </span>
+                                </div>
 
-                            <div className="flex items-center gap-2 text-sm">
-                              <div className="w-8 h-2 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full">
-                                <div 
-                                  className="h-2 bg-foreground rounded-full transition-all duration-300"
-                                  style={{ width: `${(risk.likelihood / (tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5)) * 100}%` }}
-                                ></div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <div className="w-8 h-2 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full">
+                                    <div 
+                                      className="h-2 bg-foreground rounded-full transition-all duration-300"
+                                      style={{ width: `${(risk.likelihood / matrixDimensions.cols) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                  <span className="text-muted-foreground font-medium">
+                                    Probabilidade <span className="font-semibold text-foreground">{risk.likelihood}</span>
+                                  </span>
+                                </div>
                               </div>
-                              <span className="text-muted-foreground font-medium">
-                                Probabilidade <span className="font-semibold text-foreground">{risk.likelihood}</span>
-                              </span>
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Target className="h-3 w-3" />
-                            <span className="font-mono bg-muted px-2 py-1 rounded">
-                              {risk.impact} × {risk.likelihood} = {riskScore}
-                            </span>
-                          </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Target className="h-3 w-3" />
+                                <span className="font-mono bg-muted px-2 py-1 rounded">
+                                  {risk.impact} × {risk.likelihood} = {riskScore}
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <AlertTriangle className="h-4 w-4" />
+                              <span>Risco ainda não avaliado - Impacto e Probabilidade não definidos</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -529,10 +845,11 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent 
                                   opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
@@ -543,11 +860,19 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-orange-500" />
-                {selectedRisk.name || selectedRisk.title || 'Risco'}
+                {selectedRisk.risk_title || 'Risco'}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="flex gap-2 mt-2">
                 <Badge className={getRiskColor(selectedRisk.impact, selectedRisk.likelihood, tenantSettings)}>
                   {calculateRiskLevel(selectedRisk.likelihood, selectedRisk.impact)}
+                </Badge>
+                {selectedRisk.treatment_strategy && (
+                  <Badge style={getTreatmentBadgeStyle(selectedRisk.treatment_strategy)}>
+                    {getTreatmentBadgeStyle(selectedRisk.treatment_strategy).label}
+                  </Badge>
+                )}
+                <Badge style={getStatusBadgeStyle(selectedRisk.status)}>
+                  {getStatusBadgeStyle(selectedRisk.status).label}
                 </Badge>
               </CardDescription>
             </CardHeader>
@@ -556,20 +881,45 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                 <div>
                   <h4 className="font-semibold mb-2">Descrição</h4>
                   <p className="text-sm text-gray-600">
-                    {selectedRisk.description || 'Sem descrição disponível'}
+                    {selectedRisk.risk_description || 'Sem descrição disponível'}
                   </p>
                 </div>
+                
+                {selectedRisk.risk_code && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Código do Risco</h4>
+                    <p className="text-sm text-gray-600 font-mono">
+                      {selectedRisk.risk_code}
+                    </p>
+                  </div>
+                )}
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold mb-1">Impacto</h4>
-                    <div className="text-2xl font-bold">{selectedRisk.impact}/5</div>
+                    <div className="text-2xl font-bold">{selectedRisk.impact}/{matrixDimensions.rows}</div>
                   </div>
                   <div>
                     <h4 className="font-semibold mb-1">Probabilidade</h4>
-                    <div className="text-2xl font-bold">{selectedRisk.likelihood}/5</div>
+                    <div className="text-2xl font-bold">{selectedRisk.likelihood}/{matrixDimensions.cols}</div>
                   </div>
                 </div>
+                
+                {selectedRisk.treatment_strategy && (
+                  <div>
+                    <h4 className="font-semibold mb-2">Estratégia de Tratamento</h4>
+                    <div className="flex items-center gap-2">
+                      <Badge style={getTreatmentBadgeStyle(selectedRisk.treatment_strategy)}>
+                        {getTreatmentBadgeStyle(selectedRisk.treatment_strategy).label}
+                      </Badge>
+                    </div>
+                    {selectedRisk.treatment_rationale && (
+                      <p className="text-sm text-gray-600 mt-2">
+                        {selectedRisk.treatment_rationale}
+                      </p>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex gap-2">
                   <Button 
