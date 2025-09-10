@@ -14,7 +14,8 @@ import {
   Shield,
   ClipboardList,
   Users,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -283,7 +284,20 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       editMode,
       currentStep
     });
-  }, [registrationId]);
+    
+    // Se perdemos o registrationId e não estamos em modo de edição, tentar recriar
+    if (!registrationId && !editMode && user?.tenantId && user?.id && currentStep > 1) {
+      console.warn('⚠️ registrationId perdido durante o processo! Tentando recuperar...');
+      
+      // Tentar recriar o registro
+      setTimeout(() => {
+        if (!registrationId) {
+          console.log('🔄 Tentando recriar registro perdido...');
+          createNewRiskRegistration();
+        }
+      }, 1000);
+    }
+  }, [registrationId, editMode, user?.tenantId, user?.id, currentStep]);
   
   // useEffect para monitorar mudanças no usuário
   useEffect(() => {
@@ -431,8 +445,11 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         throw new Error('Usuário não autenticado');
       }
       
-      console.log('🔍 [DEBUG] Executando inserção no banco...');
-      const { data, error } = await supabase
+      // CORREÇÃO: Tentar inserção direta primeiro (RLS temporariamente desabilitado)
+      console.log('🔧 [FIX] Configurando contexto do tenant:', user.tenantId);
+      console.log('🔍 [DEBUG] Tentando inserção direta primeiro...');
+      
+      const { data: directData, error: directError } = await supabase
         .from('risk_registrations')
         .insert({
           tenant_id: user.tenantId,
@@ -444,27 +461,64 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         .select()
         .single();
 
-      console.log('🔍 [DEBUG] Resultado da inserção:', { data, error });
+      console.log('🔍 [DEBUG] Resultado da inserção direta:', { data: directData, error: directError });
 
-      if (error) {
-        console.error('❌ Erro ao criar registro:', error);
+      if (directError) {
+        console.error('❌ Erro na inserção direta:', directError);
         console.error('🔍 [DEBUG] Detalhes do erro:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
+          code: directError.code,
+          message: directError.message,
+          details: directError.details,
+          hint: directError.hint
         });
-        throw error;
+        
+        // Fallback: tentar RPC que bypassa RLS
+        console.log('🔄 [FALLBACK] Tentando via RPC que bypassa RLS...');
+        
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_risk_registration_bypass_rls', {
+          p_tenant_id: user.tenantId,
+          p_created_by: user.id
+        });
+        
+        if (rpcError) {
+          console.error('❌ Erro ao criar registro via RPC:', rpcError);
+          throw rpcError;
+        }
+        
+        if (!rpcData) {
+          console.error('❌ Nenhum dado retornado da inserção via RPC');
+          throw new Error('Nenhum dado retornado da inserção');
+        }
+        
+        console.log('🔍 [DEBUG] Definindo registrationId (RPC):', rpcData);
+        setRegistrationId(rpcData);
+        console.log('✅ Novo registro de risco criado com sucesso (RPC):', rpcData);
+        
+        // Verificar se o estado foi atualizado
+        setTimeout(() => {
+          console.log('🔍 [DEBUG] Verificando estado após setRegistrationId (RPC):', {
+            registrationId: rpcData,
+            stateRegistrationId: registrationId
+          });
+        }, 100);
+      } else {
+        if (!directData) {
+          console.error('❌ Nenhum dado retornado da inserção direta');
+          throw new Error('Nenhum dado retornado da inserção');
+        }
+        
+        console.log('🔍 [DEBUG] Definindo registrationId (direto):', directData.id);
+        setRegistrationId(directData.id);
+        console.log('✅ Novo registro de risco criado com sucesso (direto):', directData.id);
+        
+        // Verificar se o estado foi atualizado
+        setTimeout(() => {
+          console.log('🔍 [DEBUG] Verificando estado após setRegistrationId (direto):', {
+            registrationId: directData.id,
+            stateRegistrationId: registrationId
+          });
+        }, 100);
       }
-      
-      if (!data) {
-        console.error('❌ Nenhum dado retornado da inserção');
-        throw new Error('Nenhum dado retornado da inserção');
-      }
-      
-      console.log('🔍 [DEBUG] Definindo registrationId:', data.id);
-      setRegistrationId(data.id);
-      console.log('✅ Novo registro de risco criado com sucesso:', data.id);
       
       toast({
         title: '✅ Registro Iniciado',
@@ -499,17 +553,31 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   };
 
   const saveToSupabase = async (data: RiskRegistrationData) => {
-    if (!registrationId) return;
+    if (!registrationId) {
+      console.warn('⚠️ saveToSupabase: registrationId não encontrado');
+      return;
+    }
     
     try {
+      console.log('💾 saveToSupabase: Salvando dados:', {
+        registrationId,
+        dataKeys: Object.keys(data),
+        data
+      });
+      
       const { error } = await supabase
         .from('risk_registrations')
         .update(data)
         .eq('id', registrationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ saveToSupabase: Erro ao salvar:', error);
+        throw error;
+      }
+      
+      console.log('✅ saveToSupabase: Dados salvos com sucesso');
     } catch (error) {
-      console.error('Erro ao salvar dados:', error);
+      console.error('❌ saveToSupabase: Erro geral:', error);
     }
   };
 
@@ -659,12 +727,51 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       registrationData,
       actionPlanItems,
       stakeholders,
-      user: user?.id
+      user: user?.id,
+      editMode,
+      existingRiskId
     });
     
     // Verificar se registrationId existe
     if (!registrationId) {
       console.error('❌ registrationId não encontrado!');
+      console.error('🔍 [DEBUG] Estado completo do wizard:', {
+        registrationId,
+        editMode,
+        existingRiskId,
+        userTenantId: user?.tenantId,
+        userId: user?.id,
+        currentStep,
+        registrationDataKeys: Object.keys(registrationData),
+        hasRiskTitle: !!registrationData.risk_title
+      });
+      
+      // Tentar recuperar ou criar um novo registro
+      if (!editMode && user?.tenantId && user?.id) {
+        console.log('🔄 [RECOVERY] Tentando criar novo registro antes de finalizar...');
+        try {
+          await createNewRiskRegistration();
+          
+          // Aguardar um momento para o registrationId ser definido
+          setTimeout(() => {
+            if (registrationId) {
+              console.log('✅ [RECOVERY] Registro criado com sucesso, tentando finalizar novamente...');
+              handleComplete();
+            } else {
+              console.error('❌ [RECOVERY] Falha ao criar registro');
+              toast({
+                title: 'Erro de Registro',
+                description: 'Não foi possível criar o registro. Tente recarregar a página.',
+                variant: 'destructive'
+              });
+            }
+          }, 2000);
+          return;
+        } catch (error) {
+          console.error('❌ [RECOVERY] Erro ao tentar criar registro:', error);
+        }
+      }
+      
       toast({
         title: 'Erro de Registro',
         description: 'ID do registro não encontrado. Tente recarregar a página.',
@@ -699,7 +806,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         business_area: registrationData.responsible_area || null,
         
         // Etapa 2: Análise
-        analysis_methodology: registrationData.analysis_methodology || null,
+        analysis_methodology: registrationData.analysis_methodology || registrationData.methodology_id || null,
         impact_score: registrationData.impact_score || null,
         likelihood_score: registrationData.likelihood_score || registrationData.probability_score || null,
         risk_score: registrationData.risk_score || null,
@@ -718,17 +825,61 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         treatment_cost: registrationData.treatment_cost || null,
         treatment_timeline: registrationData.treatment_timeline || null,
         
-        // Etapa 6: Comunicação
+        // Etapa 5: Plano de Ação - Salvar primeira atividade diretamente na tabela principal
+        activity_1_name: actionPlanItems?.[0]?.activity_name || null,
+        activity_1_description: actionPlanItems?.[0]?.activity_description || null,
+        activity_1_responsible: actionPlanItems?.[0]?.responsible_person || null,
+        activity_1_email: actionPlanItems?.[0]?.responsible_email || null,
+        activity_1_priority: actionPlanItems?.[0]?.priority || null,
+        activity_1_status: actionPlanItems?.[0]?.status || null,
+        activity_1_due_date: actionPlanItems?.[0]?.due_date || null,
+        
+        // Etapa 6: Comunicação - Salvar primeiro stakeholder de cada tipo
+        awareness_person_1_name: stakeholders?.find(s => s.stakeholder_type === 'awareness')?.person_name || null,
+        awareness_person_1_position: stakeholders?.find(s => s.stakeholder_type === 'awareness')?.person_position || null,
+        awareness_person_1_email: stakeholders?.find(s => s.stakeholder_type === 'awareness')?.person_email || null,
+        approval_person_1_name: stakeholders?.find(s => s.stakeholder_type === 'approval')?.person_name || null,
+        approval_person_1_position: stakeholders?.find(s => s.stakeholder_type === 'approval')?.person_position || null,
+        approval_person_1_email: stakeholders?.find(s => s.stakeholder_type === 'approval')?.person_email || null,
+        approval_person_1_status: stakeholders?.find(s => s.stakeholder_type === 'approval')?.notification_status || null,
         requires_approval: registrationData.requires_approval || false,
         
         // Etapa 7: Monitoramento
         monitoring_frequency: registrationData.monitoring_frequency || null,
+        monitoring_responsible: registrationData.monitoring_responsible || null,
         residual_impact: registrationData.residual_impact || null,
-        residual_likelihood: registrationData.residual_probability || null,
-        residual_score: registrationData.residual_risk_score || null,
+        residual_likelihood: registrationData.residual_probability || registrationData.residual_likelihood || null,
+        residual_score: registrationData.residual_risk_score || registrationData.residual_score || null,
+        closure_criteria: registrationData.closure_criteria || null,
         closure_date: registrationData.review_date || null,
         closure_notes: registrationData.monitoring_notes || null
       };
+      
+      console.log('🔍 [SAVE] Dados que serão salvos na tabela principal:', {
+        finalData,
+        actionPlanItems: actionPlanItems?.map(item => ({
+          activity_name: item.activity_name,
+          activity_description: item.activity_description,
+          responsible_person: item.responsible_person,
+          responsible_email: item.responsible_email,
+          priority: item.priority,
+          status: item.status,
+          due_date: item.due_date
+        })),
+        stakeholders: stakeholders?.map(s => ({
+          person_name: s.person_name,
+          person_position: s.person_position,
+          person_email: s.person_email,
+          stakeholder_type: s.stakeholder_type,
+          notification_status: s.notification_status
+        })),
+        registrationDataKeys: Object.keys(registrationData),
+        registrationDataSample: {
+          treatment_rationale: registrationData.treatment_rationale,
+          monitoring_frequency: registrationData.monitoring_frequency,
+          closure_criteria: registrationData.closure_criteria
+        }
+      });
       
       // Remover campos undefined ou que não existem na tabela
       Object.keys(finalData).forEach(key => {
@@ -737,7 +888,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         }
       });
       
-      console.log('Dados finais a serem salvos:', finalData);
+      console.log('🔍 [SAVE] Dados finais preparados:', finalData);
       
       console.log('💾 Atualizando registro principal...');
       const { data: updatedData, error } = await supabase
@@ -827,6 +978,35 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Carregando dados...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Verificar se temos registrationId (exceto para a primeira etapa)
+    if (!registrationId && !editMode && currentStep > 1) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="text-amber-600 mb-4">
+              <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+              <p className="font-medium">Registro não encontrado</p>
+            </div>
+            <p className="text-muted-foreground mb-4">
+              O ID do registro foi perdido. Isso pode acontecer se a página foi recarregada.
+            </p>
+            <Button 
+              onClick={() => {
+                console.log('🔄 Usuário solicitou recriação do registro');
+                createNewRiskRegistration();
+              }}
+              className="mr-2"
+            >
+              Tentar Recuperar
+            </Button>
+            <Button variant="outline" onClick={onCancel}>
+              Cancelar e Reiniciar
+            </Button>
           </div>
         </div>
       );

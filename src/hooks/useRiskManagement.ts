@@ -189,9 +189,30 @@ export const useRiskManagement = () => {
       }
 
       // Buscar riscos com filtro por tenant - ALTERADO PARA risk_registrations
+      // Incluir todos os campos necessários para exibição completa
       const { data, error } = await supabase
         .from('risk_registrations')
-        .select('*')
+        .select(`
+          *,
+          risk_registration_action_plans(
+            id,
+            activity_name,
+            activity_description,
+            responsible_person,
+            responsible_email,
+            priority,
+            status,
+            due_date
+          ),
+          risk_stakeholders(
+            id,
+            person_name,
+            person_position,
+            person_email,
+            stakeholder_type,
+            notification_status
+          )
+        `)
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
         .order('created_at', { ascending: false });
 
@@ -221,7 +242,11 @@ export const useRiskManagement = () => {
       console.log('🔍 DADOS BRUTOS DO SUPABASE:', validatedData.map(r => ({
         id: r.id,
         risk_title: r.risk_title,
-        risk_code: r.risk_code
+        risk_code: r.risk_code,
+        treatment_rationale: r.treatment_rationale,
+        activity_1_name: r.activity_1_name,
+        awareness_person_1_name: r.awareness_person_1_name,
+        monitoring_frequency: r.monitoring_frequency
       })));
 
       // Transformar dados do Supabase para o formato da aplicação
@@ -231,7 +256,11 @@ export const useRiskManagement = () => {
       console.log('🔍 DADOS TRANSFORMADOS:', transformedRisks.map(r => ({
         id: r.id,
         name: r.name,
-        riskCode: r.riskCode
+        riskCode: r.riskCode,
+        treatment_rationale: r.treatment_rationale,
+        activity_1_name: r.activity_1_name,
+        awareness_person_1_name: r.awareness_person_1_name,
+        monitoring_frequency: r.monitoring_frequency
       })));
       
       return transformedRisks;
@@ -468,6 +497,52 @@ export const useRiskManagement = () => {
       if (data.analysisData !== undefined) {
         updateData.analysis_data = data.analysisData;
       }
+      
+      // Campos adicionais do wizard - ADICIONADOS
+      if (data.source !== undefined) updateData.risk_source = data.source;
+      if (data.responsibleArea !== undefined) updateData.business_area = data.responsibleArea;
+      if (data.analysisMethodology !== undefined) updateData.analysis_methodology = data.analysisMethodology;
+      
+      // Dados GUT
+      if (data.gut_gravity !== undefined) updateData.gut_gravity = data.gut_gravity;
+      if (data.gut_urgency !== undefined) updateData.gut_urgency = data.gut_urgency;
+      if (data.gut_tendency !== undefined) updateData.gut_tendency = data.gut_tendency;
+      if (data.gut_priority !== undefined) updateData.gut_priority = data.gut_priority;
+      
+      // Dados de tratamento detalhados
+      if (data.treatment_rationale !== undefined) updateData.treatment_rationale = data.treatment_rationale;
+      if (data.treatment_cost !== undefined) updateData.treatment_cost = data.treatment_cost;
+      if (data.treatment_timeline !== undefined) updateData.treatment_timeline = data.treatment_timeline;
+      
+      // Dados de atividades do plano de ação
+      if (data.activity_1_name !== undefined) updateData.activity_1_name = data.activity_1_name;
+      if (data.activity_1_description !== undefined) updateData.activity_1_description = data.activity_1_description;
+      if (data.activity_1_responsible !== undefined) updateData.activity_1_responsible = data.activity_1_responsible;
+      if (data.activity_1_email !== undefined) updateData.activity_1_email = data.activity_1_email;
+      if (data.activity_1_priority !== undefined) updateData.activity_1_priority = data.activity_1_priority;
+      if (data.activity_1_status !== undefined) updateData.activity_1_status = data.activity_1_status;
+      if (data.activity_1_due_date !== undefined) updateData.activity_1_due_date = data.activity_1_due_date?.toISOString();
+      
+      // Dados de comunicação/stakeholders
+      if (data.awareness_person_1_name !== undefined) updateData.awareness_person_1_name = data.awareness_person_1_name;
+      if (data.awareness_person_1_position !== undefined) updateData.awareness_person_1_position = data.awareness_person_1_position;
+      if (data.awareness_person_1_email !== undefined) updateData.awareness_person_1_email = data.awareness_person_1_email;
+      if (data.approval_person_1_name !== undefined) updateData.approval_person_1_name = data.approval_person_1_name;
+      if (data.approval_person_1_position !== undefined) updateData.approval_person_1_position = data.approval_person_1_position;
+      if (data.approval_person_1_email !== undefined) updateData.approval_person_1_email = data.approval_person_1_email;
+      if (data.approval_person_1_status !== undefined) updateData.approval_person_1_status = data.approval_person_1_status;
+      
+      // Dados de monitoramento
+      if (data.monitoring_frequency !== undefined) updateData.monitoring_frequency = data.monitoring_frequency;
+      if (data.monitoring_responsible !== undefined) updateData.monitoring_responsible = data.monitoring_responsible;
+      if (data.residual_impact !== undefined) updateData.residual_impact = data.residual_impact;
+      if (data.residual_likelihood !== undefined) updateData.residual_likelihood = data.residual_likelihood;
+      if (data.residual_score !== undefined) updateData.residual_score = data.residual_score;
+      if (data.closure_criteria !== undefined) updateData.closure_criteria = data.closure_criteria;
+      if (data.closure_notes !== undefined) updateData.closure_notes = data.closure_notes;
+      if (data.closure_date !== undefined) updateData.closure_date = data.closure_date?.toISOString();
+      
+      console.log('🔍 [UPDATE] Dados que serão atualizados:', updateData);
 
       // Recalcular score se probabilidade ou impacto mudaram
       if (data.probability || data.impact) {
@@ -705,11 +780,56 @@ export const useRiskManagement = () => {
       treatmentType: supabaseRisk.treatment_strategy || 'Mitigar',
       owner: supabaseRisk.created_by || '',
       assignedTo: supabaseRisk.assigned_to || '',
-      identifiedDate: new Date(supabaseRisk.created_at),
+      identifiedDate: supabaseRisk.identified_date ? new Date(supabaseRisk.identified_date) : new Date(supabaseRisk.created_at),
       dueDate: supabaseRisk.due_date ? new Date(supabaseRisk.due_date) : undefined,
       createdBy: supabaseRisk.created_by || '',
       createdAt: new Date(supabaseRisk.created_at),
       updatedAt: new Date(supabaseRisk.updated_at || supabaseRisk.created_at),
+      
+      // Campos adicionais do wizard de registro
+      source: supabaseRisk.risk_source,
+      responsibleArea: supabaseRisk.business_area,
+      analysisMethodology: supabaseRisk.analysis_methodology,
+      
+      // Dados GUT completos
+      gut_gravity: supabaseRisk.gut_gravity,
+      gut_urgency: supabaseRisk.gut_urgency,
+      gut_tendency: supabaseRisk.gut_tendency,
+      gut_priority: supabaseRisk.gut_priority,
+      
+      // Dados de tratamento detalhados
+      treatment_rationale: supabaseRisk.treatment_rationale,
+      treatment_cost: supabaseRisk.treatment_cost,
+      treatment_timeline: supabaseRisk.treatment_timeline,
+      
+      // Dados de monitoramento
+      monitoring_frequency: supabaseRisk.monitoring_frequency,
+      monitoring_responsible: supabaseRisk.monitoring_responsible,
+      residual_impact: supabaseRisk.residual_impact,
+      residual_likelihood: supabaseRisk.residual_likelihood,
+      residual_score: supabaseRisk.residual_score,
+      closure_criteria: supabaseRisk.closure_criteria,
+      closure_notes: supabaseRisk.closure_notes,
+      closure_date: supabaseRisk.closure_date ? new Date(supabaseRisk.closure_date) : undefined,
+      
+      // Dados de atividades do plano de ação
+      activity_1_name: supabaseRisk.activity_1_name,
+      activity_1_description: supabaseRisk.activity_1_description,
+      activity_1_responsible: supabaseRisk.activity_1_responsible,
+      activity_1_email: supabaseRisk.activity_1_email,
+      activity_1_priority: supabaseRisk.activity_1_priority,
+      activity_1_status: supabaseRisk.activity_1_status,
+      activity_1_due_date: supabaseRisk.activity_1_due_date ? new Date(supabaseRisk.activity_1_due_date) : undefined,
+      
+      // Dados de comunicação/stakeholders
+      awareness_person_1_name: supabaseRisk.awareness_person_1_name,
+      awareness_person_1_position: supabaseRisk.awareness_person_1_position,
+      awareness_person_1_email: supabaseRisk.awareness_person_1_email,
+      approval_person_1_name: supabaseRisk.approval_person_1_name,
+      approval_person_1_position: supabaseRisk.approval_person_1_position,
+      approval_person_1_email: supabaseRisk.approval_person_1_email,
+      approval_person_1_status: supabaseRisk.approval_person_1_status,
+      
       analysisData: {
         gut_analysis: {
           gravity: supabaseRisk.gut_gravity,

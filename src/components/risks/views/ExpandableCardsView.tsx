@@ -169,9 +169,21 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         name: risk.name,
         description: risk.description || '',
         source: risk.source || '',
-        identificationDate: risk.identificationDate ? new Date(risk.identificationDate).toISOString().split('T')[0] : '',
+        responsibleArea: risk.responsibleArea || '',
+        identificationDate: risk.identifiedDate ? new Date(risk.identifiedDate).toISOString().split('T')[0] : '',
         
-        // Classificação
+        // Análise
+        analysisMethodology: risk.analysisMethodology || '',
+        probability: risk.probability,
+        impact: risk.impact,
+        causes: risk.causes || '',
+        consequences: risk.consequences || '',
+        
+        // Classificação GUT
+        gut_gravity: risk.gut_gravity || '',
+        gut_urgency: risk.gut_urgency || '',
+        gut_tendency: risk.gut_tendency || '',
+        gut_priority: risk.gut_priority || '',
         category: risk.category,
         subcategory: risk.subcategory || '',
         riskType: risk.riskType || '',
@@ -182,35 +194,51 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         relatedProcess: risk.relatedProcess || '',
         regulations: risk.regulations || '',
         
-        // Análise
-        probability: risk.probability,
-        impact: risk.impact,
-        causes: risk.causes || '',
-        consequences: risk.consequences || '',
-        
-        // Avaliação
-        evaluationCriteria: risk.evaluationCriteria || '',
-        tolerance: risk.tolerance || '',
-        
         // Tratamento
         treatmentType: risk.treatmentType || 'Mitigar',
+        treatment_rationale: risk.treatment_rationale || '',
+        treatment_cost: risk.treatment_cost || '',
+        treatment_timeline: risk.treatment_timeline || '',
         status: risk.status,
-        actionPlan: risk.actionPlan || '',
         assignedTo: risk.assignedTo || '',
         dueDate: risk.dueDate ? new Date(risk.dueDate).toISOString().split('T')[0] : '',
         
+        // Plano de Ação
+        activity_1_name: risk.activity_1_name || '',
+        activity_1_description: risk.activity_1_description || '',
+        activity_1_responsible: risk.activity_1_responsible || '',
+        activity_1_email: risk.activity_1_email || '',
+        activity_1_priority: risk.activity_1_priority || '',
+        activity_1_status: risk.activity_1_status || '',
+        activity_1_due_date: risk.activity_1_due_date ? new Date(risk.activity_1_due_date).toISOString().split('T')[0] : '',
+        
+        // Comunicação
+        awareness_person_1_name: risk.awareness_person_1_name || '',
+        awareness_person_1_position: risk.awareness_person_1_position || '',
+        awareness_person_1_email: risk.awareness_person_1_email || '',
+        approval_person_1_name: risk.approval_person_1_name || '',
+        approval_person_1_position: risk.approval_person_1_position || '',
+        approval_person_1_email: risk.approval_person_1_email || '',
+        approval_person_1_status: risk.approval_person_1_status || '',
+        
         // Monitoramento
+        monitoring_frequency: risk.monitoring_frequency || '',
+        monitoring_responsible: risk.monitoring_responsible || '',
+        residual_impact: risk.residual_impact || '',
+        residual_likelihood: risk.residual_likelihood || '',
+        residual_score: risk.residual_score || '',
+        closure_criteria: risk.closure_criteria || '',
+        closure_notes: risk.closure_notes || '',
+        closure_date: risk.closure_date ? new Date(risk.closure_date).toISOString().split('T')[0] : '',
+        
+        // Campos legados
         indicators: risk.indicators || '',
         reviewFrequency: risk.reviewFrequency || '',
         nextReview: risk.nextReview ? new Date(risk.nextReview).toISOString().split('T')[0] : '',
         existingControls: risk.existingControls || '',
-        
-        // Comunicação
         stakeholders: risk.stakeholders || '',
         communicationPlan: risk.communicationPlan || '',
         communicationChannel: risk.communicationChannel || '',
-        
-        // Revisão
         lessonsLearned: risk.lessonsLearned || '',
         reviewStatus: risk.reviewStatus || '',
         controlEffectiveness: risk.controlEffectiveness || ''
@@ -910,7 +938,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Fonte do Risco</Label>
                               {isEditing ? (
@@ -933,7 +961,20 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                   onChange={(e) => updateEditForm(risk.id, 'identificationDate', e.target.value)}
                                 />
                               ) : (
-                                <p className="text-sm">{formatDate(risk.identificationDate) || formatDate(risk.createdAt)}</p>
+                                <p className="text-sm">{formatDate(risk.identifiedDate) || formatDate(risk.createdAt)}</p>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Área Responsável</Label>
+                              {isEditing ? (
+                                <Input
+                                  value={editForm.responsibleArea || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'responsibleArea', e.target.value)}
+                                  placeholder="Ex: TI, RH, Financeiro, Operações"
+                                />
+                              ) : (
+                                <p className="text-sm">{risk.responsibleArea || 'Não informado'}</p>
                               )}
                             </div>
                           </div>
@@ -1478,19 +1519,52 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                           </div>
 
                           <div>
-                            <Label className="text-sm font-medium mb-2 block">Plano de Ação</Label>
+                            <Label className="text-sm font-medium mb-2 block">Justificativa do Tratamento</Label>
                             {isEditing ? (
                               <Textarea
-                                value={editForm.actionPlan || ''}
-                                onChange={(e) => updateEditForm(risk.id, 'actionPlan', e.target.value)}
-                                placeholder="Descreva as ações específicas para tratar este risco"
+                                value={editForm.treatment_rationale || ''}
+                                onChange={(e) => updateEditForm(risk.id, 'treatment_rationale', e.target.value)}
+                                placeholder="Justifique a estratégia de tratamento escolhida"
                                 rows={3}
                               />
                             ) : (
                               <p className="text-sm text-muted-foreground">
-                                {risk.actionPlan || 'Nenhum plano de ação definido'}
+                                {risk.treatment_rationale || 'Nenhuma justificativa fornecida'}
                               </p>
                             )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Custo Estimado</Label>
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  value={editForm.treatment_cost || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'treatment_cost', parseFloat(e.target.value))}
+                                  placeholder="Valor em R$"
+                                />
+                              ) : (
+                                <p className="text-sm">
+                                  {risk.treatment_cost ? 
+                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(risk.treatment_cost) 
+                                    : 'Não informado'}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Cronograma</Label>
+                              {isEditing ? (
+                                <Input
+                                  value={editForm.treatment_timeline || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'treatment_timeline', e.target.value)}
+                                  placeholder="Ex: 3 meses, 6 semanas"
+                                />
+                              ) : (
+                                <p className="text-sm">{risk.treatment_timeline || 'Não definido'}</p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -86,6 +86,10 @@ export interface Risk {
   // Análise Estruturada de Risco (nova funcionalidade)
   analysisData?: RiskAnalysisData;
   
+  // Arrays de dados relacionados (carregados via JOIN)
+  risk_registration_action_plans?: any[];
+  risk_stakeholders?: any[];
+  
   // Gestão
   status: RiskStatus;
   treatmentType: TreatmentType;
@@ -112,6 +116,58 @@ export interface Risk {
   acceptanceLetter?: RiskAcceptanceLetter;
   communications?: RiskCommunication[];
   changeLog?: RiskChangeLog[];
+  
+  // ============================================================================
+  // CAMPOS ADICIONAIS DO WIZARD DE REGISTRO
+  // ============================================================================
+  
+  // Etapa 1: Identificação
+  source?: string; // Fonte do risco
+  responsibleArea?: string; // Área responsável
+  
+  // Etapa 2: Análise
+  analysisMethodology?: string; // Metodologia de análise
+  
+  // Etapa 3: Classificação GUT
+  gut_gravity?: number; // Gravidade (1-5)
+  gut_urgency?: number; // Urgência (1-5)
+  gut_tendency?: number; // Tendência (1-5)
+  gut_priority?: string; // Prioridade calculada
+  
+  // Etapa 4: Tratamento
+  treatment_rationale?: string; // Justificativa do tratamento
+  treatment_cost?: number; // Custo do tratamento
+  treatment_timeline?: string; // Cronograma do tratamento
+  
+  // Etapa 5: Plano de Ação - Atividade 1
+  activity_1_name?: string;
+  activity_1_description?: string;
+  activity_1_responsible?: string;
+  activity_1_email?: string;
+  activity_1_priority?: string;
+  activity_1_status?: string;
+  activity_1_due_date?: Date;
+  
+  // Etapa 6: Comunicação - Pessoas de Ciência
+  awareness_person_1_name?: string;
+  awareness_person_1_position?: string;
+  awareness_person_1_email?: string;
+  
+  // Etapa 6: Comunicação - Pessoas de Aprovação
+  approval_person_1_name?: string;
+  approval_person_1_position?: string;
+  approval_person_1_email?: string;
+  approval_person_1_status?: string;
+  
+  // Etapa 7: Monitoramento
+  monitoring_frequency?: string; // Frequência de monitoramento
+  monitoring_responsible?: string; // Responsável pelo monitoramento
+  residual_impact?: number; // Impacto residual
+  residual_likelihood?: number; // Probabilidade residual
+  residual_score?: number; // Score residual
+  closure_criteria?: string; // Critérios de encerramento
+  closure_notes?: string; // Notas de encerramento
+  closure_date?: Date; // Data de encerramento
 }
 
 // ============================================================================
@@ -343,6 +399,50 @@ export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   status?: RiskStatus;
   lastReviewDate?: Date;
   nextReviewDate?: Date;
+  
+  // Campos adicionais do wizard de registro
+  source?: string;
+  responsibleArea?: string;
+  analysisMethodology?: string;
+  
+  // Dados GUT
+  gut_gravity?: number;
+  gut_urgency?: number;
+  gut_tendency?: number;
+  gut_priority?: string;
+  
+  // Dados de tratamento detalhados
+  treatment_rationale?: string;
+  treatment_cost?: number;
+  treatment_timeline?: string;
+  
+  // Dados de atividades do plano de ação
+  activity_1_name?: string;
+  activity_1_description?: string;
+  activity_1_responsible?: string;
+  activity_1_email?: string;
+  activity_1_priority?: string;
+  activity_1_status?: string;
+  activity_1_due_date?: Date;
+  
+  // Dados de comunicação/stakeholders
+  awareness_person_1_name?: string;
+  awareness_person_1_position?: string;
+  awareness_person_1_email?: string;
+  approval_person_1_name?: string;
+  approval_person_1_position?: string;
+  approval_person_1_email?: string;
+  approval_person_1_status?: string;
+  
+  // Dados de monitoramento
+  monitoring_frequency?: string;
+  monitoring_responsible?: string;
+  residual_impact?: number;
+  residual_likelihood?: number;
+  residual_score?: number;
+  closure_criteria?: string;
+  closure_notes?: string;
+  closure_date?: Date;
 }
 
 export interface CreateActivityRequest {
