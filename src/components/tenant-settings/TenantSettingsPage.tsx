@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,11 +26,17 @@ import {
   Zap,
   Bell,
   Crown,
-  Building2
+  Building2,
+  Rocket,
+  Edit,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantSelector } from '@/contexts/TenantSelectorContext';
+
+// Lazy loading do Enhanced Modal
+const AlexProcessDesignerEnhancedModal = React.lazy(() => import('../assessments/alex/AlexProcessDesignerEnhancedModal'));
 
 // Importar seções
 import { UserManagementSection } from './sections/UserManagementSection';
@@ -84,7 +90,11 @@ const TenantSettingsPage: React.FC = () => {
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [metrics, setMetrics] = useState<SettingsMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Removido: hasUnsavedChanges não era usado
+  
+  // Estados para o Enhanced Modal
+  const [showEnhancedModal, setShowEnhancedModal] = useState(false);
+  const [enhancedModalMode, setEnhancedModalMode] = useState<'create' | 'edit'>('create');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Usar contexto global de seleção de tenant
   const { 
@@ -415,7 +425,7 @@ const TenantSettingsPage: React.FC = () => {
 
       {/* Tabs de Configuração */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
           <TabsTrigger value="overview" className="flex items-center space-x-1">
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -447,6 +457,10 @@ const TenantSettingsPage: React.FC = () => {
           <TabsTrigger value="logs" className="flex items-center space-x-1">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Logs</span>
+          </TabsTrigger>
+          <TabsTrigger value="enhanced-designer" className="flex items-center space-x-1">
+            <Rocket className="h-4 w-4" />
+            <span className="hidden sm:inline">Enhanced</span>
           </TabsTrigger>
         </TabsList>
 
@@ -601,7 +615,128 @@ const TenantSettingsPage: React.FC = () => {
             <p>Seção temporáriamente desabilitada para debug.</p>
           </div>
         </TabsContent>
+
+        <TabsContent value="enhanced-designer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Rocket className="h-5 w-5 text-purple-600" />
+                <span>Enhanced Process Designer</span>
+                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
+                  v4.0 Modal
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Ferramenta avançada para criar e editar processos personalizados da organização
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Ações Rápidas */}
+              <div className="flex flex-wrap gap-4">
+                <Button 
+                  onClick={() => {
+                    console.log('🚀 Abrindo Enhanced Modal - Modo Criar');
+                    setEnhancedModalMode('create');
+                    setShowEnhancedModal(true);
+                    toast.info('Abrindo Designer Enhanced - Modo Criação');
+                  }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  <Rocket className="h-4 w-4" />
+                  Criar Novo Processo
+                  <Badge className="bg-white/20 text-white text-xs">
+                    Novo
+                  </Badge>
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    console.log('🚀 Abrindo Enhanced Modal - Modo Editar');
+                    setEnhancedModalMode('edit');
+                    setShowEnhancedModal(true);
+                    toast.info('Abrindo Designer Enhanced - Modo Edição');
+                  }}
+                  className="flex items-center gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar Processo Existente
+                  <Badge className="bg-green-100 text-green-800 text-xs">
+                    Editar
+                  </Badge>
+                </Button>
+              </div>
+              
+              {/* Informações sobre a ferramenta */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="border-purple-200 bg-purple-50 dark:bg-purple-950/20">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-2">Recursos Disponíveis</h4>
+                    <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
+                      <li>• Designer visual de formulários</li>
+                      <li>• Workflow designer avançado</li>
+                      <li>• Campos brasileiros (CPF, CNPJ, CEP)</li>
+                      <li>• Validação automática</li>
+                      <li>• Templates personalizados</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Casos de Uso</h4>
+                    <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      <li>• Processos de compliance</li>
+                      <li>• Formulários de auditoria</li>
+                      <li>• Workflows de aprovação</li>
+                      <li>• Coleta de dados estruturados</li>
+                      <li>• Processos de gestão de riscos</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Status */}
+              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-semibold">Enhanced Designer Disponível</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  A ferramenta foi transferida com sucesso do módulo Assessment para Configurações.
+                  Agora você pode criar e gerenciar processos personalizados diretamente nas configurações da organização.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+      
+      {/* Modal do Enhanced Designer */}
+      {showEnhancedModal && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                <span className="text-lg font-medium">Carregando Enhanced Designer...</span>
+              </div>
+            </div>
+          </div>
+        }>
+          <AlexProcessDesignerEnhancedModal
+            isOpen={showEnhancedModal}
+            onClose={() => setShowEnhancedModal(false)}
+            mode={enhancedModalMode}
+            onSave={(data) => {
+              console.log('Dados salvos do Enhanced Designer:', data);
+              toast.success(`Processo ${enhancedModalMode === 'create' ? 'criado' : 'salvo'} com sucesso!`);
+              setShowEnhancedModal(false);
+              setHasUnsavedChanges(false);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

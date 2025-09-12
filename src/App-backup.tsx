@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
 import { TenantSelectorProvider } from "@/contexts/TenantSelectorContext";
 // Critical imports (always loaded)
 import LoginPage from "@/components/LoginPage";
@@ -30,29 +29,9 @@ const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").th
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
 const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
-const CompliancePage = lazy(() => import("@/components/compliance/CompliancePage"));
-// Audit IA Module - Comprehensive audit management with AI
-const AuditIADashboard = lazy(() => import("@/components/audit/AuditIADashboard"));
-const AuditPlanningWizard = lazy(() => import("@/components/audit/AuditPlanningWizard"));
-const AuditScopingMatrix = lazy(() => import("@/components/audit/AuditScopingMatrix"));
-const AuditExecutionWorkspace = lazy(() => import("@/components/audit/AuditExecutionWorkspace"));
-const AIWorkingPapers = lazy(() => import("@/components/audit/AIWorkingPapers"));
-const AuditReportGenerator = lazy(() => import("@/components/audit/AuditReportGenerator"));
-const AuditEvidenceManager = lazy(() => import("@/components/audit/AuditEvidenceManager"));
-const AlexAuditAI = lazy(() => import("@/components/audit/AlexAuditAI"));
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
-// Assessments module
-const AssessmentsPage = lazy(() => import("@/components/assessments/AssessmentsPage"));
-const FrameworkManagementPage = lazy(() => import("@/components/assessments/FrameworkManagementPage").then(module => ({ default: module.FrameworkManagementPage })));
-const AssessmentDetailPage = lazy(() => import("@/components/assessments/AssessmentDetailPage"));
-const FrameworkDetailPage = lazy(() => import("@/components/assessments/FrameworkDetailPage"));
-const FrameworkEvaluationPage = lazy(() => import("@/components/assessments/FrameworkEvaluationPage"));
-const CreateFrameworkPage = lazy(() => import("@/components/assessments/CreateFrameworkPage"));
-
-// Alex Assessment Engine - Next-gen modular assessment system
-const AlexAssessmentEngineTemp = lazy(() => import("@/components/assessments/AlexAssessmentEngineTemp"));
 
 // Privacy module
 const PrivacyDashboard = lazy(() => import("@/components/privacy/PrivacyDashboard").then(module => ({ default: module.PrivacyDashboard })));
@@ -81,14 +60,10 @@ const AIPromptsPage = lazy(() => import("@/components/ai/AIPromptsPage"));
 const AIWorkflowsPage = lazy(() => import("@/components/ai/AIWorkflowsPage"));
 const AIUsagePage = lazy(() => import("@/components/ai/AIUsagePage"));
 const AISettingsPage = lazy(() => import("@/components/ai/AISettingsPage"));
-const AIAuditPage = lazy(() => import("@/components/ai/AIAuditPage"));
 
 // Import direto para teste (sem lazy loading)
 import AIManagerNew from "@/components/ai/AIManagerNew";
 import AIManagementPageDirect from "@/components/ai/AIManagementPage";
-import UserStatusCheck from "@/components/UserStatusCheck";
-import FixUserPermissions from "@/components/FixUserPermissions";
-
 
 // Other modules
 const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
@@ -227,7 +202,6 @@ const App = () => (
       <AuthProvider>
         <TenantSelectorProvider>
           <ThemeProvider>
-            <NotificationsRealtimeProvider>
               <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -260,11 +234,6 @@ const App = () => (
                 }>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="assessments" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsPage />
-                    </Suspense>
-                  } />
                   
                   <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
                   <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
@@ -305,94 +274,9 @@ const App = () => (
                       <RiskAcceptanceManagement />
                     </Suspense>
                   } />
-                  <Route path="compliance" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CompliancePage />
-                    </Suspense>
-                  } />
                   <Route path="incidents" element={
                     <Suspense fallback={<PageLoader />}>
                       <IncidentManagementPage />
-                    </Suspense>
-                  } />
-                  {/* Audit IA Module - Comprehensive audit management */}
-                  <Route path="audit" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditIADashboard />
-                    </Suspense>
-                  } />
-                  <Route path="audit/planning" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditPlanningWizard />
-                    </Suspense>
-                  } />
-                  <Route path="audit/scoping" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditScopingMatrix />
-                    </Suspense>
-                  } />
-                  <Route path="audit/execution" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditExecutionWorkspace />
-                    </Suspense>
-                  } />
-                  <Route path="audit/working-papers" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AIWorkingPapers />
-                    </Suspense>
-                  } />
-                  <Route path="audit/reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditReportGenerator />
-                    </Suspense>
-                  } />
-                  <Route path="audit/evidence" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditEvidenceManager />
-                    </Suspense>
-                  } />
-                  <Route path="audit/alex-ai" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AlexAuditAI />
-                    </Suspense>
-                  } />
-                  {/* ROTAS ESPECÍFICAS PRIMEIRO (mais específicas) */}
-                  <Route path="assessments/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CreateFrameworkPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/:id/evaluate" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkEvaluationPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkDetailPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkManagementPage />
-                    </Suspense>
-                  } />
-                  {/* TEMPORARIAMENTE REMOVIDA PARA TESTE */}
-                  {/* <Route path="assessments/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentDetailPage />
-                    </Suspense>
-                  } /> */}
-                  
-                  {/* ROTAS MOVIDAS PARA O TOPO - REMOVENDO DUPLICATAS */}
-                  <Route path="assessment-detail/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentDetailPage />
                     </Suspense>
                   } />
                   <Route path="policy-management" element={
@@ -606,12 +490,8 @@ const App = () => (
                   <Route path="test-route" element={
                     <div style={{padding: '20px'}}>
                       <h1>🧪 TESTE DE ROTA FUNCIONANDO!</h1>
-                      <p>Se você consegue ver essa mensagem, a aplicação está carregando corretamente.</p>
+                      <p>Se você consegue ver essa mensagem, o problema não é na estrutura de rotas.</p>
                       <p>Timestamp: {new Date().toISOString()}</p>
-                      <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#e8f5e8', border: '1px solid green'}}>
-                        <h3>✅ APLICAÇÃO FUNCIONANDO</h3>
-                        <p>React está renderizando corretamente!</p>
-                      </div>
                     </div>
                   } />
                 </Route>
@@ -624,7 +504,6 @@ const App = () => (
               </Routes>
             </BrowserRouter>
               </TooltipProvider>
-            </NotificationsRealtimeProvider>
           </ThemeProvider>
         </TenantSelectorProvider>
       </AuthProvider>

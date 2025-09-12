@@ -21,8 +21,7 @@ import {
   Search,
   Loader2,
   Eye,
-  Rocket,
-  Edit
+  // Rocket e Edit movidos para o módulo Configurações
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
@@ -36,7 +35,7 @@ const AlexAIRecommendations = React.lazy(() => import('./alex/AlexAIRecommendati
 const AlexAssessmentWizard = React.lazy(() => import('./alex/AlexAssessmentWizard'));
 const AlexProcessDesigner = React.lazy(() => import('./alex/AlexProcessDesigner'));
 const AlexProcessDesignerEnhanced = React.lazy(() => import('./alex/AlexProcessDesignerEnhanced'));
-const AlexProcessDesignerEnhancedModal = React.lazy(() => import('./alex/AlexProcessDesignerEnhancedModal'));
+// AlexProcessDesignerEnhancedModal movido para o módulo Configurações
 const AlexFrameworkDebug = React.lazy(() => import('./alex/AlexFrameworkDebug'));
 const AlexTemplateDebug = React.lazy(() => import('./alex/AlexTemplateDebug'));
 const NavigationDiagnostic = React.lazy(() => import('../debug/NavigationDiagnostic'));
@@ -49,8 +48,7 @@ const AssessmentsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showWizard, setShowWizard] = useState(false);
   const [selectedFramework, setSelectedFramework] = useState<string | null>(null);
-  const [showEnhancedModal, setShowEnhancedModal] = useState(false);
-  const [enhancedModalMode, setEnhancedModalMode] = useState<'create' | 'edit'>('create');
+  // Estados do Enhanced Modal movidos para o módulo Configurações
 
   // Configurações do tenant para os componentes Alex
   const tenantConfig = {
@@ -227,38 +225,7 @@ const AssessmentsPage: React.FC = () => {
             Beta
           </Badge>
         </Button>
-        <Button 
-          variant="outline"
-          onClick={() => {
-            console.log('🚀 Clicando em Designer Enhanced Modal - Criar');
-            setEnhancedModalMode('create');
-            setShowEnhancedModal(true);
-            toast.info('Abrindo Designer Enhanced em modal - Modo Criação');
-          }}
-          className="flex items-center gap-2 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300"
-        >
-          <Rocket className="h-4 w-4" />
-          Criar Enhanced
-          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
-            v4.0 Modal
-          </Badge>
-        </Button>
-        <Button 
-          variant="outline"
-          onClick={() => {
-            console.log('🚀 Clicando em Designer Enhanced Modal - Editar');
-            setEnhancedModalMode('edit');
-            setShowEnhancedModal(true);
-            toast.info('Abrindo Designer Enhanced em modal - Modo Edição');
-          }}
-          className="flex items-center gap-2 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
-        >
-          <Edit className="h-4 w-4" />
-          Editar Enhanced
-          <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs">
-            Edit
-          </Badge>
-        </Button>
+        {/* Botões Criar Enhanced e Editar Enhanced movidos para o módulo Configurações */}
       </div>
 
       {/* Main Content Tabs */}
@@ -494,21 +461,7 @@ const AssessmentsPage: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modal do Designer Enhanced */}
-      {showEnhancedModal && (
-        <Suspense fallback={<LoadingSpinner message="Carregando Designer Enhanced..." />}>
-          <AlexProcessDesignerEnhancedModal
-            isOpen={showEnhancedModal}
-            onClose={() => setShowEnhancedModal(false)}
-            mode={enhancedModalMode}
-            onSave={(data) => {
-              console.log('Dados salvos do Enhanced:', data);
-              toast.success(`${enhancedModalMode === 'create' ? 'Criado' : 'Salvo'} com sucesso!`);
-              setShowEnhancedModal(false);
-            }}
-          />
-        </Suspense>
-      )}
+      {/* Modal do Designer Enhanced movido para o módulo Configurações */}
 
       {/* Modal do Wizard de Criação */}
       {showWizard && (
