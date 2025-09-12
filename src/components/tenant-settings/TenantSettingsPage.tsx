@@ -5,13 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Select components removidos - não mais necessários
 import { 
   Settings, 
   Users, 
@@ -32,11 +26,11 @@ import {
   Zap,
   Bell,
   Crown,
-  Building2,
-  ChevronDown
+  Building2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 
 // Importar seções
 import { UserManagementSection } from './sections/UserManagementSection';
@@ -82,14 +76,7 @@ interface SettingsMetrics {
   suspiciousActivities: number;
 }
 
-interface AvailableTenant {
-  id: string;
-  name: string;
-  slug: string;
-  subscription_plan: string;
-  status: 'active' | 'inactive' | 'suspended';
-  created_at: string;
-}
+// Interface movida para TenantSelectorContext
 
 const TenantSettingsPage: React.FC = () => {
   const { user, tenant } = useAuth();
@@ -97,12 +84,13 @@ const TenantSettingsPage: React.FC = () => {
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [metrics, setMetrics] = useState<SettingsMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Removido: hasUnsavedChanges não era usado
   
-  // Estados para super admin
-  const [availableTenants, setAvailableTenants] = useState<AvailableTenant[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState<string>('');
-  const [loadingTenants, setLoadingTenants] = useState(false);
+  // Usar contexto global de seleção de tenant
+  const { 
+    selectedTenantId, 
+    isGlobalTenantSelection 
+  } = useTenantSelector();
 
   // Verificar permissões
   const isPlatformAdmin = user?.isPlatformAdmin || user?.roles?.includes('platform_admin');
@@ -111,19 +99,10 @@ const TenantSettingsPage: React.FC = () => {
   
   // Debug de permissões removido para evitar erros
   
-  // Determinar tenant atual (própria tenant ou selecionada pelo super admin)
-  const currentTenantId = isPlatformAdmin ? selectedTenantId : tenant?.id || '';
+  // O contexto já gerencia isso automaticamente
+  const currentTenantId = selectedTenantId;
 
-  useEffect(() => {
-    
-    if (isPlatformAdmin) {
-      loadAvailableTenants();
-    } else if (isTenantAdmin && tenant) {
-      setSelectedTenantId(tenant.id);
-      loadTenantInfo(tenant.id);
-      loadMetrics(tenant.id);
-    }
-  }, [isPlatformAdmin, isTenantAdmin, tenant]);
+  // O contexto global já carrega os tenants automaticamente
   
   useEffect(() => {
     if (currentTenantId) {
@@ -132,97 +111,7 @@ const TenantSettingsPage: React.FC = () => {
     }
   }, [currentTenantId]);
 
-  const loadAvailableTenants = async () => {
-    try {
-      setLoadingTenants(true);
-      
-      // Carregar todas as tenants disponíveis (apenas para platform admin)
-      const { data: tenants, error } = await supabase
-        .from('tenants')
-        .select('id, name, slug, subscription_plan, is_active, created_at')
-        .eq('is_active', true)
-        .order('name');
-        
-      if (error) {
-        
-        // Tentar carregar da tabela profiles como fallback
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('tenant_id')
-          .not('tenant_id', 'is', null);
-          
-        if (!profilesError && profilesData) {
-          // Obter IDs únicos de tenants
-          const uniqueTenantIds = [...new Set(profilesData.map(p => p.tenant_id))];
-          
-          // Buscar informações das tenants pelos IDs
-          const { data: tenantsByIds, error: tenantsByIdsError } = await supabase
-            .from('tenants')
-            .select('id, name, slug, subscription_plan, is_active, created_at')
-            .in('id', uniqueTenantIds)
-            .eq('is_active', true);
-            
-          if (!tenantsByIdsError && tenantsByIds) {
-            const realTenants = tenantsByIds.map(t => ({
-              id: t.id,
-              name: t.name,
-              slug: t.slug,
-              subscription_plan: t.subscription_plan || 'basic',
-              status: 'active' as const,
-              created_at: t.created_at
-            }));
-            
-            setAvailableTenants(realTenants);
-            
-            if (realTenants.length > 0 && !selectedTenantId) {
-              setSelectedTenantId(realTenants[0].id);
-            }
-            
-            return;
-          }
-        }
-        
-        // Último fallback para dados mock apenas se não conseguir carregar nada
-        const mockTenants: AvailableTenant[] = [
-          {
-            id: 'demo-tenant',
-            name: 'Organização Demo',
-            slug: 'organizacao-demo',
-            subscription_plan: 'professional',
-            status: 'active',
-            created_at: new Date().toISOString()
-          }
-        ];
-        setAvailableTenants(mockTenants);
-        
-        if (mockTenants.length > 0 && !selectedTenantId) {
-          setSelectedTenantId(mockTenants[0].id);
-        }
-      } else {
-        // Sucesso ao carregar da tabela tenants
-        const realTenants = (tenants || []).map(t => ({
-          id: t.id,
-          name: t.name,
-          slug: t.slug,
-          subscription_plan: t.subscription_plan || 'basic',
-          status: 'active' as const,
-          created_at: t.created_at
-        }));
-        
-        setAvailableTenants(realTenants);
-        
-        if (realTenants.length > 0 && !selectedTenantId) {
-          setSelectedTenantId(realTenants[0].id);
-        }
-        
-
-      }
-    } catch (error) {
-      toast.error('Erro ao carregar lista de organizações');
-    } finally {
-      setLoadingTenants(false);
-    }
-  };
+  // Função removida - agora gerenciada pelo TenantSelectorContext
   
   const loadTenantInfo = async (tenantId: string) => {
     if (!tenantId) return;
@@ -384,15 +273,6 @@ const TenantSettingsPage: React.FC = () => {
     }
   };
 
-  const handleSaveChanges = async () => {
-    try {
-      // Implementar salvamento das configurações
-      toast.success('Configurações salvas com sucesso!');
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      toast.error('Erro ao salvar configurações');
-    }
-  };
 
   if (!hasAccess) {
     return (
@@ -437,43 +317,6 @@ const TenantSettingsPage: React.FC = () => {
             }
           </p>
           
-          {/* Seletor de Tenant para Super Admin */}
-          {isPlatformAdmin && (
-            <div className="mt-4">
-              <div className="flex items-center space-x-3">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
-                <div className="flex-1 max-w-md">
-                  <Select 
-                    value={selectedTenantId} 
-                    onValueChange={setSelectedTenantId}
-                    disabled={loadingTenants}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecione uma organização" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableTenants.map((tenant) => (
-                        <SelectItem key={tenant.id} value={tenant.id}>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">{tenant.name}</span>
-                            <Badge 
-                              variant="secondary" 
-                              className="text-xs bg-muted text-muted-foreground border-muted-foreground/20"
-                            >
-                              {tenant.subscription_plan}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {loadingTenants && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                )}
-              </div>
-            </div>
-          )}
           
           {/* Info da Tenant */}
           {tenantInfo && (
@@ -501,22 +344,7 @@ const TenantSettingsPage: React.FC = () => {
           )}
         </div>
         
-        <div className="flex items-center space-x-2">
-          {hasUnsavedChanges && (
-            <Badge className="bg-yellow-50 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-700">
-              <Clock className="h-3 w-3 mr-1" />
-              Alterações não salvas
-            </Badge>
-          )}
-          <Button 
-            onClick={handleSaveChanges}
-            disabled={!hasUnsavedChanges}
-            className="flex items-center space-x-2"
-          >
-            <CheckCircle className="h-4 w-4" />
-            <span>Salvar Alterações</span>
-          </Button>
-        </div>
+        {/* Botão "Salvar Alterações" removido - não tinha funcionalidade */}
       </div>
 
       {/* Métricas Rápidas */}

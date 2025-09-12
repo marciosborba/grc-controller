@@ -400,7 +400,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       case 'inactive':
         return <Badge className="bg-gray-100 text-gray-800">Inativo</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pendente</Badge>;
+        return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }

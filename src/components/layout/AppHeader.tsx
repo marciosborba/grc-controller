@@ -16,6 +16,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 import { useNotifications } from '@/hooks/useNotifications';
+import { TenantSelector } from '@/components/ui/tenant-selector';
 
 export const AppHeader = () => {
   const { user, logout } = useAuth();
@@ -61,6 +62,10 @@ export const AppHeader = () => {
 
         {/* Right side - Responsivo */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+          {/* Tenant Selector - Only for Platform Admins */}
+          <div className="hidden md:block">
+            <TenantSelector />
+          </div>
           {/* Notifications */}
           <Button 
             variant="ghost" 
@@ -102,6 +107,14 @@ export const AppHeader = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 sm:w-56">
+              {/* Mobile: Tenant Selector */}
+              <div className="md:hidden mb-2">
+                <div className="px-3 py-2">
+                  <TenantSelector />
+                </div>
+                <DropdownMenuSeparator />
+              </div>
+              
               {/* Mobile: mostrar tema toggle no menu */}
               <div className="sm:hidden">
                 <DropdownMenuItem className="flex items-center justify-between px-3 py-2">

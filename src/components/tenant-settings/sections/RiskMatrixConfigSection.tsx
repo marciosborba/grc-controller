@@ -422,30 +422,56 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
 
       console.log('✅ Configuração salva com sucesso!');
       
-      // Invalidar cache para sincronizar com outras implementações
-      await queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
-      await queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      
-      setHasUnsavedChanges(false);
-      onSettingsChange();
-      toast.success('Configuração da matriz de risco salva com sucesso!');
-      
-      // Verificar se foi salvo corretamente
-      setTimeout(async () => {
-        const { data: verificationData } = await supabase
-          .from('tenants')
-          .select('settings')
-          .eq('id', currentTenantId)
-          .single();
-          
-        console.log('🔍 Verificação pós-salvamento:', {
-          saved: verificationData?.settings?.risk_matrix,
-          expected: matrixConfig
-        });
-      }, 1000);
+      try {
+        console.log('🔄 Invalidando cache...');
+        // Invalidar cache para sincronizar com outras implementações
+        await queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
+        await queryClient.invalidateQueries({ queryKey: ['tenants'] });
+        console.log('✅ Cache invalidado com sucesso');
+        
+        console.log('🔄 Atualizando estado...');
+        setHasUnsavedChanges(false);
+        onSettingsChange();
+        console.log('✅ Estado atualizado com sucesso');
+        
+        console.log('🔄 Mostrando toast de sucesso...');
+        toast.success('Configuração da matriz de risco salva com sucesso!');
+        console.log('✅ Toast mostrado com sucesso');
+        
+        // Verificar se foi salvo corretamente
+        setTimeout(async () => {
+          try {
+            console.log('🔄 Iniciando verificação pós-salvamento...');
+            const { data: verificationData } = await supabase
+              .from('tenants')
+              .select('settings')
+              .eq('id', currentTenantId)
+              .single();
+              
+            console.log('🔍 Verificação pós-salvamento:', {
+              saved: verificationData?.settings?.risk_matrix,
+              expected: matrixConfig
+            });
+          } catch (verificationError) {
+            console.error('❌ Erro na verificação pós-salvamento:', verificationError);
+          }
+        }, 1000);
+        
+      } catch (postSaveError) {
+        console.error('❌ Erro nas operações pós-salvamento:', postSaveError);
+        throw postSaveError; // Re-lançar para o catch principal
+      }
       
     } catch (error) {
-      console.error('💥 Erro ao salvar configuração:', error);
+      console.error('💥 Erro ao salvar configuração - DETALHES COMPLETOS:', {
+        error: error,
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint
+      });
       toast.error('Erro ao salvar configuração da matriz de risco');
     } finally {
       setIsLoading(false);

@@ -7,6 +7,7 @@ import { lazy, Suspense } from "react";
 import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
+import { TenantSelectorProvider } from "@/contexts/TenantSelectorContext";
 // Critical imports (always loaded)
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
@@ -221,9 +222,10 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider>
-          <NotificationsRealtimeProvider>
-            <TooltipProvider>
+        <TenantSelectorProvider>
+          <ThemeProvider>
+            <NotificationsRealtimeProvider>
+              <TooltipProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -614,9 +616,10 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-            </TooltipProvider>
-          </NotificationsRealtimeProvider>
-        </ThemeProvider>
+              </TooltipProvider>
+            </NotificationsRealtimeProvider>
+          </ThemeProvider>
+        </TenantSelectorProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

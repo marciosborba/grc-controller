@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Target, AlertTriangle, TrendingUp, Zap, ArrowLeft } from "lucide-react";
+import { Target, AlertTriangle, TrendingUp, Zap, ArrowLeft, Eye, Lock, Info } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTenantSettings } from '@/hooks/useTenantSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useTenantSecurity } from '@/utils/tenantSecurity';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface RiskMatrixViewProps {
   risks: any[];
@@ -12,9 +15,33 @@ interface RiskMatrixViewProps {
   filters?: any;
 }
 
-const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) => {
+interface RiskLevel {
+  id: string;
+  name: string;
+  color: string;
+  description: string;
+  minValue: number;
+  maxValue: number;
+  value: number;
+}
+
+interface MatrixConfig {
+  type: '3x3' | '4x4' | '5x5';
+  calculation_method: string;
+  impact_labels: string[];
+  likelihood_labels: string[];
+  risk_levels_custom: RiskLevel[];
+  risk_levels: {
+    low: number[];
+    medium: number[];
+    high: number[];
+    critical?: number[];
+  };
+}
+
+const getRiskColor = (impact: number, likelihood: number, matrixConfig: MatrixConfig | null) => {
   const riskValue = impact * likelihood;
-  const matrixType = tenantSettings?.risk_matrix?.type;
+  const matrixType = matrixConfig?.type;
   
   if (matrixType === '3x3') {
     // Matriz 3x3: Baixo (1-2), Médio (3-4), Alto (5-9)
@@ -38,15 +65,15 @@ const getRiskColor = (impact: number, likelihood: number, tenantSettings: any) =
 };
 
 // Função para calcular o nível de risco consistente com as cores
-const calculateConsistentRiskLevel = (impact: number, likelihood: number, tenantSettings: any) => {
+const calculateConsistentRiskLevel = (impact: number, likelihood: number, matrixConfig: MatrixConfig | null) => {
   const riskValue = impact * likelihood;
   
   // console.log(`calculateConsistentRiskLevel: impact=${impact}, likelihood=${likelihood}, score=${riskValue}`);
-  // console.log('tenantSettings.risk_matrix:', tenantSettings?.risk_matrix);
+  // console.log('matrixConfig:', matrixConfig);
   
   // Usar as faixas EXATAS da configuração salva (matriz verdadeira)
-  if (tenantSettings?.risk_matrix?.risk_levels) {
-    const { risk_levels } = tenantSettings.risk_matrix;
+  if (matrixConfig?.risk_levels) {
+    const { risk_levels } = matrixConfig;
     
     // console.log('risk_levels:', risk_levels);
     
@@ -69,7 +96,7 @@ const calculateConsistentRiskLevel = (impact: number, likelihood: number, tenant
     }
     
     // Se não encontrou em nenhuma faixa, usar fallback baseado no tipo
-    const matrixType = tenantSettings.risk_matrix.type;
+    const matrixType = matrixConfig.type;
     // console.log('Usando fallback para tipo:', matrixType);
     if (matrixType === '3x3') {
       const result = riskValue >= 5 ? 'Alto' : riskValue >= 3 ? 'Médio' : 'Baixo';
@@ -149,32 +176,275 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
 }) => {
   const navigate = useNavigate();
   const [selectedRisk, setSelectedRisk] = useState<any>(null);
-  const { 
-    tenantSettings, 
-    isLoading: settingsLoading, 
-    calculateRiskLevel, 
-    getMatrixLabels, 
-    getMatrixDimensions,
-    getRiskLevels
-  } = useTenantSettings(); // Sem tenantId específico - usa o do usuário logado
+  const { user } = useAuth();
+  const { userTenantId } = useTenantSecurity();
+  const [isLoading, setIsLoading] = useState(true);
+  const [matrixConfig, setMatrixConfig] = useState<MatrixConfig | null>(null);
+  
+  // Tenant ID - Usando a mesma lógica que Matrix 1
+  const tenantId = userTenantId || user?.tenantId;
   
   // DEBUG: Verificar se os dados estão chegando
-  console.log('🔍 RiskMatrixView - Dados recebidos:', {
+  console.log('🔍 MATRIZ 2 (SOMENTE LEITURA) - RiskMatrixView - Dados recebidos:', {
     risksLength: risks?.length || 0,
     risks: risks?.slice(0, 3).map(r => ({ id: r.id, risk_title: r.risk_title, name: r.name })),
     searchTerm,
     filters,
-    settingsLoading,
-    tenantSettings: tenantSettings?.risk_matrix?.type
+    isLoading,
+    matrixConfig: matrixConfig?.type,
+    tenantId
   });
+  
+  console.log('🔍 MATRIZ 2 - TENANT ID ATUAL:', tenantId);
+  console.log('🔍 MATRIZ 2 - userTenantId:', userTenantId);
+  console.log('🔍 MATRIZ 2 - user?.tenantId:', user?.tenantId);
 
-  // Criar níveis dinâmicos baseados na configuração da tenant
-  const matrixLabels = useMemo(() => getMatrixLabels(), [tenantSettings]);
-  const matrixDimensions = useMemo(() => getMatrixDimensions(), [tenantSettings]);
-  const riskLevels = useMemo(() => getRiskLevels(), [tenantSettings]);
+  // Carregar configuração diretamente do banco de dados
+  useEffect(() => {
+    const loadMatrixConfig = async () => {
+      if (!tenantId) {
+        console.log('⚠️ MATRIZ 2 - Nenhum tenant ID encontrado');
+        setIsLoading(false);
+        return;
+      }
 
-  // Criar arrays de níveis dinâmicos
+      try {
+        setIsLoading(true);
+        console.log('📥 MATRIZ 2 - Carregando configuração do banco para tenant:', tenantId);
+
+        const { data, error } = await supabase
+          .from('tenants')
+          .select('settings')
+          .eq('id', tenantId)
+          .single();
+
+        if (error) {
+          console.error('❌ MATRIZ 2 - Erro ao carregar configuração:', error);
+          return;
+        }
+
+        let matrixConfig: MatrixConfig;
+        
+        if (data?.settings?.risk_matrix) {
+          // 💾 USAR DADOS DO BANCO
+          const riskMatrix = data.settings.risk_matrix;
+          console.log('✅ MATRIZ 2 - Usando configuração do banco:', riskMatrix);
+          
+          matrixConfig = {
+            type: riskMatrix.type || '5x5',
+            calculation_method: riskMatrix.calculation_method || 'multiplication',
+            impact_labels: riskMatrix.impact_labels || [],
+            likelihood_labels: riskMatrix.likelihood_labels || [],
+            risk_levels_custom: riskMatrix.risk_levels_custom || [],
+            risk_levels: riskMatrix.risk_levels || {}
+          };
+        } else {
+          // 🎨 USAR PADRÃO 5X5 SE NÃO HÁ DADOS
+          console.log('🎨 MATRIZ 2 - Usando configuração padrão 5x5');
+          
+          matrixConfig = {
+            type: '5x5',
+            calculation_method: 'multiplication',
+            impact_labels: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'],
+            likelihood_labels: ['Muito Raro', 'Raro', 'Possível', 'Provável', 'Muito Provável'],
+            risk_levels_custom: [],
+            risk_levels: {
+              low: [1, 2, 3, 4, 5],
+              medium: [6, 7, 8, 9, 10],
+              high: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+              critical: [21, 22, 23, 24, 25]
+            }
+          };
+        }
+        
+        setMatrixConfig(matrixConfig);
+        console.log('✅ MATRIZ 2 - Matriz configurada:', {
+          type: matrixConfig.type,
+          impactLabels: matrixConfig.impact_labels,
+          likelihoodLabels: matrixConfig.likelihood_labels
+        });
+
+      } catch (error) {
+        console.error('💥 MATRIZ 2 - Erro inesperado:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMatrixConfig();
+  }, [tenantId]);
+  
+  // 🔄 RECARREGAR SEMPRE QUE O COMPONENTE FOR ACESSADO
+  useEffect(() => {
+    console.log('🔄 MATRIZ 2 - Componente montado/acessado - Forçando recarga do banco');
+    
+    const forceReload = async () => {
+      if (!tenantId) return;
+      
+      try {
+        console.log('📎 MATRIZ 2 - Fazendo consulta FRESCA ao banco...');
+        
+        const { data, error } = await supabase
+          .from('tenants')
+          .select('settings')
+          .eq('id', tenantId)
+          .single();
+          
+        if (error) {
+          console.error('❌ MATRIZ 2 - Erro na consulta fresca:', error);
+          return;
+        }
+        
+        let matrixConfig: MatrixConfig;
+        
+        if (data?.settings?.risk_matrix) {
+          const riskMatrix = data.settings.risk_matrix;
+          console.log('✅ MATRIZ 2 - Dados FRESCOS do banco:', riskMatrix);
+          
+          matrixConfig = {
+            type: riskMatrix.type || '5x5',
+            calculation_method: riskMatrix.calculation_method || 'multiplication',
+            impact_labels: riskMatrix.impact_labels || [],
+            likelihood_labels: riskMatrix.likelihood_labels || [],
+            risk_levels_custom: riskMatrix.risk_levels_custom || [],
+            risk_levels: riskMatrix.risk_levels || {}
+          };
+        } else {
+          console.log('🎨 MATRIZ 2 - Sem dados no banco, usando padrão 5x5');
+          
+          matrixConfig = {
+            type: '5x5',
+            calculation_method: 'multiplication',
+            impact_labels: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'],
+            likelihood_labels: ['Muito Raro', 'Raro', 'Possível', 'Provável', 'Muito Provável'],
+            risk_levels_custom: [],
+            risk_levels: {
+              low: [1, 2, 3, 4, 5],
+              medium: [6, 7, 8, 9, 10],
+              high: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+              critical: [21, 22, 23, 24, 25]
+            }
+          };
+        }
+        
+        setMatrixConfig(matrixConfig);
+        console.log('✅ MATRIZ 2 - Matriz ATUALIZADA com dados frescos:', {
+          type: matrixConfig.type,
+          impactLabels: matrixConfig.impact_labels,
+          likelihoodLabels: matrixConfig.likelihood_labels
+        });
+        
+      } catch (error) {
+        console.error('💥 MATRIZ 2 - Erro na recarga fresca:', error);
+      }
+    };
+    
+    forceReload();
+  }, []); // Executar sempre que o componente for montado
+
+  // Escutar eventos de sincronização da Matrix 1
+  useEffect(() => {
+    const handleMatrixUpdate = (event: CustomEvent) => {
+      const { tenantId: eventTenantId, matrixConfig: newConfig } = event.detail;
+      
+      // Só atualizar se for do mesmo tenant
+      if (eventTenantId === tenantId && newConfig) {
+        console.log('🔄 MATRIZ 2 - Sincronização automática recebida da Matriz 1:', newConfig);
+        
+        // Converter para o formato esperado pela Matriz 2
+        const syncedConfig: MatrixConfig = {
+          type: newConfig.type,
+          calculation_method: newConfig.calculation_method,
+          impact_labels: newConfig.impact_labels,
+          likelihood_labels: newConfig.likelihood_labels,
+          risk_levels_custom: newConfig.risk_levels_custom,
+          risk_levels: newConfig.risk_levels
+        };
+        
+        setMatrixConfig(syncedConfig);
+        console.log('✅ MATRIZ 2 - Atualizada automaticamente:', {
+          type: syncedConfig.type,
+          impactLabels: syncedConfig.impact_labels,
+          likelihoodLabels: syncedConfig.likelihood_labels
+        });
+      }
+    };
+
+    window.addEventListener('matrix-config-updated', handleMatrixUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('matrix-config-updated', handleMatrixUpdate as EventListener);
+    };
+  }, [tenantId]);
+
+  // Criar níveis dinâmicos baseados na configuração carregada do banco
+  const matrixLabels = useMemo(() => {
+    if (!matrixConfig) return { impact: [], likelihood: [] };
+    return {
+      impact: matrixConfig.impact_labels,
+      likelihood: matrixConfig.likelihood_labels
+    };
+  }, [matrixConfig]);
+  
+  const riskLevels = useMemo(() => {
+    if (!matrixConfig?.risk_levels_custom) return [];
+    return matrixConfig.risk_levels_custom.map(level => level.name);
+  }, [matrixConfig]);
+
+  // Calcular dimensões da matriz baseado na configuração
+  const matrixDimensions = useMemo(() => {
+    if (!matrixConfig) return { rows: 5, cols: 5 };
+    const size = parseInt(matrixConfig.type.charAt(0));
+    return { rows: size, cols: size };
+  }, [matrixConfig]);
+
+  // Calcular nível de risco baseado na configuração atual
+  const calculateRiskLevel = (impact: number, likelihood: number): string => {
+    if (!matrixConfig) return 'Desconhecido';
+    
+    const riskValue = impact * likelihood;
+    
+    // Procurar em risk_levels_custom primeiro
+    if (matrixConfig.risk_levels_custom?.length > 0) {
+      const level = matrixConfig.risk_levels_custom.find(level => 
+        riskValue >= level.minValue && riskValue <= level.maxValue
+      );
+      if (level) return level.name;
+    }
+    
+    // Fallback para risk_levels legado
+    const { risk_levels } = matrixConfig;
+    if (risk_levels.critical && risk_levels.critical.includes(riskValue)) return 'Crítico';
+    if (risk_levels.high && risk_levels.high.includes(riskValue)) return 'Alto';
+    if (risk_levels.medium && risk_levels.medium.includes(riskValue)) return 'Médio';
+    if (risk_levels.low && risk_levels.low.includes(riskValue)) return 'Baixo';
+    
+    return 'Desconhecido';
+  };
+  
+  // Obter cor do nível de risco
+  const getRiskLevelColor = (riskLevel: string): string => {
+    if (!matrixConfig?.risk_levels_custom) {
+      // Cores padrão
+      switch (riskLevel.toLowerCase()) {
+        case 'muito baixo': return '#3b82f6';
+        case 'baixo': return '#22c55e';
+        case 'médio': return '#eab308';
+        case 'alto': return '#f97316';
+        case 'crítico': case 'muito alto': return '#ef4444';
+        default: return '#6b7280';
+      }
+    }
+    
+    const level = matrixConfig.risk_levels_custom.find(l => l.name === riskLevel);
+    return level?.color || '#6b7280';
+  };
+
+  // HOOKS: Todos os hooks devem vir antes de qualquer return condicional
+
+  // Criar arrays de níveis dinâmicos baseados na configuração do banco
   const impactLevels = useMemo(() => {
+    if (!matrixConfig) return [];
     // Inverter a ordem dos labels para exibir de cima para baixo (Alto -> Baixo)
     const reversedLabels = [...matrixLabels.impact].reverse();
     
@@ -182,98 +452,37 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
       // Para matriz 3x3: index 0 = Alto (level 3), index 1 = Médio (level 2), index 2 = Baixo (level 1)
       const level = matrixLabels.impact.length - index;
       
-      // Definir cores baseadas no level para matriz 3x3
-      const getImpactColor = (level: number, matrixType: string) => {
-        if (matrixType === '3x3') {
-          switch(level) {
-            case 1: return 'bg-green-500 text-white';    // Baixo (base)
-            case 2: return 'bg-yellow-500 text-white';   // Médio
-            case 3: return 'bg-red-500 text-white';      // Alto (topo)
-            default: return 'bg-gray-500 text-white';
-          }
-        } else if (matrixType === '4x4') {
-          switch(level) {
-            case 1: return 'bg-green-500 text-white';    // Insignificante (base)
-            case 2: return 'bg-yellow-500 text-white';   // Menor
-            case 3: return 'bg-orange-500 text-white';   // Moderado
-            case 4: return 'bg-red-500 text-white';      // Maior (topo)
-            default: return 'bg-gray-500 text-white';
-          }
-        } else {
-          switch(level) {
-            case 1: return 'bg-blue-500 text-white';     // Muito Baixo (base)
-            case 2: return 'bg-green-500 text-white';    // Baixo
-            case 3: return 'bg-yellow-500 text-white';   // Médio
-            case 4: return 'bg-orange-500 text-white';   // Alto
-            case 5: return 'bg-red-500 text-white';      // Muito Alto (topo)
-            default: return 'bg-gray-500 text-white';
-          }
-        }
-      };
-      
       return {
         level,
-        label, // Usar o label EXATO da configuração
-        color: getImpactColor(level, tenantSettings?.risk_matrix?.type || '5x5')
+        label,
+        color: 'bg-muted text-foreground' // Cor neutra para headers
       };
     });
-  }, [matrixLabels.impact, tenantSettings?.risk_matrix?.type]);
+  }, [matrixLabels.impact, matrixConfig]);
 
   const likelihoodLevels = useMemo(() => {
-    return matrixLabels.likelihood.map((label, index) => {
-      // Definir cores baseadas no tipo de matriz
-      const getLikelihoodColor = (index: number, matrixType: string) => {
-        if (matrixType === '3x3') {
-          // Para matriz 3x3: cores progressivas
-          switch(index) {
-            case 0: return 'bg-green-500 text-white';    // Raro
-            case 1: return 'bg-yellow-500 text-white';   // Possível
-            case 2: return 'bg-red-500 text-white';      // Provável
-            default: return 'bg-gray-500 text-white';
-          }
-        } else if (matrixType === '4x4') {
-          switch(index) {
-            case 0: return 'bg-green-500 text-white';    // Baixo
-            case 1: return 'bg-yellow-500 text-white';   // Médio
-            case 2: return 'bg-orange-500 text-white';   // Alto  
-            case 3: return 'bg-red-500 text-white';      // Crítico
-            default: return 'bg-gray-500 text-white';
-          }
-        } else {
-          // Para matriz 5x5
-          switch(index) {
-            case 0: return 'bg-blue-500 text-white';     // Muito Baixo
-            case 1: return 'bg-green-500 text-white';    // Baixo
-            case 2: return 'bg-yellow-500 text-white';   // Médio
-            case 3: return 'bg-orange-500 text-white';   // Alto
-            case 4: return 'bg-red-500 text-white';      // Muito Alto
-            default: return 'bg-gray-500 text-white';
-          }
-        }
-      };
-
-      return {
-        level: index + 1, // Ordem normal (1,2,3 para 3x3)
-        label, // Usar o label EXATO da configuração
-        color: getLikelihoodColor(index, tenantSettings?.risk_matrix?.type || '5x5')
-      };
-    });
-  }, [matrixLabels.likelihood, tenantSettings?.risk_matrix?.type]);
+    if (!matrixConfig) return [];
+    return matrixLabels.likelihood.map((label, index) => ({
+      level: index + 1,
+      label,
+      color: 'bg-muted text-foreground' // Cor neutra para headers
+    }));
+  }, [matrixLabels.likelihood, matrixConfig]);
 
   // Filtrar e processar riscos
   const processedRisks = useMemo(() => {
-    console.log('🔍 processedRisks - Iniciando processamento:', {
-      settingsLoading,
+    console.log('🔍 MATRIZ 2 - processedRisks - Iniciando processamento:', {
+      isLoading,
       risksLength: risks?.length || 0,
       firstRisk: risks?.[0]
     });
     
-    if (settingsLoading) {
-      console.log('🔍 processedRisks - Settings ainda carregando, retornando array vazio');
+    if (isLoading) {
+      console.log('🔍 MATRIZ 2 - processedRisks - Matrix config ainda carregando, retornando array vazio');
       return [];
     }
     
-    console.log('🔍 processedRisks - Processando', risks?.length || 0, 'riscos');
+    console.log('🔍 MATRIZ 2 - processedRisks - Processando', risks?.length || 0, 'riscos');
       
     const result = risks
       .filter(risk => {
@@ -408,11 +617,11 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
     });
     
     return result;
-  }, [risks, searchTerm, filters, settingsLoading, matrixDimensions]);
+  }, [risks, searchTerm, filters, isLoading, matrixConfig]);
 
   // Estatísticas dos riscos
   const stats = useMemo(() => {
-    if (settingsLoading) return { total: 0, byLevel: {} };
+    if (isLoading) return { total: 0, byLevel: {} };
     
     const total = processedRisks.length;
     const byLevel: Record<string, number> = {};
@@ -424,23 +633,34 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
     
     // Contar riscos por nível usando nossa função consistente
     processedRisks.forEach(risk => {
-      const level = calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings);
+      const level = calculateConsistentRiskLevel(risk.impact, risk.likelihood, matrixConfig);
       if (byLevel[level] !== undefined) {
         byLevel[level]++;
       }
     });
     
     return { total, byLevel };
-  }, [processedRisks, tenantSettings, riskLevels, settingsLoading]);
+  }, [processedRisks, matrixConfig, riskLevels, isLoading]);
 
-  // Show loading while tenant settings are loading
-  if (settingsLoading) {
+  // RENDERS CONDICIONAIS: Depois de todos os hooks
+  // Se ainda carregando, mostrar loading
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-border border-t-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando configurações da matriz...</p>
+          <p className="text-muted-foreground">Carregando configuração da matriz...</p>
         </div>
+      </div>
+    );
+  }
+
+  // ✅ SEMPRE EXIBIR A MATRIZ - SEM VALIDAÇÕES DESNECESSÁRIAS
+  if (!matrixConfig) {
+    console.log('⚠️ MATRIZ 2 - Ainda carregando...');
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-border border-t-primary"></div>
       </div>
     );
   }
@@ -461,9 +681,15 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
             </Button>
             <Target className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold">Matriz de Risco</h1>
-            <Badge variant="secondary" className="ml-2">
-              {tenantSettings?.risk_matrix?.type || '5x5'} configurada
-            </Badge>
+            <div className="flex items-center gap-2 ml-2">
+              <Badge variant="secondary">
+                {matrixConfig.type} configurada
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Eye className="h-3 w-3" />
+                Somente Leitura
+              </Badge>
+            </div>
           </div>
         </div>
         
@@ -513,39 +739,39 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
             <span className="text-sm font-medium">Legenda:</span>
             {(
               // Usar as faixas EXATAS da configuração salva (matriz verdadeira)
-              tenantSettings?.risk_matrix?.risk_levels ? [
+              matrixConfig?.risk_levels ? [
                 {
                   level: 'Baixo',
                   color: 'bg-green-500 text-white',
-                  range: tenantSettings.risk_matrix.risk_levels.low.length > 0 
-                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.low)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.low)}`
+                  range: matrixConfig.risk_levels.low.length > 0 
+                    ? `${Math.min(...matrixConfig.risk_levels.low)}-${Math.max(...matrixConfig.risk_levels.low)}`
                     : '1-2'
                 },
                 {
                   level: 'Médio',
                   color: 'bg-yellow-500 text-white',
-                  range: tenantSettings.risk_matrix.risk_levels.medium.length > 0
-                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.medium)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.medium)}`
+                  range: matrixConfig.risk_levels.medium.length > 0
+                    ? `${Math.min(...matrixConfig.risk_levels.medium)}-${Math.max(...matrixConfig.risk_levels.medium)}`
                     : '3-6'
                 },
                 {
                   level: 'Alto',
                   color: 'bg-orange-500 text-white',
-                  range: tenantSettings.risk_matrix.risk_levels.high.length > 0
-                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.high)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.high)}`
+                  range: matrixConfig.risk_levels.high.length > 0
+                    ? `${Math.min(...matrixConfig.risk_levels.high)}-${Math.max(...matrixConfig.risk_levels.high)}`
                     : '7-12'
                 },
-                ...(tenantSettings.risk_matrix.risk_levels.critical ? [{
+                ...(matrixConfig.risk_levels.critical ? [{
                   level: 'Crítico',
                   color: 'bg-red-500 text-white',
-                  range: tenantSettings.risk_matrix.risk_levels.critical.length > 0
-                    ? `${Math.min(...tenantSettings.risk_matrix.risk_levels.critical)}-${Math.max(...tenantSettings.risk_matrix.risk_levels.critical)}`
+                  range: matrixConfig.risk_levels.critical.length > 0
+                    ? `${Math.min(...matrixConfig.risk_levels.critical)}-${Math.max(...matrixConfig.risk_levels.critical)}`
                     : '13-16'
                 }] : [])
               ].filter(item => {
                 // Filtrar apenas os níveis que têm valores definidos
-                const levelKey = item.level.toLowerCase() as keyof typeof tenantSettings.risk_matrix.risk_levels;
-                return tenantSettings.risk_matrix.risk_levels[levelKey]?.length > 0;
+                const levelKey = item.level.toLowerCase() as keyof typeof matrixConfig.risk_levels;
+                return matrixConfig.risk_levels[levelKey]?.length > 0;
               }) : [
                 { level: 'Baixo', color: 'bg-green-500 text-white', range: '1-2' },
                 { level: 'Médio', color: 'bg-yellow-500 text-white', range: '3-6' },
@@ -588,14 +814,14 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                       risk => risk.impact === impactLevel.level && risk.likelihood === likelihoodLevel.level
                     );
                     
-                    const riskLevel = calculateConsistentRiskLevel(impactLevel.level, likelihoodLevel.level, tenantSettings);
+                    const riskLevel = calculateConsistentRiskLevel(impactLevel.level, likelihoodLevel.level, matrixConfig);
                     const riskScore = impactLevel.level * likelihoodLevel.level;
                     
                     return (
                       <div
                         key={`${impactLevel.level}-${likelihoodLevel.level}`}
                         className={`min-h-[60px] p-2 rounded border-2 border-gray-200 relative ${
-                          getRiskColor(impactLevel.level, likelihoodLevel.level, tenantSettings)
+                          getRiskColor(impactLevel.level, likelihoodLevel.level, matrixConfig)
                         } ${cellRisks.length > 0 ? 'cursor-pointer hover:opacity-80' : ''}`}
                         onClick={() => cellRisks.length > 0 && setSelectedRisk(cellRisks[0])}
                       >
@@ -670,10 +896,10 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                 <div className="mt-4 p-4 bg-muted/30 rounded-lg text-xs">
                   <p><strong>Debug Info:</strong></p>
                   <p>Riscos originais: {risks?.length || 0}</p>
-                  <p>Settings loading: {String(settingsLoading)}</p>
+                  <p>Matrix loading: {String(isLoading)}</p>
                   <p>Search term: "{searchTerm}"</p>
-                  <p>Tenant settings: {tenantSettings ? 'Carregado' : 'Não carregado'}</p>
-                  <p>Matrix type: {tenantSettings?.risk_matrix?.type || 'N/A'}</p>
+                  <p>Matrix config: {matrixConfig ? 'Carregado' : 'Não carregado'}</p>
+                  <p>Matrix type: {matrixConfig?.type || 'N/A'}</p>
                   {risks && risks.length > 0 && (
                     <div className="mt-2">
                       <p><strong>Primeiros 3 riscos originais:</strong></p>
@@ -699,10 +925,10 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                   return null;
                 })()}
                 {processedRisks.map((risk, index) => {
-                // Calcular o nível de risco REAL baseado na matriz 3x3 configurada
-                const riskLevel = risk.hasValidScores ? calculateConsistentRiskLevel(risk.impact, risk.likelihood, tenantSettings) : 'Sem Avaliação';
+                // Calcular o nível de risco REAL baseado na matriz configurada
+                const riskLevel = risk.hasValidScores ? calculateConsistentRiskLevel(risk.impact, risk.likelihood, matrixConfig) : 'Sem Avaliação';
                 const riskScore = risk.hasValidScores ? risk.impact * risk.likelihood : 0;
-                const riskColor = risk.hasValidScores ? getRiskColor(risk.impact, risk.likelihood, tenantSettings) : 'bg-gray-500 text-white';
+                const riskColor = risk.hasValidScores ? getRiskColor(risk.impact, risk.likelihood, matrixConfig) : 'bg-gray-500 text-white';
                 
                 // console.log(`Risco ${risk.risk_code}: Impact=${risk.impact}, Likelihood=${risk.likelihood}, Score=${riskScore}, Level=${riskLevel}, Saved=${risk.risk_level}`);
                 
@@ -863,7 +1089,7 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                 {selectedRisk.risk_title || 'Risco'}
               </CardTitle>
               <CardDescription className="flex gap-2 mt-2">
-                <Badge className={getRiskColor(selectedRisk.impact, selectedRisk.likelihood, tenantSettings)}>
+                <Badge className={getRiskColor(selectedRisk.impact, selectedRisk.likelihood, matrixConfig)}>
                   {calculateRiskLevel(selectedRisk.likelihood, selectedRisk.impact)}
                 </Badge>
                 {selectedRisk.treatment_strategy && (
@@ -938,3 +1164,5 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
     </div>
   );
 };
+
+export default RiskMatrixView;

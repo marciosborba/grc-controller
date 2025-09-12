@@ -37,7 +37,7 @@ import BackupSyncSection from './sections/BackupSyncSection';
 import IntegrationsStatusDashboard from './sections/IntegrationsStatusDashboard';
 import GlobalRulesSection from './sections/GlobalRulesSection';
 import { StaticColorController } from './sections/StaticColorController';
-import RiskMatrixConfigSection from './sections/RiskMatrixConfigSection';
+// import RiskMatrixConfigSection from './sections/RiskMatrixConfigSection'; // REMOVIDO - matriz deve ficar apenas em tenant-settings
 import DocumentationModal from './DocumentationModal';
 import CryptoFieldMappingConfig from '../admin/CryptoFieldMappingConfig';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
@@ -93,7 +93,7 @@ export const GeneralSettingsPage = () => {
       case 'error':
         return <Badge className="bg-red-100 text-red-800 border-red-200">Erro</Badge>;
       case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pendente</Badge>;
+        return <Badge className="bg-yellow-500 text-white border-yellow-600">Pendente</Badge>;
       default:
         return <Badge className="bg-gray-100 text-gray-800 border-gray-200">Desconectado</Badge>;
     }
@@ -338,8 +338,7 @@ export const GeneralSettingsPage = () => {
                 </p>
               </div>
             </div>
-            <Separator />
-            <RiskMatrixConfigSection />
+            {/* REMOVIDO: RiskMatrixConfigSection - matriz deve ficar apenas em tenant-settings */}
           </div>
         </TabsContent>
 
