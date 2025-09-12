@@ -39,40 +39,8 @@ interface TestRole {
 const navigationItems = [{
   label: 'Módulos',
   items: [
-    {
-      title: 'Assessment',
-      url: '/assessments',
-      icon: ClipboardList,
-      permissions: ['assessment.read'],
-      description: 'Gestão de Assessments',
-      submenu: [
-        {
-          title: 'Alex Assessment Engine',
-          url: '/assessments',
-          icon: Brain,
-          description: 'Sistema inteligente com IA integrada'
-        },
-        {
-          title: 'Assessments Legacy',
-          url: '/assessments/legacy',
-          icon: ClipboardList,
-          description: 'Sistema tradicional de assessments'
-        },
-        {
-          title: 'Frameworks',
-          url: '/assessments/frameworks',
-          icon: FileCheck,
-          description: 'Gerenciamento de frameworks'
-        }
-      ]
-    },
-    {
-      title: 'Auditoria',
-      url: '/audit',
-      icon: Eye,
-      permissions: ['audit.read'],
-      description: 'Gestão de Auditoria'
-    },
+    // Módulo Assessment removido - funcionalidade transferida para Configurações
+    // Módulo de Auditoria removido
     {
       title: 'Ética',
       url: '/ethics',
@@ -87,13 +55,7 @@ const navigationItems = [{
       permissions: ['admin', 'users.read'],
       description: 'Gestão de usuários'
     },
-    {
-      title: 'Conformidade',
-      url: '/compliance',
-      icon: FileCheck,
-      permissions: ['compliance.read'],
-      description: 'Gestão de Conformidade'
-    },
+    // Módulo de Compliance removido
     {
       title: 'Dashboard',
       url: '/dashboard',
@@ -211,7 +173,7 @@ const TEST_ROLES = [
     name: 'compliance_manager',
     displayName: 'Gerente de Compliance',
     permissions: ['compliance.read', 'compliance.write', 'audit.read', 'audit.write', 'report.read', 'report.export', 'assessment.read'],
-    description: 'Gerencia políticas de compliance, auditoria e assessments',
+    description: 'Gerencia políticas organizacionais',
     icon: Shield
   },
   {
@@ -227,7 +189,7 @@ const TEST_ROLES = [
     name: 'auditor',
     displayName: 'Auditor',
     permissions: ['audit.read', 'audit.write', 'logs.read', 'report.read', 'compliance.read', 'all'],
-    description: 'Acesso a módulos de auditoria, relatórios, conformidade e módulos públicos (sem assessments)',
+    description: 'Acesso a módulos de relatórios e gestão',
     icon: Eye
   },
   {
@@ -414,12 +376,12 @@ export function AppSidebar() {
           displayName: role.displayName,
           permissions: role.permissions,
           isTestingNow,
-          expectedModules: ['Gestão de Auditoria', 'Assessments', 'Relatórios', 'Conformidade'],
+          expectedModules: ['Relatórios', 'Gestão'],
           permissionAnalysis: {
             'audit.read': role.permissions.includes('audit.read'),
             'assessment.read': role.permissions.includes('assessment.read'),
             'report.read': role.permissions.includes('report.read'),
-            'compliance.read': role.permissions.includes('compliance.read'),
+            // 'compliance.read': removido - módulo excluído
             'all': role.permissions.includes('all'),
             '*': role.permissions.includes('*')
           }
@@ -442,7 +404,7 @@ export function AppSidebar() {
           { name: 'Gestão de Auditoria', permissions: ['audit.read', 'all'] },
           { name: 'Assessments', permissions: ['assessment.read', 'all'] },
           { name: 'Relatórios', permissions: ['report.read', 'all'] },
-          { name: 'Conformidade', permissions: ['compliance.read', 'all'] }
+          // { name: 'Conformidade', permissions: ['compliance.read', 'all'] } - removido
         ];
         
         moduleTests.forEach(test => {
@@ -480,7 +442,7 @@ export function AppSidebar() {
     const moduleTitle = permissions.includes('audit.read') ? 'Gestão de Auditoria' :
                        permissions.includes('assessment.read') ? 'Assessments' :
                        permissions.includes('report.read') ? 'Relatórios' :
-                       permissions.includes('compliance.read') ? 'Conformidade' :
+                       // permissions.includes('compliance.read') ? 'Conformidade' : - removido
                        permissions.includes('risk.read') ? 'Gestão de Riscos' :
                        permissions.includes('incident.read') ? 'Incidentes' :
                        permissions.includes('privacy.read') ? 'Privacidade' :

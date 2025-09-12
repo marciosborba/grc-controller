@@ -125,19 +125,56 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
       // Tentar carregar dados adicionais de forma assíncrona
       try {
-        console.log('📊 [AUTH] Fetching profile and roles...');
+        console.log('📊 [AUTH] Fetching profile, roles and platform admin status...');
         
-        const [profileResult, rolesResult] = await Promise.all([
+        const [profileResult, rolesResult, platformAdminResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('user_id', supabaseUser.id).maybeSingle(),
-          supabase.from('user_roles').select('role').eq('user_id', supabaseUser.id)
+          supabase.from('user_roles').select('role').eq('user_id', supabaseUser.id),
+          supabase.from('platform_admins').select('user_id, created_at').eq('user_id', supabaseUser.id).maybeSingle()
         ]);
 
         const profile = profileResult?.data;
         const roles = rolesResult?.data || [];
+        const platformAdmin = platformAdminResult?.data;
         
-        console.log('📊 [AUTH] Profile and roles loaded:', { 
+        console.log('📊 [AUTH] Profile, roles and platform admin loaded:', { 
           hasProfile: !!profile, 
-          rolesCount: roles.length 
+          rolesCount: roles.length,
+          isPlatformAdminTable: !!platformAdmin
+        });
+
+        // 🔒 SEGURANÇA: Usar APENAS tabela platform_admins como fonte autoritativa
+        // Fallback para roles apenas se platform_admins não existir (compatibilidade)
+        let isPlatformAdmin = false;
+        let adminSource = 'none';
+        
+        if (platformAdmin) {
+          // Fonte primária: tabela platform_admins (mais segura)
+          isPlatformAdmin = true;
+          adminSource = 'platform_admins_table';
+        } else {
+          // Fallback: verificar roles (apenas para compatibilidade)
+          const hasAdminRole = roles.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role));
+          if (hasAdminRole) {
+            isPlatformAdmin = true;
+            adminSource = 'user_roles_fallback';
+            // Log de segurança: usuário admin via roles (menos seguro)
+            console.warn('⚠️ [SECURITY] Platform Admin via roles fallback:', {
+              userId: supabaseUser.id,
+              email: supabaseUser.email,
+              roles: roles.map((r: any) => r.role),
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
+        
+        console.log('🔐 [AUTH] Platform Admin verification (SECURE):', {
+          isPlatformAdmin,
+          adminSource,
+          platformAdminTable: !!platformAdmin,
+          adminRoles: roles.filter((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role)),
+          allRoles: roles.map((r: any) => r.role),
+          securityNote: adminSource === 'user_roles_fallback' ? 'USING_FALLBACK_METHOD' : 'USING_PRIMARY_METHOD'
         });
 
         // Atualizar com dados completos
@@ -149,7 +186,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           tenantId: profile?.tenant_id || 'default',
           roles: roles.length > 0 ? roles.map((r: any) => r.role) : ['user'],
           permissions: [],
-          isPlatformAdmin: roles.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role))
+          isPlatformAdmin
         };
 
         // Cache o resultado

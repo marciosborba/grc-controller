@@ -30,29 +30,12 @@ const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").th
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
 const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
-const CompliancePage = lazy(() => import("@/components/compliance/CompliancePage"));
-// Audit IA Module - Comprehensive audit management with AI
-const AuditIADashboard = lazy(() => import("@/components/audit/AuditIADashboard"));
-const AuditPlanningWizard = lazy(() => import("@/components/audit/AuditPlanningWizard"));
-const AuditScopingMatrix = lazy(() => import("@/components/audit/AuditScopingMatrix"));
-const AuditExecutionWorkspace = lazy(() => import("@/components/audit/AuditExecutionWorkspace"));
-const AIWorkingPapers = lazy(() => import("@/components/audit/AIWorkingPapers"));
-const AuditReportGenerator = lazy(() => import("@/components/audit/AuditReportGenerator"));
-const AuditEvidenceManager = lazy(() => import("@/components/audit/AuditEvidenceManager"));
-const AlexAuditAI = lazy(() => import("@/components/audit/AlexAuditAI"));
+// Módulo de Compliance removido - funcionalidade excluída
+// Módulo de Auditoria removido - funcionalidade excluída
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
-// Assessments module
-const AssessmentsPage = lazy(() => import("@/components/assessments/AssessmentsPage"));
-const FrameworkManagementPage = lazy(() => import("@/components/assessments/FrameworkManagementPage").then(module => ({ default: module.FrameworkManagementPage })));
-const AssessmentDetailPage = lazy(() => import("@/components/assessments/AssessmentDetailPage"));
-const FrameworkDetailPage = lazy(() => import("@/components/assessments/FrameworkDetailPage"));
-const FrameworkEvaluationPage = lazy(() => import("@/components/assessments/FrameworkEvaluationPage"));
-const CreateFrameworkPage = lazy(() => import("@/components/assessments/CreateFrameworkPage"));
-
-// Alex Assessment Engine - Next-gen modular assessment system
-const AlexAssessmentEngineTemp = lazy(() => import("@/components/assessments/AlexAssessmentEngineTemp"));
+// Módulo Assessment removido - funcionalidade transferida para Configurações
 
 // Privacy module
 const PrivacyDashboard = lazy(() => import("@/components/privacy/PrivacyDashboard").then(module => ({ default: module.PrivacyDashboard })));
@@ -73,6 +56,7 @@ const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPa
 // GeneralSettingsPage agora é importado diretamente acima
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
+const PlatformAdminMigration = lazy(() => import("@/components/admin/PlatformAdminMigration"));
 
 // AI Manager - New modular structure
 const AIManagerDashboard = lazy(() => import("@/components/ai/AIManagerDashboard"));
@@ -100,7 +84,7 @@ const HelpPage = lazy(() => import("./pages/HelpPage"));
 // Tenant Settings module
 const TenantSettingsPage = lazy(() => import("@/components/tenant-settings/TenantSettingsPage"));
 
-// Public vendor assessment
+// Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
 
 // Debug pages (development only)
@@ -260,11 +244,7 @@ const App = () => (
                 }>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="assessments" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsPage />
-                    </Suspense>
-                  } />
+                  {/* Rota /assessments removida - módulo excluído */}
                   
                   <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
                   <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
@@ -305,96 +285,14 @@ const App = () => (
                       <RiskAcceptanceManagement />
                     </Suspense>
                   } />
-                  <Route path="compliance" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CompliancePage />
-                    </Suspense>
-                  } />
+                  {/* Rota /compliance removida - módulo excluído */}
                   <Route path="incidents" element={
                     <Suspense fallback={<PageLoader />}>
                       <IncidentManagementPage />
                     </Suspense>
                   } />
-                  {/* Audit IA Module - Comprehensive audit management */}
-                  <Route path="audit" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditIADashboard />
-                    </Suspense>
-                  } />
-                  <Route path="audit/planning" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditPlanningWizard />
-                    </Suspense>
-                  } />
-                  <Route path="audit/scoping" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditScopingMatrix />
-                    </Suspense>
-                  } />
-                  <Route path="audit/execution" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditExecutionWorkspace />
-                    </Suspense>
-                  } />
-                  <Route path="audit/working-papers" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AIWorkingPapers />
-                    </Suspense>
-                  } />
-                  <Route path="audit/reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditReportGenerator />
-                    </Suspense>
-                  } />
-                  <Route path="audit/evidence" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditEvidenceManager />
-                    </Suspense>
-                  } />
-                  <Route path="audit/alex-ai" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AlexAuditAI />
-                    </Suspense>
-                  } />
-                  {/* ROTAS ESPECÍFICAS PRIMEIRO (mais específicas) */}
-                  <Route path="assessments/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CreateFrameworkPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/:id/evaluate" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkEvaluationPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkDetailPage />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworkManagementPage />
-                    </Suspense>
-                  } />
-                  {/* TEMPORARIAMENTE REMOVIDA PARA TESTE */}
-                  {/* <Route path="assessments/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentDetailPage />
-                    </Suspense>
-                  } /> */}
-                  
-                  {/* ROTAS MOVIDAS PARA O TOPO - REMOVENDO DUPLICATAS */}
-                  <Route path="assessment-detail/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentDetailPage />
-                    </Suspense>
-                  } />
+                  {/* Todas as rotas do módulo de Auditoria foram removidas */}
+                  {/* Todas as rotas do módulo Assessment foram removidas */}
                   <Route path="policy-management" element={
                     <Suspense fallback={<PageLoader />}>
                       <PolicyManagementPage />
@@ -476,6 +374,13 @@ const App = () => (
                     <PlatformAdminRoute>
                       <Suspense fallback={<PageLoader />}>
                         <SystemDiagnosticPage />
+                      </Suspense>
+                    </PlatformAdminRoute>
+                  } />
+                  <Route path="admin/platform-migration" element={
+                    <PlatformAdminRoute>
+                      <Suspense fallback={<PageLoader />}>
+                        <PlatformAdminMigration />
                       </Suspense>
                     </PlatformAdminRoute>
                   } />

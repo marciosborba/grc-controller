@@ -39,20 +39,8 @@ interface TestRole {
 const navigationItems = [{
   label: 'Módulos',
   items: [
-    {
-      title: 'Assessment',
-      url: '/assessments',
-      icon: ClipboardList,
-      permissions: ['assessment.read'],
-      description: 'Gestão de Assessments (apenas para roles específicas)'
-    },
-    {
-      title: 'Auditoria',
-      url: '/audit',
-      icon: Eye,
-      permissions: ['audit.read'],
-      description: 'Gestão de Auditoria'
-    },
+    // Módulo Assessment removido - funcionalidade transferida para Configurações
+    // Módulo de Auditoria removido
     {
       title: 'Ética',
       url: '/ethics',
@@ -67,13 +55,7 @@ const navigationItems = [{
       permissions: ['tenant_admin', 'admin', 'platform_admin'],
       description: 'Configurações da organização'
     },
-    {
-      title: 'Conformidade',
-      url: '/compliance',
-      icon: FileCheck,
-      permissions: ['compliance.read'],
-      description: 'Gestão de Conformidade'
-    },
+    // Módulo de Compliance removido
     {
       title: 'Dashboard',
       url: '/dashboard',
@@ -140,14 +122,23 @@ const navigationItems = [{
   ]
 }, {
   label: 'Área Administrativa',
-  items: [{
-    title: 'System Diagnostic',
-    url: '/admin/system-diagnostic',
-    icon: Activity,
-    permissions: ['platform_admin'],
-    description: 'Diagnóstico e monitoramento da plataforma'
-  }, {
-    title: 'Tenants',
+  items: [
+    {
+      title: 'Diagnóstico do Sistema',
+      url: '/admin/system-diagnostic',
+      icon: Activity,
+      permissions: ['platform_admin'],
+      description: 'Diagnóstico e monitoramento do sistema'
+    },
+    {
+      title: 'Migração Platform Admin',
+      url: '/admin/platform-migration',
+      icon: Shield,
+      permissions: ['platform_admin'],
+      description: 'Migração de segurança para tabela platform_admins'
+    },
+    {
+      title: 'Tenants',
     url: '/admin/tenants',
     icon: Building2,
     permissions: ['platform_admin'],
@@ -190,7 +181,7 @@ const TEST_ROLES = [
     name: 'compliance_manager',
     displayName: 'Gerente de Compliance',
     permissions: ['compliance.read', 'compliance.write', 'audit.read', 'audit.write', 'report.read', 'report.export', 'assessment.read'],
-    description: 'Gerencia políticas de compliance, auditoria e assessments',
+    description: 'Gerencia políticas organizacionais',
     icon: Shield
   },
   {
@@ -206,7 +197,7 @@ const TEST_ROLES = [
     name: 'auditor',
     displayName: 'Auditor',
     permissions: ['audit.read', 'audit.write', 'logs.read', 'report.read', 'compliance.read', 'all'],
-    description: 'Acesso a módulos de auditoria, relatórios, conformidade e módulos públicos (sem assessments)',
+    description: 'Acesso a módulos de relatórios e gestão',
     icon: Eye
   },
   {

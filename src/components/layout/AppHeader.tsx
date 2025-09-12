@@ -46,7 +46,7 @@ export const AppHeader = () => {
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar riscos, políticas, assessments..."
+                placeholder="Buscar riscos, políticas, relatórios..."
                 className="pl-10 bg-muted/50 border-0 focus-visible:ring-1 text-sm"
               />
             </div>

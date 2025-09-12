@@ -306,7 +306,7 @@ const NavigationDiagnostic: React.FC = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => testNavigation('/compliance')}
+              // onClick={() => testNavigation('/compliance')} - removido
             >
               Compliance
             </Button>

@@ -383,8 +383,7 @@ const AVAILABLE_PERMISSIONS = [
   { id: 'audit.write', name: 'Gerenciar Auditoria', category: 'Auditoria' },
   
   // Compliance
-  { id: 'compliance.read', name: 'Visualizar Compliance', category: 'Compliance' },
-  { id: 'compliance.write', name: 'Gerenciar Compliance', category: 'Compliance' },
+  // Permissões de Compliance removidas - módulo excluído
   
   // Gestão de Riscos
   { id: 'risk.read', name: 'Visualizar Riscos', category: 'Riscos' },
