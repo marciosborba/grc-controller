@@ -225,12 +225,17 @@ const TenantSettingsPage: React.FC = () => {
       ] = await Promise.all(promises);
       
       // Processar resultados
-      const totalUsers = usersResult.data?.length || 0;
-      const activeUsers = usersResult.data?.filter(u => {
-        const createdAt = new Date(u.created_at);
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        return createdAt > thirtyDaysAgo;
-      }).length || 0;
+      // Contar apenas usuários ativos (excluir inativos do total)
+      const { data: activeProfilesData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+        
+      const totalUsers = activeProfilesData?.length || 0;
+      const activeUsers = activeProfilesData?.length || 0;
+      
+      // Métricas: total = usuários ativos, activeUsers = usuários ativos (mesmo valor)
       
       const suspiciousActivities = suspiciousResult.data?.length || 0;
       const lastBackup = backupResult.data?.[0]?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -262,6 +267,14 @@ const TenantSettingsPage: React.FC = () => {
       
 
       setMetrics(realMetrics);
+      
+      // Atualizar também o current_users no tenantInfo para manter consistência
+      if (tenantInfo) {
+        setTenantInfo(prev => prev ? {
+          ...prev,
+          current_users: totalUsers
+        } : prev);
+      }
     } catch (error) {
       
       // Fallback com dados mínimos em caso de erro
@@ -340,7 +353,7 @@ const TenantSettingsPage: React.FC = () => {
                 {tenantInfo.subscription_plan}
               </Badge>
               <span className="text-muted-foreground">
-                {String(tenantInfo.current_users)}/{String(tenantInfo.max_users)} usuários
+                {String(metrics?.totalUsers || 0)}/{String(tenantInfo.max_users)} usuários
               </span>
               {isPlatformAdmin && (
                 <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs border border-orange-200 dark:border-orange-700">
@@ -362,8 +375,11 @@ const TenantSettingsPage: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
+                  <p className="text-sm font-medium text-muted-foreground">Usuários</p>
                   <p className="text-2xl font-bold">{String(metrics.activeUsers)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {String(metrics.totalUsers)} ativos
+                  </p>
                 </div>
                 <Users className="h-8 w-8 text-blue-500" />
               </div>
@@ -558,7 +574,26 @@ const TenantSettingsPage: React.FC = () => {
         {/* Placeholder para outras tabs - COMENTADOS PARA DEBUG */}
         {/* Gerenciamento de Usuários */}
         <TabsContent value="users">
-          <UserManagementSection tenantId={currentTenantId} />
+          <UserManagementSection 
+            tenantId={currentTenantId} 
+            onMetricsUpdate={(userMetrics) => {
+              if (metrics) {
+                setMetrics(prev => prev ? {
+                  ...prev,
+                  totalUsers: userMetrics.totalUsers,
+                  activeUsers: userMetrics.activeUsers
+                } : prev);
+              }
+              
+              // Atualizar também o tenantInfo para manter consistência
+              if (tenantInfo) {
+                setTenantInfo(prev => prev ? {
+                  ...prev,
+                  current_users: userMetrics.totalUsers
+                } : prev);
+              }
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="security">

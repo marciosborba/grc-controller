@@ -30,6 +30,7 @@ import { useDepartmentOptions, useJobTitleOptions } from '@/hooks/useExtensibleD
 import type { CreateUserRequest, AppRole } from '@/types/user-management';
 import { USER_ROLES } from '@/types/user-management';
 import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import {
   Select,
   SelectContent,
@@ -81,6 +82,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
   isLoading
 }) => {
   const { user } = useAuth();
+  const currentTenantId = useCurrentTenantId(); // Tenant selecionado no header
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [availableTenants, setAvailableTenants] = useState<Array<{id: string; name: string}>>([]);
@@ -132,6 +134,13 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
     wasLoadingRef.current = isLoading;
   }, [isLoading]);
 
+  // Atualizar tenant_id quando currentTenantId mudar (para Platform Admins)
+  useEffect(() => {
+    if (user?.isPlatformAdmin && currentTenantId && open) {
+      form.setValue('tenant_id', currentTenantId);
+    }
+  }, [currentTenantId, user?.isPlatformAdmin, open, form]);
+
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema(user?.isPlatformAdmin || false)),
     defaultValues: {
@@ -141,7 +150,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       department: '',
       phone: '',
       roles: [],
-      tenant_id: user?.isPlatformAdmin ? '' : (user?.tenantId || ''),
+      tenant_id: user?.isPlatformAdmin ? currentTenantId : (user?.tenantId || ''),
       send_invitation: true,
       must_change_password: false,
       permissions: []
@@ -178,7 +187,7 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
       department: data.department,
       phone: data.phone,
       roles: data.roles as AppRole[],
-      tenant_id: data.tenant_id || user?.tenantId || '',
+      tenant_id: data.tenant_id || currentTenantId || user?.tenantId || '',
       send_invitation: data.send_invitation,
       must_change_password: data.must_change_password,
       permissions: data.permissions
@@ -347,6 +356,12 @@ export const CreateUserDialog: React.FC<CreateUserDialogProps> = ({
                           </SelectContent>
                         </Select>
                       </FormControl>
+                      <FormDescription>
+                        {currentTenantId ? 
+                          `Tenant atual selecionado no header será usado como padrão` :
+                          `Selecione a organização onde o usuário será criado`
+                        }
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

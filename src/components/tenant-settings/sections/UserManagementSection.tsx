@@ -44,6 +44,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { usePermissions } from '@/hooks/usePermissions';
+import { PermissionsInfo } from './PermissionsInfo';
 
 interface User {
   id: string;
@@ -62,15 +64,19 @@ interface UserManagementSectionProps {
   tenantId: string;
   onUserChange?: () => void;
   onSettingsChange?: () => void;
+  onMetricsUpdate?: (metrics: { totalUsers: number; activeUsers: number }) => void;
 }
 
 export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   tenantId,
   onUserChange = () => {},
-  onSettingsChange = () => {}
+  onSettingsChange = () => {},
+  onMetricsUpdate = () => {}
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -84,6 +90,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     phone: '',
     send_invitation: true
   });
+  
+  // Hook de permissões
+  const permissions = usePermissions();
 
   useEffect(() => {
     loadUsers();
@@ -92,7 +101,11 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     const loadUsers = async () => {
     try {
       setIsLoading(true);
-      console.log('👥 [USER MANAGEMENT] Carregando usuários para tenant:', tenantId);
+      console.log('👥 [USER MANAGEMENT] Carregando usuários para tenant:', {
+        tenantId,
+        type: typeof tenantId,
+        length: tenantId?.length
+      });
       
       if (!tenantId) {
         console.warn('⚠️ [USER MANAGEMENT] Tenant ID não fornecido');
@@ -101,32 +114,38 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       }
       
       // Carregar usuários reais do banco de dados
+      console.log('🔍 [USER MANAGEMENT] Executando query no Supabase...');
+      
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          id,
-          user_id,
-          email,
-          full_name,
-          phone,
-          department,
-          job_title,
-          created_at,
-          is_active,
-          last_login_at
-        `)
+        .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
         
+      console.log('📊 [USER MANAGEMENT] Resultado da query:', {
+        data: profilesData,
+        error: profilesError,
+        count: profilesData?.length
+      });
+        
       if (profilesError) {
-        console.error('❌ [USER MANAGEMENT] Erro ao carregar profiles:', profilesError);
-        toast.error('Erro ao carregar usuários');
+        console.error('❌ [USER MANAGEMENT] Erro ao carregar profiles:', {
+          error: profilesError,
+          message: profilesError.message,
+          details: profilesError.details,
+          hint: profilesError.hint,
+          code: profilesError.code
+        });
+        toast.error(`Erro ao carregar usuários: ${profilesError.message}`);
         return;
       }
       
       if (!profilesData || profilesData.length === 0) {
         console.log('📋 [USER MANAGEMENT] Nenhum usuário encontrado para este tenant');
         setUsers([]);
+        
+        // Atualizar métricas mesmo sem usuários
+        onMetricsUpdate({ totalUsers: 0, activeUsers: 0 });
         return;
       }
       
@@ -134,36 +153,63 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       const userIds = profilesData.map(p => p.user_id).filter(Boolean);
       let userRolesData: any[] = [];
       
+      console.log('🔍 [USER MANAGEMENT] Buscando roles para userIds:', userIds);
+      
       if (userIds.length > 0) {
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
-          .in('user_id', userIds);
-          
-        if (!rolesError) {
-          userRolesData = rolesData || [];
+        try {
+          const { data: rolesData, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('user_id, role')
+            .in('user_id', userIds);
+            
+          if (rolesError) {
+            console.warn('⚠️ [USER MANAGEMENT] Erro ao carregar roles (continuando sem roles):', rolesError);
+          } else {
+            userRolesData = rolesData || [];
+            console.log('📊 [USER MANAGEMENT] Roles carregados:', userRolesData);
+          }
+        } catch (error) {
+          console.warn('⚠️ [USER MANAGEMENT] Erro inesperado ao carregar roles:', error);
         }
       }
       
       // Buscar últimos logins dos usuários
       let lastLoginsData: any[] = [];
       
+      console.log('🔍 [USER MANAGEMENT] Buscando últimos logins...');
+      
       if (userIds.length > 0) {
-        const { data: loginsData, error: loginsError } = await supabase
-          .from('activity_logs')
-          .select('user_id, created_at')
-          .eq('tenant_id', tenantId)
-          .eq('action', 'login')
-          .in('user_id', userIds)
-          .order('created_at', { ascending: false });
-          
-        if (!loginsError) {
-          lastLoginsData = loginsData || [];
+        try {
+          const { data: loginsData, error: loginsError } = await supabase
+            .from('activity_logs')
+            .select('user_id, created_at')
+            .eq('tenant_id', tenantId)
+            .eq('action', 'login')
+            .in('user_id', userIds)
+            .order('created_at', { ascending: false });
+            
+          if (loginsError) {
+            console.warn('⚠️ [USER MANAGEMENT] Erro ao carregar logins (continuando sem logins):', loginsError);
+          } else {
+            lastLoginsData = loginsData || [];
+            console.log('📊 [USER MANAGEMENT] Logins carregados:', lastLoginsData.length, 'registros');
+          }
+        } catch (error) {
+          console.warn('⚠️ [USER MANAGEMENT] Erro inesperado ao carregar logins:', error);
         }
       }
       
       // Processar dados dos usuários
-      const realUsers: User[] = profilesData.map(profile => {
+      console.log('🔄 [USER MANAGEMENT] Processando', profilesData.length, 'profiles...');
+      
+      const realUsers: User[] = profilesData.map((profile, index) => {
+        console.log(`🔄 [USER MANAGEMENT] Processando profile ${index + 1}:`, {
+          id: profile.id,
+          email: profile.email,
+          full_name: profile.full_name,
+          user_id: profile.user_id,
+          is_active: profile.is_active
+        });
         // Encontrar último login do usuário
         const lastLogin = lastLoginsData.find(log => log.user_id === profile.user_id);
         
@@ -176,29 +222,54 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         else if (userRoles.includes('admin')) role = 'admin';
         else if (userRoles.includes('super_admin')) role = 'admin';
         
-        // Determinar status
+        // Determinar status baseado no user_id e is_active
         let status: User['status'] = 'active';
-        if (!profile.is_active) status = 'inactive';
-        else if (!lastLogin && !profile.last_login_at) status = 'pending'; // Nunca fez login
+        try {
+          if (!profile.user_id) {
+            // Se não tem user_id, é um convite pendente
+            status = 'pending';
+          } else if (profile.is_active === false) {
+            // Se tem user_id mas is_active é false, usuário foi inativado
+            status = 'inactive';
+          } else {
+            // Se tem user_id e is_active é true, usuário está ativo
+            status = 'active';
+          }
+        } catch (error) {
+          console.warn('⚠️ [USER MANAGEMENT] Erro ao determinar status, usando padrão:', error);
+        }
         
-        return {
-          id: profile.id,
+        const processedUser = {
+          id: profile.id || `unknown_${index}`,
           email: profile.email || '',
           full_name: profile.full_name || 'Usuário sem nome',
           role,
           status,
           last_login: profile.last_login_at || lastLogin?.created_at || null,
-          created_at: profile.created_at,
+          created_at: profile.created_at || new Date().toISOString(),
           department: profile.department || undefined,
           phone: profile.phone || undefined,
           mfa_enabled: false // TODO: Implementar quando houver campo MFA
         };
+        
+        console.log(`✅ [USER MANAGEMENT] Profile ${index + 1} processado:`, processedUser);
+        return processedUser;
       });
       
       console.log(`✅ [USER MANAGEMENT] Carregados ${realUsers.length} usuários reais`);
       console.log('📊 [USER MANAGEMENT] Usuários carregados:', realUsers);
       
       setUsers(realUsers);
+      
+      // Atualizar métricas para sincronizar com o card
+      // Contar apenas usuários ativos e pendentes (excluir inativos)
+      const activeAndPendingUsers = realUsers.filter(u => u.status !== 'inactive');
+      const totalUsers = activeAndPendingUsers.length;
+      const activeUsers = realUsers.filter(u => u.status === 'active').length;
+      
+      // Métricas calculadas: total de usuários ativos/pendentes e usuários com status ativo
+      
+      onMetricsUpdate({ totalUsers, activeUsers });
     } catch (error) {
       console.error('❌ [USER MANAGEMENT] Erro inesperado ao carregar usuários:', error);
       toast.error('Erro ao carregar usuários');
@@ -222,90 +293,268 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   const handleCreateUser = async () => {
     try {
+      setIsCreating(true);
       console.log('➕ [USER MANAGEMENT] Criando usuário:', formData.email);
       
       // Validações básicas
-      if (!formData.email || !formData.full_name) {
-        toast.error('Email e nome são obrigatórios');
+      if (!formData.email || formData.email.trim() === '') {
+        toast.error('Email é obrigatório');
+        setIsCreating(false);
+        return;
+      }
+      
+      if (!formData.full_name || formData.full_name.trim() === '') {
+        toast.error('Nome é obrigatório');
+        setIsCreating(false);
+        return;
+      }
+      
+      if (!tenantId) {
+        toast.error('Erro: Tenant ID não encontrado');
+        setIsCreating(false);
         return;
       }
       
       // Verificar se email já existe
-      const { data: existingUser } = await supabase
+      const { data: existingUsers, error: checkError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('email', formData.email)
-        .single();
+        .eq('email', formData.email);
         
-      if (existingUser) {
+      if (checkError) {
+        console.warn('⚠️ [USER MANAGEMENT] Erro ao verificar email:', checkError);
+      } else if (existingUsers && existingUsers.length > 0) {
         toast.error('Este email já está cadastrado');
+        setIsCreating(false);
         return;
       }
       
-      // TODO: Implementar criação real de usuário via Supabase Auth
-      // Por enquanto, simular criação local
-      const newUser: User = {
-        id: `temp_${Date.now()}`,
-        email: formData.email,
-        full_name: formData.full_name,
-        role: formData.role,
-        status: 'pending',
-        last_login: null,
-        created_at: new Date().toISOString(),
-        department: formData.department,
-        phone: formData.phone,
-        mfa_enabled: false
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        toast.error('Email inválido');
+        setIsCreating(false);
+        return;
+      }
+      
+      // Verificar permissões usando o hook
+      if (permissions.isLoading) {
+        toast.error('Verificando permissões...');
+        setIsCreating(false);
+        return;
+      }
+      
+      if (!permissions.canAccessTenant(tenantId)) {
+        toast.error('Você não tem permissão para criar usuários nesta organização');
+        setIsCreating(false);
+        return;
+      }
+      
+      console.log('🚀 [1/9] Iniciando criação:', formData.email);
+      
+      // Verificar tenant
+      console.log('🔍 [2/9] Verificando tenant...');
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .eq('id', tenantId)
+        .single();
+        
+      if (tenantError || !tenantData) {
+        console.log('❌ [2/9] ERRO Tenant:', tenantError?.message);
+        toast.error('Erro: Organização não encontrada');
+        setIsCreating(false);
+        return;
+      }
+      console.log('✅ [2/9] Tenant válido:', tenantData.name);
+      
+      // PASSO 1: Criar profile sem user_id (convite)
+      const profileData = {
+        full_name: formData.full_name.trim(),
+        email: formData.email.trim(),
+        tenant_id: tenantId,
+        is_active: false, // Inativo até completar registro
+        department: formData.department?.trim() || null,
+        phone: formData.phone?.trim() || null
+        // user_id não enviado (será null) - usuário se vincula quando fazer login
       };
       
-      setUsers(prev => [...prev, newUser]);
+      console.log('📋 [3/9] Inserindo profile:', profileData);
+      
+      const { data: newProfile, error: insertError } = await supabase
+        .from('profiles')
+        .insert(profileData)
+        .select('*')
+        .single();
+      
+      if (insertError) {
+        console.log('❌ [3/9] ERRO INSERÇÃO:', {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint
+        });
+        toast.error(`Erro Profile: ${insertError.message}`);
+        setIsCreating(false);
+        return;
+      }
+      
+      console.log('✅ [3/9] Profile criado ID:', newProfile.id);
+      
+      // Nota: Role será criada quando o usuário se registrar com um user_id válido
+      if (formData.role !== 'user') {
+        console.log('📝 [4/9] Role pendente:', formData.role);
+      } else {
+        console.log('✅ [4/9] Role padrão user OK');
+      }
+      
+      // Finalizar
+      console.log('🔄 [5/9] Finalizando...');
       setIsCreateDialogOpen(false);
       resetForm();
+      await loadUsers();
       onUserChange();
       onSettingsChange();
       
-      console.log('✅ [USER MANAGEMENT] Usuário criado (simulado):', newUser.email);
-      toast.success(
-        formData.send_invitation 
-          ? 'Usuário criado e convite enviado por email (simulado)'
-          : 'Usuário criado com sucesso (simulado)'
-      );
+      console.log('🎉 [5/9] SUCESSO COMPLETO!');
+      toast.success('Convite criado! O usuário deve se registrar para ativar a conta.');
+      
     } catch (error) {
-      console.error('❌ [USER MANAGEMENT] Erro ao criar usuário:', error);
-      toast.error('Erro ao criar usuário');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.log('❌ [CATCH] ERRO CAPTURADO:', errorMessage);
+      toast.error(`Erro inesperado: ${errorMessage}`);
+    } finally {
+      setIsCreating(false);
+      console.log('🏁 [FINALLY] Processo concluído');
     }
   };
 
   const handleEditUser = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser) {
+      toast.error('Nenhum usuário selecionado');
+      return;
+    }
     
     try {
+      setIsProcessing(true);
       console.log('✏️ [USER MANAGEMENT] Editando usuário:', selectedUser.email);
       
-      // TODO: Implementar edição real no banco de dados
-      // Por enquanto, atualizar localmente
-      setUsers(prev => prev.map(user => 
-        user.id === selectedUser.id 
-          ? { 
-              ...user, 
-              full_name: formData.full_name,
-              role: formData.role,
-              department: formData.department,
-              phone: formData.phone
-            }
-          : user
-      ));
+      // Validações básicas
+      if (!formData.full_name || formData.full_name.trim() === '') {
+        toast.error('Nome é obrigatório');
+        setIsProcessing(false);
+        return;
+      }
       
+      if (!formData.email || formData.email.trim() === '') {
+        toast.error('Email é obrigatório');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Validar formato do email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        toast.error('Email inválido');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Verificar se email já existe para outro usuário
+      if (formData.email !== selectedUser.email) {
+        const { data: existingUsers, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', formData.email)
+          .neq('id', selectedUser.id);
+          
+        if (checkError) {
+          console.warn('⚠️ [USER MANAGEMENT] Erro ao verificar email duplicado:', checkError);
+        } else if (existingUsers && existingUsers.length > 0) {
+          toast.error('Este email já está sendo usado por outro usuário');
+          setIsProcessing(false);
+          return;
+        }
+      }
+      
+      // Atualizar no banco de dados se for usuário real (não temporário)
+      if (!selectedUser.id.startsWith('temp_')) {
+        const updateData = {
+          email: formData.email,
+          full_name: formData.full_name,
+          department: formData.department || null,
+          phone: formData.phone || null,
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('💾 [USER MANAGEMENT] Atualizando dados:', {
+          selectedUserId: selectedUser.id,
+          updateData,
+          originalEmail: selectedUser.email,
+          newEmail: formData.email
+        });
+        
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', selectedUser.id);
+          
+        if (updateError) {
+          console.error('❌ [USER MANAGEMENT] Erro ao atualizar no banco:', updateError);
+          toast.error('Erro ao atualizar usuário no banco de dados');
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Atualizar role se necessário (tabela user_roles)
+        if (formData.role !== selectedUser.role) {
+          // Buscar user_id do profile
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('id', selectedUser.id)
+            .single();
+            
+          if (profileData?.user_id) {
+            // Remover roles antigas
+            await supabase
+              .from('user_roles')
+              .delete()
+              .eq('user_id', profileData.user_id);
+              
+            // Adicionar nova role
+            await supabase
+              .from('user_roles')
+              .insert({
+                user_id: profileData.user_id,
+                role: formData.role,
+                tenant_id: tenantId,
+                created_at: new Date().toISOString()
+              });
+          }
+        }
+        
+        console.log('✅ [USER MANAGEMENT] Usuário atualizado no banco de dados');
+      }
+      
+      // Fechar diálogo e resetar estado
       setIsEditDialogOpen(false);
       setSelectedUser(null);
       resetForm();
+      
+      // Recarregar dados do banco para garantir sincronização
+      await loadUsers();
+      
       onUserChange();
       onSettingsChange();
       
-      console.log('✅ [USER MANAGEMENT] Usuário atualizado (simulado):', selectedUser.email);
-      toast.success('Usuário atualizado com sucesso (simulado)');
+      console.log('✅ [USER MANAGEMENT] Usuário atualizado:', selectedUser.email);
+      toast.success('Usuário atualizado com sucesso!');
     } catch (error) {
       console.error('❌ [USER MANAGEMENT] Erro ao atualizar usuário:', error);
       toast.error('Erro ao atualizar usuário');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -313,47 +562,113 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     const user = users.find(u => u.id === userId);
     if (!user) return;
     
-    if (!confirm(`Tem certeza que deseja excluir o usuário ${user.full_name}?`)) return;
-    
-    try {
-      console.log('🗑️ [USER MANAGEMENT] Excluindo usuário:', user.email);
+    // Verificar se é usuário pendente (convite) ou usuário ativo/inativo
+    if (user.status === 'pending') {
+      if (!confirm(`Tem certeza que deseja excluir o convite para ${user.full_name}?\n\nEsta ação não pode ser desfeita.`)) return;
       
-      // TODO: Implementar exclusão real no banco de dados
-      // Por enquanto, remover localmente
-      setUsers(prev => prev.filter(user => user.id !== userId));
-      onUserChange();
-      onSettingsChange();
+      try {
+        console.log('🗑️ [USER MANAGEMENT] Excluindo convite:', user.email);
+        
+        // Excluir permanentemente da tabela profiles (é apenas um convite)
+        const { error: deleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
+          
+        if (deleteError) {
+          console.error('❌ [USER MANAGEMENT] Erro ao excluir convite:', deleteError);
+          toast.error('Erro ao excluir convite: ' + deleteError.message);
+          return;
+        }
+        
+        console.log('✅ [USER MANAGEMENT] Convite excluído com sucesso');
+        toast.success('Convite excluído com sucesso!');
+      } catch (error) {
+        console.error('❌ [USER MANAGEMENT] Erro inesperado ao excluir convite:', error);
+        toast.error('Erro inesperado ao excluir convite');
+      }
+    } else {
+      // Para usuários ativos/inativos, apenas inativar
+      if (!confirm(`Tem certeza que deseja inativar o usuário ${user.full_name}?\n\nO usuário ficará inativo mas poderá ser reativado posteriormente.`)) return;
       
-      console.log('✅ [USER MANAGEMENT] Usuário excluído (simulado):', user.email);
-      toast.success('Usuário excluído com sucesso (simulado)');
-    } catch (error) {
-      console.error('❌ [USER MANAGEMENT] Erro ao excluir usuário:', error);
-      toast.error('Erro ao excluir usuário');
+      try {
+        console.log('🗑️ [USER MANAGEMENT] Inativando usuário:', user.email);
+        
+        // Marcar usuário como inativo (soft delete)
+        const { error: deactivateError } = await supabase
+          .from('profiles')
+          .update({
+            is_active: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (deactivateError) {
+          console.error('❌ [USER MANAGEMENT] Erro ao desativar usuário:', deactivateError);
+          toast.error('Erro ao desativar usuário no banco de dados');
+          return;
+        }
+        
+        console.log('✅ [USER MANAGEMENT] Usuário inativado no banco de dados');
+        toast.success('Usuário inativado com sucesso!');
+      } catch (error) {
+        console.error('❌ [USER MANAGEMENT] Erro inesperado ao inativar usuário:', error);
+        toast.error('Erro inesperado ao inativar usuário');
+      }
     }
+    
+    // Recarregar dados do banco para garantir sincronização
+    console.log('🔄 [USER MANAGEMENT] Recarregando dados após operação...');
+    await loadUsers();
+    
+    onUserChange();
+    onSettingsChange();
   };
 
   const handleToggleUserStatus = async (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
     
+    // Não permitir toggle para usuários pendentes (convites)
+    if (user.status === 'pending') {
+      toast.error('Não é possível ativar/desativar convites pendentes. Use excluir para remover o convite.');
+      return;
+    }
+    
     try {
       console.log('🔄 [USER MANAGEMENT] Alterando status do usuário:', user.email);
       
       const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      const isActive = newStatus === 'active';
       
-      // TODO: Implementar alteração real no banco de dados
-      // Por enquanto, atualizar localmente
-      setUsers(prev => prev.map(u => 
-        u.id === userId 
-          ? { ...u, status: newStatus }
-          : u
-      ));
+      // Atualizar no banco de dados se for usuário real (não temporário)
+      if (!user.id.startsWith('temp_')) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            is_active: isActive,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error('❌ [USER MANAGEMENT] Erro ao atualizar status no banco:', updateError);
+          toast.error('Erro ao atualizar status no banco de dados');
+          return;
+        }
+        
+        console.log(`✅ [USER MANAGEMENT] Status atualizado no banco para ${newStatus}`);
+      }
+      
+      // Recarregar dados do banco para garantir sincronização
+      console.log('🔄 [USER MANAGEMENT] Recarregando dados após alteração de status...');
+      await loadUsers();
       
       onUserChange();
       onSettingsChange();
       
-      console.log(`✅ [USER MANAGEMENT] Status alterado para ${newStatus} (simulado) para usuário:`, user.email);
-      toast.success(`Usuário ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso (simulado)`);
+      console.log(`✅ [USER MANAGEMENT] Status alterado para ${newStatus} para usuário:`, user.email);
+      toast.success(`Usuário ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso!`);
     } catch (error) {
       console.error('❌ [USER MANAGEMENT] Erro ao atualizar status:', error);
       toast.error('Erro ao atualizar status do usuário');
@@ -372,15 +687,22 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   };
 
   const openEditDialog = (user: User) => {
+    console.log('📝 [USER MANAGEMENT] Abrindo diálogo de edição para usuário:', user);
+    
     setSelectedUser(user);
-    setFormData({
+    
+    const newFormData = {
       email: user.email,
       full_name: user.full_name,
       role: user.role,
       department: user.department || '',
       phone: user.phone || '',
       send_invitation: false
-    });
+    };
+    
+    console.log('📝 [USER MANAGEMENT] Dados do formulário preenchidos:', newFormData);
+    
+    setFormData(newFormData);
     setIsEditDialogOpen(true);
   };
 
@@ -396,9 +718,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Ativo</Badge>;
+        return <Badge className="bg-green-600 text-white">Ativo</Badge>;
       case 'inactive':
-        return <Badge className="bg-gray-100 text-gray-800">Inativo</Badge>;
+        return <Badge className="bg-gray-500 text-white">Inativo</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-500 text-white">Pendente</Badge>;
       default:
@@ -413,6 +735,30 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           <div className="text-center">Carregando usuários...</div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Se não tem permissão, mostrar informações sobre permissões
+  if (!permissions.isLoading && !permissions.canAccessTenant(tenantId)) {
+    return (
+      <div className="space-y-6">
+        <PermissionsInfo />
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-lg font-semibold mb-2">Acesso Restrito</h3>
+              <p className="text-muted-foreground mb-4">
+                Você não tem permissão para gerenciar usuários nesta organização.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Para obter acesso, solicite ao administrador da plataforma que atribua 
+                a role de 'admin' ou 'tenant_admin' ao seu usuário.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -431,13 +777,14 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
               </CardDescription>
             </div>
             
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Usuário
-                </Button>
-              </DialogTrigger>
+            {permissions.canAccessTenant(tenantId) && (
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetForm}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Usuário
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                   <DialogTitle>Criar Novo Usuário</DialogTitle>
@@ -517,12 +864,19 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                   <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleCreateUser}>
-                    Criar Usuário
+                  <Button onClick={handleCreateUser} disabled={isCreating}>
+                    {isCreating ? 'Criando...' : 'Criar Usuário'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            )}
+            
+            {!permissions.canAccessTenant(tenantId) && !permissions.isLoading && (
+              <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                🔒 Apenas administradores podem gerenciar usuários
+              </div>
+            )}
           </div>
         </CardHeader>
 
@@ -600,7 +954,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                     </TableCell>
                     <TableCell>
                       {user.mfa_enabled ? (
-                        <Badge className="bg-green-100 text-green-800">
+                        <Badge className="bg-green-600 text-white">
                           <Shield className="h-3 w-3 mr-1" />
                           Ativo
                         </Badge>
@@ -615,29 +969,52 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openEditDialog(user)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            console.log('📝 [USER MANAGEMENT] Abrindo diálogo de edição para:', user.full_name);
+                            openEditDialog(user);
+                          }}
+                          title="Editar usuário"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleUserStatus(user.id)}
-                        >
-                          {user.status === 'active' ? (
-                            <UserX className="h-4 w-4" />
-                          ) : (
-                            <UserCheck className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        
+                        {user.status === 'pending' ? (
+                          // Para convites pendentes: apenas excluir
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('🗑️ [USER MANAGEMENT] Excluindo convite:', user.full_name);
+                              handleDeleteUser(user.id);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                            title="Excluir convite"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          // Para usuários ativos/inativos: toggle status + inativar
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log('🔄 [USER MANAGEMENT] Alterando status para:', user.full_name);
+                                handleToggleUserStatus(user.id);
+                              }}
+                              title={user.status === 'active' ? 'Desativar usuário' : 'Reativar usuário'}
+                            >
+                              {user.status === 'active' ? (
+                                <UserX className="h-4 w-4" />
+                              ) : (
+                                <UserCheck className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -726,11 +1103,18 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => {
+              console.log('❌ [USER MANAGEMENT] Botão Cancelar clicado');
+              setIsEditDialogOpen(false);
+            }}>
               Cancelar
             </Button>
-            <Button onClick={handleEditUser}>
-              Salvar Alterações
+            <Button 
+              type="button"
+              onClick={handleEditUser}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </DialogFooter>
         </DialogContent>

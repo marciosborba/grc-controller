@@ -628,7 +628,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 <div className="flex">
                   <div className="flex flex-col space-y-0 mr-2">
                     {Array.from({ length: size }, (_, i) => (
-                      <div key={i} className="h-12 w-12 flex items-center justify-center text-sm font-medium text-foreground dark:text-foreground">
+                      <div key={i} className="h-20 w-20 flex items-center justify-center text-base font-medium text-foreground dark:text-foreground">
                         {size - i}
                       </div>
                     ))}
@@ -678,15 +678,15 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                           return (
                             <div
                               key={colIndex}
-                              className="h-12 w-12 border border-white flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer"
+                              className="h-20 w-20 border border-white flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer"
                               style={{ backgroundColor }}
                               title={`Probabilidade: ${probability}, Impacto: ${impact}, Risco: ${levelName} (${riskValue})`}
                             >
-                              <span className="text-sm font-bold text-white drop-shadow-lg">
+                              <span className="text-lg font-bold text-white drop-shadow-lg">
                                 {riskValue}
                               </span>
-                              <span className="text-[10px] text-white/90 font-medium">
-                                {levelName.split(' ')[0]}
+                              <span className="text-xs text-white/90 font-medium leading-tight text-center">
+                                {levelName}
                               </span>
                             </div>
                           );
@@ -698,9 +698,9 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 
                 {/* X-axis numbers (Probability) */}
                 <div className="flex justify-center mt-2">
-                  <div className="flex space-x-0 ml-14">
+                  <div className="flex space-x-0 ml-22">
                     {Array.from({ length: size }, (_, i) => (
-                      <div key={i} className="h-8 w-12 flex items-center justify-center text-sm font-medium text-foreground dark:text-foreground">
+                      <div key={i} className="h-8 w-20 flex items-center justify-center text-base font-medium text-foreground dark:text-foreground">
                         {i + 1}
                       </div>
                     ))}
@@ -853,14 +853,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
             </div>
 
             <div className="flex items-center justify-center">
-              <Badge variant="outline" className="text-sm">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {String(config.dimensions.probability.length)}×{String(config.dimensions.impact.length)} configurada
-                <br />
-                <span className="text-xs text-muted-foreground">
-                  {config.riskLevels.length} níveis de risco
-                </span>
-              </Badge>
+              {/* Badge removido conforme solicitado */}
             </div>
           </div>
 
@@ -871,9 +864,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 <Target className="h-5 w-5" />
                 Matriz de Risco
               </h3>
-              <div className="text-sm text-muted-foreground">
-                Método: <strong>{config.settings.calculationMethod}</strong>
-              </div>
+              {/* Texto do método removido conforme solicitado */}
             </div>
             {renderMatrix()}
           </div>
