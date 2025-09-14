@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User, Search } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -39,8 +39,13 @@ interface TestRole {
 const navigationItems = [{
   label: 'Módulos',
   items: [
-    // Módulo Assessment removido - funcionalidade transferida para Configurações
-    // Módulo de Auditoria removido
+    {
+      title: 'Auditoria',
+      url: '/auditorias',
+      icon: Search,
+      permissions: ['all'],
+      description: 'Motor de assurance dinâmico e conectado'
+    },
     {
       title: 'Ética',
       url: '/ethics',

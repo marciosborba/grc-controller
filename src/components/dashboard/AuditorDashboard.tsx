@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,12 @@ const mockFindings = [
 ];
 
 const AuditorDashboard = () => {
+  const navigate = useNavigate();
+
+  const handlePlanejamentoClick = () => {
+    navigate('/planejamento-estrategico');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -308,17 +315,20 @@ const AuditorDashboard = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden">
+        <Card 
+          className="grc-card hover:shadow-lg transition-all duration-300 cursor-pointer group overflow-hidden"
+          onClick={handlePlanejamentoClick}
+        >
           <CardContent className="p-6 text-center">
             <div className="p-4 bg-primary/10 rounded-lg w-fit mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
               <Calendar className="h-8 w-8 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Planejamento</h3>
+            <h3 className="font-semibold text-foreground mb-2">Planejamento Estratégico</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Criar cronograma anual de auditorias
+              Gestão completa do planejamento estratégico organizacional
             </p>
             <Button className="grc-button-primary w-full">
-              Planejar
+              Acessar Dashboard
             </Button>
           </CardContent>
         </Card>

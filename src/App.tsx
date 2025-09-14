@@ -31,7 +31,17 @@ const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPl
 const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 // Módulo de Compliance removido - funcionalidade excluída
-// Módulo de Auditoria removido - funcionalidade excluída
+const AuditoriasDashboard = lazy(() => import("@/components/auditorias/AuditoriasDashboard"));
+const PlanejamentoAuditoria = lazy(() => import("@/components/auditorias/PlanejamentoAuditoria"));
+const ProjetosAuditoria = lazy(() => import("@/components/auditorias/ProjetosAuditoria"));
+const PapeisTrabalho = lazy(() => import("@/components/auditorias/PapeisTrabalho"));
+const RelatoriosAuditoria = lazy(() => import("@/components/auditorias/RelatoriosAuditoria"));
+const PlanejamentoCompletoDashboard = lazy(() => import("@/components/planejamento/PlanejamentoCompletoDashboard"));
+const PlanejamentoTestePage = lazy(() => import("@/components/planejamento/PlanejamentoTestePage"));
+const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage"));
+const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage"));
+const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao"));
+const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/NotificacoesPlanejamento"));
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
@@ -291,7 +301,56 @@ const App = () => (
                       <IncidentManagementPage />
                     </Suspense>
                   } />
-                  {/* Todas as rotas do módulo de Auditoria foram removidas */}
+                  <Route path="auditorias" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AuditoriasDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="auditorias/planejamento" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PlanejamentoAuditoria />
+                    </Suspense>
+                  } />
+                  <Route path="auditorias/projetos" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ProjetosAuditoria />
+                    </Suspense>
+                  } />
+                  <Route path="auditorias/papeis-trabalho" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PapeisTrabalho />
+                    </Suspense>
+                  } />
+                  <Route path="auditorias/relatorios" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <RelatoriosAuditoria />
+                    </Suspense>
+                  } />
+                  <Route path="planejamento-estrategico" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PlanejamentoCompletoDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="planejamento/planos-acao" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <PlanosAcaoPage />
+                    </Suspense>
+                  } />
+                  <Route path="planejamento/cronograma" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <CronogramaAtividadesPage />
+                    </Suspense>
+                  } />
+                  <Route path="planejamento/timeline" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <TimelineVisualizacao />
+                    </Suspense>
+                  } />
+                  <Route path="planejamento/notificacoes" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <NotificacoesPlanejamento />
+                    </Suspense>
+                  } />
                   {/* Todas as rotas do módulo Assessment foram removidas */}
                   <Route path="policy-management" element={
                     <Suspense fallback={<PageLoader />}>

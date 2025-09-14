@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,8 @@ import {
   Activity,
   CheckCircle,
   XCircle,
-  Clock
+  Clock,
+  Search
 } from 'lucide-react';
 
 
@@ -63,6 +65,7 @@ const kpiData = [
 ];
 
 const ExecutiveDashboard = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [realTimeData, setRealTimeData] = useState({
     riskScore: 0,
@@ -248,6 +251,10 @@ const ExecutiveDashboard = () => {
       clearInterval(interval);
     };
   }, []);
+
+  const handleAuditoriaClick = () => {
+    navigate('/planejamento-estrategico');
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -446,7 +453,7 @@ const ExecutiveDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group">
           <CardContent className="p-6 text-center space-y-4">
             <div className="p-4 bg-danger/10 rounded-lg w-fit mx-auto group-hover:bg-danger/20 transition-colors">
@@ -511,6 +518,26 @@ const ExecutiveDashboard = () => {
             </div>
             <Button variant="outline" className="w-full">
               Ver Todos
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card 
+          className="hover:shadow-lg transition-all duration-300 cursor-pointer group"
+          onClick={handleAuditoriaClick}
+        >
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="p-4 bg-blue/10 rounded-lg w-fit mx-auto group-hover:bg-blue/20 transition-colors">
+              <Search className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Planejamento Estratégico</h3>
+              <p className="text-sm text-muted-foreground">
+                Gestão completa do planejamento estratégico
+              </p>
+            </div>
+            <Button variant="outline" className="w-full">
+              Acessar Dashboard
             </Button>
           </CardContent>
         </Card>

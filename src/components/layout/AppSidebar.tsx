@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User, Search, Target, CheckSquare, Calendar, BarChart2 } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -39,14 +39,66 @@ interface TestRole {
 const navigationItems = [{
   label: 'Módulos',
   items: [
-    // Módulo Assessment removido - funcionalidade transferida para Configurações
-    // Módulo de Auditoria removido
     {
-      title: 'Ética',
+      title: 'Auditoria',
+      url: '/auditorias',
+      icon: Search,
+      permissions: ['all'],
+      description: 'Motor de assurance dinâmico e conectado'
+    },
+    {
+      title: 'Dashboard',
+      url: '/dashboard',
+      icon: LayoutDashboard,
+      permissions: ['all'],
+      description: 'Visão geral e métricas principais'
+    },
+    {
+      title: 'Planejamento Estratégico',
+      url: '/planejamento-estrategico',
+      icon: Target,
+      permissions: ['all'],
+      description: 'Gestão estratégica e acompanhamento organizacional',
+      submenu: [
+        {
+          title: 'Dashboard',
+          url: '/planejamento-estrategico',
+          icon: Target,
+          description: 'Visão geral do planejamento estratégico'
+        },
+        {
+          title: 'Planos de Ação',
+          url: '/planejamento/planos-acao',
+          icon: CheckSquare,
+          description: 'Gestão de planos de ação'
+        },
+        {
+          title: 'Cronograma',
+          url: '/planejamento/cronograma',
+          icon: Calendar,
+          description: 'Cronograma de atividades e marcos'
+        },
+        {
+          title: 'Timeline Visual',
+          url: '/planejamento/timeline',
+          icon: BarChart2,
+          description: 'Visualização interativa do cronograma'
+        },
+        {
+          title: 'Notificações',
+          url: '/planejamento/notificacoes',
+          icon: Bell,
+          description: 'Sistema de notificações e alertas'
+        }
+      ]
+    },
+    // Módulo Assessment removido - funcionalidade transferida para Configurações
+    {
+      title: 'Ética TESTE',
       url: '/ethics',
       icon: Shield,
       permissions: ['all'],
-      description: 'Denúncias e questões éticas'
+      description: 'TESTE - Denúncias e questões éticas'
     },
     {
       title: 'Usuários',
@@ -56,13 +108,6 @@ const navigationItems = [{
       description: 'Gestão de usuários'
     },
     // Módulo de Compliance removido
-    {
-      title: 'Dashboard',
-      url: '/dashboard',
-      icon: LayoutDashboard,
-      permissions: ['all'],
-      description: 'Visão geral e métricas principais'
-    },
     {
       title: 'Notificações',
       url: '/notifications',
@@ -156,7 +201,7 @@ const TEST_ROLES = [
     id: 'platform_admin',
     name: 'platform_admin',
     displayName: 'Platform Admin',
-    permissions: ['platform_admin', 'all', '*', 'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage'],
+    permissions: ['platform_admin', 'all', '*', 'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage', 'audit.read', 'audit.write'],
     description: 'Administrador da plataforma com acesso total e capacidade de gerenciar múltiplos tenants',
     icon: Crown
   },
@@ -164,7 +209,7 @@ const TEST_ROLES = [
     id: '1',
     name: 'super_admin',
     displayName: 'Super Administrador',
-    permissions: ['*', 'all'], // Todas as permissões
+    permissions: ['*', 'all', 'audit.read', 'audit.write'], // Todas as permissões
     description: 'Acesso total à plataforma com poderes de configuração global',
     icon: Crown
   },
@@ -203,7 +248,7 @@ const TEST_ROLES = [
 ];
 
 export function AppSidebar() {
-  console.log('🚀 [SIDEBAR] AppSidebar carregado - Menu atualizado para "Gestão de Políticas"');
+  console.log('🚀 [SIDEBAR] AppSidebar ATUALIZADO - Auditoria deve aparecer AGORA!');
   const {
     state
   } = useSidebar();
@@ -574,7 +619,7 @@ export function AppSidebar() {
       permissions: user?.permissions
     });
     console.log('🔐 [AI MANAGER DEBUG] Verificação de acesso:', {
-      hasAccess: hasAccess(item.permissions, item.title),
+      hasAccess: hasPermission(item.permissions),
       requiredPermissions: item.permissions,
       itemTitle: item.title
     });
