@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { 
   Calendar,
   ClipboardList,
@@ -49,6 +51,7 @@ interface AuditProject {
 export function AuditoriasDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { tenantSettings } = useTenantSettings();
   const [auditUniverse, setAuditUniverse] = useState<AuditUniverse[]>([]);
   const [auditProjects, setAuditProjects] = useState<AuditProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,6 +134,52 @@ export function AuditoriasDashboard() {
     if (level >= 4) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
     if (level >= 3) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+  };
+
+  // Mapear níveis numéricos para nomes de risco baseado na configuração da tenant
+  const mapRiskLevel = (numericLevel: number): string => {
+    const matrixType = tenantSettings?.risk_matrix?.type || '5x5';
+    
+    // Se há configuração personalizada, usar ela
+    if (tenantSettings?.risk_matrix?.risk_levels_custom) {
+      const customLevels = tenantSettings.risk_matrix.risk_levels_custom
+        .sort((a, b) => a.value - b.value);
+      
+      // Mapear o nível numérico para o nível personalizado correspondente
+      const levelIndex = numericLevel - 1;
+      if (levelIndex >= 0 && levelIndex < customLevels.length) {
+        return customLevels[levelIndex].name;
+      }
+    }
+    
+    // Mapeamento baseado no tipo de matriz
+    switch (matrixType) {
+      case '3x3':
+        switch (numericLevel) {
+          case 1: return 'Baixo';
+          case 2: return 'Médio';
+          case 3: return 'Alto';
+          default: return 'Baixo';
+        }
+      case '4x4':
+        switch (numericLevel) {
+          case 1: return 'Baixo';
+          case 2: return 'Médio';
+          case 3: return 'Alto';
+          case 4: return 'Crítico';
+          default: return 'Baixo';
+        }
+      case '5x5':
+      default:
+        switch (numericLevel) {
+          case 1: return 'Muito Baixo';
+          case 2: return 'Baixo';
+          case 3: return 'Médio';
+          case 4: return 'Alto';
+          case 5: return 'Muito Alto';
+          default: return 'Baixo';
+        }
+    }
   };
 
   const calculateMetrics = () => {
@@ -311,21 +360,14 @@ export function AuditoriasDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-5 gap-2">
-                  {[1, 2, 3, 4, 5].map(risk => {
-                    const count = auditUniverse.filter(p => p.nivel_risco === risk).length;
-                    return (
-                      <div key={risk} className="text-center">
-                        <div 
-                          className={`h-20 rounded ${getRiskColor(risk)} flex items-center justify-center font-bold text-lg`}
-                        >
-                          {count}
-                        </div>
-                        <p className="text-xs mt-1">Nível {risk}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                <RiskLevelDisplay 
+                  risks={auditUniverse.map(p => ({ 
+                    risk_level: mapRiskLevel(p.nivel_risco)
+                  }))}
+                  size="md"
+                  responsive={true}
+                  className=""
+                />
               </CardContent>
             </Card>
 

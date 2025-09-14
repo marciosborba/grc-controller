@@ -427,7 +427,13 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         // Invalidar cache para sincronizar com outras implementações
         await queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
         await queryClient.invalidateQueries({ queryKey: ['tenants'] });
-        console.log('✅ Cache invalidado com sucesso');
+        
+        // Disparar evento customizado para notificar outros componentes
+        window.dispatchEvent(new CustomEvent('risk-matrix-updated', {
+          detail: { tenantId: currentTenantId, config: matrixConfig }
+        }));
+        
+        console.log('✅ Cache invalidado e evento disparado com sucesso');
         
         console.log('🔄 Atualizando estado...');
         setHasUnsavedChanges(false);

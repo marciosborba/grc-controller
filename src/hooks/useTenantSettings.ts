@@ -106,8 +106,10 @@ export const useTenantSettings = (specificTenantId?: string) => {
       return settings;
     },
     enabled: !!user && !!targetTenantId,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000 // 10 minutos
+    staleTime: 0, // Sempre buscar dados frescos
+    gcTime: 2 * 60 * 1000, // 2 minutos
+    refetchOnWindowFocus: true, // Recarregar quando a janela ganhar foco
+    refetchOnMount: true // Sempre recarregar ao montar o componente
   });
 
   // Função para calcular o nível de risco baseado na configuração do tenant
