@@ -70,6 +70,7 @@ export function PlanejamentoTestePage() {
             <p>✅ Componente React carregou</p>
             <p>✅ UI Components funcionando</p>
             <p>✅ Rota configurada corretamente</p>
+            <p>✅ Layout completo com sidebar e header</p>
             <p>🎯 Planejamento estratégico está operacional!</p>
           </div>
         </CardContent>

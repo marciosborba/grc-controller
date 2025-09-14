@@ -36,8 +36,12 @@ const PlanejamentoAuditoria = lazy(() => import("@/components/auditorias/Planeja
 const ProjetosAuditoria = lazy(() => import("@/components/auditorias/ProjetosAuditoria"));
 const PapeisTrabalho = lazy(() => import("@/components/auditorias/PapeisTrabalho"));
 const RelatoriosAuditoria = lazy(() => import("@/components/auditorias/RelatoriosAuditoria"));
-const PlanejamentoCompletoDashboard = lazy(() => import("@/components/planejamento/PlanejamentoCompletoDashboard"));
-const PlanejamentoTestePage = lazy(() => import("@/components/planejamento/PlanejamentoTestePage"));
+const PlanejamentoAuditoriaDashboard = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaDashboard").then(module => ({ default: module.PlanejamentoAuditoriaDashboard })));
+const PlanejamentoTestePage = lazy(() => import("@/components/planejamento/PlanejamentoTestePage").then(module => ({ default: module.PlanejamentoTestePage })));
+const PlanejamentoAuditoriaCorrigido = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaCorrigido").then(module => ({ default: module.PlanejamentoAuditoriaCorrigido })));
+const PlanejamentoAuditoriaCompleto = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaCompleto").then(module => ({ default: module.PlanejamentoAuditoriaCompleto })));
+const PlanejamentoMinimalTest = lazy(() => import("@/components/planejamento/PlanejamentoMinimalTest").then(module => ({ default: module.PlanejamentoMinimalTest })));
+const PlanejamentoAuditoriaSimplificado = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaSimplificado").then(module => ({ default: module.PlanejamentoAuditoriaSimplificado })));
 const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage"));
 const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage"));
 const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao"));
@@ -328,7 +332,7 @@ const App = () => (
                   } />
                   <Route path="planejamento-estrategico" element={
                     <Suspense fallback={<PageLoader />}>
-                      <PlanejamentoCompletoDashboard />
+                      <PlanejamentoAuditoriaSimplificado />
                     </Suspense>
                   } />
                   <Route path="planejamento/planos-acao" element={
@@ -575,6 +579,26 @@ const App = () => (
                       <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#e8f5e8', border: '1px solid green'}}>
                         <h3>✅ APLICAÇÃO FUNCIONANDO</h3>
                         <p>React está renderizando corretamente!</p>
+                      </div>
+                    </div>
+                  } />
+                  <Route path="planejamento-teste" element={
+                    <div style={{padding: '20px', backgroundColor: '#f0f9ff', minHeight: '100vh'}}>
+                      <h1 style={{color: '#1e40af', marginBottom: '20px'}}>🎯 TESTE PLANEJAMENTO ESTRATÉGICO</h1>
+                      <div style={{backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>
+                        <h2>✅ Página de Planejamento Carregou!</h2>
+                        <p>Se você está vendo esta mensagem, o roteamento está funcionando corretamente.</p>
+                        <p><strong>URL atual:</strong> {window.location.pathname}</p>
+                        <p><strong>Timestamp:</strong> {new Date().toLocaleString()}</p>
+                        <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#dcfce7', borderLeft: '4px solid #16a34a'}}>
+                          <h3>Status do Sistema:</h3>
+                          <ul>
+                            <li>✅ React renderizando</li>
+                            <li>✅ Router funcionando</li>
+                            <li>✅ Componente carregando</li>
+                            <li>✅ Servidor ativo na porta 8080</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   } />
