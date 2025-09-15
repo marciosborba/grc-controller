@@ -479,8 +479,8 @@ const TenantSettingsPage: React.FC = () => {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Cards de Ações Rápidas */}
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('users')}>
-              <CardContent className="p-6">
+            <Card className="cursor-pointer hover:shadow-md transition-all duration-300 group relative overflow-hidden" onClick={() => setActiveTab('users')}>
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 rounded-full bg-blue-100">
                     <Users className="h-6 w-6 text-blue-600" />
@@ -497,10 +497,11 @@ const TenantSettingsPage: React.FC = () => {
                   </div>
                 </div>
               </CardContent>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
             </Card>
 
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('security')}>
-              <CardContent className="p-6">
+            <Card className="cursor-pointer hover:shadow-md transition-all duration-300 group relative overflow-hidden" onClick={() => setActiveTab('security')}>
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 rounded-full bg-green-100">
                     <Shield className="h-6 w-6 text-green-600" />
@@ -517,10 +518,11 @@ const TenantSettingsPage: React.FC = () => {
                   </div>
                 </div>
               </CardContent>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
             </Card>
 
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('data')}>
-              <CardContent className="p-6">
+            <Card className="cursor-pointer hover:shadow-md transition-all duration-300 group relative overflow-hidden" onClick={() => setActiveTab('data')}>
+              <CardContent className="p-6 relative z-10">
                 <div className="flex items-center space-x-3">
                   <div className="p-3 rounded-full bg-purple-100">
                     <Database className="h-6 w-6 text-purple-600" />
@@ -537,6 +539,7 @@ const TenantSettingsPage: React.FC = () => {
                   </div>
                 </div>
               </CardContent>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
             </Card>
           </div>
 

@@ -25,6 +25,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
+import { UniversoAuditavel } from './UniversoAuditavel';
 
 interface AuditUniverse {
   id: string;
@@ -51,15 +52,36 @@ interface AuditProject {
 export function AuditoriasDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { tenantSettings } = useTenantSettings();
+  const { tenantSettings, refetch: refetchTenantSettings } = useTenantSettings();
   const [auditUniverse, setAuditUniverse] = useState<AuditUniverse[]>([]);
   const [auditProjects, setAuditProjects] = useState<AuditProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('overview');
+  
+  // Log para debug
+  console.log('📊 AuditoriasDashboard renderizado:', {
+    matrixType: tenantSettings?.risk_matrix?.type,
+    hasCustomLevels: !!tenantSettings?.risk_matrix?.risk_levels_custom,
+    timestamp: new Date().toISOString()
+  });
 
   useEffect(() => {
     loadAuditData();
   }, []);
+  
+  // Escutar atualizações da matriz de risco
+  useEffect(() => {
+    const handleMatrixUpdate = (event: CustomEvent) => {
+      console.log('🔄 Matriz de risco atualizada, recarregando configurações...', event.detail);
+      refetchTenantSettings();
+    };
+    
+    window.addEventListener('risk-matrix-updated', handleMatrixUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('risk-matrix-updated', handleMatrixUpdate as EventListener);
+    };
+  }, [refetchTenantSettings]);
 
   const loadAuditData = async () => {
     try {
@@ -292,8 +314,8 @@ export function AuditoriasDashboard() {
 
       {/* Módulos de Auditoria */}
       <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/planejamento-estrategico')}>
-          <CardContent className="p-4 sm:p-6">
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/planejamento-estrategico')}>
+          <CardContent className="p-4 sm:p-6 relative z-10">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
@@ -301,10 +323,11 @@ export function AuditoriasDashboard() {
             <h3 className="font-semibold text-base sm:text-lg mb-2">Planejamento Estratégico</h3>
             <p className="text-muted-foreground text-sm">Gestão completa do planejamento estratégico organizacional</p>
           </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/auditorias/projetos')}>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/projetos')}>
+          <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -312,10 +335,11 @@ export function AuditoriasDashboard() {
             <h3 className="font-semibold text-base sm:text-lg mb-2">Projetos</h3>
             <p className="text-muted-foreground text-sm">Gestão de projetos de auditoria e equipes</p>
           </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/auditorias/papeis-trabalho')}>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/papeis-trabalho')}>
+          <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -323,10 +347,11 @@ export function AuditoriasDashboard() {
             <h3 className="font-semibold text-base sm:text-lg mb-2">Papéis de Trabalho</h3>
             <p className="text-muted-foreground text-sm">Documentação digital de evidências</p>
           </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/auditorias/relatorios')}>
-          <CardContent className="p-6">
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/relatorios')}>
+          <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
@@ -334,6 +359,7 @@ export function AuditoriasDashboard() {
             <h3 className="font-semibold text-base sm:text-lg mb-2">Relatórios</h3>
             <p className="text-muted-foreground text-sm">Comunicação de resultados e dashboards</p>
           </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
       </div>
 
@@ -407,41 +433,7 @@ export function AuditoriasDashboard() {
         </TabsContent>
 
         <TabsContent value="universe" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Universo Auditável</CardTitle>
-              <CardDescription>
-                Processos organizacionais mapeados para auditoria
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {auditUniverse.map(process => (
-                  <div key={process.id} className="flex items-center justify-between p-4 border rounded">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{process.processo}</h4>
-                      <p className="text-sm text-muted-foreground">{process.categoria_risco}</p>
-                      <p className="text-sm text-muted-foreground">Responsável: {process.responsavel_processo}</p>
-                    </div>
-                    <div className="text-right space-y-2">
-                      <Badge className={getRiskColor(process.nivel_risco)}>
-                        Risco: {process.nivel_risco}
-                      </Badge>
-                      <Badge className={getStatusColor(process.status)}>
-                        {process.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-                {auditUniverse.length === 0 && (
-                  <div className="text-center py-8">
-                    <Target className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground">Nenhum processo mapeado ainda</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <UniversoAuditavel />
         </TabsContent>
 
         <TabsContent value="projects" className="space-y-4">
