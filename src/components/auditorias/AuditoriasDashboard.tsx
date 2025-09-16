@@ -24,8 +24,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 import { UniversoAuditavel } from './UniversoAuditavel';
+import { ProjetosAuditoria } from './ProjetosAuditoria';
+import { PlanejamentoAnualAuditoria } from './PlanejamentoAnualAuditoria';
+import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
 
 interface AuditUniverse {
   id: string;
@@ -52,6 +56,8 @@ interface AuditProject {
 export function AuditoriasDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const selectedTenantId = useCurrentTenantId();
+  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
   const { tenantSettings, refetch: refetchTenantSettings } = useTenantSettings();
   const [auditUniverse, setAuditUniverse] = useState<AuditUniverse[]>([]);
   const [auditProjects, setAuditProjects] = useState<AuditProject[]>([]);
@@ -66,8 +72,10 @@ export function AuditoriasDashboard() {
   });
 
   useEffect(() => {
-    loadAuditData();
-  }, []);
+    if (effectiveTenantId) {
+      loadAuditData();
+    }
+  }, [effectiveTenantId]);
   
   // Escutar atualizações da matriz de risco
   useEffect(() => {
@@ -91,21 +99,21 @@ export function AuditoriasDashboard() {
       const { data: universeData, error: universeError } = await supabase
         .from('universo_auditavel')
         .select('*')
-        .eq('tenant_id', user?.tenant?.id)
-        .order('nivel_risco_auditoria', { ascending: false });
+        .eq('tenant_id', effectiveTenantId)
+        .order('created_at', { ascending: false });
 
       if (universeError) {
         console.error('Erro ao carregar universo auditável:', universeError);
       } else {
         const mappedUniverse = universeData?.map(item => ({
           id: item.id,
-          processo: item.processo || 'Processo não definido',
-          categoria_risco: item.categoria_risco || 'Não categorizado',
-          nivel_risco: item.nivel_risco_auditoria || 1,
-          responsavel_processo: item.responsavel_processo || 'Não definido',
-          ultima_auditoria: item.ultima_auditoria,
-          proxima_auditoria: item.proxima_auditoria_planejada,
-          status: item.status_auditoria || 'pendente'
+          processo: item.nome || 'Processo não definido',
+          categoria_risco: item.tipo || 'Não categorizado',
+          nivel_risco: item.criticidade === 'critica' ? 5 : item.criticidade === 'alta' ? 4 : item.criticidade === 'media' ? 3 : item.criticidade === 'baixa' ? 2 : 1,
+          responsavel_processo: item.responsavel || 'Não definido',
+          ultima_auditoria: item.data_ultima_auditoria,
+          proxima_auditoria: item.data_proxima_auditoria,
+          status: item.status || 'pendente'
         })) || [];
         setAuditUniverse(mappedUniverse);
       }
@@ -114,7 +122,7 @@ export function AuditoriasDashboard() {
       const { data: projectsData, error: projectsError } = await supabase
         .from('projetos_auditoria')
         .select('*')
-        .eq('tenant_id', user?.tenant?.id)
+        .eq('tenant_id', effectiveTenantId)
         .order('data_inicio', { ascending: false });
 
       if (projectsError) {
@@ -123,12 +131,12 @@ export function AuditoriasDashboard() {
         const mappedProjects = projectsData?.map(project => ({
           id: project.id,
           titulo: project.titulo || 'Projeto sem título',
-          tipo: project.tipo || 'Auditoria Geral',
+          tipo: project.tipo_auditoria || 'Auditoria Geral',
           status: project.status || 'planejado',
-          auditor_lider: project.auditor_lider || 'Não definido',
+          auditor_lider: project.chefe_auditoria || 'Não definido',
           data_inicio: project.data_inicio || '',
-          data_fim_prevista: project.data_fim_prevista || '',
-          progresso: project.progresso_percentual || 0
+          data_fim_prevista: project.data_fim_planejada || '',
+          progresso: 0 // TODO: calcular progresso baseado na fase atual
         })) || [];
         setAuditProjects(mappedProjects);
       }
@@ -326,7 +334,7 @@ export function AuditoriasDashboard() {
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/projetos')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('projects')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
@@ -338,7 +346,7 @@ export function AuditoriasDashboard() {
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/papeis-trabalho')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('working-papers')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
@@ -365,11 +373,12 @@ export function AuditoriasDashboard() {
 
       {/* Módulos Principais */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="universe">Universo Auditável</TabsTrigger>
           <TabsTrigger value="projects">Projetos</TabsTrigger>
           <TabsTrigger value="planning">Planejamento</TabsTrigger>
+          <TabsTrigger value="working-papers">Papéis de Trabalho</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 sm:space-y-6">
@@ -437,87 +446,15 @@ export function AuditoriasDashboard() {
         </TabsContent>
 
         <TabsContent value="projects" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Projetos de Auditoria</CardTitle>
-              <CardDescription>
-                Gestão de projetos e execução de auditorias
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {auditProjects.map(project => (
-                  <div key={project.id} className="p-4 border rounded">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{project.titulo}</h4>
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Tipo:</p>
-                        <p>{project.tipo}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Auditor Líder:</p>
-                        <p>{project.auditor_lider}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Início:</p>
-                        <p>{project.data_inicio ? new Date(project.data_inicio).toLocaleDateString() : 'Não definido'}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Progresso:</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full" 
-                              style={{ width: `${project.progresso}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm">{project.progresso}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {auditProjects.length === 0 && (
-                  <div className="text-center py-8">
-                    <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-muted-foreground">Nenhum projeto de auditoria criado</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ProjetosAuditoria />
         </TabsContent>
 
         <TabsContent value="planning" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Planejador Anual
-              </CardTitle>
-              <CardDescription>
-                Cronograma e planejamento de auditorias
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <Calendar className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Planejador em Desenvolvimento</h3>
-                <p className="text-muted-foreground mb-4">
-                  O planejador anual interativo estará disponível em breve
-                </p>
-                <Button variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Plano Anual
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <PlanejamentoAnualAuditoria />
+        </TabsContent>
+
+        <TabsContent value="working-papers" className="space-y-4">
+          <PapeisTrabalhoCompleto />
         </TabsContent>
       </Tabs>
     </div>

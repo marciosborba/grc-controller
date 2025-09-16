@@ -647,8 +647,15 @@ export function UniversoAuditavel() {
 
       {/* Métricas Resumidas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {getRiskLevels().slice(0, 2).map((level, index) => {
-          const normalizedLevel = level.toLowerCase();
+        {getRiskLevels().slice(-2).reverse().map((level, index) => {
+          const normalizedLevel = level.toLowerCase()
+            .replace('crítico', 'critica')  // "Crítico" → "critica" 
+            .replace('crítica', 'critica')  // "Crítica" → "critica"
+            .replace('médio', 'media')      // "Médio" → "media"
+            .replace('média', 'media')      // "Média" → "media"
+            .replace('alto', 'alta')        // "Alto" → "alta"
+            .replace('baixo', 'baixa')      // "Baixo" → "baixa"
+            .replace('muito alto', 'critica'); // "Muito Alto" → "critica"
           const count = universeItems.filter(p => p.criticidade === normalizedLevel).length;
           const colorClass = index === 0 ? 'text-red-600' : 'text-orange-600';
           
