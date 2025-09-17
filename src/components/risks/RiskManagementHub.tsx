@@ -24,7 +24,8 @@ import {
   Download,
   Mail,
   Calendar,
-  Activity
+  Activity,
+  Search
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth} from '@/contexts/AuthContextOptimized';
@@ -314,6 +315,10 @@ export const RiskManagementHub: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm">
+            <Search className="h-4 w-4 mr-2" />
+            Buscar
+          </Button>
           <ImprovedAIChatDialog 
             type="risk"
             context={{ 

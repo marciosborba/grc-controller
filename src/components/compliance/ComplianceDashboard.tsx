@@ -23,12 +23,17 @@ import {
   ArrowRight,
   Activity,
   Target,
-  Zap
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
+import SOXControlsLibrary from './SOXControlsLibrary';
+import NonConformitiesManagement from './NonConformitiesManagement';
+import AssessmentsManagement from './AssessmentsManagement';
+import MonitoramentoManagement from './MonitoramentoManagement';
 
 interface ComplianceMetrics {
   totalFrameworks: number;
@@ -190,9 +195,15 @@ export function ComplianceDashboard() {
         origem,
         categoria,
         status,
-        requisitos_compliance!inner(
+        codigo,
+        tipo,
+        requisitos_compliance(
           id,
-          status
+          status,
+          codigo,
+          titulo,
+          categoria,
+          criticidade
         )
       `)
       .eq('tenant_id', effectiveTenantId)
@@ -309,6 +320,10 @@ export function ComplianceDashboard() {
           <p className="text-muted-foreground">Central de Compliance e Gestão Regulatória</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline">
+            <Search className="h-4 w-4 mr-2" />
+            Buscar
+          </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filtros
@@ -476,6 +491,7 @@ export function ComplianceDashboard() {
                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
+
         <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
               onClick={() => setSelectedTab('reports')}>
           <CardContent className="p-6 relative z-10">
@@ -493,14 +509,92 @@ export function ComplianceDashboard() {
 
       {/* Conteúdo Principal */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
+          <TabsTrigger value="assessments">Avaliações</TabsTrigger>
           <TabsTrigger value="nonconformities">Não Conformidades</TabsTrigger>
           <TabsTrigger value="monitoring">Monitoramento</TabsTrigger>
+          <TabsTrigger value="sox-library">Biblioteca SOX</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Navegação por Categorias */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+            <Card className="border-orange-200 dark:border-orange-800 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedTab('frameworks')}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">Frameworks Regulatórios</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  SOX, LGPD, BACEN e outros requisitos obrigatórios
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {frameworks.filter(f => f.tipo === 'regulatorio').length} frameworks ativos
+                  </span>
+                  <Badge variant="destructive" className="text-xs">
+                    Crítico
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedTab('frameworks')}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">Padrões Normativos</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  ISO 27001, NIST, COBIT e boas práticas
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {frameworks.filter(f => f.tipo === 'normativo').length} frameworks ativos
+                  </span>
+                  <Badge className="bg-blue-100 text-blue-800 text-xs">
+                    Estratégico
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-green-200 dark:border-green-800 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => setSelectedTab('nonconformities')}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                    <Target className="h-5 w-5 text-green-600" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-1">Planos de Ação</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Não conformidades e melhorias em andamento
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {activePlans} planos ativos
+                  </span>
+                  <Badge className="bg-green-100 text-green-800 text-xs">
+                    {metrics.overduePlans} atrasados
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Status dos Frameworks */}
             <Card>
@@ -648,10 +742,137 @@ export function ComplianceDashboard() {
             </Card>
           </div>
 
-          {/* Lista de Frameworks */}
+          {/* Categorização Natural dos Frameworks */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Frameworks Regulatórios */}
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                  <AlertTriangle className="h-5 w-5" />
+                  Regulatórios
+                </CardTitle>
+                <CardDescription>
+                  Frameworks obrigatórios e regulamentações setoriais
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {frameworks
+                  .filter(f => f.tipo === 'regulatorio')
+                  .map(framework => (
+                    <div key={framework.id} className="border rounded-lg p-3 bg-orange-50 dark:bg-orange-900/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">{framework.nome}</h4>
+                          <p className="text-xs text-muted-foreground">{framework.origem}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs font-bold ${getConformityColor(framework.conformityScore)}`}>
+                            {framework.conformityScore}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {framework.totalRequirements} controles
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          Gerenciar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+
+            {/* Frameworks Normativos */}
+            <Card className="border-blue-200 dark:border-blue-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                  <CheckCircle className="h-5 w-5" />
+                  Normativos
+                </CardTitle>
+                <CardDescription>
+                  Padrões e boas práticas de mercado
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {frameworks
+                  .filter(f => f.tipo === 'normativo')
+                  .map(framework => (
+                    <div key={framework.id} className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-sm">{framework.nome}</h4>
+                          <p className="text-xs text-muted-foreground">{framework.origem}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs font-bold ${getConformityColor(framework.conformityScore)}`}>
+                            {framework.conformityScore}%
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {framework.totalRequirements} controles
+                        </span>
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+                          Gerenciar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+
+            {/* Métricas e Ações Rápidas */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Ações Rápidas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Framework
+                </Button>
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Importar Controles
+                </Button>
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Relatório Executivo
+                </Button>
+                <div className="pt-4 border-t">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-primary">{frameworks.length}</p>
+                    <p className="text-xs text-muted-foreground">Frameworks Ativos</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div>
+                    <p className="text-lg font-semibold text-orange-600">
+                      {frameworks.filter(f => f.tipo === 'regulatorio').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Regulatórios</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-blue-600">
+                      {frameworks.filter(f => f.tipo === 'normativo').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Normativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Lista Detalhada de Frameworks */}
           <Card>
             <CardHeader>
-              <CardTitle>Frameworks Ativos</CardTitle>
+              <CardTitle>Biblioteca Completa de Frameworks</CardTitle>
               <CardDescription>
                 Visualize e gerencie todos os frameworks de compliance da organização
               </CardDescription>
@@ -666,10 +887,20 @@ export function ComplianceDashboard() {
                           <div>
                             <h3 className="font-semibold text-lg">{framework.nome}</h3>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant={framework.categoria === 'regulatorio' ? 'destructive' : 'secondary'}>
-                                {framework.categoria === 'regulatorio' ? 'Regulatório' : 'Normativo'}
+                              <Badge variant={framework.tipo === 'regulatorio' ? 'destructive' : 'secondary'}>
+                                {framework.tipo === 'regulatorio' ? 'Regulatório' : 'Normativo'}
                               </Badge>
                               <Badge variant="outline">{framework.origem}</Badge>
+                              {framework.codigo === 'SOX-2002' && (
+                                <Badge className="bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-200">
+                                  Seção 404
+                                </Badge>
+                              )}
+                              {framework.codigo === 'LGPD-2018' && (
+                                <Badge className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200">
+                                  LGPD
+                                </Badge>
+                              )}
                               <span className="text-sm text-muted-foreground">
                                 {framework.status === 'ativo' ? '✅' : '⏸️'} {framework.status}
                               </span>
@@ -737,24 +968,20 @@ export function ComplianceDashboard() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="assessments">
+          <AssessmentsManagement />
+        </TabsContent>
+
         <TabsContent value="nonconformities">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-center text-muted-foreground">
-                Módulo de Não Conformidades em desenvolvimento...
-              </p>
-            </CardContent>
-          </Card>
+          <NonConformitiesManagement />
+        </TabsContent>
+
+        <TabsContent value="sox-library">
+          <SOXControlsLibrary />
         </TabsContent>
 
         <TabsContent value="monitoring">
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-center text-muted-foreground">
-                Módulo de Monitoramento em desenvolvimento...
-              </p>
-            </CardContent>
-          </Card>
+          <MonitoramentoManagement />
         </TabsContent>
       </Tabs>
     </div>

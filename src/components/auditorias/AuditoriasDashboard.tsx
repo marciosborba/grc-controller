@@ -171,7 +171,11 @@ export function AuditoriasDashboard() {
           auditor_lider: project.chefe_auditoria || 'Não definido',
           data_inicio: project.data_inicio || '',
           data_fim_prevista: project.data_fim_planejada || '',
-          progresso: 0 // TODO: calcular progresso baseado na fase atual
+          progresso: project.fase_atual === 'concluida' ? 100 : 
+                    project.fase_atual === 'followup' ? 90 :
+                    project.fase_atual === 'fieldwork' ? 60 : 25,
+          metadata: project.metadados || {},
+          codigo: project.codigo || ''
         })) || [];
         setAuditProjects(mappedProjects);
       }
@@ -414,6 +418,10 @@ export function AuditoriasDashboard() {
           <p className="text-muted-foreground">Motor de Assurance Dinâmico e Conectado</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline">
+            <Search className="h-4 w-4 mr-2" />
+            Buscar
+          </Button>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filtros
@@ -722,15 +730,28 @@ export function AuditoriasDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {auditProjects.filter(p => p.status === 'em_andamento').slice(0, 3).map(project => (
-                    <div key={project.id} className="flex items-center justify-between p-3 border rounded">
+                  {auditProjects.filter(p => p.status === 'em_andamento' || p.status === 'em_execucao').slice(0, 3).map((project: any) => (
+                    <div key={project.id} className="flex items-center justify-between p-3 border rounded hover:shadow-sm transition-shadow">
                       <div className="flex-1">
-                        <p className="font-medium">{project.titulo}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium">{project.titulo}</p>
+                          {project.metadata?.sox_audit && (
+                            <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">
+                              SOX
+                            </Badge>
+                          )}
+                          {project.tipo === 'regulatoria' && !project.metadata?.sox_audit && (
+                            <Badge variant="destructive" className="text-xs">
+                              Regulatória
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{project.auditor_lider}</p>
+                        <p className="text-xs text-muted-foreground">{project.codigo}</p>
                       </div>
                       <div className="text-right">
                         <Badge className={getStatusColor(project.status)}>
-                          {project.status.replace('_', ' ')}
+                          {(project.status || '').replace('_', ' ')}
                         </Badge>
                         <p className="text-sm text-muted-foreground mt-1">
                           {project.progresso}%
