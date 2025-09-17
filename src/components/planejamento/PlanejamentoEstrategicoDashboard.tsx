@@ -24,7 +24,12 @@ import {
   ArrowDown,
   Minus,
   Building,
-  MapPin
+  MapPin,
+  Eye,
+  Edit,
+  Trash2,
+  SquarePen,
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -90,12 +95,34 @@ interface KPIData {
   status_atual: 'verde' | 'amarelo' | 'vermelho';
 }
 
+interface TrabalhoAuditoria {
+  id: string;
+  codigo: string;
+  titulo: string;
+  descricao: string;
+  tipo_auditoria: 'compliance' | 'operational' | 'financial' | 'it' | 'investigative' | 'follow_up';
+  area_auditada: string;
+  nivel_risco: 'baixo' | 'medio' | 'alto' | 'critico';
+  data_inicio_planejada: string;
+  data_fim_planejada: string;
+  horas_planejadas: number;
+  orcamento_estimado: number;
+  status: 'planejado' | 'aprovado' | 'iniciado' | 'em_andamento' | 'suspenso' | 'concluido' | 'cancelado';
+  percentual_conclusao: number;
+  prioridade: number;
+  auditor_lider: string;
+  auditor_lider_profile?: {
+    full_name: string;
+  };
+}
+
 export function PlanejamentoEstrategicoDashboard() {
   const { user } = useAuth();
   const [planos, setPlanos] = useState<PlanoEstrategico[]>([]);
   const [objetivos, setObjetivos] = useState<ObjetivoEstrategico[]>([]);
   const [iniciativas, setIniciativas] = useState<IniciativaEstrategica[]>([]);
   const [kpis, setKPIs] = useState<KPIData[]>([]);
+  const [trabalhos, setTrabalhos] = useState<TrabalhoAuditoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('visao-geral');
 
@@ -155,6 +182,23 @@ export function PlanejamentoEstrategicoDashboard() {
         console.error('Erro ao carregar iniciativas:', iniciativasError);
       } else {
         setIniciativas(iniciativasData || []);
+      }
+
+      // Carregar trabalhos de auditoria
+      const { data: trabalhosData, error: trabalhosError } = await supabase
+        .from('trabalhos_auditoria')
+        .select(`
+          *,
+          auditor_lider_profile:profiles!trabalhos_auditoria_auditor_lider_fkey(full_name)
+        `)
+        .eq('tenant_id', user.tenant.id)
+        .order('data_inicio_planejada', { ascending: true })
+        .limit(5);
+
+      if (trabalhosError) {
+        console.error('Erro ao carregar trabalhos de auditoria:', trabalhosError);
+      } else {
+        setTrabalhos(trabalhosData || []);
       }
 
       // Carregar KPIs (simulado - será implementado quando houver medições)
@@ -241,6 +285,23 @@ export function PlanejamentoEstrategicoDashboard() {
       'vermelho': 'bg-red-100 text-red-800'
     };
     return healthColors[health as keyof typeof healthColors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const riskColors = {
+    baixo: 'bg-green-100 text-green-800',
+    medio: 'bg-yellow-100 text-yellow-800',
+    alto: 'bg-orange-100 text-orange-800',
+    critico: 'bg-red-100 text-red-800'
+  };
+
+  const statusColors = {
+    planejado: 'bg-blue-500 text-white dark:bg-blue-600',
+    aprovado: 'bg-green-500 text-white dark:bg-green-600',
+    iniciado: 'bg-yellow-500 text-white dark:bg-yellow-600',
+    em_andamento: 'bg-yellow-500 text-white dark:bg-yellow-600',
+    suspenso: 'bg-orange-500 text-white dark:bg-orange-600',
+    concluido: 'bg-green-500 text-white dark:bg-green-600',
+    cancelado: 'bg-red-500 text-white dark:bg-red-600'
   };
 
   const metrics = calculateMetrics();

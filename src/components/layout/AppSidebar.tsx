@@ -40,18 +40,50 @@ const navigationItems = [{
   label: 'Módulos',
   items: [
     {
-      title: 'Auditoria',
-      url: '/auditorias',
-      icon: Search,
-      permissions: ['all'],
-      description: 'Motor de assurance dinâmico e conectado'
-    },
-    {
       title: 'Dashboard',
       url: '/dashboard',
       icon: LayoutDashboard,
       permissions: ['all'],
       description: 'Visão geral e métricas principais'
+    },
+    {
+      title: 'Auditoria',
+      url: '/auditorias',
+      icon: Search,
+      permissions: ['audit.read', 'all'],
+      description: 'Gestão de auditorias e controles internos',
+      submenu: [
+        {
+          title: 'Dashboard',
+          url: '/auditorias',
+          icon: LayoutDashboard,
+          description: 'Visão geral das auditorias'
+        },
+        {
+          title: 'Planejamento',
+          url: '/auditorias/planejamento',
+          icon: Calendar,
+          description: 'Planejamento de auditorias'
+        },
+        {
+          title: 'Projetos',
+          url: '/auditorias/projetos',
+          icon: Target,
+          description: 'Gestão de projetos de auditoria'
+        },
+        {
+          title: 'Papéis de Trabalho',
+          url: '/auditorias/papeis-trabalho',
+          icon: FileText,
+          description: 'Documentação e evidências'
+        },
+        {
+          title: 'Relatórios',
+          url: '/auditorias/relatorios',
+          icon: BarChart3,
+          description: 'Relatórios de auditoria'
+        }
+      ]
     },
     {
       title: 'Planejamento Estratégico',
@@ -94,11 +126,18 @@ const navigationItems = [{
     },
     // Módulo Assessment removido - funcionalidade transferida para Configurações
     {
-      title: 'Ética TESTE',
+      title: 'Conformidade',
+      url: '/compliance',
+      icon: FileCheck,
+      permissions: ['compliance.read', 'all'],
+      description: 'Gestão de conformidade e frameworks regulatórios'
+    },
+    {
+      title: 'Ética',
       url: '/ethics',
       icon: Shield,
       permissions: ['all'],
-      description: 'TESTE - Denúncias e questões éticas'
+      description: 'Canal de denúncias e questões éticas'
     },
     {
       title: 'Usuários',
@@ -248,7 +287,6 @@ const TEST_ROLES = [
 ];
 
 export function AppSidebar() {
-  console.log('🚀 [SIDEBAR] AppSidebar ATUALIZADO - Auditoria deve aparecer AGORA!');
   const {
     state
   } = useSidebar();
@@ -487,7 +525,7 @@ export function AppSidebar() {
     const moduleTitle = permissions.includes('audit.read') ? 'Gestão de Auditoria' :
                        permissions.includes('assessment.read') ? 'Assessments' :
                        permissions.includes('report.read') ? 'Relatórios' :
-                       // permissions.includes('compliance.read') ? 'Conformidade' : - removido
+                       permissions.includes('compliance.read') ? 'Conformidade' :
                        permissions.includes('risk.read') ? 'Gestão de Riscos' :
                        permissions.includes('incident.read') ? 'Incidentes' :
                        permissions.includes('privacy.read') ? 'Privacidade' :
@@ -658,14 +696,8 @@ export function AppSidebar() {
         {navigationItems.map((group, groupIndex) => {
           const filteredItems = group.items.filter(item => {
     const hasAccess = hasPermission(item.permissions);
-    // DEBUG: Log das permissões para cada item
-    console.log(`🔐 [PERMISSION DEBUG] ${item.title}:`, {
-      requiredPermissions: item.permissions,
-      hasAccess,
-      userIsPlatformAdmin: user?.isPlatformAdmin,
-      userPermissions: user?.permissions || [],
-      userRoles: user?.roles || []
-    });
+    
+    // Verificação de acesso sem logs desnecessários
     return hasAccess;
   });
           
@@ -881,5 +913,5 @@ export function AppSidebar() {
       </SidebarContent>
 
 
-    </Sidebar>;
+    </Sidebar>
 }

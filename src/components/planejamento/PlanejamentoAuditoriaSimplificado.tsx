@@ -344,7 +344,6 @@ export function PlanejamentoAuditoriaSimplificado() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="trabalhos">Trabalhos</TabsTrigger>
           <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
         </TabsList>
 
@@ -432,329 +431,337 @@ export function PlanejamentoAuditoriaSimplificado() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
 
-        <TabsContent value="trabalhos" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Trabalhos de Auditoria Planejados</h2>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Trabalho
-            </Button>
-          </div>
+          {/* Lista de Trabalhos de Auditoria */}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Trabalhos de Auditoria Planejados</h2>
+              <Button onClick={handleCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Trabalho
+              </Button>
+            </div>
 
-          {/* Card para criação de novo trabalho */}
-          {isCreating && (
-            <Card className="border-primary/50 bg-primary/5">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Novo Trabalho de Auditoria</CardTitle>
-                <CardDescription>Preencha as informações do novo trabalho</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="titulo">Título</Label>
-                    <Input 
-                      id="titulo"
-                      value={formData.titulo || ''} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                      placeholder="Digite o título do trabalho"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="area_auditada">Área Auditada</Label>
-                    <Input 
-                      id="area_auditada"
-                      value={formData.area_auditada || ''} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, area_auditada: e.target.value }))}
-                      placeholder="Ex: Financeiro, TI, RH"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="descricao">Descrição</Label>
-                  <Textarea 
-                    id="descricao"
-                    value={formData.descricao || ''} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                    rows={3}
-                    placeholder="Descreva os objetivos e escopo do trabalho"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="tipo_auditoria">Tipo de Auditoria</Label>
-                    <Select value={formData.tipo_auditoria || 'operational'} onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_auditoria: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="operational">Operacional</SelectItem>
-                        <SelectItem value="it">TI</SelectItem>
-                        <SelectItem value="financial">Financeira</SelectItem>
-                        <SelectItem value="compliance">Compliance</SelectItem>
-                        <SelectItem value="follow_up">Follow-up</SelectItem>
-                        <SelectItem value="investigative">Investigativa</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="nivel_risco">Nível de Risco</Label>
-                    <Select value={formData.nivel_risco || 'medio'} onValueChange={(value) => setFormData(prev => ({ ...prev, nivel_risco: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="baixo">Baixo</SelectItem>
-                        <SelectItem value="medio">Médio</SelectItem>
-                        <SelectItem value="alto">Alto</SelectItem>
-                        <SelectItem value="critico">Crítico</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="horas_planejadas">Horas Planejadas</Label>
-                    <Input 
-                      id="horas_planejadas"
-                      type="number"
-                      value={formData.horas_planejadas || ''} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, horas_planejadas: parseFloat(e.target.value) }))}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="data_inicio_planejada">Data de Início</Label>
-                    <Input 
-                      id="data_inicio_planejada"
-                      type="date"
-                      value={formData.data_inicio_planejada || ''} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, data_inicio_planejada: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="data_fim_planejada">Data de Fim</Label>
-                    <Input 
-                      id="data_fim_planejada"
-                      type="date"
-                      value={formData.data_fim_planejada || ''} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button variant="outline" onClick={handleCancel}>
-                    <X className="h-4 w-4 mr-2" />
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Criar Trabalho
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Cards dos trabalhos existentes */}
-          <div className="grid gap-4">
-            {trabalhos.map((trabalho) => (
-              <Card key={trabalho.id} className="transition-all duration-200 hover:shadow-md">
+            {/* Card para criação de novo trabalho */}
+            {isCreating && (
+              <Card className="border-primary/50 bg-primary/5">
                 <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 space-y-1 cursor-pointer" onClick={() => handleToggleExpand(trabalho.id)}>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {trabalho.titulo}
-                        <Badge className={getRiscoColor(trabalho.nivel_risco)}>
-                          {trabalho.nivel_risco}
-                        </Badge>
-                        <Badge className={getStatusColor(trabalho.status)}>
-                          {trabalho.status.replace('_', ' ')}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription className="line-clamp-2">{trabalho.descricao}</CardDescription>
+                  <CardTitle className="text-lg">Novo Trabalho de Auditoria</CardTitle>
+                  <CardDescription>Preencha as informações do novo trabalho</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="titulo">Título</Label>
+                      <Input 
+                        id="titulo"
+                        value={formData.titulo || ''} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+                        placeholder="Digite o título do trabalho"
+                      />
                     </div>
-                    <div className="flex gap-2 ml-4">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleToggleExpand(trabalho.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        {expandedCard === trabalho.id ? 'Ocultar' : 'Ver'}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(trabalho)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(trabalho)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div>
+                      <Label htmlFor="area_auditada">Área Auditada</Label>
+                      <Input 
+                        id="area_auditada"
+                        value={formData.area_auditada || ''} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, area_auditada: e.target.value }))}
+                        placeholder="Ex: Financeiro, TI, RH"
+                      />
                     </div>
                   </div>
-                </CardHeader>
-                
-                {/* Conteúdo básico sempre visível */}
-                <CardContent className="pt-0">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="descricao">Descrição</Label>
+                    <Textarea 
+                      id="descricao"
+                      value={formData.descricao || ''} 
+                      onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                      rows={3}
+                      placeholder="Descreva os objetivos e escopo do trabalho"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Código</p>
-                      <p className="font-medium text-sm">{trabalho.codigo}</p>
+                      <Label htmlFor="tipo_auditoria">Tipo de Auditoria</Label>
+                      <Select value={formData.tipo_auditoria || 'operational'} onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_auditoria: value }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="operational">Operacional</SelectItem>
+                          <SelectItem value="it">TI</SelectItem>
+                          <SelectItem value="financial">Financeira</SelectItem>
+                          <SelectItem value="compliance">Compliance</SelectItem>
+                          <SelectItem value="follow_up">Follow-up</SelectItem>
+                          <SelectItem value="investigative">Investigativa</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Área</p>
-                      <p className="font-medium text-sm">{trabalho.area_auditada}</p>
+                      <Label htmlFor="nivel_risco">Nível de Risco</Label>
+                      <Select value={formData.nivel_risco || 'medio'} onValueChange={(value) => setFormData(prev => ({ ...prev, nivel_risco: value }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="baixo">Baixo</SelectItem>
+                          <SelectItem value="medio">Médio</SelectItem>
+                          <SelectItem value="alto">Alto</SelectItem>
+                          <SelectItem value="critico">Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Horas</p>
-                      <p className="font-medium text-sm">{trabalho.horas_planejadas}h</p>
+                      <Label htmlFor="horas_planejadas">Horas Planejadas</Label>
+                      <Input 
+                        id="horas_planejadas"
+                        type="number"
+                        value={formData.horas_planejadas || ''} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, horas_planejadas: parseFloat(e.target.value) }))}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="data_inicio_planejada">Data de Início</Label>
+                      <Input 
+                        id="data_inicio_planejada"
+                        type="date"
+                        value={formData.data_inicio_planejada || ''} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, data_inicio_planejada: e.target.value }))}
+                      />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Período</p>
-                      <p className="font-medium text-sm">
-                        {new Date(trabalho.data_inicio_planejada).toLocaleDateString()} - {new Date(trabalho.data_fim_planejada).toLocaleDateString()}
-                      </p>
+                      <Label htmlFor="data_fim_planejada">Data de Fim</Label>
+                      <Input 
+                        id="data_fim_planejada"
+                        type="date"
+                        value={formData.data_fim_planejada || ''} 
+                        onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
+                      />
                     </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={handleCancel}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleSave}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Criar Trabalho
+                    </Button>
                   </div>
                 </CardContent>
-
-                {/* Conteúdo expandido */}
-                {expandedCard === trabalho.id && (
-                  <CardContent className="pt-0 border-t bg-muted/20">
-                    {editingCard === trabalho.id ? (
-                      // Modo de edição
-                      <div className="space-y-4 pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`titulo-${trabalho.id}`}>Título</Label>
-                            <Input 
-                              id={`titulo-${trabalho.id}`}
-                              value={formData.titulo || ''} 
-                              onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`area-${trabalho.id}`}>Área Auditada</Label>
-                            <Input 
-                              id={`area-${trabalho.id}`}
-                              value={formData.area_auditada || ''} 
-                              onChange={(e) => setFormData(prev => ({ ...prev, area_auditada: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor={`desc-${trabalho.id}`}>Descrição</Label>
-                          <Textarea 
-                            id={`desc-${trabalho.id}`}
-                            value={formData.descricao || ''} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                            rows={3}
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <Label htmlFor={`tipo-${trabalho.id}`}>Tipo de Auditoria</Label>
-                            <Select value={formData.tipo_auditoria || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_auditoria: value }))}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="operational">Operacional</SelectItem>
-                                <SelectItem value="it">TI</SelectItem>
-                                <SelectItem value="financial">Financeira</SelectItem>
-                                <SelectItem value="compliance">Compliance</SelectItem>
-                                <SelectItem value="follow_up">Follow-up</SelectItem>
-                                <SelectItem value="investigative">Investigativa</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor={`risco-${trabalho.id}`}>Nível de Risco</Label>
-                            <Select value={formData.nivel_risco || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, nivel_risco: value }))}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="baixo">Baixo</SelectItem>
-                                <SelectItem value="medio">Médio</SelectItem>
-                                <SelectItem value="alto">Alto</SelectItem>
-                                <SelectItem value="critico">Crítico</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor={`horas-${trabalho.id}`}>Horas Planejadas</Label>
-                            <Input 
-                              id={`horas-${trabalho.id}`}
-                              type="number"
-                              value={formData.horas_planejadas || ''} 
-                              onChange={(e) => setFormData(prev => ({ ...prev, horas_planejadas: parseFloat(e.target.value) }))}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`inicio-${trabalho.id}`}>Data de Início</Label>
-                            <Input 
-                              id={`inicio-${trabalho.id}`}
-                              type="date"
-                              value={formData.data_inicio_planejada || ''} 
-                              onChange={(e) => setFormData(prev => ({ ...prev, data_inicio_planejada: e.target.value }))}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`fim-${trabalho.id}`}>Data de Fim</Label>
-                            <Input 
-                              id={`fim-${trabalho.id}`}
-                              type="date"
-                              value={formData.data_fim_planejada || ''} 
-                              onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-4 border-t">
-                          <Button variant="outline" onClick={handleCancel}>
-                            <X className="h-4 w-4 mr-2" />
-                            Cancelar
-                          </Button>
-                          <Button onClick={handleSave}>
-                            <Save className="h-4 w-4 mr-2" />
-                            Salvar
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // Modo de visualização expandido
-                      <div className="space-y-4 pt-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Descrição Completa</h4>
-                          <p className="text-sm text-muted-foreground">{trabalho.descricao}</p>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Tipo de Auditoria</p>
-                            <p className="text-sm">{trabalho.tipo_auditoria}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Status</p>
-                            <Badge className={getStatusColor(trabalho.status)}>
-                              {trabalho.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Nível de Risco</p>
-                            <Badge className={getRiscoColor(trabalho.nivel_risco)}>
-                              {trabalho.nivel_risco}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                )}
               </Card>
-            ))}
+            )}
+
+            {/* Cards dos trabalhos existentes */}
+            <div className="grid gap-4">
+              {trabalhos.slice(0, 5).map((trabalho) => (
+                <Card key={trabalho.id} className="transition-all duration-200 hover:shadow-md">
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 space-y-1 cursor-pointer" onClick={() => handleToggleExpand(trabalho.id)}>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          {trabalho.titulo}
+                          <Badge className={getRiscoColor(trabalho.nivel_risco)}>
+                            {trabalho.nivel_risco}
+                          </Badge>
+                          <Badge className={getStatusColor(trabalho.status)}>
+                            {trabalho.status.replace('_', ' ')}
+                          </Badge>
+                        </CardTitle>
+                        <CardDescription className="line-clamp-2">{trabalho.descricao}</CardDescription>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleToggleExpand(trabalho.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(trabalho)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(trabalho)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  
+                  {/* Conteúdo básico sempre visível */}
+                  <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Código</p>
+                        <p className="font-medium text-sm">{trabalho.codigo}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Área</p>
+                        <p className="font-medium text-sm">{trabalho.area_auditada}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Horas</p>
+                        <p className="font-medium text-sm">{trabalho.horas_planejadas}h</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Período</p>
+                        <p className="font-medium text-sm">
+                          {new Date(trabalho.data_inicio_planejada).toLocaleDateString()} - {new Date(trabalho.data_fim_planejada).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+
+                  {/* Conteúdo expandido */}
+                  {expandedCard === trabalho.id && (
+                    <CardContent className="pt-0 border-t bg-muted/20">
+                      {editingCard === trabalho.id ? (
+                        // Modo de edição
+                        <div className="space-y-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`titulo-${trabalho.id}`}>Título</Label>
+                              <Input 
+                                id={`titulo-${trabalho.id}`}
+                                value={formData.titulo || ''} 
+                                onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`area-${trabalho.id}`}>Área Auditada</Label>
+                              <Input 
+                                id={`area-${trabalho.id}`}
+                                value={formData.area_auditada || ''} 
+                                onChange={(e) => setFormData(prev => ({ ...prev, area_auditada: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor={`desc-${trabalho.id}`}>Descrição</Label>
+                            <Textarea 
+                              id={`desc-${trabalho.id}`}
+                              value={formData.descricao || ''} 
+                              onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                              rows={3}
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label htmlFor={`tipo-${trabalho.id}`}>Tipo de Auditoria</Label>
+                              <Select value={formData.tipo_auditoria || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_auditoria: value }))}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="operational">Operacional</SelectItem>
+                                  <SelectItem value="it">TI</SelectItem>
+                                  <SelectItem value="financial">Financeira</SelectItem>
+                                  <SelectItem value="compliance">Compliance</SelectItem>
+                                  <SelectItem value="follow_up">Follow-up</SelectItem>
+                                  <SelectItem value="investigative">Investigativa</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label htmlFor={`risco-${trabalho.id}`}>Nível de Risco</Label>
+                              <Select value={formData.nivel_risco || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, nivel_risco: value }))}>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="baixo">Baixo</SelectItem>
+                                  <SelectItem value="medio">Médio</SelectItem>
+                                  <SelectItem value="alto">Alto</SelectItem>
+                                  <SelectItem value="critico">Crítico</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label htmlFor={`horas-${trabalho.id}`}>Horas Planejadas</Label>
+                              <Input 
+                                id={`horas-${trabalho.id}`}
+                                type="number"
+                                value={formData.horas_planejadas || ''} 
+                                onChange={(e) => setFormData(prev => ({ ...prev, horas_planejadas: parseFloat(e.target.value) }))}
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`inicio-${trabalho.id}`}>Data de Início</Label>
+                              <Input 
+                                id={`inicio-${trabalho.id}`}
+                                type="date"
+                                value={formData.data_inicio_planejada || ''} 
+                                onChange={(e) => setFormData(prev => ({ ...prev, data_inicio_planejada: e.target.value }))}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`fim-${trabalho.id}`}>Data de Fim</Label>
+                              <Input 
+                                id={`fim-${trabalho.id}`}
+                                type="date"
+                                value={formData.data_fim_planejada || ''} 
+                                onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-4 border-t">
+                            <Button variant="outline" onClick={handleCancel}>
+                              <X className="h-4 w-4 mr-2" />
+                              Cancelar
+                            </Button>
+                            <Button onClick={handleSave}>
+                              <Save className="h-4 w-4 mr-2" />
+                              Salvar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Modo de visualização expandido
+                        <div className="space-y-4 pt-4">
+                          <div>
+                            <h4 className="font-medium mb-2">Descrição Completa</h4>
+                            <p className="text-sm text-muted-foreground">{trabalho.descricao}</p>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Tipo de Auditoria</p>
+                              <p className="text-sm">{trabalho.tipo_auditoria}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Status</p>
+                              <Badge className={getStatusColor(trabalho.status)}>
+                                {trabalho.status.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">Nível de Risco</p>
+                              <Badge className={getRiscoColor(trabalho.nivel_risco)}>
+                                {trabalho.nivel_risco}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+
+              {trabalhos.length === 0 && (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-muted-foreground">Nenhum trabalho de auditoria planejado encontrado</p>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 

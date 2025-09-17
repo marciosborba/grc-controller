@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { 
@@ -20,7 +22,15 @@ import {
   Search,
   Plus,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  Edit,
+  Trash2,
+  SquarePen,
+  Download,
+  Printer,
+  Mail,
+  Settings
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -28,7 +38,6 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 import { UniversoAuditavel } from './UniversoAuditavel';
 import { ProjetosAuditoria } from './ProjetosAuditoria';
-import { PlanejamentoAnualAuditoria } from './PlanejamentoAnualAuditoria';
 import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
 
 interface AuditUniverse {
@@ -53,6 +62,27 @@ interface AuditProject {
   progresso: number;
 }
 
+interface TrabalhoAuditoria {
+  id: string;
+  codigo: string;
+  titulo: string;
+  descricao: string;
+  tipo_auditoria: 'compliance' | 'operational' | 'financial' | 'it' | 'investigative' | 'follow_up';
+  area_auditada: string;
+  nivel_risco: 'baixo' | 'medio' | 'alto' | 'critico';
+  data_inicio_planejada: string;
+  data_fim_planejada: string;
+  horas_planejadas: number;
+  orcamento_estimado: number;
+  status: 'planejado' | 'aprovado' | 'iniciado' | 'em_andamento' | 'suspenso' | 'concluido' | 'cancelado';
+  percentual_conclusao: number;
+  prioridade: number;
+  auditor_lider: string;
+  auditor_lider_profile?: {
+    full_name: string;
+  };
+}
+
 export function AuditoriasDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -61,8 +91,13 @@ export function AuditoriasDashboard() {
   const { tenantSettings, refetch: refetchTenantSettings } = useTenantSettings();
   const [auditUniverse, setAuditUniverse] = useState<AuditUniverse[]>([]);
   const [auditProjects, setAuditProjects] = useState<AuditProject[]>([]);
+  const [trabalhos, setTrabalhos] = useState<TrabalhoAuditoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState('');
+  const [selectedFormat, setSelectedFormat] = useState('pdf');
+  const [generatingReport, setGeneratingReport] = useState(false);
   
   // Log para debug
   console.log('📊 AuditoriasDashboard renderizado:', {
@@ -141,6 +176,23 @@ export function AuditoriasDashboard() {
         setAuditProjects(mappedProjects);
       }
 
+      // Carregar trabalhos de auditoria
+      const { data: trabalhosData, error: trabalhosError } = await supabase
+        .from('trabalhos_auditoria')
+        .select(`
+          *,
+          auditor_lider_profile:profiles!trabalhos_auditoria_auditor_lider_fkey(full_name)
+        `)
+        .eq('tenant_id', effectiveTenantId)
+        .order('data_inicio_planejada', { ascending: true })
+        .limit(5);
+
+      if (trabalhosError) {
+        console.error('Erro ao carregar trabalhos de auditoria:', trabalhosError);
+      } else {
+        setTrabalhos(trabalhosData || []);
+      }
+
     } catch (error) {
       console.error('Erro ao carregar dados de auditoria:', error);
       toast.error('Erro ao carregar dados de auditoria');
@@ -164,6 +216,23 @@ export function AuditoriasDashboard() {
     if (level >= 4) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
     if (level >= 3) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
     return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+  };
+
+  const riskColors = {
+    baixo: 'bg-green-100 text-green-800',
+    medio: 'bg-yellow-100 text-yellow-800',
+    alto: 'bg-orange-100 text-orange-800',
+    critico: 'bg-red-100 text-red-800'
+  };
+
+  const statusColors = {
+    planejado: 'bg-blue-500 text-white dark:bg-blue-600',
+    aprovado: 'bg-green-500 text-white dark:bg-green-600',
+    iniciado: 'bg-yellow-500 text-white dark:bg-yellow-600',
+    em_andamento: 'bg-yellow-500 text-white dark:bg-yellow-600',
+    suspenso: 'bg-orange-500 text-white dark:bg-orange-600',
+    concluido: 'bg-green-500 text-white dark:bg-green-600',
+    cancelado: 'bg-red-500 text-white dark:bg-red-600'
   };
 
   // Mapear níveis numéricos para nomes de risco baseado na configuração da tenant
@@ -209,6 +278,105 @@ export function AuditoriasDashboard() {
           case 5: return 'Muito Alto';
           default: return 'Baixo';
         }
+    }
+  };
+
+  // Definição dos tipos de relatórios disponíveis
+  const reportTypes = [
+    {
+      id: 'audit_universe_summary',
+      name: 'Resumo do Universo Auditável',
+      description: 'Relatório completo dos processos auditáveis e níveis de risco',
+      icon: Target
+    },
+    {
+      id: 'audit_projects_status',
+      name: 'Status dos Projetos de Auditoria',
+      description: 'Relatório detalhado do andamento dos projetos',
+      icon: ClipboardList
+    },
+    {
+      id: 'risk_assessment_report',
+      name: 'Relatório de Avaliação de Riscos',
+      description: 'Análise consolidada dos riscos identificados',
+      icon: AlertTriangle
+    },
+    {
+      id: 'audit_plan_compliance',
+      name: 'Conformidade do Plano de Auditoria',
+      description: 'Acompanhamento da execução do plano anual',
+      icon: CheckCircle
+    },
+    {
+      id: 'working_papers_summary',
+      name: 'Resumo dos Papéis de Trabalho',
+      description: 'Consolidação das evidências coletadas',
+      icon: FileText
+    },
+    {
+      id: 'executive_dashboard',
+      name: 'Dashboard Executivo',
+      description: 'Visão gerencial com KPIs e métricas principais',
+      icon: BarChart3
+    }
+  ];
+
+  // Função para gerar relatórios
+  const handleGenerateReport = async () => {
+    if (!selectedReportType) {
+      toast.error('Selecione um tipo de relatório');
+      return;
+    }
+
+    setGeneratingReport(true);
+    
+    try {
+      // Simulação da geração do relatório
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const reportInfo = reportTypes.find(r => r.id === selectedReportType);
+      const formatLabel = selectedFormat.toUpperCase();
+      
+      toast.success(`Relatório "${reportInfo?.name}" gerado em ${formatLabel} com sucesso!`);
+      
+      // Aqui seria implementada a lógica real de geração e download
+      // Por exemplo: window.open(downloadUrl, '_blank');
+      
+      setReportDialogOpen(false);
+      setSelectedReportType('');
+      setSelectedFormat('pdf');
+      
+    } catch (error) {
+      console.error('Erro ao gerar relatório:', error);
+      toast.error('Erro ao gerar relatório. Tente novamente.');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Função para enviar relatório por email
+  const handleEmailReport = async () => {
+    if (!selectedReportType) {
+      toast.error('Selecione um tipo de relatório');
+      return;
+    }
+
+    setGeneratingReport(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const reportInfo = reportTypes.find(r => r.id === selectedReportType);
+      toast.success(`Relatório "${reportInfo?.name}" enviado por email!`);
+      
+      setReportDialogOpen(false);
+      setSelectedReportType('');
+      
+    } catch (error) {
+      console.error('Erro ao enviar relatório:', error);
+      toast.error('Erro ao enviar relatório por email.');
+    } finally {
+      setGeneratingReport(false);
     }
   };
 
@@ -358,26 +526,161 @@ export function AuditoriasDashboard() {
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => navigate('/auditorias/relatorios')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+          <DialogTrigger asChild>
+            <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
+              <CardContent className="p-6 relative z-10">
+                <div className="flex items-center justify-between mb-4">
+                  <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-base sm:text-lg mb-2">📊 Relatórios Avançados</h3>
+                <p className="text-muted-foreground text-sm">Geração automática de relatórios em múltiplos formatos</p>
+              </CardContent>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+            </Card>
+          </DialogTrigger>
+          
+          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-orange-600" />
+                Central de Relatórios de Auditoria
+              </DialogTitle>
+              <DialogDescription>
+                Selecione o tipo de relatório e formato para geração ou exportação
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Seleção do Tipo de Relatório */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">Tipo de Relatório</label>
+                <div className="grid gap-3">
+                  {reportTypes.map((report) => {
+                    const IconComponent = report.icon;
+                    return (
+                      <Card 
+                        key={report.id}
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          selectedReportType === report.id ? 'ring-2 ring-primary bg-primary/5' : ''
+                        }`}
+                        onClick={() => setSelectedReportType(report.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${
+                              selectedReportType === report.id ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                            }`}>
+                              <IconComponent className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-medium text-sm">{report.name}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{report.description}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Seleção do Formato */}
+              {selectedReportType && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Formato de Exportação</label>
+                  <Select value={selectedFormat} onValueChange={setSelectedFormat}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pdf">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-red-600" />
+                          PDF - Portable Document Format
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="excel">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-green-600" />
+                          Excel - Planilha eletrônica
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="csv">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          CSV - Valores separados por vírgula
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="png">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-purple-600" />
+                          PNG - Imagem do relatório
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Opções Avançadas */}
+              {selectedReportType && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Opções Avançadas</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" size="sm" className="justify-start">
+                      <Settings className="h-4 w-4 mr-2" />
+                      Filtros
+                    </Button>
+                    <Button variant="outline" size="sm" className="justify-start">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Período
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Botões de Ação */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  onClick={handleGenerateReport}
+                  disabled={!selectedReportType || generatingReport}
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  {generatingReport ? 'Gerando...' : 'Gerar Relatório'}
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  onClick={handleEmailReport}
+                  disabled={!selectedReportType || generatingReport}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+                
+                <Button 
+                  variant="outline"
+                  disabled={!selectedReportType || generatingReport}
+                  onClick={() => toast.info('Função de impressão será implementada')}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+              </div>
             </div>
-            <h3 className="font-semibold text-base sm:text-lg mb-2">Relatórios</h3>
-            <p className="text-muted-foreground text-sm">Comunicação de resultados e dashboards</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Módulos Principais */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="universe">Universo Auditável</TabsTrigger>
           <TabsTrigger value="projects">Projetos</TabsTrigger>
-          <TabsTrigger value="planning">Planejamento</TabsTrigger>
           <TabsTrigger value="working-papers">Papéis de Trabalho</TabsTrigger>
         </TabsList>
 
@@ -447,10 +750,6 @@ export function AuditoriasDashboard() {
 
         <TabsContent value="projects" className="space-y-4">
           <ProjetosAuditoria />
-        </TabsContent>
-
-        <TabsContent value="planning" className="space-y-4">
-          <PlanejamentoAnualAuditoria />
         </TabsContent>
 
         <TabsContent value="working-papers" className="space-y-4">

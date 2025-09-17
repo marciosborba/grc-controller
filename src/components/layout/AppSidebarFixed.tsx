@@ -47,6 +47,13 @@ const navigationItems = [{
       description: 'Motor de assurance dinâmico e conectado'
     },
     {
+      title: 'Conformidade',
+      url: '/compliance',
+      icon: FileCheck,
+      permissions: ['compliance.read', 'all'],
+      description: 'Gestão de conformidade e frameworks regulatórios'
+    },
+    {
       title: 'Ética',
       url: '/ethics',
       icon: Shield,

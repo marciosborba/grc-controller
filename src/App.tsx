@@ -30,7 +30,8 @@ const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").th
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
 const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
-// Módulo de Compliance removido - funcionalidade excluída
+// Módulo de Compliance
+const ComplianceDashboard = lazy(() => import("@/components/compliance/ComplianceDashboard"));
 const AuditoriasDashboard = lazy(() => import("@/components/auditorias/AuditoriasDashboard"));
 const PlanejamentoAuditoria = lazy(() => import("@/components/auditorias/PlanejamentoAuditoria"));
 const ProjetosAuditoria = lazy(() => import("@/components/auditorias/ProjetosAuditoria"));
@@ -299,7 +300,11 @@ const App = () => (
                       <RiskAcceptanceManagement />
                     </Suspense>
                   } />
-                  {/* Rota /compliance removida - módulo excluído */}
+                  <Route path="compliance" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ComplianceDashboard />
+                    </Suspense>
+                  } />
                   <Route path="incidents" element={
                     <Suspense fallback={<PageLoader />}>
                       <IncidentManagementPage />
