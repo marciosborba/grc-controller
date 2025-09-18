@@ -151,7 +151,7 @@ export function PlanejamentoAnualAuditoria() {
         .order('created_at', { ascending: false });
 
       if (planosError) {
-        console.error('Erro ao carregar planos:', planosError);
+        secureLog('error', 'Erro ao carregar planos', planosError);
         toast.error('Erro ao carregar planos de auditoria');
       } else {
         setPlanos(planosData || []);
@@ -170,14 +170,14 @@ export function PlanejamentoAnualAuditoria() {
         .order('data_inicio_planejada', { ascending: true });
 
       if (trabalhosError) {
-        console.error('Erro ao carregar trabalhos:', trabalhosError);
+        secureLog('error', 'Erro ao carregar trabalhos', trabalhosError);
         toast.error('Erro ao carregar trabalhos de auditoria');
       } else {
         setTrabalhos(trabalhosData || []);
       }
 
     } catch (error) {
-      console.error('Erro geral:', error);
+      secureLog('error', 'Erro geral ao carregar dados de planejamento', error);
       toast.error('Erro ao carregar dados de planejamento');
     } finally {
       setLoading(false);
@@ -196,7 +196,7 @@ export function PlanejamentoAnualAuditoria() {
         }]);
 
       if (error) {
-        console.error('Erro ao criar plano:', error);
+        secureLog('error', 'Erro ao criar plano', error);
         if (error.code === '23505') {
           toast.error('Já existe um plano com este código');
         } else {
@@ -209,7 +209,7 @@ export function PlanejamentoAnualAuditoria() {
         loadPlanosETrabalhos();
       }
     } catch (error) {
-      console.error('Erro ao criar plano:', error);
+      secureLog('error', 'Erro ao criar plano', error);
       toast.error('Erro ao criar plano de auditoria');
     }
   };
@@ -228,7 +228,7 @@ export function PlanejamentoAnualAuditoria() {
         .eq('tenant_id', effectiveTenantId);
 
       if (error) {
-        console.error('Erro ao atualizar plano:', error);
+        secureLog('error', 'Erro ao atualizar plano', error);
         toast.error('Erro ao atualizar plano de auditoria');
       } else {
         toast.success('Plano de auditoria atualizado com sucesso');
@@ -237,7 +237,7 @@ export function PlanejamentoAnualAuditoria() {
         loadPlanosETrabalhos();
       }
     } catch (error) {
-      console.error('Erro ao atualizar plano:', error);
+      secureLog('error', 'Erro ao atualizar plano', error);
       toast.error('Erro ao atualizar plano de auditoria');
     }
   };
@@ -253,14 +253,14 @@ export function PlanejamentoAnualAuditoria() {
         .eq('tenant_id', effectiveTenantId);
 
       if (error) {
-        console.error('Erro ao excluir plano:', error);
+        secureLog('error', 'Erro ao excluir plano', error);
         toast.error('Erro ao excluir plano de auditoria');
       } else {
         toast.success('Plano de auditoria excluído com sucesso');
         loadPlanosETrabalhos();
       }
     } catch (error) {
-      console.error('Erro ao excluir plano:', error);
+      secureLog('error', 'Erro ao excluir plano', error);
       toast.error('Erro ao excluir plano de auditoria');
     }
   };

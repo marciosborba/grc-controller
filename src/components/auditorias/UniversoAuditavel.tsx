@@ -21,6 +21,8 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { toast } from 'sonner';
+import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 interface UniverseItem {
   id: string;
@@ -86,6 +88,9 @@ export function UniversoAuditavel() {
   
   // Hook para configurações do tenant (matriz de risco)
   const { getRiskLevels, getMatrixDimensions, tenantSettings } = useTenantSettings(effectiveTenantId);
+  
+  // Rate limiting para operações CRUD
+  const rateLimitCRUD = useCRUDRateLimit();
   const [universeItems, setUniverseItems] = useState<UniverseItem[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -117,8 +122,8 @@ export function UniversoAuditavel() {
     if (effectiveTenantId) {
       loadUniverseData();
     } else {
-      console.log('⚠️ Aguardando tenant ser carregado...', { 
-        user: user?.email, 
+      secureLog('info', 'Aguardando tenant ser carregado', { 
+        userEmail: user?.email, 
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
         userTenantId: user?.tenantId
@@ -133,12 +138,11 @@ export function UniversoAuditavel() {
       // Determinar o tenant ID efetivo baseado no tipo de usuário
       const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
       
-      console.log('🔍 Carregando universo auditável para tenant:', effectiveTenantId);
-      console.log('🏢 Tenant ID efetivo:', { 
+      secureLog('info', 'Carregando universo auditável para tenant', { 
+        tenantId: effectiveTenantId,
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
-        userTenantId: user?.tenantId,
-        effectiveTenantId
+        userTenantId: user?.tenantId
       });
       
       if (!effectiveTenantId) {
@@ -153,28 +157,28 @@ export function UniversoAuditavel() {
         .eq('tenant_id', effectiveTenantId)
         .order('codigo', { ascending: true }); // Ordenação inicial por código para manter estabilidade
 
-      console.log('📊 Dados retornados:', { data, error, count: data?.length });
+      secureLog('info', 'Dados retornados', { hasData: !!data, hasError: !!error, count: data?.length });
       
       if (data && data.length > 0) {
-        console.log('📋 Primeiros 3 itens carregados:', data.slice(0, 3).map(item => ({
-          codigo: item.codigo,
-          nome: item.nome,
-          criticidade: item.criticidade,
-          nivel: item.nivel
-        })));
+        secureLog('info', 'Itens carregados', { 
+          count: data.length,
+          sample: data.slice(0, 3).map(item => ({
+            codigo: item.codigo,
+            criticidade: item.criticidade,
+            nivel: item.nivel
+          }))
+        });
       }
 
       if (error) {
-        console.error('❌ Erro ao carregar universo auditável:', error);
+        secureLog('error', 'Erro ao carregar universo auditável', error);
         toast.error('Erro ao carregar dados');
       } else {
-        console.log('✅ Dados carregados com sucesso:', data?.length, 'itens');
-        console.log('🔄 Atualizando estado do componente...');
+        secureLog('info', 'Dados carregados com sucesso', { count: data?.length });
         setUniverseItems(data || []);
-        console.log('🎯 Estado atualizado! Nova lista tem', (data || []).length, 'itens');
       }
     } catch (error) {
-      console.error('Erro ao carregar universo auditável:', error);
+      secureLog('error', 'Erro ao carregar universo auditável', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -269,10 +273,9 @@ export function UniversoAuditavel() {
 
   const handleEdit = async (item: UniverseItem) => {
     // 🔍 DEBUG: Log do item que foi clicado
-    console.log('🎯 [CLICK] Item clicado para editar:', {
-      id: item.id,
+    secureLog('info', 'Item clicado para editar', {
+      itemId: item.id,
       codigo: item.codigo,
-      nome: item.nome,
       nivel: item.nivel,
       criticidade: item.criticidade
     });
@@ -285,13 +288,10 @@ export function UniversoAuditavel() {
     }
     
     try {
-      console.log('🔍 [DB_QUERY] Buscando item no banco:', {
+      secureLog('info', 'Buscando item no banco', {
         itemId: item.id,
         tenantId: effectiveTenantId,
-        originalItem: {
-          codigo: item.codigo,
-          nome: item.nome
-        }
+        codigo: item.codigo
       });
       
       const { data: freshData, error } = await supabase
@@ -302,13 +302,15 @@ export function UniversoAuditavel() {
         .single();
         
       if (error) {
-        console.error('❌ [EDIT] Erro:', error);
+        secureLog('error', 'Erro ao carregar dados para edição', error);
         toast.error('Erro ao carregar dados para edição');
         return;
       }
       
-      console.log('✅ [EDIT] Item carregado:', freshData.codigo);
-      console.log('🔍 [DEBUG] Criticidade do banco:', { criticidade: freshData.criticidade, tipo: typeof freshData.criticidade });
+      secureLog('info', 'Item carregado para edição', { 
+        codigo: freshData.codigo,
+        criticidade: freshData.criticidade
+      });
       
       setEditingItem(freshData);
       setFormData({
@@ -327,20 +329,15 @@ export function UniversoAuditavel() {
         metodologia: freshData.metadados?.metodologia || ''
       });
       
-      console.log('🔍 [DEBUG] FormData definido:', { 
+      secureLog('info', 'FormData definido para edição', { 
         criticidade: freshData.criticidade,
-        nivel: freshData.nivel 
+        nivel: freshData.nivel,
+        riskLevelsCount: getRiskLevels().length
       });
-      
-      console.log('📋 [DEBUG] getRiskLevels():', getRiskLevels());
-      console.log('🎯 [DEBUG] Valores normalized do dropdown:', getRiskLevels().map(level => ({
-        original: level,
-        normalized: level.toLowerCase().replace('crítica', 'critica').replace('média', 'media')
-      })));
       
       setShowForm(true);
     } catch (error) {
-      console.error('❌ [EDIT] Erro inesperado:', error);
+      secureLog('error', 'Erro inesperado ao abrir modal de edição', error);
       toast.error('Erro ao abrir modal de edição');
     }
   };
@@ -362,14 +359,14 @@ export function UniversoAuditavel() {
         .single();
         
       if (error) {
-        console.error('❌ [VIEW] Erro:', error);
+        secureLog('error', 'Erro ao carregar dados para visualização', error);
         toast.error('Erro ao carregar dados para visualização');
         return;
       }
       
       setViewingItem(freshData);
     } catch (error) {
-      console.error('❌ [VIEW] Erro inesperado:', error);
+      secureLog('error', 'Erro inesperado ao abrir modal de visualização', error);
       toast.error('Erro ao abrir modal de visualização');
     }
   };
@@ -388,7 +385,7 @@ export function UniversoAuditavel() {
       // Determinar o tenant ID efetivo baseado no tipo de usuário
       const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
       
-      console.log('💾 [SAVE] Iniciando...');
+      secureLog('info', 'Iniciando salvamento de item', { isEditing: !!editingItem });
       
       if (!effectiveTenantId) {
         throw new Error('Tenant ID não encontrado. Não é possível salvar o item.');
@@ -436,37 +433,37 @@ export function UniversoAuditavel() {
         }
       };
       
-      console.log('📦 [SAVE] Enviando:', {
+      secureLog('info', 'Enviando item para salvamento', {
         codigo: itemData.codigo,
         nivel: itemData.nivel,
         criticidade: itemData.criticidade
       });
       let result;
       if (editingItem) {
-        console.log('📝 [SAVE] UPDATE para item:', editingItem.id);
+        secureLog('info', 'Atualizando item existente', { itemId: editingItem.id });
         result = await supabase
           .from('universo_auditavel')
           .update(itemData)
           .eq('id', editingItem.id)
           .select(); // Retorna o item atualizado
       } else {
-        console.log('➕ [SAVE] INSERT novo item');
+        secureLog('info', 'Inserindo novo item', {});
         result = await supabase
           .from('universo_auditavel')
           .insert([itemData])
           .select(); // Retorna o item inserido
       }
 
-      console.log('🏁 [SAVE] Resultado da operação:', result);
+      secureLog('info', 'Resultado da operação de salvamento', { hasData: !!result.data, hasError: !!result.error });
 
       if (result.error) {
-        console.error('❌ [SAVE] Erro:', result.error);
+        secureLog('error', 'Erro no salvamento do item', result.error);
         throw result.error;
       }
 
       const savedItem = result.data?.[0];
       if (savedItem) {
-        console.log('✅ [SAVE] Salvo:', {
+        secureLog('info', 'Item salvo com sucesso', {
           codigo: savedItem.codigo,
           nivel: savedItem.nivel,
           criticidade: savedItem.criticidade
@@ -483,13 +480,11 @@ export function UniversoAuditavel() {
       await new Promise(resolve => setTimeout(resolve, 100));
 
     } catch (error: any) {
-      console.error('❌ [SAVE] Erro completo:', error);
-      console.error('❌ [SAVE] Detalhes do erro:', {
+      secureLog('error', 'Erro completo no salvamento', {
         code: error.code,
         message: error.message,
         details: error.details,
-        hint: error.hint,
-        fullError: error
+        hint: error.hint
       });
       
       let errorMessage = 'Erro ao salvar item';
@@ -510,7 +505,7 @@ export function UniversoAuditavel() {
         errorMessage = error;
       }
       
-      console.error('📱 [SAVE] Mostrando erro:', errorMessage);
+      secureLog('error', 'Exibindo erro para o usuário', { message: errorMessage });
       toast.error(`${errorMessage} (Código: ${error.code || 'N/A'})`);
     } finally {
       setSubmitting(false);
@@ -533,7 +528,7 @@ export function UniversoAuditavel() {
       toast.success('Item excluído com sucesso!');
       loadUniverseData();
     } catch (error) {
-      console.error('Erro ao excluir:', error);
+      secureLog('error', 'Erro ao excluir item', error);
       toast.error('Erro ao excluir item');
     }
   };
@@ -891,7 +886,6 @@ export function UniversoAuditavel() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Criticidade *</label>
-                  {console.log('🔍 [RENDER] formData.criticidade atual:', formData.criticidade)}
                   <select
                     value={formData.criticidade}
                     onChange={(e) => setFormData(prev => ({...prev, criticidade: e.target.value}))}
@@ -909,7 +903,7 @@ export function UniversoAuditavel() {
                         .replace('alto', 'alta')        // "Alto" → "alta"
                         .replace('baixo', 'baixa');     // "Baixo" → "baixa"
                       
-                      console.log(`🔧 [DROPDOWN] ${level} → ${normalizedValue}`);
+                      // Normalizing risk level values for database compatibility
                       
                       return (
                         <option key={level} value={normalizedValue}>

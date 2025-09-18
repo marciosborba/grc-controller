@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { secureLog } from '@/utils/securityLogger';
 
 interface AuditReport {
   id: string;
@@ -108,7 +109,7 @@ export function RelatoriosAuditoria() {
         .order('data_criacao', { ascending: false });
 
       if (reportsError) {
-        console.error('Erro ao carregar relatórios:', reportsError);
+        secureLog('error', 'Erro ao carregar relatórios', reportsError);
       } else {
         const mappedReports = reportsData?.map(report => ({
           id: report.id,
@@ -183,7 +184,7 @@ export function RelatoriosAuditoria() {
       setDashboards(mockDashboards);
 
     } catch (error) {
-      console.error('Erro ao carregar dados de relatórios:', error);
+      secureLog('error', 'Erro ao carregar dados de relatórios', error);
       toast.error('Erro ao carregar dados de relatórios');
     } finally {
       setLoading(false);

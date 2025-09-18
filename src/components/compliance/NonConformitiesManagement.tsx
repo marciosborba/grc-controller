@@ -47,6 +47,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { sanitizeInput, sanitizeObject, secureLog } from '@/utils/securityLogger';
 
 interface NonConformity {
   id: string;
@@ -154,7 +155,7 @@ const NonConformitiesManagement: React.FC = () => {
         loadUsers()
       ]);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      secureLog('error', 'Erro ao carregar dados de não conformidades', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -228,21 +229,22 @@ const NonConformitiesManagement: React.FC = () => {
   const handleCreateNonConformity = async (data: z.infer<typeof nonConformitySchema>) => {
     try {
       const codigo = `NC-${Date.now()}`;
+      const sanitizedData = sanitizeObject(data);
       
       const { error } = await supabase
         .from('nao_conformidades')
         .insert({
           tenant_id: tenantId,
           codigo,
-          titulo: data.titulo,
-          o_que: data.o_que,
-          onde: data.onde,
-          quando: data.quando,
-          quem: data.quem,
-          por_que: data.por_que,
-          categoria: data.categoria,
-          criticidade: data.criticidade,
-          responsavel_tratamento: data.responsavel_tratamento,
+          titulo: sanitizedData.titulo,
+          o_que: sanitizedData.o_que,
+          onde: sanitizedData.onde,
+          quando: sanitizedData.quando,
+          quem: sanitizedData.quem,
+          por_que: sanitizedData.por_que,
+          categoria: sanitizedData.categoria,
+          criticidade: sanitizedData.criticidade,
+          responsavel_tratamento: sanitizedData.responsavel_tratamento,
           data_identificacao: format(data.data_identificacao, 'yyyy-MM-dd'),
           prazo_resolucao: data.prazo_resolucao ? format(data.prazo_resolucao, 'yyyy-MM-dd') : null,
           status: 'aberta',
@@ -256,7 +258,7 @@ const NonConformitiesManagement: React.FC = () => {
       nonConformityForm.reset();
       loadNonConformities();
     } catch (error) {
-      console.error('Erro ao criar não conformidade:', error);
+      secureLog('error', 'Erro ao criar não conformidade', error);
       toast.error('Erro ao criar não conformidade');
     }
   };
@@ -266,6 +268,7 @@ const NonConformitiesManagement: React.FC = () => {
 
     try {
       const codigo = `PA-${selectedNonConformity.codigo}-${Date.now()}`;
+      const sanitizedData = sanitizeObject(data);
       
       const { error } = await supabase
         .from('planos_acao_conformidade')
@@ -273,14 +276,14 @@ const NonConformitiesManagement: React.FC = () => {
           tenant_id: tenantId,
           nao_conformidade_id: selectedNonConformity.id,
           codigo,
-          titulo: data.titulo,
-          descricao_acao: data.descricao_acao,
-          objetivo_acao: data.objetivo_acao,
-          responsavel_execucao: data.responsavel_execucao,
+          titulo: sanitizedData.titulo,
+          descricao_acao: sanitizedData.descricao_acao,
+          objetivo_acao: sanitizedData.objetivo_acao,
+          responsavel_execucao: sanitizedData.responsavel_execucao,
           data_inicio_planejada: format(data.data_inicio_planejada, 'yyyy-MM-dd'),
           data_fim_planejada: format(data.data_fim_planejada, 'yyyy-MM-dd'),
-          tipo_acao: data.tipo_acao || 'corretiva',
-          categoria_acao: data.categoria_acao || 'processo',
+          tipo_acao: sanitizedData.tipo_acao || 'corretiva',
+          categoria_acao: sanitizedData.categoria_acao || 'processo',
           status: 'planejado',
           percentual_conclusao: 0,
           created_by: user?.id
@@ -294,7 +297,7 @@ const NonConformitiesManagement: React.FC = () => {
       loadActionPlans(selectedNonConformity.id);
       loadNonConformities(); // Reload to update counts
     } catch (error) {
-      console.error('Erro ao criar plano de ação:', error);
+      secureLog('error', 'Erro ao criar plano de ação', error);
       toast.error('Erro ao criar plano de ação');
     }
   };

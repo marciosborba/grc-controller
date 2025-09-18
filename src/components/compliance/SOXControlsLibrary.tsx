@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { sanitizeInput, sanitizeObject, secureLog } from '@/utils/securityLogger';
 
 interface SOXControl {
   id: string;
@@ -136,7 +137,7 @@ const SOXControlsLibrary: React.FC = () => {
 
       setControls(data || []);
     } catch (error) {
-      console.error('Erro ao carregar biblioteca SOX:', error);
+      secureLog('error', 'Erro ao carregar biblioteca SOX', error);
       toast.error('Erro ao carregar biblioteca de controles SOX');
     } finally {
       setLoading(false);
@@ -209,14 +210,15 @@ const SOXControlsLibrary: React.FC = () => {
     if (!effectiveTenantId || !user) return;
 
     try {
+      const sanitizedValues = sanitizeObject(values);
       // Converter strings de evidências e sistemas para arrays
-      const evidencias = values.evidencias_funcionamento.split('\n').filter(e => e.trim());
-      const sistemas = values.sistemas_aplicaveis ? values.sistemas_aplicaveis.split('\n').filter(s => s.trim()) : [];
+      const evidencias = sanitizedValues.evidencias_funcionamento.split('\n').filter((e: string) => e.trim());
+      const sistemas = sanitizedValues.sistemas_aplicaveis ? sanitizedValues.sistemas_aplicaveis.split('\n').filter((s: string) => s.trim()) : [];
 
       const { error } = await supabase
         .from('biblioteca_controles_sox')
         .insert({
-          ...values,
+          ...sanitizedValues,
           evidencias_funcionamento: evidencias,
           sistemas_aplicaveis: sistemas,
           tenant_id: effectiveTenantId,
@@ -231,7 +233,7 @@ const SOXControlsLibrary: React.FC = () => {
       controlForm.reset();
       loadSOXControls();
     } catch (error) {
-      console.error('Erro ao criar controle:', error);
+      secureLog('error', 'Erro ao criar controle SOX', error);
       toast.error('Erro ao criar controle');
     }
   };
@@ -272,13 +274,14 @@ const SOXControlsLibrary: React.FC = () => {
     if (!editingControl || !effectiveTenantId) return;
 
     try {
-      const evidencias = values.evidencias_funcionamento.split('\n').filter(e => e.trim());
-      const sistemas = values.sistemas_aplicaveis ? values.sistemas_aplicaveis.split('\n').filter(s => s.trim()) : [];
+      const sanitizedValues = sanitizeObject(values);
+      const evidencias = sanitizedValues.evidencias_funcionamento.split('\n').filter((e: string) => e.trim());
+      const sistemas = sanitizedValues.sistemas_aplicaveis ? sanitizedValues.sistemas_aplicaveis.split('\n').filter((s: string) => s.trim()) : [];
 
       const { error } = await supabase
         .from('biblioteca_controles_sox')
         .update({
-          ...values,
+          ...sanitizedValues,
           evidencias_funcionamento: evidencias,
           sistemas_aplicaveis: sistemas
         })
@@ -293,7 +296,7 @@ const SOXControlsLibrary: React.FC = () => {
       controlForm.reset();
       loadSOXControls();
     } catch (error) {
-      console.error('Erro ao atualizar controle:', error);
+      secureLog('error', 'Erro ao atualizar controle SOX', error);
       toast.error('Erro ao atualizar controle');
     }
   };
@@ -323,7 +326,7 @@ const SOXControlsLibrary: React.FC = () => {
       toast.success('Controle excluído com sucesso');
       loadSOXControls();
     } catch (error) {
-      console.error('Erro ao excluir controle:', error);
+      secureLog('error', 'Erro ao excluir controle SOX', error);
       toast.error('Erro ao excluir controle');
     }
   };

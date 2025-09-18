@@ -27,6 +27,8 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 interface ProjetoAuditoria {
   id: string;
@@ -146,6 +148,11 @@ export function ProjetosAuditoria() {
   // Estados para ordenação
   const [sortBy, setSortBy] = useState('data_inicio');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Estados para paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     if (effectiveTenantId) {
@@ -153,20 +160,20 @@ export function ProjetosAuditoria() {
       loadUniversos();
       loadProfiles();
     } else {
-      console.log('⚠️ Aguardando tenant ser carregado...', { 
-        user: user?.email, 
+      secureLog('info', 'Aguardando tenant ser carregado', { 
+        userEmail: user?.email, 
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
         userTenantId: user?.tenantId
       });
     }
-  }, [user?.tenantId, user?.isPlatformAdmin, selectedTenantId]);
+  }, [user?.tenantId, user?.isPlatformAdmin, selectedTenantId, currentPage]);
 
   const loadProjectsData = async () => {
     try {
       setLoading(true);
       
-      console.log('🔍 Carregando projetos de auditoria para tenant:', effectiveTenantId);
+      secureLog('info', 'Carregando projetos de auditoria para tenant', { tenantId: effectiveTenantId });
       
       if (!effectiveTenantId) {
         toast.error('Tenant não identificado. Por favor, faça login novamente.');
@@ -174,6 +181,18 @@ export function ProjetosAuditoria() {
         return;
       }
       
+      // Primeiro, obter contagem total para paginação
+      const { count } = await supabase
+        .from('projetos_auditoria')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', effectiveTenantId);
+      
+      setTotalItems(count || 0);
+
+      // Carregar dados com paginação
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
       const { data, error } = await supabase
         .from('projetos_auditoria')
         .select(`
@@ -189,28 +208,31 @@ export function ProjetosAuditoria() {
           )
         `)
         .eq('tenant_id', effectiveTenantId)
-        .order('data_inicio', { ascending: false });
+        .order('data_inicio', { ascending: false })
+        .range(from, to);
 
-      console.log('📊 Projetos retornados:', { data, error, count: data?.length });
+      secureLog('info', 'Projetos retornados', { hasData: !!data, hasError: !!error, count: data?.length });
       
       if (data && data.length > 0) {
-        console.log('📋 Primeiros 3 projetos carregados:', data.slice(0, 3).map(item => ({
-          codigo: item.codigo,
-          titulo: item.titulo,
-          status: item.status,
-          fase_atual: item.fase_atual
-        })));
+        secureLog('info', 'Projetos carregados com sucesso', { 
+          count: data.length,
+          sample: data.slice(0, 3).map(item => ({
+            codigo: item.codigo,
+            status: item.status,
+            fase_atual: item.fase_atual
+          }))
+        });
       }
 
       if (error) {
-        console.error('❌ Erro ao carregar projetos de auditoria:', error);
+        secureLog('error', 'Erro ao carregar projetos de auditoria', error);
         toast.error('Erro ao carregar projetos');
       } else {
-        console.log('✅ Projetos carregados com sucesso:', data?.length, 'itens');
+        secureLog('info', 'Projetos carregados com sucesso', { count: data?.length });
         setProjetos(data || []);
       }
     } catch (error) {
-      console.error('Erro ao carregar projetos de auditoria:', error);
+      secureLog('error', 'Erro ao carregar projetos de auditoria', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -229,12 +251,12 @@ export function ProjetosAuditoria() {
         .order('nome');
         
       if (error) {
-        console.error('Erro ao carregar universos auditáveis:', error);
+        secureLog('error', 'Erro ao carregar universos auditáveis', error);
       } else {
         setUniversos(data || []);
       }
     } catch (error) {
-      console.error('Erro ao carregar universos auditáveis:', error);
+      secureLog('error', 'Erro ao carregar universos auditáveis', error);
     }
   };
 
@@ -249,12 +271,12 @@ export function ProjetosAuditoria() {
         .order('full_name');
         
       if (error) {
-        console.error('Erro ao carregar profiles:', error);
+        secureLog('error', 'Erro ao carregar profiles', error);
       } else {
         setProfiles(data || []);
       }
     } catch (error) {
-      console.error('Erro ao carregar profiles:', error);
+      secureLog('error', 'Erro ao carregar profiles', error);
     }
   };
 
@@ -338,10 +360,9 @@ export function ProjetosAuditoria() {
   };
 
   const handleEdit = async (item: ProjetoAuditoria) => {
-    console.log('🎯 [CLICK] Projeto clicado para editar:', {
-      id: item.id,
+    secureLog('info', 'Projeto clicado para editar', {
+      itemId: item.id,
       codigo: item.codigo,
-      titulo: item.titulo,
       status: item.status
     });
     
@@ -351,7 +372,7 @@ export function ProjetosAuditoria() {
     }
     
     try {
-      console.log('🔍 [DB_QUERY] Buscando projeto no banco:', {
+      secureLog('info', 'Buscando projeto no banco', {
         itemId: item.id,
         tenantId: effectiveTenantId
       });
@@ -364,12 +385,12 @@ export function ProjetosAuditoria() {
         .single();
         
       if (error) {
-        console.error('❌ [EDIT] Erro:', error);
+        secureLog('error', 'Erro ao carregar dados para edição', error);
         toast.error('Erro ao carregar dados para edição');
         return;
       }
       
-      console.log('✅ [EDIT] Projeto carregado:', freshData.codigo);
+      secureLog('info', 'Projeto carregado para edição', { codigo: freshData.codigo });
       
       setEditingItem(freshData);
       setFormData({
@@ -390,7 +411,7 @@ export function ProjetosAuditoria() {
       
       setShowForm(true);
     } catch (error) {
-      console.error('❌ [EDIT] Erro inesperado:', error);
+      secureLog('error', 'Erro inesperado ao abrir modal de edição', error);
       toast.error('Erro ao abrir modal de edição');
     }
   };
@@ -421,14 +442,14 @@ export function ProjetosAuditoria() {
         .single();
         
       if (error) {
-        console.error('❌ [VIEW] Erro:', error);
+        secureLog('error', 'Erro ao carregar dados para visualização', error);
         toast.error('Erro ao carregar dados para visualização');
         return;
       }
       
       setViewingItem(freshData);
     } catch (error) {
-      console.error('❌ [VIEW] Erro inesperado:', error);
+      secureLog('error', 'Erro inesperado ao abrir modal de visualização', error);
       toast.error('Erro ao abrir modal de visualização');
     }
   };
@@ -444,7 +465,7 @@ export function ProjetosAuditoria() {
     setSubmitting(true);
 
     try {
-      console.log('💾 [SAVE] Iniciando salvamento de projeto...');
+      secureLog('info', 'Iniciando salvamento de projeto', { isEditing: !!editingItem });
       
       if (!effectiveTenantId) {
         throw new Error('Tenant ID não encontrado. Não é possível salvar o projeto.');
@@ -492,40 +513,38 @@ export function ProjetosAuditoria() {
         metadados: editingItem?.metadados || {}
       };
       
-      console.log('📦 [SAVE] Enviando projeto:', {
+      secureLog('info', 'Enviando projeto para salvamento', {
         codigo: itemData.codigo,
-        titulo: itemData.titulo,
         status: itemData.status
       });
 
       let result;
       if (editingItem) {
-        console.log('📝 [SAVE] UPDATE para projeto:', editingItem.id);
+        secureLog('info', 'Atualizando projeto existente', { projectId: editingItem.id });
         result = await supabase
           .from('projetos_auditoria')
           .update(itemData)
           .eq('id', editingItem.id)
           .select();
       } else {
-        console.log('➕ [SAVE] INSERT novo projeto');
+        secureLog('info', 'Inserindo novo projeto', {});
         result = await supabase
           .from('projetos_auditoria')
           .insert([itemData])
           .select();
       }
 
-      console.log('🏁 [SAVE] Resultado da operação:', result);
+      secureLog('info', 'Resultado da operação de salvamento', { hasData: !!result.data, hasError: !!result.error });
 
       if (result.error) {
-        console.error('❌ [SAVE] Erro:', result.error);
+        secureLog('error', 'Erro no salvamento do projeto', result.error);
         throw result.error;
       }
 
       const savedItem = result.data?.[0];
       if (savedItem) {
-        console.log('✅ [SAVE] Projeto salvo:', {
+        secureLog('info', 'Projeto salvo com sucesso', {
           codigo: savedItem.codigo,
-          titulo: savedItem.titulo,
           status: savedItem.status
         });
       }
@@ -537,7 +556,7 @@ export function ProjetosAuditoria() {
       await new Promise(resolve => setTimeout(resolve, 100));
 
     } catch (error: any) {
-      console.error('❌ [SAVE] Erro completo:', error);
+      secureLog('error', 'Erro completo no salvamento', error);
       
       let errorMessage = 'Erro ao salvar projeto';
       
@@ -575,7 +594,7 @@ export function ProjetosAuditoria() {
       toast.success('Projeto excluído com sucesso!');
       loadProjectsData();
     } catch (error) {
-      console.error('Erro ao excluir projeto:', error);
+      secureLog('error', 'Erro ao excluir projeto', error);
       toast.error('Erro ao excluir projeto');
     }
   };
@@ -890,6 +909,36 @@ export function ProjetosAuditoria() {
               </div>
             )}
           </div>
+          
+          {/* Controles de Paginação */}
+          {totalItems > itemsPerPage && (
+            <div className="flex items-center justify-between px-6 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} projetos
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Anterior
+                </Button>
+                <span className="text-sm">
+                  Página {currentPage} de {Math.ceil(totalItems / itemsPerPage)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalItems / itemsPerPage), prev + 1))}
+                  disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

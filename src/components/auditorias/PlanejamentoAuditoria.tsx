@@ -26,8 +26,11 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 // Interfaces baseadas nas tabelas reais do banco de dados
 interface ProjetoAuditoria {
@@ -93,6 +96,11 @@ interface ControleAuditoria {
 export function PlanejamentoAuditoria() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const selectedTenantId = useCurrentTenantId();
+  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
+  
+  // Rate limiting para operações CRUD
+  const rateLimitCRUD = useCRUDRateLimit();
   const [projetos, setProjetos] = useState<ProjetoAuditoria[]>([]);
   const [universo, setUniverso] = useState<UniversoAuditavel[]>([]);
   const [riscos, setRiscos] = useState<RiscoAuditoria[]>([]);
@@ -101,7 +109,7 @@ export function PlanejamentoAuditoria() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState('overview');
   
-  console.log('🎯 PlanejamentoAuditoria renderizado com abas:', { activeTab, hasProjects: projetos.length });
+  secureLog('info', 'PlanejamentoAuditoria renderizado', { activeTab, projectsCount: projetos.length });
 
   useEffect(() => {
     loadPlanningData();
@@ -110,6 +118,13 @@ export function PlanejamentoAuditoria() {
   const loadPlanningData = async () => {
     try {
       setLoading(true);
+      
+      // Verificar se tenant está definido
+      if (!effectiveTenantId) {
+        toast.error('Tenant não identificado. Por favor, faça login novamente.');
+        setLoading(false);
+        return;
+      }
       
       // Carregar projetos de auditoria do ano selecionado
       const { data: projetosData, error: projetosError } = await supabase
@@ -125,13 +140,13 @@ export function PlanejamentoAuditoria() {
             full_name
           )
         `)
-        .eq('tenant_id', user?.tenant?.id)
+.eq('tenant_id', effectiveTenantId)
         .gte('data_inicio', `${selectedYear}-01-01`)
         .lt('data_inicio', `${selectedYear + 1}-01-01`)
         .order('created_at', { ascending: false });
 
       if (projetosError) {
-        console.error('Erro ao carregar projetos de auditoria:', projetosError);
+        secureLog('error', 'Erro ao carregar projetos de auditoria', projetosError);
       } else {
         setProjetos(projetosData || []);
       }
@@ -140,12 +155,12 @@ export function PlanejamentoAuditoria() {
       const { data: universoData, error: universoError } = await supabase
         .from('universo_auditavel')
         .select('*')
-        .eq('tenant_id', user?.tenant?.id)
+.eq('tenant_id', effectiveTenantId)
         .eq('status', 'ativo')
         .order('nome');
 
       if (universoError) {
-        console.error('Erro ao carregar universo auditável:', universoError);
+        secureLog('error', 'Erro ao carregar universo auditável', universoError);
       } else {
         setUniverso(universoData || []);
       }
@@ -154,13 +169,13 @@ export function PlanejamentoAuditoria() {
       const { data: riscosData, error: riscosError } = await supabase
         .from('riscos_auditoria')
         .select('*')
-        .eq('tenant_id', user?.tenant?.id)
+.eq('tenant_id', effectiveTenantId)
         .eq('status', 'ativo')
         .order('risco_residual', { ascending: false })
         .limit(10);
 
       if (riscosError) {
-        console.error('Erro ao carregar riscos:', riscosError);
+        secureLog('error', 'Erro ao carregar riscos', riscosError);
       } else {
         setRiscos(riscosData || []);
       }
@@ -169,19 +184,19 @@ export function PlanejamentoAuditoria() {
       const { data: controlesData, error: controlesError } = await supabase
         .from('controles_auditoria')
         .select('*')
-        .eq('tenant_id', user?.tenant?.id)
+.eq('tenant_id', effectiveTenantId)
         .eq('status', 'ativo')
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (controlesError) {
-        console.error('Erro ao carregar controles:', controlesError);
+        secureLog('error', 'Erro ao carregar controles', controlesError);
       } else {
         setControles(controlesData || []);
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dados de planejamento:', error);
+      secureLog('error', 'Erro ao carregar dados de planejamento', error);
       toast.error('Erro ao carregar dados de planejamento');
     } finally {
       setLoading(false);

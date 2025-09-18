@@ -36,6 +36,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
+import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 import { UniversoAuditavel } from './UniversoAuditavel';
 import { ProjetosAuditoria } from './ProjetosAuditoria';
 import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
@@ -99,8 +101,11 @@ export function AuditoriasDashboard() {
   const [selectedFormat, setSelectedFormat] = useState('pdf');
   const [generatingReport, setGeneratingReport] = useState(false);
   
-  // Log para debug
-  console.log('📊 AuditoriasDashboard renderizado:', {
+  // Rate limiting para operações CRUD
+  const rateLimitCRUD = useCRUDRateLimit();
+  
+  // Log seguro para debug
+  secureLog('info', 'AuditoriasDashboard renderizado', {
     matrixType: tenantSettings?.risk_matrix?.type,
     hasCustomLevels: !!tenantSettings?.risk_matrix?.risk_levels_custom,
     timestamp: new Date().toISOString()
@@ -115,7 +120,7 @@ export function AuditoriasDashboard() {
   // Escutar atualizações da matriz de risco
   useEffect(() => {
     const handleMatrixUpdate = (event: CustomEvent) => {
-      console.log('🔄 Matriz de risco atualizada, recarregando configurações...', event.detail);
+      secureLog('info', 'Matriz de risco atualizada, recarregando configurações', event.detail);
       refetchTenantSettings();
     };
     
@@ -138,7 +143,7 @@ export function AuditoriasDashboard() {
         .order('created_at', { ascending: false });
 
       if (universeError) {
-        console.error('Erro ao carregar universo auditável:', universeError);
+        secureLog('error', 'Erro ao carregar universo auditável', universeError);
       } else {
         const mappedUniverse = universeData?.map(item => ({
           id: item.id,
@@ -161,7 +166,7 @@ export function AuditoriasDashboard() {
         .order('data_inicio', { ascending: false });
 
       if (projectsError) {
-        console.error('Erro ao carregar projetos de auditoria:', projectsError);
+        secureLog('error', 'Erro ao carregar projetos de auditoria', projectsError);
       } else {
         const mappedProjects = projectsData?.map(project => ({
           id: project.id,
@@ -192,13 +197,13 @@ export function AuditoriasDashboard() {
         .limit(5);
 
       if (trabalhosError) {
-        console.error('Erro ao carregar trabalhos de auditoria:', trabalhosError);
+        secureLog('error', 'Erro ao carregar trabalhos de auditoria', trabalhosError);
       } else {
         setTrabalhos(trabalhosData || []);
       }
 
     } catch (error) {
-      console.error('Erro ao carregar dados de auditoria:', error);
+      secureLog('error', 'Erro ao carregar dados de auditoria', error);
       toast.error('Erro ao carregar dados de auditoria');
     } finally {
       setLoading(false);
@@ -351,7 +356,7 @@ export function AuditoriasDashboard() {
       setSelectedFormat('pdf');
       
     } catch (error) {
-      console.error('Erro ao gerar relatório:', error);
+      secureLog('error', 'Erro ao gerar relatório', error);
       toast.error('Erro ao gerar relatório. Tente novamente.');
     } finally {
       setGeneratingReport(false);
@@ -377,7 +382,7 @@ export function AuditoriasDashboard() {
       setSelectedReportType('');
       
     } catch (error) {
-      console.error('Erro ao enviar relatório:', error);
+      secureLog('error', 'Erro ao enviar relatório por email', error);
       toast.error('Erro ao enviar relatório por email.');
     } finally {
       setGeneratingReport(false);

@@ -1,6 +1,81 @@
 // =====================================================
-// UTILITÁRIOS DE LOGGING DE SEGURANÇA (TEMPORARIAMENTE DESABILITADO)
+// UTILITÁRIOS DE LOGGING DE SEGURANÇA E SANITIZAÇÃO
 // =====================================================
+
+// Função de sanitização de inputs - CORREÇÃO CRÍTICA
+export const sanitizeInput = (input: string | undefined | null): string => {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+  
+  return input
+    // Remove scripts maliciosos
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove outros elementos HTML perigosos
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+    .replace(/<link\b[^<]*(?:(?!<\/link>)<[^<]*)*<\/link>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    // Escapa caracteres especiais
+    .replace(/[<>&"']/g, (match) => {
+      const escape: Record<string, string> = {
+        '<': '&lt;',
+        '>': '&gt;',
+        '&': '&amp;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return escape[match];
+    })
+    // Remove tentativas de SQL injection básicas
+    .replace(/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/gi, '')
+    // Remove caracteres de controle
+    .replace(/[\x00-\x1F\x7F]/g, '')
+    // Limita tamanho
+    .substring(0, 10000);
+};
+
+// Função para sanitizar objetos completos
+export const sanitizeObject = (obj: Record<string, any>): Record<string, any> => {
+  const sanitized: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string') {
+      sanitized[key] = sanitizeInput(value);
+    } else if (typeof value === 'object' && value !== null) {
+      sanitized[key] = sanitizeObject(value);
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  
+  return sanitized;
+};
+
+// Função para logging seguro - substitui console.log
+export const secureLog = (level: 'info' | 'warn' | 'error', message: string, data?: any) => {
+  // Em produção, não fazer log no console
+  if (process.env.NODE_ENV === 'production') {
+    // Aqui seria enviado para serviço de logging seguro
+    return;
+  }
+  
+  // Em desenvolvimento, log limitado
+  const sanitizedData = data ? sanitizeObject(data) : undefined;
+  
+  switch (level) {
+    case 'info':
+      console.log(`[INFO] ${message}`, sanitizedData);
+      break;
+    case 'warn':
+      console.warn(`[WARN] ${message}`, sanitizedData);
+      break;
+    case 'error':
+      console.error(`[ERROR] ${message}`, sanitizedData ? { error: sanitizedData.message || 'Erro interno' } : undefined);
+      break;
+  }
+};
 
 // Tipos para logs de segurança
 export interface SecurityLogData {
@@ -81,6 +156,42 @@ export const logSuspiciousActivity = async (
   }
 };
 
+// Função para log de auditoria completo
+export const auditLog = async (
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+  oldData?: any,
+  newData?: any,
+  metadata: Record<string, any> = {}
+): Promise<void> => {
+  try {
+    const sessionInfo = await captureSessionInfo();
+    
+    const { error } = await supabase
+      .from('audit_logs')
+      .insert({
+        tenant_id: metadata.tenant_id || null,
+        user_id: metadata.user_id || null,
+        action: action,
+        resource_type: resourceType,
+        resource_id: resourceId || null,
+        old_data: oldData ? sanitizeObject(oldData) : null,
+        new_data: newData ? sanitizeObject(newData) : null,
+        metadata: sanitizeObject(metadata),
+        ip_address: sessionInfo.ip_address,
+        user_agent: sessionInfo.user_agent,
+        session_id: metadata.session_id || null
+      });
+    
+    if (error) {
+      secureLog('error', 'Erro ao registrar audit log', error);
+    }
+  } catch (error) {
+    secureLog('error', 'Erro ao registrar audit log', error);
+  }
+};
+
 export const logActivity = async (
   action: string,
   resourceType: string,
@@ -101,10 +212,10 @@ export const logActivity = async (
       });
     
     if (error) {
-      console.error('Erro ao registrar atividade:', error);
+      secureLog('error', 'Erro ao registrar atividade', error);
     }
   } catch (error) {
-    console.error('Erro ao registrar atividade:', error);
+    secureLog('error', 'Erro ao registrar atividade', error);
   }
 };
 

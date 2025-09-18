@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { secureLog } from '@/utils/securityLogger';
 
 export function UniversoAuditavelTest() {
   const { user } = useAuth();
@@ -19,8 +20,8 @@ export function UniversoAuditavelTest() {
     if (effectiveTenantId) {
       loadData();
     } else {
-      console.log('⚠️ Aguardando tenant ser carregado...', { 
-        user: user?.email, 
+      secureLog('info', 'Aguardando tenant ser carregado', { 
+        userEmail: user?.email, 
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
         userTenantId: user?.tenant?.id,
@@ -34,13 +35,11 @@ export function UniversoAuditavelTest() {
       // Determinar o tenant ID efetivo baseado no tipo de usuário
       const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenant?.id;
       
-      console.log('🔍 Carregando dados para tenant:', effectiveTenantId);
-      console.log('👤 Usuário completo:', user);
-      console.log('🏢 Tenant ID efetivo:', { 
+      secureLog('info', 'Carregando dados para tenant', { 
+        tenantId: effectiveTenantId,
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
-        userTenantId: user?.tenant?.id,
-        effectiveTenantId
+        userTenantId: user?.tenant?.id
       });
       
       if (!effectiveTenantId) {
@@ -55,17 +54,17 @@ export function UniversoAuditavelTest() {
         .eq('tenant_id', effectiveTenantId)
         .order('nivel', { ascending: false });
 
-      console.log('📊 Resultado:', { result, error, count: result?.length });
+      secureLog('info', 'Resultado da consulta', { hasResult: !!result, hasError: !!error, count: result?.length });
 
       if (error) {
         setError(error.message);
-        console.error('❌ Erro:', error);
+        secureLog('error', 'Erro na consulta', error);
       } else {
         setData(result || []);
-        console.log('✅ Dados carregados:', result?.length, 'itens');
+        secureLog('info', 'Dados carregados com sucesso', { count: result?.length });
       }
     } catch (err) {
-      console.error('❌ Erro exception:', err);
+      secureLog('error', 'Erro de exceção ao carregar dados', err);
       setError('Erro ao carregar dados');
     } finally {
       setLoading(false);

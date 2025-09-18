@@ -30,6 +30,8 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 interface ProcedimentoAuditoria {
   id: string;
@@ -80,6 +82,9 @@ export function PapeisTrabalhoCompleto() {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
+  
+  // Rate limiting para operações CRUD
+  const rateLimitCRUD = useCRUDRateLimit();
 
   const [procedimentos, setProcedimentos] = useState<ProcedimentoAuditoria[]>([]);
   const [trabalhos, setTrabalhos] = useState<any[]>([]);
@@ -133,7 +138,7 @@ export function PapeisTrabalhoCompleto() {
         .order('created_at', { ascending: false });
 
       if (procedimentosError) {
-        console.error('Erro ao carregar procedimentos:', procedimentosError);
+        secureLog('error', 'Erro ao carregar procedimentos', procedimentosError);
         toast.error('Erro ao carregar procedimentos de auditoria');
       } else {
         setProcedimentos(procedimentosData || []);
@@ -147,7 +152,7 @@ export function PapeisTrabalhoCompleto() {
         .order('titulo');
 
       if (trabalhosError) {
-        console.error('Erro ao carregar trabalhos:', trabalhosError);
+        secureLog('error', 'Erro ao carregar trabalhos', trabalhosError);
       } else {
         setTrabalhos(trabalhosData || []);
       }
@@ -160,13 +165,13 @@ export function PapeisTrabalhoCompleto() {
         .order('full_name');
 
       if (profilesError) {
-        console.error('Erro ao carregar profiles:', profilesError);
+        secureLog('error', 'Erro ao carregar profiles', profilesError);
       } else {
         setProfiles(profilesData || []);
       }
 
     } catch (error) {
-      console.error('Erro geral:', error);
+      secureLog('error', 'Erro geral ao carregar dados', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -175,17 +180,34 @@ export function PapeisTrabalhoCompleto() {
 
   const handleCreate = async () => {
     try {
+      // Rate limiting
+      if (!rateLimitCRUD.checkRateLimit('create')) {
+        toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
+        return;
+      }
+
+      // Sanitizar dados do formulário
+      const sanitizedFormData = sanitizeObject({
+        ...formData,
+        codigo: sanitizeInput(formData.codigo),
+        titulo: sanitizeInput(formData.titulo),
+        descricao: sanitizeInput(formData.descricao),
+        objetivo: sanitizeInput(formData.objetivo),
+        controle_testado: sanitizeInput(formData.controle_testado),
+        criterios_aceitacao: sanitizeInput(formData.criterios_aceitacao)
+      });
+
       const { error } = await supabase
         .from('procedimentos_auditoria')
         .insert([{
-          ...formData,
+          ...sanitizedFormData,
           tenant_id: effectiveTenantId,
           created_by: user?.id,
           updated_by: user?.id
         }]);
 
       if (error) {
-        console.error('Erro ao criar procedimento:', error);
+        secureLog('error', 'Erro ao criar procedimento', error);
         if (error.code === '23505') {
           toast.error('Já existe um procedimento com este código para este trabalho');
         } else {
@@ -193,12 +215,20 @@ export function PapeisTrabalhoCompleto() {
         }
       } else {
         toast.success('Procedimento de auditoria criado com sucesso');
+        
+        // Log de auditoria
+        await auditLog('CREATE', 'procedimentos_auditoria', {
+          codigo: sanitizedFormData.codigo,
+          titulo: sanitizedFormData.titulo,
+          tenant_id: effectiveTenantId
+        });
+        
         setShowCreateDialog(false);
         resetForm();
         loadData();
       }
     } catch (error) {
-      console.error('Erro ao criar procedimento:', error);
+      secureLog('error', 'Erro ao criar procedimento', error);
       toast.error('Erro ao criar procedimento de auditoria');
     }
   };
@@ -207,26 +237,56 @@ export function PapeisTrabalhoCompleto() {
     if (!selectedProcedimento) return;
 
     try {
+      // Rate limiting
+      if (!rateLimitCRUD.checkRateLimit('update')) {
+        toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
+        return;
+      }
+
+      // Sanitizar dados do formulário
+      const sanitizedFormData = sanitizeObject({
+        ...formData,
+        codigo: sanitizeInput(formData.codigo),
+        titulo: sanitizeInput(formData.titulo),
+        descricao: sanitizeInput(formData.descricao),
+        objetivo: sanitizeInput(formData.objetivo),
+        controle_testado: sanitizeInput(formData.controle_testado),
+        criterios_aceitacao: sanitizeInput(formData.criterios_aceitacao)
+      });
+
       const { error } = await supabase
         .from('procedimentos_auditoria')
         .update({
-          ...formData,
+          ...sanitizedFormData,
           updated_by: user?.id
         })
         .eq('id', selectedProcedimento.id)
         .eq('tenant_id', effectiveTenantId);
 
       if (error) {
-        console.error('Erro ao atualizar procedimento:', error);
+        secureLog('error', 'Erro ao atualizar procedimento', error);
         toast.error('Erro ao atualizar procedimento de auditoria');
       } else {
         toast.success('Procedimento de auditoria atualizado com sucesso');
+        
+        // Log de auditoria
+        await auditLog('UPDATE', 'procedimentos_auditoria', {
+          id: selectedProcedimento.id,
+          codigo: sanitizedFormData.codigo,
+          titulo: sanitizedFormData.titulo,
+          old_data: {
+            codigo: selectedProcedimento.codigo,
+            titulo: selectedProcedimento.titulo
+          },
+          tenant_id: effectiveTenantId
+        });
+        
         setShowEditDialog(false);
         resetForm();
         loadData();
       }
     } catch (error) {
-      console.error('Erro ao atualizar procedimento:', error);
+      secureLog('error', 'Erro ao atualizar procedimento', error);
       toast.error('Erro ao atualizar procedimento de auditoria');
     }
   };
@@ -235,6 +295,12 @@ export function PapeisTrabalhoCompleto() {
     if (!confirm('Tem certeza que deseja excluir este procedimento de auditoria?')) return;
 
     try {
+      // Rate limiting
+      if (!rateLimitCRUD.checkRateLimit('delete')) {
+        toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
+        return;
+      }
+
       const { error } = await supabase
         .from('procedimentos_auditoria')
         .delete()
@@ -242,14 +308,23 @@ export function PapeisTrabalhoCompleto() {
         .eq('tenant_id', effectiveTenantId);
 
       if (error) {
-        console.error('Erro ao excluir procedimento:', error);
+        secureLog('error', 'Erro ao excluir procedimento', error);
         toast.error('Erro ao excluir procedimento de auditoria');
       } else {
         toast.success('Procedimento de auditoria excluído com sucesso');
+        
+        // Log de auditoria
+        await auditLog('DELETE', 'procedimentos_auditoria', {
+          id: procedimento.id,
+          codigo: procedimento.codigo,
+          titulo: procedimento.titulo,
+          tenant_id: effectiveTenantId
+        });
+        
         loadData();
       }
     } catch (error) {
-      console.error('Erro ao excluir procedimento:', error);
+      secureLog('error', 'Erro ao excluir procedimento', error);
       toast.error('Erro ao excluir procedimento de auditoria');
     }
   };

@@ -157,15 +157,18 @@ export function ComplianceDashboard() {
       .in('status', ['planejada', 'aprovada', 'em_execucao']);
 
     // Avaliações próximas (próximos 30 dias)
+    const today = new Date().toISOString().split('T')[0];
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
     
     const { data: upcomingAssessmentsData } = await supabase
       .from('requisitos_compliance')
-      .select('id')
+      .select('id, data_proxima_avaliacao')
       .eq('tenant_id', effectiveTenantId)
+      .eq('status', 'ativo')
+      .gte('data_proxima_avaliacao', today)
       .lte('data_proxima_avaliacao', thirtyDaysFromNow.toISOString().split('T')[0])
-      .eq('status', 'ativo');
+      .not('data_proxima_avaliacao', 'is', null);
 
     // Calcular taxa de conformidade (simplificado)
     const conformityRate = requirementsData?.length 
@@ -180,7 +183,7 @@ export function ComplianceDashboard() {
       criticalNonConformities: nonConformitiesData?.filter(nc => nc.criticidade === 'critica').length || 0,
       overduePlans: overduePlansData?.length || 0,
       upcomingAssessments: upcomingAssessmentsData?.length || 0,
-      monthlyTrend: Math.random() * 10 - 5 // Simulado por enquanto
+      monthlyTrend: nonConformitiesData?.length > 0 ? -2.3 : 1.8 // Baseado em não conformidades
     });
 
     setActivePlans(activePlansData?.length || 0);

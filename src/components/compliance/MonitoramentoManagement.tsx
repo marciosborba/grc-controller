@@ -37,6 +37,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
+import { sanitizeInput, sanitizeObject, secureLog } from '@/utils/securityLogger';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -140,7 +141,7 @@ const MonitoramentoManagement: React.FC = () => {
         loadUsers()
       ]);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      secureLog('error', 'Erro ao carregar dados de monitoramento', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -186,10 +187,11 @@ const MonitoramentoManagement: React.FC = () => {
       // Gerar objeto_id temporário para este exemplo
       const objeto_id = crypto.randomUUID();
       
+      const sanitizedValues = sanitizeObject(values);
       const { error } = await supabase
         .from('monitoramento_conformidade')
         .insert({
-          ...values,
+          ...sanitizedValues,
           tenant_id: effectiveTenantId,
           objeto_id: objeto_id,
           status: 'ativo'
@@ -202,7 +204,7 @@ const MonitoramentoManagement: React.FC = () => {
       monitoringForm.reset();
       loadMonitoringItems();
     } catch (error) {
-      console.error('Erro ao criar monitoramento:', error);
+      secureLog('error', 'Erro ao criar monitoramento', error);
       toast.error('Erro ao criar monitoramento');
     }
   };
@@ -248,7 +250,7 @@ const MonitoramentoManagement: React.FC = () => {
       monitoringForm.reset();
       loadMonitoringItems();
     } catch (error) {
-      console.error('Erro ao atualizar monitoramento:', error);
+      secureLog('error', 'Erro ao atualizar monitoramento', error);
       toast.error('Erro ao atualizar monitoramento');
     }
   };
@@ -268,7 +270,7 @@ const MonitoramentoManagement: React.FC = () => {
       toast.success('Monitoramento excluído com sucesso');
       loadMonitoringItems();
     } catch (error) {
-      console.error('Erro ao excluir monitoramento:', error);
+      secureLog('error', 'Erro ao excluir monitoramento', error);
       toast.error('Erro ao excluir monitoramento');
     }
   };
@@ -288,7 +290,7 @@ const MonitoramentoManagement: React.FC = () => {
       toast.success(`Monitoramento ${newStatus === 'ativo' ? 'ativado' : 'pausado'} com sucesso`);
       loadMonitoringItems();
     } catch (error) {
-      console.error('Erro ao alterar status:', error);
+      secureLog('error', 'Erro ao alterar status', error);
       toast.error('Erro ao alterar status do monitoramento');
     }
   };
@@ -338,7 +340,7 @@ const MonitoramentoManagement: React.FC = () => {
   const stats = {
     total: monitoringItems.length,
     ativos: monitoringItems.filter(item => item.status === 'ativo').length,
-    pausados: monitoringItems.filter(item => item.status === 'pausado').length,
+    pausados: monitoringItems.filter(item => item.status === 'suspenso' || item.status === 'inativo').length,
     automatizados: monitoringItems.filter(item => item.automatizado).length
   };
 

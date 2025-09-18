@@ -49,6 +49,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { sanitizeInput, sanitizeObject, secureLog } from '@/utils/securityLogger';
 
 interface Assessment {
   id: string;
@@ -108,7 +109,8 @@ const AssessmentsManagement: React.FC = () => {
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
 
   const { user } = useAuth();
-  const tenantId = useCurrentTenantId();
+  const selectedTenantId = useCurrentTenantId();
+  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
 
   const assessmentForm = useForm<z.infer<typeof assessmentSchema>>({
     resolver: zodResolver(assessmentSchema),
@@ -121,10 +123,10 @@ const AssessmentsManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [tenantId]);
+  }, [effectiveTenantId]);
 
   const loadData = async () => {
-    if (!tenantId) return;
+    if (!effectiveTenantId) return;
     
     setLoading(true);
     try {
@@ -134,7 +136,7 @@ const AssessmentsManagement: React.FC = () => {
         loadUsers()
       ]);
     } catch (error) {
-      console.error('Erro ao carregar dados:', error);
+      secureLog('error', 'Erro ao carregar dados de avaliações', error);
       toast.error('Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -152,7 +154,7 @@ const AssessmentsManagement: React.FC = () => {
           frameworks_compliance!inner(nome)
         )
       `)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', effectiveTenantId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -176,7 +178,7 @@ const AssessmentsManagement: React.FC = () => {
         framework_id,
         frameworks_compliance!inner(nome)
       `)
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', effectiveTenantId)
       .eq('status', 'ativo')
       .order('titulo');
 
@@ -196,7 +198,7 @@ const AssessmentsManagement: React.FC = () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, email')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', effectiveTenantId)
       .order('full_name');
 
     if (error) throw error;
@@ -218,20 +220,21 @@ const AssessmentsManagement: React.FC = () => {
   const handleCreateAssessment = async (data: z.infer<typeof assessmentSchema>) => {
     try {
       const codigo = `AV-${Date.now()}`;
+      const sanitizedData = sanitizeObject(data);
       
       const { error } = await supabase
         .from('avaliacoes_conformidade')
         .insert({
-          tenant_id: tenantId,
-          requisito_id: data.requisito_id,
+          tenant_id: effectiveTenantId,
+          requisito_id: sanitizedData.requisito_id,
           codigo,
-          titulo: data.titulo,
-          descricao: data.descricao,
-          tipo_avaliacao: data.tipo_avaliacao,
-          metodologia: data.metodologia,
+          titulo: sanitizedData.titulo,
+          descricao: sanitizedData.descricao,
+          tipo_avaliacao: sanitizedData.tipo_avaliacao,
+          metodologia: sanitizedData.metodologia,
           data_planejada: format(data.data_planejada, 'yyyy-MM-dd'),
           data_inicio: data.data_inicio ? format(data.data_inicio, 'yyyy-MM-dd') : null,
-          avaliador_responsavel: data.avaliador_responsavel,
+          avaliador_responsavel: sanitizedData.avaliador_responsavel,
           amostra_testada: data.amostra_testada,
           populacao_total: data.populacao_total,
           status: 'planejada',
@@ -245,7 +248,7 @@ const AssessmentsManagement: React.FC = () => {
       assessmentForm.reset();
       loadAssessments();
     } catch (error) {
-      console.error('Erro ao criar avaliação:', error);
+      secureLog('error', 'Erro ao criar avaliação', error);
       toast.error('Erro ao criar avaliação');
     }
   };
@@ -266,7 +269,7 @@ const AssessmentsManagement: React.FC = () => {
       toast.success('Avaliação iniciada com sucesso');
       loadAssessments();
     } catch (error) {
-      console.error('Erro ao iniciar avaliação:', error);
+      secureLog('error', 'Erro ao iniciar avaliação', error);
       toast.error('Erro ao iniciar avaliação');
     }
   };
@@ -287,7 +290,7 @@ const AssessmentsManagement: React.FC = () => {
       toast.success('Avaliação concluída com sucesso');
       loadAssessments();
     } catch (error) {
-      console.error('Erro ao concluir avaliação:', error);
+      secureLog('error', 'Erro ao concluir avaliação', error);
       toast.error('Erro ao concluir avaliação');
     }
   };

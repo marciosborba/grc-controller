@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { secureLog } from '@/utils/securityLogger';
 
 interface WorkingPaper {
   id: string;
@@ -89,7 +90,7 @@ export function PapeisTrabalho() {
         .order('data_criacao', { ascending: false });
 
       if (papersError) {
-        console.error('Erro ao carregar papéis de trabalho:', papersError);
+        secureLog('error', 'Erro ao carregar papéis de trabalho', papersError);
       } else {
         const mappedPapers = papersData?.map(paper => ({
           id: paper.id,
@@ -124,7 +125,7 @@ export function PapeisTrabalho() {
         .order('nome', { ascending: true });
 
       if (templatesError) {
-        console.error('Erro ao carregar templates:', templatesError);
+        secureLog('error', 'Erro ao carregar templates', templatesError);
       } else {
         const mappedTemplates = templatesData?.map(template => ({
           id: template.id,
@@ -139,7 +140,7 @@ export function PapeisTrabalho() {
       }
 
     } catch (error) {
-      console.error('Erro ao carregar papéis de trabalho:', error);
+      secureLog('error', 'Erro ao carregar papéis de trabalho', error);
       toast.error('Erro ao carregar papéis de trabalho');
     } finally {
       setLoading(false);
