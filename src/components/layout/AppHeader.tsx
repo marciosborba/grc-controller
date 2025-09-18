@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, LogOut, User, Settings } from 'lucide-react';
+import { Bell, Search, LogOut, User, Settings, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,7 +19,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { TenantSelector } from '@/components/ui/tenant-selector';
 
 export const AppHeader = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { unreadCount } = useNotifications();
   const navigate = useNavigate();
 
@@ -81,6 +81,19 @@ export const AppHeader = () => {
               </Badge>
             )}
           </Button>
+
+          {/* Debug: Refresh Permissions Button */}
+          {user?.isPlatformAdmin && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 sm:h-10 sm:w-10 text-orange-600"
+              onClick={refreshUser}
+              title="Refresh Permissions (Debug)"
+            >
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+          )}
 
           {/* Theme Toggle */}
           <div className="hidden sm:block">

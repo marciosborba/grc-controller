@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User, Search, Target, CheckSquare, Calendar, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList, BarChart3, Settings, HelpCircle, ChevronRight, Brain, Eye, Zap, Building2, Activity, KeyRound, Database, Plug, Bell, TestTube, Crown, User, Search, Target, CheckSquare, Calendar, BarChart2, FileText } from 'lucide-react';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 import { getUserFirstName, getUserInitials, getUserDisplayName } from '@/utils/userHelpers';
 import { getTenantDisplayName } from '@/utils/tenantHelpers';
+import { PermissionDebug } from '@/components/debug/PermissionDebug';
 
 // Interface para roles do banco de dados
 interface DatabaseRole {
@@ -124,7 +125,13 @@ const navigationItems = [{
         }
       ]
     },
-    // Módulo Assessment removido - funcionalidade transferida para Configurações
+    {
+      title: 'Assessments',
+      url: '/assessments',
+      icon: Target,
+      permissions: ['assessment.read', 'all'],
+      description: 'Avaliações de maturidade e compliance'
+    },
     {
       title: 'Conformidade',
       url: '/compliance',
@@ -287,6 +294,8 @@ const TEST_ROLES = [
 ];
 
 export function AppSidebar() {
+  console.log('🚀 [SIDEBAR] AppSidebar iniciando...');
+  
   const {
     state
   } = useSidebar();
@@ -295,6 +304,13 @@ export function AppSidebar() {
   const {
     user
   } = useAuth();
+  
+  console.log('👤 [SIDEBAR] User no sidebar:', {
+    userExists: !!user,
+    email: user?.email,
+    permissions: user?.permissions?.length || 0,
+    hasAssessmentRead: user?.permissions?.includes('assessment.read')
+  });
 
   // Estado para teste de roles - iniciar com Super Admin (role original do usuário)
   const [currentTestRole, setCurrentTestRole] = useState(TEST_ROLES.find(r => r.id === '1') || TEST_ROLES[0]); // Super Admin por padrão
@@ -521,6 +537,19 @@ export function AppSidebar() {
       return false;
     }
     
+    // Debug específico para assessment.read
+    const isAssessmentCheck = permissions.includes('assessment.read');
+    if (isAssessmentCheck) {
+      console.log('🎯 [ASSESSMENT PERMISSION] Verificando permissão assessment.read:', {
+        requiredPermissions: permissions,
+        userPermissions: user.permissions,
+        userRoles: user.roles,
+        isPlatformAdmin: user.isPlatformAdmin,
+        isTestingRole,
+        currentTestRole: currentTestRole?.name
+      });
+    }
+    
     // Identificar o módulo para debug
     const moduleTitle = permissions.includes('audit.read') ? 'Gestão de Auditoria' :
                        permissions.includes('assessment.read') ? 'Assessments' :
@@ -693,11 +722,34 @@ export function AppSidebar() {
 
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
+        {/* Log simples para debug */}
+        {console.log('🎯 [SIDEBAR RENDER] Estado atual:', {
+          userExists: !!user,
+          userEmail: user?.email,
+          userPermissions: user?.permissions,
+          userRoles: user?.roles,
+          isPlatformAdmin: user?.isPlatformAdmin,
+          collapsed
+        })}
+        
         {navigationItems.map((group, groupIndex) => {
           const filteredItems = group.items.filter(item => {
     const hasAccess = hasPermission(item.permissions);
     
-    // Verificação de acesso sem logs desnecessários
+    // Debug específico para Assessments
+    if (item.title === 'Assessments') {
+      console.log('🎯 [ASSESSMENTS DEBUG] Verificando acesso ao módulo Assessments:', {
+        title: item.title,
+        requiredPermissions: item.permissions,
+        hasAccess,
+        userPermissions: user?.permissions,
+        userRoles: user?.roles,
+        isPlatformAdmin: user?.isPlatformAdmin,
+        isTestingRole,
+        currentTestRole: currentTestRole?.name
+      });
+    }
+    
     return hasAccess;
   });
           

@@ -1,0 +1,385 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { 
+  FileText, CheckCircle, Play, Activity, Award, BookOpen, AlertCircle, ArrowRight, Settings, Target, BarChart3, List
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { supabase } from '@/integrations/supabase/client';
+
+export default function AssessmentsDashboard() {
+  const { user, effectiveTenantId } = useAuth();
+  const navigate = useNavigate();
+  
+  // Estados separados e simples
+  const [assessments, setAssessments] = useState([]);
+  const [frameworks, setFrameworks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Função separada para carregar assessments
+  const loadAssessments = async () => {
+    if (!effectiveTenantId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('id, titulo, status, percentual_conclusao, percentual_maturidade')
+        .eq('tenant_id', effectiveTenantId)
+        .limit(10);
+
+      if (error) {
+        console.error('Erro assessments:', error);
+        setError('Erro ao carregar assessments');
+        return;
+      }
+
+      setAssessments(data || []);
+    } catch (err) {
+      console.error('Erro geral assessments:', err);
+      setError('Erro geral ao carregar assessments');
+    }
+  };
+
+  // Função separada para carregar frameworks
+  const loadFrameworks = async () => {
+    if (!effectiveTenantId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('assessment_frameworks')
+        .select('id, nome, tipo_framework')
+        .eq('tenant_id', effectiveTenantId)
+        .limit(5);
+
+      if (error) {
+        console.error('Erro frameworks:', error);
+        return;
+      }
+
+      setFrameworks(data || []);
+    } catch (err) {
+      console.error('Erro geral frameworks:', err);
+    }
+  };
+
+  // UseEffect ÚNICO com dependências controladas
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchData = async () => {
+      if (!effectiveTenantId || !user || loading) return;
+      
+      console.log('Carregando dados para tenant:', effectiveTenantId);
+      setLoading(true);
+      setError('');
+
+      try {
+        await Promise.all([
+          loadAssessments(),
+          loadFrameworks()
+        ]);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveTenantId, user?.id]); // Dependências específicas
+
+  // Cálculos derivados simples
+  const metrics = {
+    total: assessments.length,
+    active: assessments.filter(a => ['em_andamento', 'iniciado'].includes(a.status)).length,
+    completed: assessments.filter(a => a.status === 'concluido').length,
+    avgMaturity: assessments.length > 0 
+      ? Math.round(assessments.reduce((sum, a) => sum + (a.percentual_maturidade || 0), 0) / assessments.length)
+      : 0
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'concluido': 'bg-green-100 text-green-800',
+      'em_andamento': 'bg-blue-100 text-blue-800',
+      'iniciado': 'bg-blue-100 text-blue-800',
+      'planejado': 'bg-gray-100 text-gray-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p className="ml-4">Carregando assessments...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Assessments</h1>
+          <p className="text-muted-foreground">Central de Avaliação de Maturidade e Compliance</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={() => navigate('/assessments/frameworks')}>
+            <Settings className="h-4 w-4 mr-2" />
+            Frameworks
+          </Button>
+          <Button onClick={() => navigate('/assessments/execution')}>
+            <Play className="h-4 w-4 mr-2" />
+            Executar Assessment
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-red-800">{error}</span>
+          </div>
+        </div>
+      )}
+
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Ações Rápidas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/assessments/frameworks')}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Frameworks</p>
+                    <p className="text-xl font-bold">Gerenciar</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Settings className="h-8 w-8 text-blue-600" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground ml-2" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/assessments/execution')}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Execução</p>
+                    <p className="text-xl font-bold">Assessments</p>
+                  </div>
+                  <div className="flex items-center">
+                    <Play className="h-8 w-8 text-green-600" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground ml-2" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/assessments/questions')}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Questões</p>
+                    <p className="text-xl font-bold">Gerenciar</p>
+                  </div>
+                  <div className="flex items-center">
+                    <List className="h-8 w-8 text-orange-600" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground ml-2" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/assessments/reports')}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Relatórios</p>
+                    <p className="text-xl font-bold">Visualizar</p>
+                  </div>
+                  <div className="flex items-center">
+                    <BarChart3 className="h-8 w-8 text-purple-600" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground ml-2" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Métricas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold">{metrics.total}</p>
+                  </div>
+                  <Activity className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ativos</p>
+                    <p className="text-2xl font-bold text-blue-600">{metrics.active}</p>
+                  </div>
+                  <Play className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Concluídos</p>
+                    <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Maturidade</p>
+                    <p className="text-2xl font-bold text-purple-600">{metrics.avgMaturity}%</p>
+                  </div>
+                  <Award className="h-8 w-8 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Status do Sistema */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Status do Sistema</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Tenant ID:</span>
+                  <span className="font-mono text-sm">{effectiveTenantId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Usuário:</span>
+                  <span>{user?.id ? '✅ Autenticado' : '❌ Não autenticado'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Assessments carregados:</span>
+                  <span>{assessments.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Frameworks carregados:</span>
+                  <span>{frameworks.length}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assessments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Assessments</CardTitle>
+              <CardDescription>
+                {assessments.length} assessments encontrados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {assessments.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Nenhum assessment encontrado</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {assessments.map((assessment) => (
+                    <div key={assessment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h3 className="font-medium">{assessment.titulo}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className={getStatusColor(assessment.status)}>
+                            {assessment.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {assessment.percentual_conclusao}% concluído
+                        </p>
+                        {assessment.percentual_maturidade && (
+                          <p className="text-sm text-muted-foreground">
+                            {assessment.percentual_maturidade}% maturidade
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="frameworks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Frameworks Disponíveis</CardTitle>
+              <CardDescription>
+                {frameworks.length} frameworks encontrados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {frameworks.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Nenhum framework encontrado</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {frameworks.map((framework) => (
+                    <Card key={framework.id}>
+                      <CardContent className="p-4">
+                        <h3 className="font-medium">{framework.nome}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {framework.tipo_framework}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

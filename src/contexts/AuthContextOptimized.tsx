@@ -49,6 +49,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
   refreshUserData: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +81,34 @@ const debounce = <T extends (...args: any[]) => any>(
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
+};
+
+// Função para obter permissões baseadas nas roles
+const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = false): string[] => {
+  // Platform admins têm todas as permissões
+  if (isPlatformAdmin) {
+    return ['read', 'write', 'delete', 'admin', 'platform_admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage', 'assessment.read', 'all'];
+  }
+
+  // Mapeamento básico de permissões para roles do sistema
+  const permissionMap: Record<string, string[]> = {
+    admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'assessment.read', 'all'],
+    ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read', 'assessment.read'],
+    risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
+    compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read', 'assessment.read'],
+    auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
+    user: ['read', 'all']
+  };
+  
+  const allPermissions = new Set<string>();
+  
+  // Adicionar permissões das roles básicas
+  roles.forEach(role => {
+    const rolePermissions = permissionMap[role] || ['read'];
+    rolePermissions.forEach(permission => allPermissions.add(permission));
+  });
+  
+  return Array.from(allPermissions);
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -119,7 +148,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         name: supabaseUser.email?.split('@')[0] || 'Usuário',
         tenantId: 'default',
         roles: ['user'],
-        permissions: [],
+        permissions: getPermissionsForRoles(['user'], false),
         isPlatformAdmin: false
       };
 
@@ -178,14 +207,26 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         });
 
         // Atualizar com dados completos
+        const userRoles = roles.length > 0 ? roles.map((r: any) => r.role) : ['user'];
+        const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
+        
+        console.log('🎯 [AUTH DEBUG] Usuário carregado com permissões:', {
+          userId: supabaseUser.id,
+          email: supabaseUser.email,
+          roles: userRoles,
+          permissions: userPermissions,
+          isPlatformAdmin,
+          hasAssessmentRead: userPermissions.includes('assessment.read')
+        });
+        
         const userData: AuthUser = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
           name: profile?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
           jobTitle: profile?.job_title,
           tenantId: profile?.tenant_id || 'default',
-          roles: roles.length > 0 ? roles.map((r: any) => r.role) : ['user'],
-          permissions: [],
+          roles: userRoles,
+          permissions: userPermissions,
           isPlatformAdmin
         };
 
@@ -208,7 +249,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         name: supabaseUser.email?.split('@')[0] || 'Usuário',
         tenantId: 'default',
         roles: ['user'],
-        permissions: [],
+        permissions: getPermissionsForRoles(['user'], false),
         isPlatformAdmin: false
       };
     }
@@ -251,7 +292,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           name: session.user.email?.split('@')[0] || 'Usuário',
           tenantId: 'default',
           roles: ['user'],
-          permissions: [],
+          permissions: getPermissionsForRoles(['user'], false),
           isPlatformAdmin: false
         };
         setUser(basicUser);
@@ -464,6 +505,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     }
   }, [session, loadUserData]);
 
+  // Alias para compatibilidade
+  const refreshUser = refreshUserData;
+
   const contextValue: AuthContextType = {
     user,
     session,
@@ -472,6 +516,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     logout,
     signup,
     refreshUserData,
+    refreshUser,
   };
 
   return (

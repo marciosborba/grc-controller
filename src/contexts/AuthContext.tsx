@@ -48,6 +48,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,7 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getPermissions = useCallback(async (roles: string[], isPlatformAdmin: boolean = false, userId?: string): Promise<string[]> => {
     // Platform admins têm todas as permissões
     if (isPlatformAdmin) {
-      return ['read', 'write', 'delete', 'admin', 'platform_admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage', 'all'];
+      return ['read', 'write', 'delete', 'admin', 'platform_admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'tenants.manage', 'assessment.read', 'all'];
     }
 
     // Verificar cache primeiro
@@ -116,10 +117,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Mapeamento básico de permissões para roles do sistema
     const permissionMap: Record<string, string[]> = {
-      admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'all'],
-      ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read'],
-      risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read'],
-      compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read'],
+      admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'assessment.read', 'all'],
+      ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read', 'assessment.read'],
+      risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
+      compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read', 'assessment.read'],
       auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
       user: ['read', 'all']
     };
@@ -419,6 +420,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [buildUserObject]);
 
+  const refreshUser = async () => {
+    if (session?.user) {
+      // Limpar cache do usuário atual
+      roleCache.delete(session.user.id);
+      
+      try {
+        const authUser = await buildUserObject(session.user);
+        setUser(authUser);
+        console.log('[AUTH] Usuário atualizado com novas permissões');
+      } catch (error) {
+        console.error('[AUTH] Erro ao atualizar usuário:', error);
+      }
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -426,6 +442,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     login,
     logout,
     signup,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

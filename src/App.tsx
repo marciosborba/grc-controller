@@ -50,7 +50,21 @@ const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/No
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
-// Módulo Assessment removido - funcionalidade transferida para Configurações
+// Módulo Assessment - Versão Profissional Atualizada
+const AssessmentsDashboard = lazy(() => import("@/components/assessments/AssessmentsDashboard"));
+const AssessmentsDashboardPro = lazy(() => import("@/components/assessments/views/AssessmentsDashboardPro"));
+const AssessmentsDashboardSimple = lazy(() => import("@/components/assessments/views/AssessmentsDashboardSimple"));
+const AssessmentsDashboardConsistent = lazy(() => import("@/components/assessments/views/AssessmentsDashboardConsistent"));
+const FrameworksAssessment = lazy(() => import("@/components/assessments/FrameworksAssessment"));
+const FrameworksManagement = lazy(() => import("@/components/assessments/views/FrameworksManagement"));
+const FrameworksManagementSimple = lazy(() => import("@/components/assessments/views/FrameworksManagementSimple"));
+const FrameworksManagementFixed = lazy(() => import("@/components/assessments/views/FrameworksManagementFixed"));
+const AssessmentExecution = lazy(() => import("@/components/assessments/AssessmentExecution"));
+const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
+const AssessmentsList = lazy(() => import("@/components/assessments/AssessmentsList"));
+const QuestionsManagement = lazy(() => import("@/components/assessments/QuestionsManagement"));
+const ActionPlansManagement = lazy(() => import("@/components/assessments/ActionPlansManagement"));
+const AssessmentReporting = lazy(() => import("@/components/assessments/AssessmentReporting"));
 
 // Privacy module
 const PrivacyDashboard = lazy(() => import("@/components/privacy/PrivacyDashboard").then(module => ({ default: module.PrivacyDashboard })));
@@ -259,7 +273,81 @@ const App = () => (
                 }>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />
-                  {/* Rota /assessments removida - módulo excluído */}
+                  <Route path="assessments" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsDashboardConsistent />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/simple" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsDashboardSimple />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/pro" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsDashboardPro />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/legacy" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/frameworks" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworksManagementFixed />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/frameworks/simple" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworksManagementSimple />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/frameworks/pro" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworksManagement />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/frameworks/legacy" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <FrameworksAssessment />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/execution" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentExecutionComplete />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/execution/:assessmentId" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentExecutionComplete />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/execution/legacy" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentExecution />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/list" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentsList />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/questions" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <QuestionsManagement />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/action-plans" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansManagement />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/reports" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentReporting />
+                    </Suspense>
+                  } />
                   
                   <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
                   <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
