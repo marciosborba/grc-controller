@@ -2,6 +2,11 @@ import React, { lazy, Suspense } from 'react';
 import { useAuth} from '@/contexts/AuthContextOptimized';
 
 // Lazy load dashboards to reduce initial bundle size
+const IntegratedExecutiveDashboardFixed = lazy(() => import('./IntegratedExecutiveDashboardFixed'));
+const IntegratedDashboardComplete = lazy(() => import('./IntegratedDashboardComplete'));
+const IntegratedDashboardFixed = lazy(() => import('./IntegratedDashboardFixed'));
+const SimpleDashboard = lazy(() => import('./SimpleDashboard'));
+const IntegratedExecutiveDashboard = lazy(() => import('./IntegratedExecutiveDashboard'));
 const ExecutiveDashboard = lazy(() => import('./ExecutiveDashboard'));
 const RiskManagerDashboard = lazy(() => import('./RiskManagerDashboard'));
 const ComplianceDashboard = lazy(() => import('./ComplianceDashboard'));
@@ -19,43 +24,10 @@ const DashboardPage = () => {
 
   if (!user) return null;
 
-  // Route to appropriate dashboard based on user role with lazy loading
-  if (user.roles.includes('admin') || user.roles.includes('ciso')) {
-    return (
-      <Suspense fallback={<DashboardLoader />}>
-        <ExecutiveDashboard />
-      </Suspense>
-    );
-  }
-
-  if (user.roles.includes('risk_manager')) {
-    return (
-      <Suspense fallback={<DashboardLoader />}>
-        <RiskManagerDashboard />
-      </Suspense>
-    );
-  }
-
-  if (user.roles.includes('compliance_officer')) {
-    return (
-      <Suspense fallback={<DashboardLoader />}>
-        <ComplianceDashboard />
-      </Suspense>
-    );
-  }
-
-  if (user.roles.includes('auditor')) {
-    return (
-      <Suspense fallback={<DashboardLoader />}>
-        <AuditorDashboard />
-      </Suspense>
-    );
-  }
-
-  // Default dashboard with lazy loading
+  // Use the original dashboard with only the 3 specific fixes applied
   return (
     <Suspense fallback={<DashboardLoader />}>
-      <ExecutiveDashboard />
+      <IntegratedExecutiveDashboardFixed />
     </Suspense>
   );
 };
