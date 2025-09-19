@@ -6,6 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -23,12 +32,29 @@ export default function AssessmentsDashboard() {
   const [frameworks, setFrameworks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedTab, setSelectedTab] = useState('overview');
   
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState('');
   
   // Estados para seleção múltipla
   const [selectedAssessments, setSelectedAssessments] = useState([]);
+
+  // Estados para modal de criação de assessment
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [assessmentType, setAssessmentType] = useState('framework'); // 'framework' ou 'custom'
+  const [selectedFramework, setSelectedFramework] = useState(null);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    descricao: '',
+    data_inicio: null,
+    data_fim_planejada: null,
+    responsavel_assessment: '',
+    avaliadores: [],
+    prioridade: 'media'
+  });
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [isCreating, setIsCreating] = useState(false);
 
   // Função separada para carregar assessments
   const loadAssessments = async () => {
@@ -146,6 +172,13 @@ export default function AssessmentsDashboard() {
     };
   }, [effectiveTenantId, user?.id]); // Dependências específicas
 
+  // UseEffect para carregar usuários quando o modal for aberto
+  useEffect(() => {
+    if (isCreateModalOpen && effectiveTenantId) {
+      loadUsers();
+    }
+  }, [isCreateModalOpen, effectiveTenantId]);
+
   // Filtros aplicados
   const filteredAssessments = assessments.filter(assessment => {
     return searchTerm === '' || 
@@ -157,9 +190,13 @@ export default function AssessmentsDashboard() {
     total: assessments.length,
     active: assessments.filter(a => ['em_andamento', 'iniciado'].includes(a.status)).length,
     completed: assessments.filter(a => a.status === 'concluido').length,
+    frameworks: frameworks.length,
     avgMaturity: assessments.length > 0 
       ? Math.round(assessments.reduce((sum, a) => sum + (a.percentual_maturidade || 0), 0) / assessments.length)
-      : 0
+      : 0,
+    pending: assessments.filter(a => a.status === 'planejado').length,
+    reviewPending: assessments.filter(a => a.status === 'em_revisao').length,
+    monthlyTrend: 12 // Simulado
   };
 
   const getStatusColor = (status) => {
@@ -208,31 +245,125 @@ export default function AssessmentsDashboard() {
     }
   };
 
-  const handleBulkStatusChange = (newStatus) => {
-    console.log('Alterando status para:', newStatus, 'dos assessments:', selectedAssessments);
-    toast.success(`Status alterado para ${newStatus} em ${selectedAssessments.length} assessments!`);
-    setSelectedAssessments([]);
+  // Função para carregar usuários disponíveis
+  const loadUsers = async () => {
+    if (!effectiveTenantId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nome, email')
+        .eq('tenant_id', effectiveTenantId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setAvailableUsers(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+      toast.error('Erro ao carregar usuários disponíveis');
+    }
   };
 
-  // Função para alterar status (simples por enquanto)
-  const handleStatusTransition = async (assessmentId, targetStatus, comments = '') => {
-    console.log('Transição de status:', assessmentId, targetStatus, comments);
-    toast.success(`Status alterado para ${targetStatus}`);
-    // Recarregar dados
-    await Promise.all([loadAssessments(), loadFrameworks()]);
+  // Função para criar novo assessment
+  const handleCreateAssessment = async () => {
+    if (!effectiveTenantId || !user) {
+      toast.error('Dados de autenticação não disponíveis');
+      return;
+    }
+
+    // Validações básicas
+    if (!formData.titulo.trim()) {
+      toast.error('Título é obrigatório');
+      return;
+    }
+
+    if (assessmentType === 'framework' && !selectedFramework) {
+      toast.error('Selecione um framework');
+      return;
+    }
+
+    if (!formData.responsavel_assessment) {
+      toast.error('Responsável pelo assessment é obrigatório');
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const assessmentData = {
+        tenant_id: effectiveTenantId,
+        titulo: formData.titulo,
+        descricao: formData.descricao,
+        framework_id: assessmentType === 'framework' ? selectedFramework.id : null,
+        responsavel_assessment: formData.responsavel_assessment,
+        data_inicio: formData.data_inicio,
+        data_fim_planejada: formData.data_fim_planejada,
+        prioridade: formData.prioridade,
+        status: 'planejado',
+        percentual_conclusao: 0,
+        created_by: user.id,
+        updated_by: user.id
+      };
+
+      const { data: newAssessment, error } = await supabase
+        .from('assessments')
+        .insert([assessmentData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Se há avaliadores selecionados, criar os relacionamentos
+      if (formData.avaliadores.length > 0) {
+        const avaliadoresData = formData.avaliadores.map(userId => ({
+          tenant_id: effectiveTenantId,
+          assessment_id: newAssessment.id,
+          user_id: userId,
+          role: 'respondent'
+        }));
+
+        const { error: avaliadoresError } = await supabase
+          .from('assessment_user_roles')
+          .insert(avaliadoresData);
+
+        if (avaliadoresError) {
+          console.error('Erro ao adicionar avaliadores:', avaliadoresError);
+          toast.error('Assessment criado, mas houve erro ao adicionar avaliadores');
+        }
+      }
+
+      toast.success('Assessment criado com sucesso!');
+      setIsCreateModalOpen(false);
+      resetForm();
+      await loadAssessments(); // Recarregar lista
+
+    } catch (error) {
+      console.error('Erro ao criar assessment:', error);
+      toast.error('Erro ao criar assessment: ' + error.message);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  // Função para verificar qualidade (simples por enquanto)
-  const handleQualityCheck = async (assessmentId) => {
-    console.log('Verificação de qualidade:', assessmentId);
-    toast.success('Verificação de qualidade realizada');
+  // Função para resetar formulário
+  const resetForm = () => {
+    setFormData({
+      titulo: '',
+      descricao: '',
+      data_inicio: null,
+      data_fim_planejada: null,
+      responsavel_assessment: '',
+      avaliadores: [],
+      prioridade: 'media'
+    });
+    setSelectedFramework(null);
+    setAssessmentType('framework');
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="ml-4">Carregando assessments...</p>
       </div>
     );
   }
@@ -254,7 +385,7 @@ export default function AssessmentsDashboard() {
             <Filter className="h-4 w-4 mr-2" />
             Filtros
           </Button>
-          <Button onClick={() => navigate('/assessments/execution')}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Assessment
           </Button>
@@ -282,7 +413,7 @@ export default function AssessmentsDashboard() {
                 </p>
                 <p className="text-xs text-muted-foreground flex items-center mt-1">
                   <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-                  +12% vs mês anterior
+                  +{metrics.monthlyTrend}% vs mês anterior
                 </p>
               </div>
               <Shield className="h-10 w-10 text-green-600" />
@@ -294,7 +425,7 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Assessments</p>
+                <p className="text-sm text-muted-foreground">Assessments</p>
                 <p className="text-2xl font-bold">{metrics.total}</p>
               </div>
               <FileText className="h-10 w-10 text-blue-600" />
@@ -343,7 +474,7 @@ export default function AssessmentsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Frameworks</p>
-                <p className="text-2xl font-bold text-purple-600">{frameworks.length}</p>
+                <p className="text-2xl font-bold text-purple-600">{metrics.frameworks}</p>
               </div>
               <BookOpen className="h-10 w-10 text-purple-600" />
             </div>
@@ -355,9 +486,7 @@ export default function AssessmentsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Pendentes Revisão</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {assessments.filter(a => a.status === 'em_revisao').length}
-                </p>
+                <p className="text-2xl font-bold text-orange-600">{metrics.reviewPending}</p>
               </div>
               <Clock className="h-10 w-10 text-orange-600" />
             </div>
@@ -368,191 +497,159 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Equipes Ativas</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {metrics.active}
-                </p>
+                <p className="text-sm text-muted-foreground">Planejados</p>
+                <p className="text-2xl font-bold text-indigo-600">{metrics.pending}</p>
                 <p className="text-xs text-muted-foreground">
-                  Respondentes e auditores
+                  Aguardando execução
                 </p>
               </div>
-              <Users className="h-10 w-10 text-indigo-600" />
+              <Target className="h-10 w-10 text-indigo-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Fluxo do Processo de Assessment */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" />
-            Processo de Assessment - Metodologia CMMI
-          </CardTitle>
-          <CardDescription>
-            Siga o fluxo padronizado para garantir qualidade e maturidade dos controles
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/frameworks')}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">1. Framework</div>
-                    <div className="text-sm text-muted-foreground">Selecionar biblioteca</div>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-blue-600">
-                  {frameworks.length} frameworks disponíveis
-                </div>
-              </CardContent>
-            </Card>
+      {/* Cards de Ação */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+              onClick={() => setIsCreateModalOpen(true)}>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <Plus className="h-8 w-8 text-green-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Novo Assessment</h3>
+            <p className="text-muted-foreground text-sm">Iniciar nova avaliação de maturidade</p>
+          </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+        </Card>
 
-            <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/execution')}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100">
-                    <Users className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">2. Responsáveis</div>
-                    <div className="text-sm text-muted-foreground">Atribuir equipes</div>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-green-600">
-                  Respondentes e auditores
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+              onClick={() => setSelectedTab('assessments')}>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <FileText className="h-8 w-8 text-blue-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Assessments</h3>
+            <p className="text-muted-foreground text-sm">Gerenciar avaliações existentes</p>
+          </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+        </Card>
 
-            <Card className="border-l-4 border-l-orange-500 hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100">
-                    <Edit className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">3. Avaliação</div>
-                    <div className="text-sm text-muted-foreground">Responder controles</div>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-orange-600">
-                  Coleta de evidências
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+              onClick={() => navigate('/assessments/frameworks')}>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <BookOpen className="h-8 w-8 text-purple-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Frameworks</h3>
+            <p className="text-muted-foreground text-sm">Biblioteca de controles e frameworks</p>
+          </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+        </Card>
 
-            <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100">
-                    <Award className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">4. Maturidade</div>
-                    <div className="text-sm text-muted-foreground">Avaliar CMMI</div>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-purple-600">
-                  Níveis 1-5 CMMI
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
+              onClick={() => setSelectedTab('action-plans')}>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <Target className="h-8 w-8 text-orange-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Planos de Ação</h3>
+            <p className="text-muted-foreground text-sm">Remediar gaps e melhorias</p>
+          </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+        </Card>
+      </div>
 
-            <Card className="border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/reports')}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-indigo-100">
-                    <BarChart3 className="h-5 w-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <div className="font-medium">5. Relatórios</div>
-                    <div className="text-sm text-muted-foreground">Gerar insights</div>
-                  </div>
-                </div>
-                <div className="mt-3 text-xs text-indigo-600">
-                  Analytics avançados
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      {/* Conteúdo Principal */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="assessments">Lista de Assessments</TabsTrigger>
+          <TabsTrigger value="assessments">Assessments</TabsTrigger>
+          <TabsTrigger value="frameworks">Frameworks</TabsTrigger>
+          <TabsTrigger value="action-plans">Planos de Ação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Barra de Busca */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar assessments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            {searchTerm && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {filteredAssessments.length} de {assessments.length} assessments encontrados
-              </p>
-            )}
-          </div>
-
-          {/* Ações Rápidas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer" 
-                  onClick={() => navigate('/assessments/frameworks')}>
-              <CardContent className="p-4 text-center">
-                <BookOpen className="h-8 w-8 mx-auto text-blue-600 mb-2" />
-                <h3 className="font-medium">Gerenciar Frameworks</h3>
-                <p className="text-sm text-muted-foreground">ISO 27001, NIST, SOX</p>
+          {/* Status dos Assessments */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Assessments Ativos
+                </CardTitle>
+                <CardDescription>
+                  Avaliações em andamento e próximas ações
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {assessments.slice(0, 4).map(assessment => (
+                    <div key={assessment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="font-medium">{assessment.titulo}</p>
+                          <Badge className={getStatusColor(assessment.status)}>
+                            {assessment.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <Progress value={assessment.percentual_conclusao} className="h-2 mb-2" />
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>{assessment.percentual_conclusao}% concluído</span>
+                          {assessment.percentual_maturidade && (
+                            <span>{assessment.percentual_maturidade}% maturidade</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/execution')}>
-              <CardContent className="p-4 text-center">
-                <Plus className="h-8 w-8 mx-auto text-green-600 mb-2" />
-                <h3 className="font-medium">Novo Assessment</h3>
-                <p className="text-sm text-muted-foreground">Iniciar nova avaliação</p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/manage')}>
-              <CardContent className="p-4 text-center">
-                <Settings className="h-8 w-8 mx-auto text-purple-600 mb-2" />
-                <h3 className="font-medium">Gerenciar</h3>
-                <p className="text-sm text-muted-foreground">CRUD e configurações</p>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate('/assessments/reports')}>
-              <CardContent className="p-4 text-center">
-                <BarChart3 className="h-8 w-8 mx-auto text-indigo-600 mb-2" />
-                <h3 className="font-medium">Relatórios</h3>
-                <p className="text-sm text-muted-foreground">Analytics e insights</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Frameworks Disponíveis
+                </CardTitle>
+                <CardDescription>
+                  Biblioteca de controles e padrões
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {frameworks.map(framework => (
+                    <div key={framework.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <div>
+                        <p className="font-medium">{framework.nome}</p>
+                        <p className="text-sm text-muted-foreground">{framework.tipo_framework}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  ))}
+                  {frameworks.length === 0 && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Nenhum framework cadastrado</p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="assessments" className="space-y-4">
-          {/* Ações em Lote - Simplificadas */}
+          {/* Ações em Lote */}
           {selectedAssessments.length > 0 && (
             <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-2">
@@ -609,16 +706,13 @@ export default function AssessmentsDashboard() {
                   <p className="text-muted-foreground">
                     {assessments.length === 0 ? 'Nenhum assessment encontrado' : 'Nenhum assessment corresponde à busca'}
                   </p>
-                  {searchTerm && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2"
-                      onClick={() => setSearchTerm('')}
-                    >
-                      Limpar busca
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={() => navigate('/assessments/execution')}
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeiro Assessment
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -658,7 +752,6 @@ export default function AssessmentsDashboard() {
                           </div>
                         </div>
                         
-                        {/* Ações Essenciais */}
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t">
                           <Button size="sm" variant="outline">
                             <Eye className="h-3 w-3 mr-1" />
@@ -683,7 +776,334 @@ export default function AssessmentsDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="frameworks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Frameworks Disponíveis</CardTitle>
+              <CardDescription>
+                {frameworks.length} frameworks cadastrados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {frameworks.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">Nenhum framework encontrado</p>
+                  <Button onClick={() => navigate('/assessments/frameworks')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Framework
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {frameworks.map((framework) => (
+                    <Card key={framework.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                      <CardContent className="p-4">
+                        <h3 className="font-medium">{framework.nome}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {framework.tipo_framework}
+                        </p>
+                        <div className="flex justify-between items-center mt-3">
+                          <Button size="sm" variant="outline">
+                            Ver Controles
+                          </Button>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="action-plans" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Planos de Ação</CardTitle>
+              <CardDescription>
+                Gerenciar melhorias e remediações
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">Funcionalidade em desenvolvimento</p>
+                <p className="text-sm text-muted-foreground">
+                  Planos de ação serão criados automaticamente após assessments concluídos
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Modal de Criação de Assessment */}
+      <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
+        setIsCreateModalOpen(open);
+        if (!open) {
+          resetForm();
+        }
+      }}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Criar Novo Assessment
+            </DialogTitle>
+            <DialogDescription>
+              Configure um novo assessment de maturidade para sua organização
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Tipo de Assessment */}
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Tipo de Assessment</Label>
+              <RadioGroup 
+                value={assessmentType} 
+                onValueChange={setAssessmentType}
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="framework" id="framework" />
+                  <Label htmlFor="framework" className="cursor-pointer">
+                    A partir de um Framework
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="custom" id="custom" />
+                  <Label htmlFor="custom" className="cursor-pointer">
+                    Assessment Customizado
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Seleção de Framework (se applicable) */}
+            {assessmentType === 'framework' && (
+              <div className="space-y-3">
+                <Label className="text-base font-medium">
+                  Framework <span className="text-red-500">*</span>
+                </Label>
+                <Select 
+                  value={selectedFramework?.id || ''} 
+                  onValueChange={(value) => {
+                    const framework = frameworks.find(f => f.id === value);
+                    setSelectedFramework(framework || null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um framework..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {frameworks.map((framework) => (
+                      <SelectItem key={framework.id} value={framework.id}>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {framework.tipo_framework}
+                          </Badge>
+                          {framework.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedFramework && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">{selectedFramework.nome}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {selectedFramework.descricao}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Informações Básicas */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="titulo">
+                  Título do Assessment <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="titulo"
+                  value={formData.titulo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+                  placeholder="Ex: Assessment ISO 27001 - Primeiro Trimestre 2024"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="descricao">Descrição</Label>
+                <Textarea
+                  id="descricao"
+                  value={formData.descricao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                  placeholder="Descreva o objetivo e escopo deste assessment..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Datas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Data de Início</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data_inicio ? format(formData.data_inicio, "dd/MM/yyyy") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data_inicio}
+                      onSelect={(date) => setFormData(prev => ({ ...prev, data_inicio: date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Prazo Final</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.data_fim_planejada ? format(formData.data_fim_planejada, "dd/MM/yyyy") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.data_fim_planejada}
+                      onSelect={(date) => setFormData(prev => ({ ...prev, data_fim_planejada: date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Responsáveis */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="responsavel">
+                  Responsável pelo Assessment <span className="text-red-500">*</span>
+                </Label>
+                <Select 
+                  value={formData.responsavel_assessment}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_assessment: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex flex-col">
+                          <span>{user.nome}</span>
+                          <span className="text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Avaliadores/Respondentes</Label>
+                <div className="space-y-2">
+                  {availableUsers.map((user) => (
+                    <div key={user.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`user-${user.id}`}
+                        checked={formData.avaliadores.includes(user.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              avaliadores: [...prev.avaliadores, user.id]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              avaliadores: prev.avaliadores.filter(id => id !== user.id)
+                            }));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`user-${user.id}`} className="cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="text-sm">{user.nome}</span>
+                          <span className="text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Prioridade */}
+            <div className="space-y-2">
+              <Label>Prioridade</Label>
+              <Select
+                value={formData.prioridade}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, prioridade: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baixa">Baixa</SelectItem>
+                  <SelectItem value="media">Média</SelectItem>
+                  <SelectItem value="alta">Alta</SelectItem>
+                  <SelectItem value="critica">Crítica</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateModalOpen(false)}
+              disabled={isCreating}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCreateAssessment}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Assessment
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

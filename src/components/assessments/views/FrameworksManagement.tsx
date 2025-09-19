@@ -1,1 +1,821 @@
-import React, { useState } from 'react';\nimport { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';\nimport { Badge } from '@/components/ui/badge';\nimport { Button } from '@/components/ui/button';\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';\nimport { Input } from '@/components/ui/input';\nimport { Label } from '@/components/ui/label';\nimport { Textarea } from '@/components/ui/textarea';\nimport { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';\nimport { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';\nimport { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';\nimport { toast } from 'sonner';\nimport { \n  Plus, Settings, BookOpen, Download, Upload, Edit, Trash2, \n  Search, Filter, Eye, Copy, Shield, Award, Target,\n  FileText, CheckCircle, AlertCircle, Info, ExternalLink\n} from 'lucide-react';\nimport { useFrameworks, useFrameworkTemplates, useFrameworkImport } from '@/hooks/useFrameworks';\nimport type { AssessmentFramework, CreateAssessmentFrameworkData, FrameworkType } from '@/types/assessment';\n\ninterface FrameworksManagementProps {\n  className?: string;\n}\n\nexport default function FrameworksManagement({ className }: FrameworksManagementProps) {\n  // Estados para filtros e busca\n  const [searchTerm, setSearchTerm] = useState('');\n  const [typeFilter, setTypeFilter] = useState<FrameworkType | 'all'>('all');\n  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');\n  \n  // Estados para modais\n  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);\n  const [isImportModalOpen, setIsImportModalOpen] = useState(false);\n  const [editingFramework, setEditingFramework] = useState<AssessmentFramework | null>(null);\n  const [selectedFramework, setSelectedFramework] = useState<AssessmentFramework | null>(null);\n  \n  // Estados para formulários\n  const [formData, setFormData] = useState<CreateAssessmentFrameworkData>({\n    nome: '',\n    tipo_framework: 'CUSTOM',\n    versao: '1.0',\n    descricao: ''\n  });\n\n  // Hooks para dados\n  const { \n    frameworks, \n    isLoading: frameworksLoading,\n    createFramework,\n    updateFramework,\n    deleteFramework,\n    isCreating,\n    isUpdating,\n    isDeleting\n  } = useFrameworks({\n    filters: {\n      search: searchTerm || undefined,\n      tipo_framework: typeFilter !== 'all' ? [typeFilter] : undefined,\n      is_active: statusFilter === 'all' ? undefined : statusFilter === 'active'\n    },\n    include_domains: true\n  });\n\n  const { templates, isLoading: templatesLoading } = useFrameworkTemplates();\n  const { importFramework, isImporting } = useFrameworkImport();\n\n  // Filtros aplicados\n  const filteredFrameworks = frameworks.filter(framework => {\n    const matchesSearch = !searchTerm || \n      framework.nome.toLowerCase().includes(searchTerm.toLowerCase());\n    \n    const matchesType = typeFilter === 'all' || \n      framework.tipo_framework === typeFilter;\n\n    const matchesStatus = statusFilter === 'all' || \n      (statusFilter === 'active' ? framework.is_active : !framework.is_active);\n\n    return matchesSearch && matchesType && matchesStatus;\n  });\n\n  // Funções auxiliares\n  const getFrameworkTypeIcon = (type: FrameworkType) => {\n    const icons = {\n      'ISO27001': Shield,\n      'SOX': Award,\n      'NIST': Target,\n      'COBIT': Settings,\n      'LGPD': Shield,\n      'GDPR': Shield,\n      'PCI_DSS': Shield,\n      'HIPAA': Shield,\n      'CUSTOM': FileText\n    };\n    return icons[type] || FileText;\n  };\n\n  const getFrameworkTypeColor = (type: FrameworkType) => {\n    const colors = {\n      'ISO27001': 'bg-blue-100 text-blue-800 border-blue-200',\n      'SOX': 'bg-green-100 text-green-800 border-green-200',\n      'NIST': 'bg-purple-100 text-purple-800 border-purple-200',\n      'COBIT': 'bg-orange-100 text-orange-800 border-orange-200',\n      'LGPD': 'bg-red-100 text-red-800 border-red-200',\n      'GDPR': 'bg-red-100 text-red-800 border-red-200',\n      'PCI_DSS': 'bg-yellow-100 text-yellow-800 border-yellow-200',\n      'HIPAA': 'bg-pink-100 text-pink-800 border-pink-200',\n      'CUSTOM': 'bg-gray-100 text-gray-800 border-gray-200'\n    };\n    return colors[type] || 'bg-gray-100 text-gray-800 border-gray-200';\n  };\n\n  // Handlers\n  const handleCreateFramework = async () => {\n    try {\n      await createFramework(formData);\n      setIsCreateModalOpen(false);\n      setFormData({\n        nome: '',\n        tipo_framework: 'CUSTOM',\n        versao: '1.0',\n        descricao: ''\n      });\n    } catch (error) {\n      console.error('Erro ao criar framework:', error);\n    }\n  };\n\n  const handleUpdateFramework = async () => {\n    if (!editingFramework) return;\n    \n    try {\n      await updateFramework({\n        id: editingFramework.id,\n        data: formData\n      });\n      setEditingFramework(null);\n      setFormData({\n        nome: '',\n        tipo_framework: 'CUSTOM',\n        versao: '1.0',\n        descricao: ''\n      });\n    } catch (error) {\n      console.error('Erro ao atualizar framework:', error);\n    }\n  };\n\n  const handleDeleteFramework = async (framework: AssessmentFramework) => {\n    try {\n      await deleteFramework(framework.id);\n    } catch (error) {\n      console.error('Erro ao deletar framework:', error);\n    }\n  };\n\n  const handleImportTemplate = async (templateId: string) => {\n    try {\n      await importFramework(templateId);\n      setIsImportModalOpen(false);\n    } catch (error) {\n      console.error('Erro ao importar template:', error);\n    }\n  };\n\n  const openEditModal = (framework: AssessmentFramework) => {\n    setEditingFramework(framework);\n    setFormData({\n      nome: framework.nome,\n      tipo_framework: framework.tipo_framework,\n      versao: framework.versao,\n      descricao: framework.descricao || ''\n    });\n  };\n\n  const clearFilters = () => {\n    setSearchTerm('');\n    setTypeFilter('all');\n    setStatusFilter('all');\n  };\n\n  if (frameworksLoading) {\n    return (\n      <div className=\"flex items-center justify-center min-h-[400px]\">\n        <div className=\"animate-spin rounded-full h-12 w-12 border-b-2 border-primary\"></div>\n        <p className=\"ml-4\">Carregando frameworks...</p>\n      </div>\n    );\n  }\n\n  return (\n    <div className={`space-y-6 ${className}`}>\n      {/* Header */}\n      <div className=\"relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700 p-8 text-white\">\n        <div className=\"absolute inset-0 bg-black/10\"></div>\n        <div className=\"absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-white/10\"></div>\n        \n        <div className=\"relative\">\n          <div className=\"flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6\">\n            <div className=\"flex-1\">\n              <div className=\"flex items-center gap-3 mb-3\">\n                <div className=\"p-2 bg-white/20 rounded-lg\">\n                  <BookOpen className=\"h-6 w-6\" />\n                </div>\n                <h1 className=\"text-4xl font-bold\">Frameworks de Assessment</h1>\n              </div>\n              <p className=\"text-blue-100 text-lg mb-4\">\n                Gerencie frameworks de compliance e crie estruturas customizadas\n              </p>\n              \n              <div className=\"grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm\">\n                <div className=\"flex items-center gap-2 bg-white/10 rounded-lg p-3\">\n                  <BookOpen className=\"h-4 w-4\" />\n                  <div>\n                    <p className=\"text-blue-100\">Total</p>\n                    <p className=\"font-semibold\">{frameworks.length}</p>\n                  </div>\n                </div>\n                <div className=\"flex items-center gap-2 bg-white/10 rounded-lg p-3\">\n                  <CheckCircle className=\"h-4 w-4\" />\n                  <div>\n                    <p className=\"text-blue-100\">Ativos</p>\n                    <p className=\"font-semibold\">{frameworks.filter(f => f.is_active).length}</p>\n                  </div>\n                </div>\n                <div className=\"flex items-center gap-2 bg-white/10 rounded-lg p-3\">\n                  <Award className=\"h-4 w-4\" />\n                  <div>\n                    <p className=\"text-blue-100\">Templates</p>\n                    <p className=\"font-semibold\">{templates.length}</p>\n                  </div>\n                </div>\n              </div>\n            </div>\n            \n            <div className=\"flex flex-col sm:flex-row gap-3\">\n              <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>\n                <DialogTrigger asChild>\n                  <Button \n                    variant=\"secondary\"\n                    className=\"bg-white/20 hover:bg-white/30 text-white border-white/30\"\n                  >\n                    <Download className=\"h-4 w-4 mr-2\" />\n                    Importar Template\n                  </Button>\n                </DialogTrigger>\n              </Dialog>\n              \n              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>\n                <DialogTrigger asChild>\n                  <Button className=\"bg-white text-blue-600 hover:bg-white/90 font-semibold\">\n                    <Plus className=\"h-4 w-4 mr-2\" />\n                    Novo Framework\n                  </Button>\n                </DialogTrigger>\n              </Dialog>\n            </div>\n          </div>\n        </div>\n      </div>\n\n      {/* Filtros */}\n      <Card>\n        <CardContent className=\"p-6\">\n          <div className=\"flex flex-col lg:flex-row gap-4\">\n            <div className=\"flex-1\">\n              <div className=\"relative\">\n                <Search className=\"absolute left-3 top-3 h-4 w-4 text-muted-foreground\" />\n                <Input\n                  placeholder=\"Buscar frameworks pelo nome...\"\n                  value={searchTerm}\n                  onChange={(e) => setSearchTerm(e.target.value)}\n                  className=\"pl-10\"\n                />\n              </div>\n            </div>\n            \n            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as FrameworkType | 'all')}>\n              <SelectTrigger className=\"w-[180px]\">\n                <SelectValue placeholder=\"Tipo\" />\n              </SelectTrigger>\n              <SelectContent>\n                <SelectItem value=\"all\">Todos os Tipos</SelectItem>\n                <SelectItem value=\"ISO27001\">ISO 27001</SelectItem>\n                <SelectItem value=\"SOX\">SOX</SelectItem>\n                <SelectItem value=\"NIST\">NIST</SelectItem>\n                <SelectItem value=\"COBIT\">COBIT</SelectItem>\n                <SelectItem value=\"LGPD\">LGPD</SelectItem>\n                <SelectItem value=\"GDPR\">GDPR</SelectItem>\n                <SelectItem value=\"PCI_DSS\">PCI DSS</SelectItem>\n                <SelectItem value=\"HIPAA\">HIPAA</SelectItem>\n                <SelectItem value=\"CUSTOM\">Customizado</SelectItem>\n              </SelectContent>\n            </Select>\n            \n            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'active' | 'inactive')}>\n              <SelectTrigger className=\"w-[150px]\">\n                <SelectValue placeholder=\"Status\" />\n              </SelectTrigger>\n              <SelectContent>\n                <SelectItem value=\"all\">Todos</SelectItem>\n                <SelectItem value=\"active\">Ativos</SelectItem>\n                <SelectItem value=\"inactive\">Inativos</SelectItem>\n              </SelectContent>\n            </Select>\n            \n            {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all') && (\n              <Button variant=\"outline\" onClick={clearFilters}>\n                <Filter className=\"h-4 w-4 mr-2\" />\n                Limpar\n              </Button>\n            )}\n          </div>\n          \n          {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all') && (\n            <div className=\"mt-4 flex items-center gap-2 text-sm text-muted-foreground\">\n              <Filter className=\"h-4 w-4\" />\n              <span>\n                Mostrando {filteredFrameworks.length} de {frameworks.length} frameworks\n                {searchTerm && ` | Busca: \"${searchTerm}\"`}\n                {typeFilter !== 'all' && ` | Tipo: ${typeFilter}`}\n                {statusFilter !== 'all' && ` | Status: ${statusFilter}`}\n              </span>\n            </div>\n          )}\n        </CardContent>\n      </Card>\n\n      <Tabs defaultValue=\"frameworks\" className=\"w-full\">\n        <TabsList className=\"grid w-full grid-cols-2\">\n          <TabsTrigger value=\"frameworks\">Meus Frameworks</TabsTrigger>\n          <TabsTrigger value=\"templates\">Templates Disponíveis</TabsTrigger>\n        </TabsList>\n\n        <TabsContent value=\"frameworks\" className=\"space-y-4\">\n          {filteredFrameworks.length === 0 ? (\n            <Card>\n              <CardContent className=\"p-12\">\n                <div className=\"text-center\">\n                  <BookOpen className=\"h-12 w-12 text-muted-foreground mx-auto mb-4\" />\n                  <h3 className=\"text-lg font-medium mb-2\">Nenhum framework encontrado</h3>\n                  <p className=\"text-muted-foreground mb-4\">\n                    {frameworks.length === 0 \n                      ? 'Comece criando seu primeiro framework ou importando um template' \n                      : 'Nenhum framework corresponde aos filtros aplicados'\n                    }\n                  </p>\n                  <div className=\"flex justify-center gap-2\">\n                    {frameworks.length === 0 ? (\n                      <>\n                        <Button onClick={() => setIsCreateModalOpen(true)}>\n                          <Plus className=\"h-4 w-4 mr-2\" />\n                          Criar Framework\n                        </Button>\n                        <Button variant=\"outline\" onClick={() => setIsImportModalOpen(true)}>\n                          <Download className=\"h-4 w-4 mr-2\" />\n                          Importar Template\n                        </Button>\n                      </>\n                    ) : (\n                      <Button variant=\"outline\" onClick={clearFilters}>\n                        Limpar filtros\n                      </Button>\n                    )}\n                  </div>\n                </div>\n              </CardContent>\n            </Card>\n          ) : (\n            <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\">\n              {filteredFrameworks.map((framework) => {\n                const IconComponent = getFrameworkTypeIcon(framework.tipo_framework);\n                \n                return (\n                  <Card key={framework.id} className=\"hover:shadow-lg transition-all duration-200 group\">\n                    <CardContent className=\"p-6\">\n                      <div className=\"flex items-start justify-between mb-4\">\n                        <div className=\"flex items-center gap-3\">\n                          <div className={`p-2 rounded-lg ${getFrameworkTypeColor(framework.tipo_framework).replace('text-', 'text-').replace('border-', '').replace('bg-', 'bg-')}`}>\n                            <IconComponent className=\"h-5 w-5\" />\n                          </div>\n                          <div>\n                            <h3 className=\"font-semibold text-lg\">{framework.nome}</h3>\n                            <p className=\"text-sm text-muted-foreground\">v{framework.versao}</p>\n                          </div>\n                        </div>\n                        \n                        <div className=\"flex items-center gap-1\">\n                          {framework.is_standard && (\n                            <Badge variant=\"secondary\" className=\"text-xs\">\n                              Padrão\n                            </Badge>\n                          )}\n                          <Badge \n                            variant={framework.is_active ? \"default\" : \"secondary\"}\n                            className={framework.is_active ? \"bg-green-100 text-green-800\" : \"\"}\n                          >\n                            {framework.is_active ? 'Ativo' : 'Inativo'}\n                          </Badge>\n                        </div>\n                      </div>\n                      \n                      <Badge className={getFrameworkTypeColor(framework.tipo_framework)}>\n                        {framework.tipo_framework}\n                      </Badge>\n                      \n                      {framework.descricao && (\n                        <p className=\"text-sm text-muted-foreground mt-3 line-clamp-2\">\n                          {framework.descricao}\n                        </p>\n                      )}\n                      \n                      {/* Estatísticas */}\n                      <div className=\"mt-4 pt-4 border-t\">\n                        <div className=\"grid grid-cols-2 gap-4 text-sm\">\n                          <div>\n                            <p className=\"text-muted-foreground\">Domínios</p>\n                            <p className=\"font-semibold\">{framework.domains?.length || 0}</p>\n                          </div>\n                          <div>\n                            <p className=\"text-muted-foreground\">Assessments</p>\n                            <p className=\"font-semibold\">{framework.assessments?.length || 0}</p>\n                          </div>\n                        </div>\n                      </div>\n                      \n                      {/* Ações */}\n                      <div className=\"mt-4 flex items-center gap-2\">\n                        <Button \n                          variant=\"outline\" \n                          size=\"sm\" \n                          className=\"flex-1\"\n                          onClick={() => setSelectedFramework(framework)}\n                        >\n                          <Eye className=\"h-4 w-4 mr-2\" />\n                          Visualizar\n                        </Button>\n                        \n                        <Button \n                          variant=\"outline\" \n                          size=\"sm\"\n                          onClick={() => openEditModal(framework)}\n                        >\n                          <Edit className=\"h-4 w-4\" />\n                        </Button>\n                        \n                        <AlertDialog>\n                          <AlertDialogTrigger asChild>\n                            <Button \n                              variant=\"outline\" \n                              size=\"sm\"\n                              className=\"text-red-600 hover:text-red-700\"\n                            >\n                              <Trash2 className=\"h-4 w-4\" />\n                            </Button>\n                          </AlertDialogTrigger>\n                          <AlertDialogContent>\n                            <AlertDialogHeader>\n                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>\n                              <AlertDialogDescription>\n                                Tem certeza que deseja excluir o framework \"{framework.nome}\"? \n                                Esta ação não pode ser desfeita e todos os assessments relacionados serão afetados.\n                              </AlertDialogDescription>\n                            </AlertDialogHeader>\n                            <AlertDialogFooter>\n                              <AlertDialogCancel>Cancelar</AlertDialogCancel>\n                              <AlertDialogAction \n                                onClick={() => handleDeleteFramework(framework)}\n                                className=\"bg-red-600 hover:bg-red-700\"\n                              >\n                                Excluir\n                              </AlertDialogAction>\n                            </AlertDialogFooter>\n                          </AlertDialogContent>\n                        </AlertDialog>\n                      </div>\n                    </CardContent>\n                  </Card>\n                );\n              })}\n            </div>\n          )}\n        </TabsContent>\n\n        <TabsContent value=\"templates\" className=\"space-y-4\">\n          {templatesLoading ? (\n            <Card>\n              <CardContent className=\"p-12\">\n                <div className=\"text-center\">\n                  <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4\"></div>\n                  <p className=\"text-muted-foreground\">Carregando templates...</p>\n                </div>\n              </CardContent>\n            </Card>\n          ) : templates.length === 0 ? (\n            <Card>\n              <CardContent className=\"p-12\">\n                <div className=\"text-center\">\n                  <Download className=\"h-12 w-12 text-muted-foreground mx-auto mb-4\" />\n                  <h3 className=\"text-lg font-medium mb-2\">Nenhum template disponível</h3>\n                  <p className=\"text-muted-foreground\">\n                    Templates de frameworks serão disponibilizados em breve.\n                  </p>\n                </div>\n              </CardContent>\n            </Card>\n          ) : (\n            <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\">\n              {templates.map((template) => {\n                const IconComponent = getFrameworkTypeIcon(template.tipo_framework);\n                \n                return (\n                  <Card key={template.id} className=\"hover:shadow-lg transition-all duration-200\">\n                    <CardContent className=\"p-6\">\n                      <div className=\"flex items-start gap-3 mb-4\">\n                        <div className={`p-2 rounded-lg ${getFrameworkTypeColor(template.tipo_framework).replace('text-', 'text-').replace('border-', '').replace('bg-', 'bg-')}`}>\n                          <IconComponent className=\"h-5 w-5\" />\n                        </div>\n                        <div className=\"flex-1\">\n                          <h3 className=\"font-semibold text-lg\">{template.nome}</h3>\n                          <p className=\"text-sm text-muted-foreground\">v{template.versao}</p>\n                        </div>\n                        <Badge className={getFrameworkTypeColor(template.tipo_framework)}>\n                          {template.tipo_framework}\n                        </Badge>\n                      </div>\n                      \n                      {template.descricao && (\n                        <p className=\"text-sm text-muted-foreground mb-4\">\n                          {template.descricao}\n                        </p>\n                      )}\n                      \n                      <Button \n                        className=\"w-full\"\n                        onClick={() => handleImportTemplate(template.id)}\n                        disabled={isImporting}\n                      >\n                        <Download className=\"h-4 w-4 mr-2\" />\n                        {isImporting ? 'Importando...' : 'Importar Template'}\n                      </Button>\n                    </CardContent>\n                  </Card>\n                );\n              })}\n            </div>\n          )}\n        </TabsContent>\n      </Tabs>\n\n      {/* Modal de Criar/Editar Framework */}\n      <Dialog \n        open={isCreateModalOpen || !!editingFramework} \n        onOpenChange={(open) => {\n          if (!open) {\n            setIsCreateModalOpen(false);\n            setEditingFramework(null);\n            setFormData({\n              nome: '',\n              tipo_framework: 'CUSTOM',\n              versao: '1.0',\n              descricao: ''\n            });\n          }\n        }}\n      >\n        <DialogContent className=\"sm:max-w-[500px]\">\n          <DialogHeader>\n            <DialogTitle>\n              {editingFramework ? 'Editar Framework' : 'Novo Framework'}\n            </DialogTitle>\n            <DialogDescription>\n              {editingFramework \n                ? 'Atualize as informações do framework.' \n                : 'Crie um novo framework de assessment customizado.'\n              }\n            </DialogDescription>\n          </DialogHeader>\n          \n          <div className=\"space-y-4\">\n            <div>\n              <Label htmlFor=\"nome\">Nome do Framework</Label>\n              <Input\n                id=\"nome\"\n                value={formData.nome}\n                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}\n                placeholder=\"Ex: Framework de Segurança Customizado\"\n              />\n            </div>\n            \n            <div>\n              <Label htmlFor=\"tipo\">Tipo de Framework</Label>\n              <Select \n                value={formData.tipo_framework} \n                onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_framework: value as FrameworkType }))}\n              >\n                <SelectTrigger>\n                  <SelectValue />\n                </SelectTrigger>\n                <SelectContent>\n                  <SelectItem value=\"ISO27001\">ISO 27001</SelectItem>\n                  <SelectItem value=\"SOX\">SOX</SelectItem>\n                  <SelectItem value=\"NIST\">NIST</SelectItem>\n                  <SelectItem value=\"COBIT\">COBIT</SelectItem>\n                  <SelectItem value=\"LGPD\">LGPD</SelectItem>\n                  <SelectItem value=\"GDPR\">GDPR</SelectItem>\n                  <SelectItem value=\"PCI_DSS\">PCI DSS</SelectItem>\n                  <SelectItem value=\"HIPAA\">HIPAA</SelectItem>\n                  <SelectItem value=\"CUSTOM\">Customizado</SelectItem>\n                </SelectContent>\n              </Select>\n            </div>\n            \n            <div>\n              <Label htmlFor=\"versao\">Versão</Label>\n              <Input\n                id=\"versao\"\n                value={formData.versao}\n                onChange={(e) => setFormData(prev => ({ ...prev, versao: e.target.value }))}\n                placeholder=\"1.0\"\n              />\n            </div>\n            \n            <div>\n              <Label htmlFor=\"descricao\">Descrição</Label>\n              <Textarea\n                id=\"descricao\"\n                value={formData.descricao}\n                onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}\n                placeholder=\"Descreva o propósito e escopo deste framework...\"\n                rows={3}\n              />\n            </div>\n          </div>\n          \n          <DialogFooter>\n            <Button \n              variant=\"outline\" \n              onClick={() => {\n                setIsCreateModalOpen(false);\n                setEditingFramework(null);\n              }}\n            >\n              Cancelar\n            </Button>\n            <Button \n              onClick={editingFramework ? handleUpdateFramework : handleCreateFramework}\n              disabled={isCreating || isUpdating || !formData.nome.trim()}\n            >\n              {(isCreating || isUpdating) && <div className=\"animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2\"></div>}\n              {editingFramework ? 'Atualizar' : 'Criar'}\n            </Button>\n          </DialogFooter>\n        </DialogContent>\n      </Dialog>\n\n      {/* Modal de Importar Template */}\n      <DialogContent className=\"sm:max-w-[600px]\">\n        <DialogHeader>\n          <DialogTitle>Importar Template de Framework</DialogTitle>\n          <DialogDescription>\n            Selecione um template para importar como novo framework.\n          </DialogDescription>\n        </DialogHeader>\n        \n        <div className=\"space-y-4 max-h-[400px] overflow-y-auto\">\n          {templates.map((template) => {\n            const IconComponent = getFrameworkTypeIcon(template.tipo_framework);\n            \n            return (\n              <Card key={template.id} className=\"cursor-pointer hover:shadow-md transition-shadow\">\n                <CardContent className=\"p-4\">\n                  <div className=\"flex items-center gap-3\">\n                    <div className={`p-2 rounded-lg ${getFrameworkTypeColor(template.tipo_framework).replace('text-', 'text-').replace('border-', '').replace('bg-', 'bg-')}`}>\n                      <IconComponent className=\"h-5 w-5\" />\n                    </div>\n                    <div className=\"flex-1\">\n                      <h4 className=\"font-semibold\">{template.nome}</h4>\n                      <p className=\"text-sm text-muted-foreground\">{template.descricao}</p>\n                    </div>\n                    <Badge className={getFrameworkTypeColor(template.tipo_framework)}>\n                      {template.tipo_framework}\n                    </Badge>\n                    <Button \n                      size=\"sm\"\n                      onClick={() => handleImportTemplate(template.id)}\n                      disabled={isImporting}\n                    >\n                      <Download className=\"h-4 w-4 mr-2\" />\n                      Importar\n                    </Button>\n                  </div>\n                </CardContent>\n              </Card>\n            );\n          })}\n        </div>\n        \n        <DialogFooter>\n          <Button variant=\"outline\" onClick={() => setIsImportModalOpen(false)}>\n            Fechar\n          </Button>\n        </DialogFooter>\n      </DialogContent>\n    </div>\n  );\n}"
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { toast } from 'sonner';
+import { 
+  Plus, Download, Upload, Search, Filter, Edit, Trash2, BookOpen,
+  FileDown, FileUp, Settings, Shield, Award, Target, MoreHorizontal,
+  CheckCircle, XCircle, AlertCircle
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { supabase } from '@/integrations/supabase/client';
+
+interface FrameworksManagementProps {
+  className?: string;
+}
+
+export default function FrameworksManagement({ className }: FrameworksManagementProps) {
+  const { user, effectiveTenantId } = useAuth();
+  
+  // Estados básicos
+  const [frameworks, setFrameworks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFrameworks, setSelectedFrameworks] = useState([]);
+  
+  // Estados para modais
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [editingFramework, setEditingFramework] = useState(null);
+  
+  // Estados para formulário
+  const [formData, setFormData] = useState({
+    nome: '',
+    tipo_framework: 'CUSTOM',
+    versao: '1.0',
+    descricao: '',
+    is_active: true
+  });
+  
+  // Estados para operações
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  
+  // Estados para importação
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportPreview, setShowImportPreview] = useState(false);
+  
+  // Carregar frameworks
+  const loadFrameworks = async () => {
+    if (!effectiveTenantId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('assessment_frameworks')
+        .select(`
+          id, nome, tipo_framework, versao, descricao, 
+          is_active, is_standard, created_at,
+          domains:assessment_domains(count)
+        `)
+        .eq('tenant_id', effectiveTenantId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setFrameworks(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar frameworks:', error);
+      toast.error('Erro ao carregar frameworks');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Criar framework
+  const handleCreateFramework = async () => {
+    if (!effectiveTenantId || !user) {
+      toast.error('Dados de autenticação não disponíveis');
+      return;
+    }
+    
+    if (!formData.nome.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+    
+    setIsCreating(true);
+    try {
+      const frameworkData = {
+        tenant_id: effectiveTenantId,
+        nome: formData.nome,
+        tipo_framework: formData.tipo_framework,
+        versao: formData.versao,
+        descricao: formData.descricao,
+        is_active: formData.is_active,
+        is_standard: false,
+        created_by: user.id,
+        updated_by: user.id
+      };
+      
+      const { error } = await supabase
+        .from('assessment_frameworks')
+        .insert([frameworkData]);
+      
+      if (error) throw error;
+      
+      toast.success('Framework criado com sucesso!');
+      setIsCreateModalOpen(false);
+      resetForm();
+      await loadFrameworks();
+      
+    } catch (error) {
+      console.error('Erro ao criar framework:', error);
+      toast.error('Erro ao criar framework: ' + error.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+  
+  // Atualizar framework
+  const handleUpdateFramework = async () => {
+    if (!editingFramework || !effectiveTenantId || !user) return;
+    
+    setIsCreating(true);
+    try {
+      const { error } = await supabase
+        .from('assessment_frameworks')
+        .update({
+          nome: formData.nome,
+          tipo_framework: formData.tipo_framework,
+          versao: formData.versao,
+          descricao: formData.descricao,
+          is_active: formData.is_active,
+          updated_by: user.id
+        })
+        .eq('id', editingFramework.id)
+        .eq('tenant_id', effectiveTenantId);
+      
+      if (error) throw error;
+      
+      toast.success('Framework atualizado com sucesso!');
+      setEditingFramework(null);
+      resetForm();
+      await loadFrameworks();
+      
+    } catch (error) {
+      console.error('Erro ao atualizar framework:', error);
+      toast.error('Erro ao atualizar framework: ' + error.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+  
+  // Excluir framework
+  const handleDeleteFramework = async (frameworkId) => {
+    if (!effectiveTenantId) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('assessment_frameworks')
+        .delete()
+        .eq('id', frameworkId)
+        .eq('tenant_id', effectiveTenantId);
+      
+      if (error) throw error;
+      
+      toast.success('Framework excluído com sucesso!');
+      await loadFrameworks();
+      
+    } catch (error) {
+      console.error('Erro ao excluir framework:', error);
+      toast.error('Erro ao excluir framework: ' + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  // Exportar frameworks selecionados
+  const handleExport = () => {
+    const selectedData = frameworks.filter(f => selectedFrameworks.includes(f.id));
+    const exportData = {
+      frameworks: selectedData,
+      exported_at: new Date().toISOString(),
+      exported_by: user?.email
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
+      type: 'application/json' 
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `frameworks_export_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast.success(`${selectedData.length} frameworks exportados!`);
+  };
+
+  // Processar arquivo de importação
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      toast.error('Por favor, selecione um arquivo JSON válido');
+      return;
+    }
+
+    setImportFile(file);
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        
+        // Validar estrutura do arquivo
+        if (!data.frameworks || !Array.isArray(data.frameworks)) {
+          toast.error('Formato de arquivo inválido. Esperado: { frameworks: [...] }');
+          return;
+        }
+
+        // Validar cada framework
+        const validFrameworks = data.frameworks.filter((fw: any) => {
+          return fw.nome && fw.tipo_framework;
+        });
+
+        if (validFrameworks.length === 0) {
+          toast.error('Nenhum framework válido encontrado no arquivo');
+          return;
+        }
+
+        setImportPreview(validFrameworks);
+        setShowImportPreview(true);
+        toast.success(`${validFrameworks.length} frameworks prontos para importação`);
+        
+      } catch (error) {
+        toast.error('Erro ao ler arquivo JSON: ' + error.message);
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+
+  // Importar frameworks
+  const handleImportFrameworks = async () => {
+    if (!effectiveTenantId || !user || importPreview.length === 0) {
+      toast.error('Dados necessários não disponíveis');
+      return;
+    }
+
+    setIsImporting(true);
+    let importedCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const framework of importPreview) {
+        try {
+          const frameworkData = {
+            tenant_id: effectiveTenantId,
+            nome: framework.nome,
+            tipo_framework: framework.tipo_framework || 'CUSTOM',
+            versao: framework.versao || '1.0',
+            descricao: framework.descricao || '',
+            is_active: framework.is_active !== undefined ? framework.is_active : true,
+            is_standard: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          const { error } = await supabase
+            .from('assessment_frameworks')
+            .insert([frameworkData]);
+
+          if (error) {
+            console.error(`Erro ao importar framework ${framework.nome}:`, error);
+            errorCount++;
+          } else {
+            importedCount++;
+          }
+        } catch (error) {
+          console.error(`Erro ao processar framework ${framework.nome}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (importedCount > 0) {
+        toast.success(`${importedCount} frameworks importados com sucesso!`);
+        await loadFrameworks(); // Recarregar lista
+      }
+      
+      if (errorCount > 0) {
+        toast.warning(`${errorCount} frameworks não puderam ser importados`);
+      }
+
+      // Limpar estados de importação
+      setImportFile(null);
+      setImportPreview([]);
+      setShowImportPreview(false);
+      setIsImportModalOpen(false);
+      
+    } catch (error) {
+      console.error('Erro geral na importação:', error);
+      toast.error('Erro durante a importação de frameworks');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // Resetar importação
+  const resetImport = () => {
+    setImportFile(null);
+    setImportPreview([]);
+    setShowImportPreview(false);
+  };
+  
+  // Resetar formulário
+  const resetForm = () => {
+    setFormData({
+      nome: '',
+      tipo_framework: 'CUSTOM',
+      versao: '1.0',
+      descricao: '',
+      is_active: true
+    });
+  };
+  
+  // Abrir modal de edição
+  const openEditModal = (framework) => {
+    setEditingFramework(framework);
+    setFormData({
+      nome: framework.nome,
+      tipo_framework: framework.tipo_framework,
+      versao: framework.versao,
+      descricao: framework.descricao || '',
+      is_active: framework.is_active
+    });
+  };
+  
+  // Filtrar frameworks
+  const filteredFrameworks = frameworks.filter(framework =>
+    searchTerm === '' || 
+    framework.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    framework.tipo_framework.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  // Seleção múltipla
+  const toggleFrameworkSelection = (frameworkId) => {
+    setSelectedFrameworks(prev =>
+      prev.includes(frameworkId)
+        ? prev.filter(id => id !== frameworkId)
+        : [...prev, frameworkId]
+    );
+  };
+  
+  const toggleSelectAll = () => {
+    setSelectedFrameworks(
+      selectedFrameworks.length === filteredFrameworks.length 
+        ? [] 
+        : filteredFrameworks.map(f => f.id)
+    );
+  };
+  
+  // Ícone do tipo de framework
+  const getFrameworkIcon = (type) => {
+    const icons = {
+      'ISO27001': Shield,
+      'SOX': Award, 
+      'NIST': Target,
+      'COBIT': Settings,
+      'LGPD': Shield,
+      'GDPR': Shield,
+      'CUSTOM': BookOpen
+    };
+    return icons[type] || BookOpen;
+  };
+  
+  // UseEffect para carregar dados
+  useEffect(() => {
+    if (effectiveTenantId) {
+      loadFrameworks();
+    }
+  }, [effectiveTenantId]);
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className={`space-y-6 ${className}`}>
+      {/* Header simplificado */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Gestão de Frameworks</h1>
+          <p className="text-muted-foreground">
+            {frameworks.length} frameworks • {frameworks.filter(f => f.is_active).length} ativos
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleExport}
+            disabled={selectedFrameworks.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar ({selectedFrameworks.length})
+          </Button>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Framework
+          </Button>
+        </div>
+      </div>
+      
+      {/* Barra de busca */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar frameworks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {filteredFrameworks.length} de {frameworks.length} frameworks
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Tabela de frameworks */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Lista de Frameworks</CardTitle>
+            {selectedFrameworks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedFrameworks.length} selecionados
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (window.confirm(`Excluir ${selectedFrameworks.length} frameworks selecionados?`)) {
+                      selectedFrameworks.forEach(id => handleDeleteFramework(id));
+                      setSelectedFrameworks([]);
+                    }
+                  }}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Selecionados
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {filteredFrameworks.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                {frameworks.length === 0 ? 'Nenhum framework encontrado' : 'Nenhum resultado'}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                {frameworks.length === 0 
+                  ? 'Comece criando seu primeiro framework'
+                  : 'Tente ajustar os filtros de busca'
+                }
+              </p>
+              <Button onClick={() => setIsCreateModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Primeiro Framework
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedFrameworks.length === filteredFrameworks.length && filteredFrameworks.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Versão</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Domínios</TableHead>
+                  <TableHead className="w-24">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredFrameworks.map((framework) => {
+                  const IconComponent = getFrameworkIcon(framework.tipo_framework);
+                  
+                  return (
+                    <TableRow key={framework.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedFrameworks.includes(framework.id)}
+                          onCheckedChange={() => toggleFrameworkSelection(framework.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <IconComponent className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">{framework.nome}</div>
+                            {framework.descricao && (
+                              <div className="text-sm text-muted-foreground line-clamp-1">
+                                {framework.descricao}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {framework.tipo_framework}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{framework.versao}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {framework.is_active ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                          <span className={framework.is_active ? 'text-green-600' : 'text-red-600'}>
+                            {framework.is_active ? 'Ativo' : 'Inativo'}
+                          </span>
+                          {framework.is_standard && (
+                            <Badge variant="secondary" className="text-xs">Padrão</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {framework.domains?.[0]?.count || 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModal(framework)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o framework "{framework.nome}"?
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteFramework(framework.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Modal de Criar/Editar Framework */}
+      <Dialog 
+        open={isCreateModalOpen || !!editingFramework} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateModalOpen(false);
+            setEditingFramework(null);
+            resetForm();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingFramework ? 'Editar Framework' : 'Novo Framework'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingFramework 
+                ? 'Atualize as informações do framework' 
+                : 'Crie um novo framework de assessment'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome *</Label>
+              <Input
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                placeholder="Nome do framework"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tipo">Tipo</Label>
+                <Select 
+                  value={formData.tipo_framework}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_framework: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ISO27001">ISO 27001</SelectItem>
+                    <SelectItem value="SOX">SOX</SelectItem>
+                    <SelectItem value="NIST">NIST</SelectItem>
+                    <SelectItem value="COBIT">COBIT</SelectItem>
+                    <SelectItem value="LGPD">LGPD</SelectItem>
+                    <SelectItem value="GDPR">GDPR</SelectItem>
+                    <SelectItem value="CUSTOM">Customizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="versao">Versão</Label>
+                <Input
+                  id="versao"
+                  value={formData.versao}
+                  onChange={(e) => setFormData(prev => ({ ...prev, versao: e.target.value }))}
+                  placeholder="1.0"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={formData.descricao}
+                onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                placeholder="Descrição opcional do framework"
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+              />
+              <Label htmlFor="is_active">Framework ativo</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setEditingFramework(null);
+                resetForm();
+              }}
+              disabled={isCreating}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={editingFramework ? handleUpdateFramework : handleCreateFramework}
+              disabled={isCreating}
+            >
+              {isCreating ? 'Salvando...' : editingFramework ? 'Atualizar' : 'Criar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de Importar Frameworks */}
+      <Dialog open={isImportModalOpen} onOpenChange={(open) => {
+        setIsImportModalOpen(open);
+        if (!open) {
+          resetImport();
+        }
+      }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Importar Frameworks
+            </DialogTitle>
+            <DialogDescription>
+              Selecione um arquivo JSON para importar frameworks. O arquivo deve seguir o formato de exportação do sistema.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Seleção de arquivo */}
+            <div className="space-y-2">
+              <Label>Arquivo JSON</Label>
+              <Input
+                type="file"
+                accept=".json"
+                onChange={handleFileChange}
+                disabled={isImporting}
+                className="cursor-pointer"
+              />
+              <p className="text-sm text-muted-foreground">
+                Formato esperado: arquivo JSON com estrutura {`{ "frameworks": [...] }`}
+              </p>
+            </div>
+
+            {/* Preview dos frameworks */}
+            {showImportPreview && importPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>Preview - {importPreview.length} frameworks encontrados:</Label>
+                <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2 bg-muted/30">
+                  {importPreview.map((fw, index) => (
+                    <div key={index} className="flex justify-between items-center p-2 bg-background rounded border">
+                      <div className="flex-1">
+                        <p className="font-medium">{fw.nome}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {fw.tipo_framework} • v{fw.versao || '1.0'}
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fw.is_active !== false ? 'Ativo' : 'Inativo'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Informações do arquivo selecionado */}
+            {importFile && (
+              <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded">
+                <p><strong>Arquivo:</strong> {importFile.name}</p>
+                <p><strong>Tamanho:</strong> {(importFile.size / 1024).toFixed(2)} KB</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsImportModalOpen(false)}
+              disabled={isImporting}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleImportFrameworks}
+              disabled={!showImportPreview || importPreview.length === 0 || isImporting}
+              className="min-w-24"
+            >
+              {isImporting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar {importPreview.length > 0 ? `(${importPreview.length})` : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

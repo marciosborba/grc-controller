@@ -53,7 +53,6 @@ const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 // Módulo Assessment - Versão Profissional Atualizada
 const AssessmentsDashboard = lazy(() => import("@/components/assessments/AssessmentsDashboard"));
 const AssessmentCRUD = lazy(() => import("@/components/assessments/AssessmentCRUD"));
-const AssessmentsDashboardPro = lazy(() => import("@/components/assessments/views/AssessmentsDashboardPro"));
 const AssessmentsDashboardSimple = lazy(() => import("@/components/assessments/views/AssessmentsDashboardSimple"));
 const AssessmentsDashboardConsistent = lazy(() => import("@/components/assessments/views/AssessmentsDashboardConsistent"));
 const FrameworksAssessment = lazy(() => import("@/components/assessments/FrameworksAssessment"));
@@ -294,11 +293,6 @@ const App = () => (
                   <Route path="assessments/simple" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentsDashboardSimple />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/pro" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsDashboardPro />
                     </Suspense>
                   } />
                   <Route path="assessments/legacy" element={
