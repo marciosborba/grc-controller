@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, Target, Calendar, Users, DollarSign, CheckCircle, AlertTriangle, Clock, FileText, TrendingUp, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Assessment, AssessmentActionPlan, AssessmentActionItem, AssessmentResponse } from '@/types/assessment';
@@ -22,7 +23,12 @@ import { sanitizeInput, sanitizeObject, auditLog } from '@/utils/securityLogger'
 import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 export default function ActionPlansManagement() {
-  const { user, effectiveTenantId } = useAuth();
+  const { user } = useAuth();
+  const { selectedTenantId } = useTenantSelector();
+  
+  // Para super usuários, usar selectedTenantId do seletor
+  // Para usuários normais, usar tenantId do perfil
+  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
   const navigate = useNavigate();
   const rateLimitCRUD = useCRUDRateLimit(user?.id || 'anonymous');
 
@@ -108,7 +114,24 @@ export default function ActionPlansManagement() {
   ];
 
   useEffect(() => {
-    loadAssessments();
+    // Timeout para evitar carregamento infinito
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.log('Timeout: Parando carregamento após 5 segundos');
+        setLoading(false);
+      }
+    }, 5000);
+
+    if (effectiveTenantId) {
+      loadAssessments();
+    } else {
+      // Se não há tenant ID, para o loading após um tempo
+      setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+    }
+
+    return () => clearTimeout(timeout);
   }, [effectiveTenantId]);
 
   useEffect(() => {
@@ -126,6 +149,13 @@ export default function ActionPlansManagement() {
 
   const loadAssessments = async () => {
     try {
+      console.log('🔍 [ACTION PLANS] Carregando assessments para tenant:', effectiveTenantId);
+      console.log('👤 [ACTION PLANS] Usuário:', {
+        id: user?.id,
+        isPlatformAdmin: user?.isPlatformAdmin,
+        tenantId: user?.tenantId
+      });
+      
       if (!rateLimitCRUD.checkRateLimit('read')) {
         toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
         return;
@@ -142,7 +172,12 @@ export default function ActionPlansManagement() {
         .in('status', ['em_andamento', 'em_revisao', 'concluido'])
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 [ACTION PLANS] Resultado assessments:', { data, error });
+      
+      if (error) {
+        console.error('❌ [ACTION PLANS] Erro na query assessments:', error);
+        throw error;
+      }
 
       setAssessments(data || []);
     } catch (error) {
@@ -155,20 +190,22 @@ export default function ActionPlansManagement() {
 
   const loadActionPlans = async (assessmentId: string) => {
     try {
+      console.log('🔍 [ACTION PLANS] Carregando planos para assessment:', assessmentId, 'tenant:', effectiveTenantId);
+      
+      // Query simples primeiro
       const { data, error } = await supabase
         .from('assessment_action_plans')
-        .select(`
-          *,
-          assessment:assessments(titulo, codigo),
-          responsavel_profile:profiles!assessment_action_plans_responsavel_plano_fkey(full_name, email),
-          items_count:assessment_action_items(count),
-          items_completed:assessment_action_items(count)
-        `)
+        .select('*')
         .eq('assessment_id', assessmentId)
         .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 [ACTION PLANS] Resultado planos:', { data, error });
+      
+      if (error) {
+        console.error('❌ [ACTION PLANS] Erro na query planos:', error);
+        throw error;
+      }
 
       setActionPlans(data || []);
     } catch (error) {
@@ -443,6 +480,36 @@ export default function ActionPlansManagement() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
+  // Se não há tenant ID, mostra mensagem específica
+  if (!effectiveTenantId) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate('/assessments')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+          <div className="border-l border-muted-foreground/20 pl-4">
+            <h1 className="text-2xl font-bold">Planos de Ação</h1>
+          </div>
+        </div>
+        
+        <Card>
+          <CardContent className="text-center py-8">
+            <AlertTriangle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium">Tenant não identificado</h3>
+            <p className="text-muted-foreground mb-4">
+              Não foi possível identificar o tenant atual. Verifique se você está logado corretamente.
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Recarregar Página
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -649,6 +716,9 @@ export default function ActionPlansManagement() {
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                     <p className="text-sm text-muted-foreground mt-2">Carregando assessments...</p>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      {effectiveTenantId ? `Tenant: ${effectiveTenantId}` : 'Aguardando tenant...'}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

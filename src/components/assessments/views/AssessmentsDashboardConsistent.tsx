@@ -13,7 +13,6 @@ import {
   TrendingUp,
   Activity,
   FileText,
-  Settings,
   BarChart3,
   Users,
   Calendar,
@@ -120,14 +119,6 @@ export default function AssessmentsDashboardConsistent() {
       color: 'indigo',
       action: () => navigate('/assessments/reports'),
       count: metrics.completedAssessments
-    },
-    {
-      title: 'Configurações',
-      description: 'Configurar metodologias e pesos',
-      icon: Settings,
-      color: 'slate',
-      action: () => navigate('/assessments/settings'),
-      count: 0
     }
   ];
 
@@ -278,65 +269,6 @@ export default function AssessmentsDashboardConsistent() {
               <Calendar className="h-10 w-10 text-blue-600" />
             </div>
           </CardContent>
-        </Card>
-      </div>
-
-      {/* Módulos de Assessment - Seguindo padrão do Compliance */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/frameworks')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <BookOpen className="h-8 w-8 text-blue-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Frameworks</h3>
-            <p className="text-muted-foreground text-sm">Gestão de frameworks de compliance e maturidade</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/list')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Play className="h-8 w-8 text-green-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Execução</h3>
-            <p className="text-muted-foreground text-sm">Executar e acompanhar assessments</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/action-plans')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Target className="h-8 w-8 text-orange-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Planos de Ação</h3>
-            <p className="text-muted-foreground text-sm">Gestão de gaps e planos de melhoria</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/reports')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <BarChart3 className="h-8 w-8 text-purple-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Relatórios</h3>
-            <p className="text-muted-foreground text-sm">Dashboards e relatórios executivos</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
       </div>
 

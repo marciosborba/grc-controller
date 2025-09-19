@@ -52,6 +52,7 @@ const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
 // Módulo Assessment - Versão Profissional Atualizada
 const AssessmentsDashboard = lazy(() => import("@/components/assessments/AssessmentsDashboard"));
+const AssessmentCRUD = lazy(() => import("@/components/assessments/AssessmentCRUD"));
 const AssessmentsDashboardPro = lazy(() => import("@/components/assessments/views/AssessmentsDashboardPro"));
 const AssessmentsDashboardSimple = lazy(() => import("@/components/assessments/views/AssessmentsDashboardSimple"));
 const AssessmentsDashboardConsistent = lazy(() => import("@/components/assessments/views/AssessmentsDashboardConsistent"));
@@ -61,9 +62,16 @@ const FrameworksManagementSimple = lazy(() => import("@/components/assessments/v
 const FrameworksManagementFixed = lazy(() => import("@/components/assessments/views/FrameworksManagementFixed"));
 const AssessmentExecution = lazy(() => import("@/components/assessments/AssessmentExecution"));
 const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
-const AssessmentsList = lazy(() => import("@/components/assessments/AssessmentsList"));
+// Componente corrigido após fix do RLS
+import AssessmentsListWorking from "@/components/assessments/AssessmentsListWorking";
 const QuestionsManagement = lazy(() => import("@/components/assessments/QuestionsManagement"));
 const ActionPlansManagement = lazy(() => import("@/components/assessments/ActionPlansManagement"));
+const ActionPlansManagementProfessional = lazy(() => import("@/components/assessments/ActionPlansManagementProfessional"));
+const ActionPlansDashboard = lazy(() => import("@/components/action-plans/ActionPlansDashboard"));
+const ActionPlansDebug = lazy(() => import("@/components/action-plans/ActionPlansDebug"));
+const ActionPlansSimpleTest = lazy(() => import("@/components/action-plans/ActionPlansSimpleTest"));
+const ActionPlansMinimalTest = lazy(() => import("@/components/action-plans/ActionPlansMinimalTest"));
+const ActionPlansDebugSimple = lazy(() => import("@/components/assessments/ActionPlansDebugSimple"));
 const AssessmentReporting = lazy(() => import("@/components/assessments/AssessmentReporting"));
 
 // Privacy module
@@ -275,7 +283,12 @@ const App = () => (
                   <Route path="dashboard" element={<DashboardPage />} />
                   <Route path="assessments" element={
                     <Suspense fallback={<PageLoader />}>
-                      <AssessmentsDashboardConsistent />
+                      <AssessmentsDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/manage" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssessmentCRUD />
                     </Suspense>
                   } />
                   <Route path="assessments/simple" element={
@@ -328,24 +341,30 @@ const App = () => (
                       <AssessmentExecution />
                     </Suspense>
                   } />
-                  <Route path="assessments/list" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsList />
-                    </Suspense>
-                  } />
+                  <Route path="assessments/list" element={<AssessmentsListWorking />} />
                   <Route path="assessments/questions" element={
                     <Suspense fallback={<PageLoader />}>
                       <QuestionsManagement />
                     </Suspense>
                   } />
+                  <Route path="action-plans" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansDashboard />
+                    </Suspense>
+                  } />
                   <Route path="assessments/action-plans" element={
                     <Suspense fallback={<PageLoader />}>
-                      <ActionPlansManagement />
+                      <ActionPlansManagementProfessional />
                     </Suspense>
                   } />
                   <Route path="assessments/reports" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentReporting />
+                    </Suspense>
+                  } />
+                  <Route path="assessments/action-plans/debug" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansDebugSimple />
                     </Suspense>
                   } />
                   
