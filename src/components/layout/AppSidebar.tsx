@@ -168,6 +168,43 @@ const navigationItems = [{
       permissions: ['risk.read'],
       description: 'Gestão de Riscos'
     },
+    {
+      title: 'Planos de Ação',
+      url: '/action-plans',
+      icon: Target,
+      permissions: ['action_plans.read', 'all'],
+      description: 'Gestão centralizada de planos de ação',
+      submenu: [
+        {
+          title: 'Dashboard',
+          url: '/action-plans',
+          icon: LayoutDashboard,
+          permissions: ['action_plans.read', 'all'],
+          description: 'Visão geral dos planos de ação'
+        },
+        {
+          title: 'Gerenciar Planos',
+          url: '/action-plans/management',
+          icon: CheckSquare,
+          permissions: ['action_plans.read', 'all'],
+          description: 'Gestão de planos de ação'
+        },
+        {
+          title: 'Relatórios',
+          url: '/action-plans/reports',
+          icon: BarChart2,
+          permissions: ['action_plans.read', 'all'],
+          description: 'Relatórios e análises'
+        },
+        {
+          title: 'Configurações',
+          url: '/action-plans/settings',
+          icon: Settings,
+          permissions: ['action_plans.read', 'all'],
+          description: 'Configurações do módulo'
+        }
+      ]
+    },
 
     {
       title: 'Incidentes',
@@ -560,6 +597,7 @@ export function AppSidebar() {
                        permissions.includes('privacy.read') ? 'Privacidade' :
                        permissions.includes('vendor.read') ? 'Vendor Risk' :
                        permissions.includes('platform_admin') ? 'Platform Admin' :
+                       permissions.includes('action_plans.read') ? 'Planos de Ação' :
                        permissions.includes('all') ? 'Módulo Público' : 'Desconhecido';
     
     // MODO DE TESTE DE ROLE
@@ -739,6 +777,20 @@ export function AppSidebar() {
     // Debug específico para Assessments
     if (item.title === 'Assessments') {
       console.log('🎯 [ASSESSMENTS DEBUG] Verificando acesso ao módulo Assessments:', {
+        title: item.title,
+        requiredPermissions: item.permissions,
+        hasAccess,
+        userPermissions: user?.permissions,
+        userRoles: user?.roles,
+        isPlatformAdmin: user?.isPlatformAdmin,
+        isTestingRole,
+        currentTestRole: currentTestRole?.name
+      });
+    }
+    
+    // Debug específico para Planos de Ação
+    if (item.title === 'Planos de Ação') {
+      console.log('🎯 [ACTION PLANS DEBUG] Verificando acesso ao módulo Planos de Ação:', {
         title: item.title,
         requiredPermissions: item.permissions,
         hasAccess,

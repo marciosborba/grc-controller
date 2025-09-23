@@ -96,7 +96,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
   const getStatusDistribution = () => {
     return [
       { status: 'Publicadas', count: analytics.published, color: 'bg-green-500' },
-      { status: 'Rascunhos', count: analytics.draft, color: 'bg-yellow-500' },
+      { status: 'Novas', count: analytics.draft, color: 'bg-yellow-500' },
       { status: 'Em Revisão', count: analytics.inReview, color: 'bg-blue-500' },
       { status: 'Aprovadas', count: analytics.approved, color: 'bg-purple-500' }
     ];

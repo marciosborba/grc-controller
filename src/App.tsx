@@ -29,6 +29,19 @@ const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHu
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
 const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
+
+// Centralized Action Plans Module
+const ActionPlansSimple = lazy(() => import("@/components/action-plans/ActionPlansSimple").then(module => ({ default: module.ActionPlansSimple })));
+const ActionPlansDashboardNew = lazy(() => import("@/components/action-plans/ActionPlansDashboardNew").then(module => ({ default: module.ActionPlansDashboard })));
+const ActionPlansDashboardFixed = lazy(() => import("@/components/action-plans/ActionPlansDashboardFixed").then(module => ({ default: module.ActionPlansDashboard })));
+const ActionPlansDashboardSimpleTest = lazy(() => import("@/components/action-plans/ActionPlansDashboardSimple").then(module => ({ default: module.ActionPlansDashboard })));
+const ActionPlansBasic = lazy(() => import("@/components/action-plans/ActionPlansBasic").then(module => ({ default: module.ActionPlansBasic })));
+const ActionPlansDashboardStep1 = lazy(() => import("@/components/action-plans/ActionPlansDashboardStep1").then(module => ({ default: module.ActionPlansDashboard })));
+const ActionPlansManagementCentralized = lazy(() => import("@/components/action-plans/ActionPlansManagement").then(module => ({ default: module.ActionPlansManagement })));
+const ActionPlanDetails = lazy(() => import("@/components/action-plans/ActionPlanDetails").then(module => ({ default: module.ActionPlanDetails })));
+const ActionPlanForm = lazy(() => import("@/components/action-plans/ActionPlanForm").then(module => ({ default: module.ActionPlanForm })));
+const ActionPlansReports = lazy(() => import("@/components/action-plans/ActionPlansReports").then(module => ({ default: module.ActionPlansReports })));
+const ActionPlansSettings = lazy(() => import("@/components/action-plans/ActionPlansSettings").then(module => ({ default: module.ActionPlansSettings })));
 const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 // Módulo de Compliance
 const ComplianceDashboard = lazy(() => import("@/components/compliance/ComplianceDashboard"));
@@ -341,9 +354,40 @@ const App = () => (
                       <QuestionsManagement />
                     </Suspense>
                   } />
+                  {/* Centralized Action Plans Module */}
                   <Route path="action-plans" element={
                     <Suspense fallback={<PageLoader />}>
-                      <ActionPlansDashboard />
+                      <ActionPlansDashboardStep1 />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/management" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansManagementCentralized />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/details/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlanDetails />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/create" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlanForm />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/edit/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlanForm />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/reports" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansReports />
+                    </Suspense>
+                  } />
+                  <Route path="action-plans/settings" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ActionPlansSettings />
                     </Suspense>
                   } />
                   <Route path="assessments/action-plans" element={
@@ -389,11 +433,6 @@ const App = () => (
                   <Route path="risks/matrix" element={
                     <Suspense fallback={<PageLoader />}>
                       <RiskMatrixPage />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansManagementPage />
                     </Suspense>
                   } />
                   <Route path="risk-letters" element={

@@ -97,6 +97,13 @@ const navigationItems = [{
       description: 'Gestão de Riscos'
     },
     {
+      title: 'Planos de Ação',
+      url: '/action-plans',
+      icon: Target,
+      permissions: ['all'],
+      description: 'Gestão centralizada de planos de ação'
+    },
+    {
       title: 'Incidentes',
       url: '/incidents',
       icon: Zap,

@@ -175,7 +175,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
+            <CardTitle className="text-sm font-medium">Novas</CardTitle>
             <Edit className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -267,7 +267,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">Rascunhos</span>
+                  <span className="text-sm">Novas</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">{stats.draft}</span>

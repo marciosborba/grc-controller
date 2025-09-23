@@ -381,7 +381,7 @@ const IntegratedExecutiveDashboard = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="text-muted-foreground">Carregando dashboard integrado...</p>
+          <p className="text-muted-foreground">Carregando dashboard executivo...</p>
         </div>
       </div>
     );
@@ -393,7 +393,7 @@ const IntegratedExecutiveDashboard = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Dashboard Executivo Integrado
+            Dashboard Executivo
           </h1>
           <p className="text-muted-foreground text-lg">
             Visao unificada de GRC • Matriz {matrixConfig.type} • Atualizacao em tempo real
@@ -506,7 +506,7 @@ const IntegratedExecutiveDashboard = () => {
             <div className="flex items-center justify-between mb-2">
               <FileText className="h-8 w-8 text-orange-500" />
               <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                {metrics.draftPolicies} rascunhos
+                {metrics.draftPolicies} novas
               </Badge>
             </div>
             <div className="space-y-1">
@@ -898,7 +898,7 @@ const IntegratedExecutiveDashboard = () => {
                     <p className="text-2xl font-bold">{metrics.publishedPolicies}</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Rascunhos</p>
+                    <p className="text-muted-foreground">Novas</p>
                     <p className="text-2xl font-bold text-orange-600">{metrics.draftPolicies}</p>
                   </div>
                 </div>

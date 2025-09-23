@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 import { getTenantMatrixConfig } from '@/utils/risk-analysis';
 import { Loader2 } from 'lucide-react';
 
@@ -29,6 +30,7 @@ interface RiskMatrixConfig {
 
 const RiskMatrix = () => {
   const { user } = useAuth();
+  const { selectedTenantId } = useTenantSelector();
   const [risks, setRisks] = useState<Risk[]>([]);
   const [loading, setLoading] = useState(true);
   const [matrix, setMatrix] = useState<MatrixCell[][]>([]);
@@ -37,6 +39,9 @@ const RiskMatrix = () => {
     impact_labels: ['Baixo', 'Médio', 'Alto', 'Crítico'],
     likelihood_labels: ['Raro', 'Improvável', 'Possível', 'Provável']
   });
+  
+  // Usar o mesmo sistema de tenant_id do dashboard
+  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
 
 
   const getRiskColor = (impact: number, likelihood: number) => {
@@ -95,37 +100,63 @@ const RiskMatrix = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!effectiveTenantId) {
+        console.log('🔍 RiskMatrix: Aguardando tenant_id...');
+        setLoading(false);
+        return;
+      }
+      
       try {
+        console.log('🔍 RiskMatrix: Carregando dados para tenant:', effectiveTenantId);
+        
         // Buscar configurações da tenant usando a função centralizada
-        if (user?.tenant?.id) {
-          // Carregando configuração da matriz para tenant
-          const config = await getTenantMatrixConfig(user.tenant.id);
-          // Configuração carregada
-          setMatrixConfig(config);
+        if (effectiveTenantId) {
+          try {
+            const config = await getTenantMatrixConfig(effectiveTenantId);
+            setMatrixConfig(config);
+            console.log('✅ RiskMatrix: Configuração carregada:', config);
+          } catch (configError) {
+            console.warn('⚠️ RiskMatrix: Erro ao carregar configuração, usando padrão:', configError);
+          }
         }
 
-        // Buscar riscos - CORRIGIDO: usar tabela 'risk_assessments' com campos corretos
-        // Buscando riscos da tabela risk_assessments
+        // Buscar riscos com filtro de tenant_id
+        console.log('🔍 RiskMatrix: Buscando riscos para tenant_id:', effectiveTenantId);
         const { data, error } = await supabase
           .from('risk_assessments')
-          .select('*');
+          .select('*')
+          .eq('tenant_id', effectiveTenantId);
 
         if (error) {
-          console.error('❌ Erro ao buscar riscos:', error);
+          console.error('❌ RiskMatrix: Erro ao buscar riscos:', error);
           throw error;
         }
         
-        // Riscos carregados: data?.length || 0
+        console.log('✅ RiskMatrix: Riscos carregados:', data?.length || 0);
+        console.log('📊 RiskMatrix: Dados dos riscos:', data);
+        
+        // Verificar se os riscos têm os campos necessários
+        if (data && data.length > 0) {
+          const firstRisk = data[0];
+          console.log('🔍 RiskMatrix: Primeiro risco:', {
+            id: firstRisk.id,
+            title: firstRisk.title,
+            impact_score: firstRisk.impact_score,
+            likelihood_score: firstRisk.likelihood_score,
+            risk_level: firstRisk.risk_level
+          });
+        }
+        
         setRisks(data || []);
       } catch (error) {
-        console.error('Erro ao carregar dados:', error);
+        console.error('❌ RiskMatrix: Erro ao carregar dados:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user?.tenant?.id]);
+  }, [effectiveTenantId]);
 
   useEffect(() => {
     const matrixSize = matrixConfig.type === '4x4' ? 4 : 5;
