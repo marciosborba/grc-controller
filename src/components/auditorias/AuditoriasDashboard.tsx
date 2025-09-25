@@ -41,6 +41,10 @@ import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 import { UniversoAuditavel } from './UniversoAuditavel';
 import { ProjetosAuditoria } from './ProjetosAuditoria';
 import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
+import { AuditRiskMatrix } from './AuditRiskMatrix';
+import { StatisticalSampling } from './StatisticalSampling';
+import { RelatoriosAuditoriaSecure } from './RelatoriosAuditoriaSecure';
+import { PlanejamentoAuditoriaOptimized } from './PlanejamentoAuditoriaOptimized';
 
 interface AuditUniverse {
   id: string;
@@ -690,11 +694,15 @@ export function AuditoriasDashboard() {
 
       {/* Módulos Principais */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="universe">Universo Auditável</TabsTrigger>
           <TabsTrigger value="projects">Projetos</TabsTrigger>
           <TabsTrigger value="working-papers">Papéis de Trabalho</TabsTrigger>
+          <TabsTrigger value="risk-matrix">Matriz de Risco</TabsTrigger>
+          <TabsTrigger value="sampling">Amostragem</TabsTrigger>
+          <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
+          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 sm:space-y-6">
@@ -780,6 +788,22 @@ export function AuditoriasDashboard() {
 
         <TabsContent value="working-papers" className="space-y-4">
           <PapeisTrabalhoCompleto />
+        </TabsContent>
+
+        <TabsContent value="risk-matrix" className="space-y-4">
+          <AuditRiskMatrix />
+        </TabsContent>
+
+        <TabsContent value="sampling" className="space-y-4">
+          <StatisticalSampling />
+        </TabsContent>
+
+        <TabsContent value="planejamento" className="space-y-4">
+          <PlanejamentoAuditoriaOptimized />
+        </TabsContent>
+
+        <TabsContent value="relatorios" className="space-y-4">
+          <RelatoriosAuditoriaSecure />
         </TabsContent>
       </Tabs>
     </div>
