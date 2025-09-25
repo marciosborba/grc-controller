@@ -414,7 +414,7 @@ export const AIWorkflowsSection: React.FC = () => {
                         <SelectValue placeholder="Selecione uma frequência" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Manual</SelectItem>
+                        <SelectItem value="all">Manual</SelectItem>
                         {cronPresets.map(preset => (
                           <SelectItem key={preset.value} value={preset.value}>
                             {preset.label}

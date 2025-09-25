@@ -356,7 +356,7 @@ export function CreateLegalBasisDialog({ onCreateBasis }: CreateLegalBasisDialog
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum responsável específico</SelectItem>
+                          <SelectItem value="all">Nenhum responsável específico</SelectItem>
                           <SelectItem value="00000000-0000-0000-0000-000000000001">DPO - Data Protection Officer</SelectItem>
                           <SelectItem value="00000000-0000-0000-0000-000000000002">Departamento Jurídico</SelectItem>
                           <SelectItem value="00000000-0000-0000-0000-000000000003">Compliance Officer</SelectItem>

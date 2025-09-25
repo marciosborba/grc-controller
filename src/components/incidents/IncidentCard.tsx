@@ -676,7 +676,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                               <SelectValue placeholder="Selecionar usuário" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Não atribuído</SelectItem>
+                              <SelectItem value="all">Não atribuído</SelectItem>
                               {profiles.map((profile) => (
                                 <SelectItem key={profile.user_id} value={profile.user_id}>
                                   {profile.full_name}

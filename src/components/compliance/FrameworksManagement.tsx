@@ -558,7 +558,7 @@ export function FrameworksManagement() {
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os tipos</SelectItem>
+            <SelectItem value="all">Todos os tipos</SelectItem>
             {TIPOS_FRAMEWORK.map(tipo => (
               <SelectItem key={tipo.value} value={tipo.value}>
                 {tipo.label}
@@ -572,7 +572,7 @@ export function FrameworksManagement() {
             <SelectValue placeholder="Filtrar por categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todas as categorias</SelectItem>
+            <SelectItem value="all">Todas as categorias</SelectItem>
             {CATEGORIAS.map(categoria => (
               <SelectItem key={categoria} value={categoria}>
                 {categoria}

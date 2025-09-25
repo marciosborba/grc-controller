@@ -252,28 +252,9 @@ export function useAuditModule<T = any>(options: UseAuditModuleOptions) {
     }
   }, [effectiveTenantId, loadData]);
 
-  // Loading component padronizado
-  const LoadingComponent = () => (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-    </div>
-  );
-
-  // Error boundary component
-  const ErrorComponent = ({ error }: { error: string }) => (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <div className="text-red-500 text-lg mb-2">Erro</div>
-        <div className="text-muted-foreground">{error}</div>
-        <button 
-          onClick={() => loadData()}
-          className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/80"
-        >
-          Tentar Novamente
-        </button>
-      </div>
-    </div>
-  );
+  // Helper functions para UI (sem JSX)
+  const getLoadingMessage = () => "Carregando dados de auditoria...";
+  const getErrorMessage = (error: string) => `Erro no módulo de auditoria: ${error}`;
 
   return {
     // State
@@ -287,9 +268,9 @@ export function useAuditModule<T = any>(options: UseAuditModuleOptions) {
     loadData,
     handleError,
     
-    // Components
-    LoadingComponent,
-    ErrorComponent,
+    // Helper functions
+    getLoadingMessage,
+    getErrorMessage,
     
     // Utilities
     setLoading,

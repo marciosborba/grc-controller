@@ -372,7 +372,7 @@ export const EnhancedActionPlansManagement: React.FC = () => {
                 <SelectValue placeholder="Módulo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os módulos</SelectItem>
+                <SelectItem value="all">Todos os módulos</SelectItem>
                 <SelectItem value="risk_management">Gestão de Riscos</SelectItem>
                 <SelectItem value="compliance">Conformidade</SelectItem>
                 <SelectItem value="assessments">Avaliações</SelectItem>
@@ -387,7 +387,7 @@ export const EnhancedActionPlansManagement: React.FC = () => {
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 <SelectItem value="planejado">Planejado</SelectItem>
                 <SelectItem value="em_execucao">Em Execução</SelectItem>
                 <SelectItem value="pausado">Pausado</SelectItem>
@@ -401,7 +401,7 @@ export const EnhancedActionPlansManagement: React.FC = () => {
                 <SelectValue placeholder="Prioridade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as prioridades</SelectItem>
+                <SelectItem value="all">Todas as prioridades</SelectItem>
                 <SelectItem value="critica">Crítica</SelectItem>
                 <SelectItem value="alta">Alta</SelectItem>
                 <SelectItem value="media">Média</SelectItem>
@@ -414,7 +414,7 @@ export const EnhancedActionPlansManagement: React.FC = () => {
                 <SelectValue placeholder="Vencimento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os prazos</SelectItem>
+                <SelectItem value="all">Todos os prazos</SelectItem>
                 <SelectItem value="vencidos">Vencidos</SelectItem>
                 <SelectItem value="hoje">Vencem hoje</SelectItem>
                 <SelectItem value="proximos_7">Próximos 7 dias</SelectItem>

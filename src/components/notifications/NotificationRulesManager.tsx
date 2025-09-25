@@ -739,7 +739,7 @@ export const NotificationRulesManager: React.FC = () => {
                       <SelectValue placeholder="Todos os módulos" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os módulos</SelectItem>
+                      <SelectItem value="all">Todos os módulos</SelectItem>
                       <SelectItem value="risks">Riscos</SelectItem>
                       <SelectItem value="assessments">Assessments</SelectItem>
                       <SelectItem value="privacy">Privacidade</SelectItem>

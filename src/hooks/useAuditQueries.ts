@@ -244,17 +244,13 @@ export function usePlanejamentoData() {
     },
     trabalhos: {
       tableName: 'trabalhos_auditoria',
-      select: `
-        *,
-        profiles:auditor_lider(full_name),
-        planos_auditoria_anuais:plano_anual_id(titulo)
-      `,
+      select: '*',
       orderBy: { column: 'prioridade', ascending: true }
     },
     recursos: {
       tableName: 'orcamento_auditoria',
       select: '*',
-      orderBy: { column: 'periodo_inicio', ascending: false }
+      orderBy: { column: 'created_at', ascending: false }
     }
   });
 }

@@ -114,7 +114,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
                 <SelectValue placeholder="Todas as roles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as roles</SelectItem>
+                <SelectItem value="all">Todas as roles</SelectItem>
                 {Object.entries(USER_ROLES).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
@@ -149,7 +149,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
                 <SelectValue placeholder="Todos os status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os status</SelectItem>
+                <SelectItem value="all">Todos os status</SelectItem>
                 {STATUS_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -184,7 +184,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
                 <SelectValue placeholder="Todos os departamentos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os departamentos</SelectItem>
+                <SelectItem value="all">Todos os departamentos</SelectItem>
                 {DEPARTMENTS.map((dept) => (
                   <SelectItem key={dept} value={dept}>
                     {dept}
@@ -221,7 +221,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="true">MFA Habilitado</SelectItem>
                 <SelectItem value="false">MFA Desabilitado</SelectItem>
               </SelectContent>
@@ -255,7 +255,7 @@ export const UserFilters: React.FC<UserFiltersProps> = ({
                 <SelectValue placeholder="Qualquer período" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Qualquer período</SelectItem>
+                <SelectItem value="all">Qualquer período</SelectItem>
                 {LOGIN_PERIOD_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value.toString()}>
                     {option.label}

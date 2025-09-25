@@ -44,7 +44,7 @@ import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
 import { AuditRiskMatrix } from './AuditRiskMatrix';
 import { StatisticalSampling } from './StatisticalSampling';
 import { RelatoriosAuditoriaSecure } from './RelatoriosAuditoriaSecure';
-import { PlanejamentoAuditoriaOptimized } from './PlanejamentoAuditoriaOptimized';
+import { PlanejamentoFuncional } from './PlanejamentoFuncional';
 
 interface AuditUniverse {
   id: string;
@@ -694,7 +694,7 @@ export function AuditoriasDashboard() {
 
       {/* Módulos Principais */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="universe">Universo Auditável</TabsTrigger>
           <TabsTrigger value="projects">Projetos</TabsTrigger>
@@ -799,7 +799,7 @@ export function AuditoriasDashboard() {
         </TabsContent>
 
         <TabsContent value="planejamento" className="space-y-4">
-          <PlanejamentoAuditoriaOptimized />
+          <PlanejamentoFuncional />
         </TabsContent>
 
         <TabsContent value="relatorios" className="space-y-4">

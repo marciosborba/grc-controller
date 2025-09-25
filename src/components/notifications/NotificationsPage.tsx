@@ -425,7 +425,7 @@ export const NotificationsPage: React.FC = () => {
                     <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os status</SelectItem>
+                    <SelectItem value="all">Todos os status</SelectItem>
                     <SelectItem value="unread">Não lidas</SelectItem>
                     <SelectItem value="read">Lidas</SelectItem>
                     <SelectItem value="archived">Arquivadas</SelectItem>
@@ -449,7 +449,7 @@ export const NotificationsPage: React.FC = () => {
                     <SelectValue placeholder="Todas as prioridades" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as prioridades</SelectItem>
+                    <SelectItem value="all">Todas as prioridades</SelectItem>
                     <SelectItem value="critical">Crítica</SelectItem>
                     <SelectItem value="high">Alta</SelectItem>
                     <SelectItem value="medium">Média</SelectItem>
@@ -473,7 +473,7 @@ export const NotificationsPage: React.FC = () => {
                     <SelectValue placeholder="Todos os módulos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os módulos</SelectItem>
+                    <SelectItem value="all">Todos os módulos</SelectItem>
                     {Object.entries(moduleConfig).map(([key, config]) => (
                       <SelectItem key={key} value={key}>
                         {config.label}

@@ -533,7 +533,7 @@ export function CronogramaAtividadesPage() {
                   <SelectValue placeholder="Selecione a atividade pai" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma (atividade raiz)</SelectItem>
+                  <SelectItem value="all">Nenhuma (atividade raiz)</SelectItem>
                   {atividades.filter(a => a.tipo === 'fase').map((atividade) => (
                     <SelectItem key={atividade.id} value={atividade.id}>
                       {atividade.codigo} - {atividade.titulo}

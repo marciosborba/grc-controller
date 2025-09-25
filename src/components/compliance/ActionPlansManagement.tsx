@@ -791,7 +791,7 @@ export function ActionPlansManagement() {
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os status</SelectItem>
+            <SelectItem value="all">Todos os status</SelectItem>
             {STATUS_OPTIONS.map(status => (
               <SelectItem key={status.value} value={status.value}>
                 {status.label}
@@ -805,7 +805,7 @@ export function ActionPlansManagement() {
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos os tipos</SelectItem>
+            <SelectItem value="all">Todos os tipos</SelectItem>
             {TIPOS_ACAO.map(tipo => (
               <SelectItem key={tipo.value} value={tipo.value}>
                 {tipo.label}
