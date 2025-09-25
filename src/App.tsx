@@ -123,8 +123,10 @@ import UserStatusCheck from "@/components/UserStatusCheck";
 import FixUserPermissions from "@/components/FixUserPermissions";
 
 
-// Other modules
-const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage"));
+// Ethics Module - Complete
+const EthicsManagementDashboard = lazy(() => import("@/components/ethics/EthicsManagementDashboard"));
+const PublicEthicsReportPage = lazy(() => import("@/components/ethics/PublicEthicsReportPage"));
+const EthicsChannelPage = lazy(() => import("@/components/ethics/EthicsChannelPage")); // Legacy component
 const ReportsPage = lazy(() => import("@/components/reports/ReportsPageOptimized"));
 const UserProfilePage = lazy(() => import("@/components/profile/UserProfilePage").then(module => ({ default: module.UserProfilePage })));
 const NotificationsPage = lazy(() => import("@/components/notifications/NotificationsPage").then(module => ({ default: module.NotificationsPage })));
@@ -280,6 +282,11 @@ const App = () => (
                 <Route path="/vendor-assessment/:publicLinkId" element={
                   <Suspense fallback={<PageLoader />}>
                     <PublicVendorAssessmentPage />
+                  </Suspense>
+                } />
+                <Route path="/ethics-report" element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PublicEthicsReportPage />
                   </Suspense>
                 } />
                 
@@ -517,6 +524,11 @@ const App = () => (
                     </Suspense>
                   } />
                   <Route path="ethics" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <EthicsManagementDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="ethics/legacy" element={
                     <Suspense fallback={<PageLoader />}>
                       <EthicsChannelPage />
                     </Suspense>
