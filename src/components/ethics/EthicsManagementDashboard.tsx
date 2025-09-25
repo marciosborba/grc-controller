@@ -379,13 +379,16 @@ const EthicsManagementDashboard: React.FC = () => {
     const accentColor = [16, 185, 129]; // Green-500
     const grayColor = [107, 114, 128]; // Gray-500
     let yPosition = margin;
+    
+    // Configurar fontes para caracteres especiais
+    doc.setFont('helvetica');
 
-    // Função para adicionar nova página se necessário
+    // Função para adicionar nova página se necessário com melhor espaçamento
     const addPageIfNeeded = (additionalHeight = 0) => {
-      if (yPosition + additionalHeight > pageHeight - margin) {
+      if (yPosition + additionalHeight > pageHeight - 50) { // Mais espaço para rodapé
         doc.addPage();
         addHeader();
-        yPosition = margin + 25;
+        yPosition = margin + 35; // Mais espaço no topo
       }
     };
 
@@ -405,8 +408,8 @@ const EthicsManagementDashboard: React.FC = () => {
       yPosition += height + 5;
     };
 
-    // Função para adicionar texto com quebra automática
-    const addText = (text: string, fontSize = 10, isBold = false, color = [0, 0, 0], indent = 0) => {
+    // Função para adicionar texto com quebra automática e melhor espaçamento
+    const addText = (text: string, fontSize = 9, isBold = false, color = [0, 0, 0], indent = 0, lineSpacing = 1.2) => {
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
       if (isBold) {
@@ -416,79 +419,97 @@ const EthicsManagementDashboard: React.FC = () => {
       }
       
       const lines = doc.splitTextToSize(text, contentWidth - indent);
-      addPageIfNeeded(lines.length * 6);
+      const totalHeight = lines.length * fontSize * lineSpacing;
+      addPageIfNeeded(totalHeight + 8);
       
-      doc.text(lines, margin + indent, yPosition);
-      yPosition += lines.length * 6 + 3;
+      for (let i = 0; i < lines.length; i++) {
+        doc.text(lines[i], margin + indent, yPosition + (i * fontSize * lineSpacing));
+      }
+      yPosition += totalHeight + 8;
     };
 
-    // Função para adicionar título principal
+    // Função para adicionar título principal com melhor espaçamento
     const addTitle = (text: string, color = primaryColor) => {
-      addPageIfNeeded(20);
-      addColorBox(color, 3);
-      doc.setFontSize(16);
+      addPageIfNeeded(35);
+      yPosition += 8; // Espaço antes do título
+      addColorBox(color, 2);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...color);
       doc.text(text, margin, yPosition);
-      yPosition += 18;
+      yPosition += 20;
     };
 
-    // Função para adicionar subtítulo
+    // Função para adicionar subtítulo com melhor formatação
     const addSubTitle = (text: string, color = accentColor) => {
-      addPageIfNeeded(15);
-      doc.setFontSize(12);
+      addPageIfNeeded(20);
+      yPosition += 6; // Espaço antes do subtítulo
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...color);
       doc.text(text, margin, yPosition);
-      yPosition += 12;
+      yPosition += 15;
     };
 
-    // Função para adicionar caixa de destaque
+    // Função para adicionar caixa de destaque com melhor formatação
     const addHighlightBox = (title: string, content: string, bgColor = [248, 250, 252]) => {
-      addPageIfNeeded(30);
+      const titleLines = doc.splitTextToSize(title, contentWidth - 15);
+      const contentLines = doc.splitTextToSize(content, contentWidth - 15);
+      const boxHeight = (titleLines.length * 5) + (contentLines.length * 4.5) + 18;
+      
+      addPageIfNeeded(boxHeight + 12);
+      
       doc.setFillColor(...bgColor);
       doc.setDrawColor(...grayColor);
-      const boxHeight = 25;
       doc.rect(margin, yPosition, contentWidth, boxHeight, 'FD');
       
-      doc.setFontSize(10);
+      // Título da caixa
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text(title, margin + 5, yPosition + 8);
+      doc.text(titleLines, margin + 8, yPosition + 10);
       
+      // Conteúdo da caixa
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(0, 0, 0);
-      const lines = doc.splitTextToSize(content, contentWidth - 10);
-      doc.text(lines, margin + 5, yPosition + 15);
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(8);
+      const contentY = yPosition + 10 + (titleLines.length * 5) + 4;
+      doc.text(contentLines, margin + 8, contentY);
       
-      yPosition += boxHeight + 8;
+      yPosition += boxHeight + 12;
     };
 
-    // Função para adicionar passo numerado
+    // Função para adicionar passo numerado com melhor formatação
     const addStep = (stepNumber: number, title: string, description: string) => {
-      addPageIfNeeded(20);
+      const titleLines = doc.splitTextToSize(title, contentWidth - 25);
+      const descLines = doc.splitTextToSize(description, contentWidth - 25);
+      const stepHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
       
-      // Círculo numerado
+      addPageIfNeeded(stepHeight + 5);
+      
+      // Círculo numerado menor
       doc.setFillColor(...primaryColor);
-      doc.circle(margin + 8, yPosition + 5, 6, 'F');
+      doc.circle(margin + 6, yPosition + 4, 4, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text(stepNumber.toString(), margin + 6, yPosition + 8);
+      const numText = stepNumber.toString();
+      doc.text(numText, stepNumber < 10 ? margin + 4.5 : margin + 3.5, yPosition + 6);
       
       // Título do passo
       doc.setTextColor(...primaryColor);
-      doc.setFontSize(11);
-      doc.text(title, margin + 20, yPosition + 8);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(titleLines, margin + 16, yPosition + 6);
       
       // Descrição
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(60, 60, 60);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const lines = doc.splitTextToSize(description, contentWidth - 25);
-      doc.text(lines, margin + 20, yPosition + 15);
+      doc.setFontSize(8);
+      const descY = yPosition + 6 + (titleLines.length * 4) + 2;
+      doc.text(descLines, margin + 16, descY);
       
-      yPosition += Math.max(20, lines.length * 4 + 12);
+      yPosition += stepHeight + 8;
     };
 
     // === CAPA DO DOCUMENTO ===
@@ -501,23 +522,23 @@ const EthicsManagementDashboard: React.FC = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('MÓDULO DE ÉTICA', pageWidth / 2, 35, { align: 'center' });
+    doc.text('CANAL DE ETICA', pageWidth / 2, 35, { align: 'center' });
     
     doc.setFontSize(16);
     doc.setFont('helvetica', 'normal');
-    doc.text('Guia Completo do Usuário', pageWidth / 2, 50, { align: 'center' });
+    doc.text('Manual do Usuario - Sistema GRC', pageWidth / 2, 50, { align: 'center' });
     
     doc.setFontSize(12);
-    doc.text('Sistema GRC Controller', pageWidth / 2, 65, { align: 'center' });
+    doc.text('Gestao Completa de Denuncias e Investigacoes', pageWidth / 2, 65, { align: 'center' });
     
     // Informações da versão
     yPosition = 100;
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('Versão:', margin, yPosition);
+    doc.text('Versao:', margin, yPosition);
     doc.setFont('helvetica', 'normal');
-    doc.text('2.0 - Professional Edition', margin + 25, yPosition);
+    doc.text('3.0 - Edicao Corporativa', margin + 25, yPosition);
     
     yPosition += 15;
     doc.setFont('helvetica', 'bold');
@@ -531,20 +552,20 @@ const EthicsManagementDashboard: React.FC = () => {
     
     yPosition += 15;
     doc.setFont('helvetica', 'bold');
-    doc.text('Audiência:', margin, yPosition);
+    doc.text('Publico:', margin, yPosition);
     doc.setFont('helvetica', 'normal');
-    doc.text('Administradores, CISO, Risk Managers, Compliance Officers', margin + 25, yPosition);
+    doc.text('Equipes de Compliance, Auditoria e Gestao de Riscos', margin + 25, yPosition);
     
     // Caixa de destaque na capa
     yPosition += 30;
     addHighlightBox(
-      '🎯 OBJETIVOS DESTE MANUAL',
-      'Capacitar usuários para dominar todas as funcionalidades do módulo de ética, desde configuração inicial até casos complexos de investigação. Inclui exemplos práticos, casos de uso reais e melhores práticas de UX/UI.'
+      'OBJETIVO DO MANUAL',
+      'Este manual oferece orientacao completa sobre o uso do modulo Canal de Etica, incluindo recebimento de denuncias, gestao de investigacoes, coleta de evidencias e implementacao de acoes corretivas.'
     );
     
     addHighlightBox(
-      '📋 PRÉ-REQUISITOS',
-      'Acesso ao sistema GRC Controller, permissões adequadas (Admin/CISO/Risk Manager), conhecimento básico de compliance ético e navegadores atualizados.'
+      'PRE-REQUISITOS',
+      'Acesso ao sistema GRC Controller com permissoes adequadas. Conhecimento basico de processos de compliance etico e investigacao corporativa.'
     );
     
     // Nova página para índice
@@ -554,18 +575,16 @@ const EthicsManagementDashboard: React.FC = () => {
     // ÍNDICE VISUAL
     
     const tocItems = [
-      { num: '01', title: 'PRIMEIROS PASSOS', desc: 'Login, navegação e overview da interface', page: '3' },
-      { num: '02', title: 'DASHBOARD EXECUTIVO', desc: 'KPIs, métricas e visão geral dos casos', page: '5' },
-      { num: '03', title: 'GESTÃO DE CASOS', desc: 'Recebimento, triagem e acompanhamento', page: '8' },
-      { num: '04', title: 'INVESTIGAÇÕES AVANÇADAS', desc: 'Planejamento, orçamento e metodologias', page: '12' },
-      { num: '05', title: 'EVIDÊNCIAS FORENSES', desc: 'Coleta, preservação e chain of custody', page: '16' },
-      { num: '06', title: 'AÇÕES CORRETIVAS', desc: 'Implementação e medição de eficácia', page: '20' },
-      { num: '07', title: 'COMPLIANCE REGULATÓRIO', desc: 'Notificações automáticas para órgãos', page: '24' },
-      { num: '08', title: 'COMUNICAÇÕES', desc: 'Templates, métricas e automações', page: '28' },
-      { num: '09', title: 'CONFIGURAÇÕES AVANÇADAS', desc: 'SLA, integrações e personalizações', page: '32' },
-      { num: '10', title: 'CASOS DE USO REAIS', desc: 'Exemplos práticos com passo a passo', page: '36' },
-      { num: '11', title: 'MELHORES PRÁTICAS', desc: 'UX/UI, performance e otimizações', page: '42' },
-      { num: '12', title: 'TROUBLESHOOTING', desc: 'Problemas comuns e soluções', page: '46' }
+      { num: '01', title: 'VISAO GERAL', desc: 'Introducao ao modulo e navegacao basica', page: '3' },
+      { num: '02', title: 'DASHBOARD PRINCIPAL', desc: 'KPIs, metricas e alertas importantes', page: '4' },
+      { num: '03', title: 'GESTAO DE CASOS', desc: 'Recebimento, triagem e acompanhamento de denuncias', page: '6' },
+      { num: '04', title: 'PLANOS DE INVESTIGACAO', desc: 'Criacao e gestao de investigacoes estruturadas', page: '8' },
+      { num: '05', title: 'GESTAO DE EVIDENCIAS', desc: 'Coleta, preservacao e cadeia de custodia', page: '10' },
+      { num: '06', title: 'ACOES CORRETIVAS', desc: 'Implementacao e monitoramento de medidas', page: '12' },
+      { num: '07', title: 'NOTIFICACOES REGULATORIAS', desc: 'Comunicacao com orgaos fiscalizadores', page: '14' },
+      { num: '08', title: 'CONFIGURACOES DO SISTEMA', desc: 'SLA, prazos e notificacoes automaticas', page: '16' },
+      { num: '09', title: 'CASOS PRATICOS', desc: 'Exemplos reais de uso do sistema', page: '18' },
+      { num: '10', title: 'SOLUCAO DE PROBLEMAS', desc: 'Troubleshooting e FAQ', page: '22' }
     ];
     
     tocItems.forEach(item => {
@@ -600,411 +619,536 @@ const EthicsManagementDashboard: React.FC = () => {
     doc.addPage();
     yPosition = margin;
     
-    // ===== CAPÍTULO 1: PRIMEIROS PASSOS =====
+    // ===== CAPITULO 1: VISAO GERAL =====
     
+    addTitle('1. VISAO GERAL DO MODULO', primaryColor);
     
+    addText('O Canal de Etica e um modulo completo para gestao de denuncias e investigacoes corporativas. Ele permite receber, processar e acompanhar casos eticos de forma estruturada e transparente.');
     
-    addStep(1, 'Navegue até o Menu Principal', 'No painel esquerdo do sistema, localize e clique no ícone "Ética" (shield/escudo azul).');
-    addStep(2, 'Verificar Permissões', 'Certifique-se de ter role adequado: Admin, CISO, Risk Manager ou Compliance Officer.');
-    addStep(3, 'Carregamento dos Dados', 'O sistema carrega automaticamente dados do seu tenant. Aguarde a sincronização.');
+    addSubTitle('1.1 Principais Funcionalidades');
+    addStep(1, 'Dashboard Executivo', 'Visao geral com KPIs, metricas e alertas importantes para tomada de decisao rapida.');
+    addStep(2, 'Gestao de Casos', 'Recebimento, triagem e acompanhamento completo de denuncias eticas.');
+    addStep(3, 'Investigacoes Estruturadas', 'Criacao de planos de investigacao com metodologia e orcamento definidos.');
+    addStep(4, 'Coleta de Evidencias', 'Sistema forensico para preservacao de provas com cadeia de custodia.');
+    addStep(5, 'Acoes Corretivas', 'Implementacao e monitoramento de medidas preventivas e corretivas.');
+    addStep(6, 'Compliance Regulatorio', 'Notificacoes automaticas para orgaos fiscalizadores quando necessario.');
+    
+    addSubTitle('1.2 Acesso ao Sistema');
+    addText('Para acessar o modulo, navegue ate o menu lateral e clique em "Canal de Etica". Certifique-se de ter as permissoes adequadas: Admin, CISO, Risk Manager ou Compliance Officer.');
     
     addHighlightBox(
-      '💡 DICA PRO',
-      'Use Ctrl+Alt+E como atalho rápido para acessar o módulo de qualquer tela do sistema.'
+      'IMPORTANTE',
+      'O sistema utiliza controle de acesso baseado em roles. Nem todas as funcionalidades estao disponiveis para todos os usuarios.'
     );
     
-    
-    
-    // Seção visual da interface
-    
-    
-    
-    
-    
-    addStep(1, 'Vá para Configurações', 'Clique na aba "Configurações" para setup inicial.');
-    addStep(2, 'Configure SLA', 'Defina prazos: Confirmação (24h), Investigação (5 dias), Resolução (30 dias).');
-    addStep(3, 'Templates de E-mail', 'Personalize mensagens automáticas mantendo variáveis {{PROTOCOLO}}, {{TITULO}}.');
-    addStep(4, 'Integrações', 'Configure SMTP para e-mails automáticos (opcional: Slack, SharePoint).');
-    addStep(5, 'Teste o Sistema', 'Crie um caso fictício para validar fluxo completo.');
-    
-    // ===== CAPÍTULO 2: DASHBOARD EXECUTIVO =====
+    // ===== CAPITULO 2: DASHBOARD PRINCIPAL =====
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 25;
+    yPosition = margin + 35; // Mais espaço no topo
     
+    addTitle('2. DASHBOARD PRINCIPAL', primaryColor);
     
+    addText('O dashboard oferece uma visao executiva completa do programa de etica, apresentando metricas essenciais, alertas criticos e atividades recentes em uma unica tela.');
     
+    addSubTitle('2.1 KPIs Principais');
+    addText('O sistema apresenta 6 indicadores fundamentais:');
     
-    addHighlightBox(
-      '📈 MÉTRICAS ESSENCIAIS',
-      'Estes 6 KPIs oferecem visão instantânea da saúde do programa ético: Total de casos, Em andamento, Investigando, Resolvidos, Anônimas, Críticas.'
-    );
+    addStep(1, 'Total de Casos', 'Numero total de denuncias recebidas no sistema desde a implementacao.');
+    addStep(2, 'Em Andamento', 'Cases ativos em diferentes fases: aberto, triagem, investigacao, revisao.');
+    addStep(3, 'Investigando', 'Casos em investigacao ativa com planos estruturados e recursos alocados.');
+    addStep(4, 'Resolvidos', 'Cases finalizados com resolucao documentada e acoes implementadas.');
+    addStep(5, 'Anonimas', 'Denuncias recebidas sem identificacao do denunciante.');
+    addStep(6, 'Criticas', 'Cases classificados como alta prioridade pelo sistema de IA.');
     
-    // Explicação detalhada de cada KPI
-    const kpis = [
-      { 
-        name: 'TOTAL', 
-        icon: '🛡️', 
-        desc: 'Todos os casos recebidos desde implementação',
-        action: 'Clique para filtrar todos os casos na aba "Casos"',
-        benchmark: 'Varia por organização. Média: 2-5 casos/1000 funcionários/ano'
-      },
-      { 
-        name: 'EM ANDAMENTO', 
-        icon: '⏳', 
-        desc: 'Status: open, triaging, investigating, in_review',
-        action: 'Monitor crítico - alta quantidade indica gargalo processual',
-        benchmark: 'Ideal: <30% do total de casos'
-      },
-      { 
-        name: 'INVESTIGANDO', 
-        icon: '🔍', 
-        desc: 'Casos em investigação ativa com recursos alocados',
-        action: 'Acompanhe orçamento e cronograma na aba "Investigações"',
-        benchmark: 'Tempo médio: 15-45 dias dependendo da complexidade'
-      },
-      { 
-        name: 'RESOLVIDOS', 
-        icon: '✅', 
-        desc: 'Casos finalizados com resolução documentada',
-        action: 'Analise patterns para prevenção proativa',
-        benchmark: 'Meta: >80% taxa de resolução'
-      },
-      { 
-        name: 'ANÔNIMAS', 
-        icon: '👤', 
-        desc: 'Denúncias sem identificação do reportante',
-        action: 'Requer investigação mais cuidadosa e criativa',
-        benchmark: '40-60% das denúncias tipicamente são anônimas'
-      },
-      { 
-        name: 'CRÍTICAS', 
-        icon: '🚨', 
-        desc: 'IA classificou como alto impacto/risco',
-        action: 'Prioridade máxima - pode requerer notificação regulatória',
-        benchmark: 'Devem ser <10% do total'
-      }
-    ];
-    
-    kpis.forEach((kpi, index) => {
-      addPageIfNeeded(25);
-      
-      doc.setFillColor(248, 250, 252);
-      doc.rect(margin, yPosition, contentWidth, 20, 'F');
-      
-      doc.setTextColor(...primaryColor);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${kpi.icon} ${kpi.name}`, margin + 5, yPosition + 8);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(kpi.desc, margin + 5, yPosition + 13);
-      
-      doc.setTextColor(...accentColor);
-      doc.setFont('helvetica', 'italic');
-      doc.text(`💡 ${kpi.action}`, margin + 5, yPosition + 17);
-      
-      yPosition += 25;
-    });
-    
-    
-    
-    addStep(1, 'Taxa de Resolução', 'Percentual de casos resolvidos vs total. Meta organizacional típica: >80%. Indica eficácia do programa.');
-    addStep(2, 'Conformidade SLA', 'Percentual dentro dos prazos definidos. Meta: >95%. Indica disciplina processual.');
-    addStep(3, 'Violações SLA', 'Casos com prazo vencido. Alerta vermelho crítico. Meta: <5% dos casos ativos.');
-    
-    
+    addSubTitle('2.2 Metricas dos Submodulos');
+    addText('Cards adicionais mostram estatisticas detalhadas de cada modulo:');
     
     addHighlightBox(
-      '📊 DENÚNCIAS POR CATEGORIA',
-      'Distribuição visual por tipo: assédio, fraude, conflito_interesse, discriminação, retaliação, etc. CLIQUE em qualquer fatia para aplicar filtro automático na aba Casos.'
+      'INVESTIGACOES',
+      'Mostra investigacoes ativas, concluidas e total. Permite avaliar a carga de trabalho da equipe investigativa.'
     );
     
     addHighlightBox(
-      '📊 DENÚNCIAS POR SEVERIDADE', 
-      'Classificação de impacto com cores: 🟢 Baixa, 🟡 Média, 🟠 Alta, 🔴 Crítica. Sistema de IA classifica automaticamente baseado em keywords e contexto.'
+      'EVIDENCIAS',
+      'Controla evidencias ativas, arquivadas e total. Essencial para gestao forense e preservacao de provas.'
     );
-    
-    // ===== CASO DE USO PRÁTICO: DASHBOARD =====
-    
-    
-    
-    addStep(1, 'Acesse Dashboard', 'Segunda-feira, 09h00: Abra o módulo e observe KPIs principais.');
-    addStep(2, 'Identifique Anomalias', 'Taxa de resolução caiu para 70% (abaixo da meta 80%). Violações SLA aumentaram.');
-    addStep(3, 'Drill Down', 'Clique no gráfico "Por Categoria" - fraude financeira representa 40% dos casos novos.');
-    addStep(4, 'Ação Imediata', 'Vá para aba "Casos", filtre por "fraud" e identifique gargalos específicos.');
-    addStep(5, 'Report Executivo', 'Documente achados e proponha ações: mais recursos para investigações financeiras.');
     
     addHighlightBox(
-      '⚡ RESULTADO ESPERADO',
-      'Em 15 minutos você tem insights acionáveis para decisões executivas, demonstrando valor do programa ético com dados concretos.'
+      'ACOES CORRETIVAS',
+      'Acompanha medidas em progresso, concluidas e total. Fundamental para demonstrar efetividade das respostas.'
     );
-
-    // ===== CAPÍTULO 3: GESTÃO DE CASOS =====
+    
+    addHighlightBox(
+      'REGULATORIO',
+      'Monitora notificacoes pendentes, enviadas e total. Critico para compliance com orgaos fiscalizadores.'
+    );
+    
+    addSubTitle('2.3 Alertas e Atividades');
+    addText('A secao de alertas destaca situacoes que requerem atencao imediata:');
+    
+    addStep(1, 'SLA Vencidos', 'Cases que ultrapassaram os prazos definidos e precisam de acao urgente.');
+    addStep(2, 'Cases Criticos', 'Situacoes de alta prioridade que podem impactar a organizacao.');
+    addStep(3, 'Legal Hold', 'Evidencias protegidas por ordem judicial que nao podem ser alteradas.');
+    
+    addText('A secao de atividade recente mostra os ultimos 5 casos com informacoes de status e severidade, facilitando o acompanhamento das situacoes mais atuais.');
+    
+    // ===== CAPITULO 3: GESTAO DE CASOS =====
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 25;
+    yPosition = margin + 35; // Mais espaço no topo
     
+    addTitle('3. GESTAO DE CASOS', primaryColor);
     
+    addText('A aba Casos e o centro operacional do modulo, onde todas as denuncias sao gerenciadas desde o recebimento ate a resolucao final.');
     
+    addSubTitle('3.1 Sistema de Filtros Avancados');
+    addText('O sistema oferece filtros poderosos para localizacao rapida de casos:');
     
-    addHighlightBox(
-      '🔍 BUSCA AVANÇADA',
-      'O campo de busca suporta: números de protocolo (ETH-2025-001), palavras-chave no título, texto na descrição, nome de pessoas envolvidas.'
-    );
+    addStep(1, 'Busca Universal', 'Digite numeros de protocolo (ETH-2025-001), palavras-chave do titulo ou conteudo da descricao. O sistema busca em todos os campos simultaneamente.');
+    addStep(2, 'Filtro por Status', 'Selecione entre: Aberto, Triagem, Investigando, Em Revisao, Resolvido, Fechado. Cada status representa uma fase especifica do processo.');
+    addStep(3, 'Filtro por Severidade', 'Classificacao automatica por IA: Baixa (verde), Media (amarelo), Alta (laranja), Critica (vermelho). Facilita priorizacao.');
+    addStep(4, 'Botao Limpar Filtros', 'Restaura visualizacao completa removendo todas as restricoes aplicadas.');
     
-    addStep(1, 'Campo de Busca Universal', 'Digite qualquer termo. Sistema busca em protocolo, título, descrição simultaneamente.');
-    addStep(2, 'Filtro por Status', 'Dropdown com todas as opções: Open, Triaging, Investigating, In Review, Resolved, Closed.');
-    addStep(3, 'Filtro por Severidade', 'Low (verde), Medium (amarelo), High (laranja), Critical (vermelho).');
-    addStep(4, 'Botão Atualizar', 'Aplica filtros e recarrega dados. Loading state mostra progresso.');
-    
-    
-    
-    // Detalhamento visual dos cards
-    
-    
-    
-    
-    const abas = [
-      {
-        name: 'DETALHES',
-        icon: '📝',
-        desc: 'Informações básicas, descrição completa, dados do denunciante (se não anônimo)',
-        practical: 'Use para entender contexto inicial e determinar próximos passos'
-      },
-      {
-        name: 'INVESTIGAÇÃO', 
-        icon: '🔍',
-        desc: 'Plano de investigação associado, metodologia escolhida, cronograma',
-        practical: 'Vincule a um plano existente ou crie novo diretamente'
-      },
-      {
-        name: 'EVIDÊNCIAS',
-        icon: '📎', 
-        desc: 'Documentos anexados, fotos, arquivos, chain of custody completa',
-        practical: 'Upload direto de evidências com hash automático SHA-256'
-      },
-      {
-        name: 'AÇÕES',
-        icon: '⚡',
-        desc: 'Medidas corretivas implementadas ou planejadas, status de implementação',
-        practical: 'Crie ações corretivas específicas para este caso'
-      },
-      {
-        name: 'REGULATÓRIO',
-        icon: '📋',
-        desc: 'Notificações para órgãos governamentais (SEC, OSHA, etc.)',
-        practical: 'Sistema identifica automaticamente necessidade de notificação'
-      },
-      {
-        name: 'RESOLUÇÃO',
-        icon: '✅',
-        desc: 'Conclusão final, lessons learned, medidas preventivas',
-        practical: 'Documente resolução para consultas futuras e analytics'
-      },
-      {
-        name: 'TIMELINE',
-        icon: '📅',
-        desc: 'Histórico cronológico completo de todas as atividades',
-        practical: 'Auditoria completa - cada ação fica registrada'
-      },
-      {
-        name: 'INFO',
-        icon: 'ℹ️',
-        desc: 'Metadados, classificação de IA, scores de risco calculados',
-        practical: 'Informações técnicas para análises avançadas'
-      }
-    ];
-    
-    abas.forEach(aba => {
-      addPageIfNeeded(20);
-      
-      doc.setFillColor(252, 250, 248);
-      doc.rect(margin, yPosition, contentWidth, 18, 'F');
-      
-      doc.setTextColor(...primaryColor);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${aba.icon} ${aba.name}`, margin + 5, yPosition + 7);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(aba.desc, margin + 5, yPosition + 11);
-      
-      doc.setTextColor(...accentColor);
-      doc.setFont('helvetica', 'italic');
-      doc.text(`💡 ${aba.practical}`, margin + 5, yPosition + 15);
-      
-      yPosition += 22;
-    });
-    
-    // ===== CASO PRÁTICO DETALHADO: GESTÃO DE CASO =====
-    
-    
-    
-    addStep(1, 'Recebimento Inicial', 'Caso ETH-2025-004 criado automaticamente. IA classifica como "High severity" baseado em keywords.');
-    addStep(2, 'Triagem Rápida', 'Acesse aba "Detalhes" - leia descrição completa. Identifique departamento e pessoas envolvidas.');
-    addStep(3, 'Aba Investigação', 'Clique "Criar Plano" → Selecione tipo "Completa" → Aloque R$ 10.000 → 30 dias prazo.');
-    addStep(4, 'Coleta de Evidências', 'Aba "Evidências" → Upload e-mails, gravações, documentos HR → Sistema gera hash automático.');
-    addStep(5, 'Ações Imediatas', 'Aba "Ações" → Crie "Afastamento temporário do supervisor" → Status: Em Progresso.');
-    addStep(6, 'Check Regulatório', 'Aba "Regulatório" → Sistema sugere notificação OSHA por ambiente hostil → Avalie necessidade.');
-    addStep(7, 'Timeline Completa', 'Aba "Timeline" mostra todos os passos registrados automaticamente.');
+    addSubTitle('3.2 Cards Expansiveis - Estrutura Completa');
+    addText('Cada caso e apresentado em um card expansivel com 8 abas especializadas:');
     
     addHighlightBox(
-      '⚡ RESULTADO OBTIDO',
-      'Em 45 minutos você estruturou investigação completa, protegeu evidências, iniciou ações e avaliou aspectos regulatórios. Caso está sob controle total.'
+      'ABA DETALHES',
+      'Informacoes basicas do caso: protocolo, titulo, descricao, dados do denunciante (quando nao anonimo), data de criacao, status atual e classificacao de severidade.'
     );
     
-    // ===== CAPÍTULO 4: MELHORES PRÁTICAS E TROUBLESHOOTING =====
+    addHighlightBox(
+      'ABA INVESTIGACAO',
+      'Vinculacao com planos de investigacao estruturados. Permite criar novos planos ou associar a investigacoes existentes, definindo metodologia, orcamento e cronograma.'
+    );
+    
+    addHighlightBox(
+      'ABA EVIDENCIAS',
+      'Sistema forensico completo para upload de documentos, fotos, emails, gravacoes. Cada evidencia recebe hash SHA-256 automatico e registro de cadeia de custodia.'
+    );
+    
+    addHighlightBox(
+      'ABA ACOES',
+      'Gestao de medidas corretivas e preventivas. Permite criar, acompanhar e avaliar a eficacia das acoes implementadas em resposta ao caso.'
+    );
+    
+    addHighlightBox(
+      'ABA REGULATORIO',
+      'Notificacoes obrigatorias para orgaos fiscalizadores. Sistema identifica automaticamente quando ha necessidade de comunicacao com autoridades.'
+    );
+    
+    addHighlightBox(
+      'ABA RESOLUCAO',
+      'Documentacao da conclusao do caso, incluindo resumo da investigacao, medidas implementadas, lessons learned e recomendacoes preventivas.'
+    );
+    
+    addHighlightBox(
+      'ABA TIMELINE',
+      'Historico cronologico completo de todas as atividades realizadas no caso. Cada acao fica permanentemente registrada para auditoria.'
+    );
+    
+    addHighlightBox(
+      'ABA INFO',
+      'Metadados tecnicos, scores de risco calculados por IA, classificacoes automaticas e informacoes para analises avancadas.'
+    );
+    
+    addSubTitle('3.3 Exemplo Pratico: Gestao de Caso de Assedio');
+    addText('Cenario: Denuncia de assedio moral recebida anonimamente em 15/01/2025');
+    
+    addStep(1, 'Recepcao Automatica', 'Sistema cria caso ETH-2025-015 automaticamente. IA classifica como severidade ALTA baseado em palavras-chave detectadas.');
+    addStep(2, 'Triagem Inicial', 'Acesse aba DETALHES: Leia descricao completa, identifique departamento envolvido (Vendas), possivel agressor (Gerente Regional).');
+    addStep(3, 'Planejamento', 'Aba INVESTIGACAO: Clique "Criar Plano" > Tipo "Investigacao Completa" > Orcamento R$ 15.000 > Prazo 45 dias > Metodologia "Entrevistas + Analise Documental".');
+    addStep(4, 'Coleta Imediata', 'Aba EVIDENCIAS: Upload emails corporativos, gravacoes de reunioes, avaliacoes de desempenho. Sistema gera hash para cada arquivo.');
+    addStep(5, 'Protecao da Vitima', 'Aba ACOES: Criar "Realocacao temporaria da vitima" > Status "Em Progresso" > Responsavel "RH" > Prazo 48h.');
+    addStep(6, 'Avaliacao Legal', 'Aba REGULATORIO: Sistema sugere notificacao ao Ministerio Publico do Trabalho. Avaliar necessidade com juridico.');
+    addStep(7, 'Monitoramento', 'Aba TIMELINE: Acompanhar todas as acoes registradas cronologicamente.');
+    
+    addHighlightBox(
+      'RESULTADO EM 60 MINUTOS',
+      'Caso estruturado completamente: investigacao planejada, evidencias protegidas, vitima amparada, aspectos legais avaliados. Processo sob controle total.'
+    );
+    
+    // ===== CAPITULO 4: PLANOS DE INVESTIGACAO =====
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 25;
+    yPosition = margin + 35; // Mais espaço no topo
     
+    addTitle('4. PLANOS DE INVESTIGACAO', primaryColor);
     
+    addText('O modulo de investigacoes permite estruturar processos investigativos profissionais com metodologia definida, orcamento controlado e cronograma claro.');
     
-    addStep(1, 'Use Filtros Inteligentemente', 'Sempre filtre por período e status para reduzir carga de dados. Sistema carrega mais rápido com datasets menores.');
-    addStep(2, 'Mantenha Sessão Ativa', 'Renove login a cada 4 horas. Sessões expiradas causam erros de permissão e perda de progresso.');
-    addStep(3, 'One Tab Policy', 'Use apenas uma aba do módulo por vez. Múltiplas instâncias podem causar conflitos de sincronização.');
+    addSubTitle('4.1 Tipos de Investigacao');
+    addStep(1, 'Investigacao Rapida', 'Para casos simples. Prazo 5-10 dias, orcamento ate R$ 5.000. Foco em entrevistas e analise documental basica.');
+    addStep(2, 'Investigacao Completa', 'Para casos complexos. Prazo 30-60 dias, orcamento R$ 10.000-50.000. Inclui pericia tecnica, investigacao externa.');
+    addStep(3, 'Investigacao Externa', 'Para casos criticos ou conflito de interesse. Empresa terceirizada, prazo 60-90 dias, orcamento acima R$ 50.000.');
     
-    
-    addStep(1, 'Evidências Sensíveis', 'Sempre use proteção "Legal Privilege" para comunicações com advogados. Marque "Confidencial" para dados pessoais.');
-    addStep(2, 'Chain of Custody', 'Documente TODA transferência de evidências. Quebra na cadeia invalida evidência legalmente.');
-    addStep(3, 'Backup Regular', 'Execute backup semanal via aba Configurações. Casos críticos requerem múltiplas cópias.');
-    
-    
-    addStep(1, 'Hover para Insights', 'Passe mouse sobre elementos para revelar tooltips com informações adicionais.');
-    addStep(2, 'Cores Têm Significado', '🔴 Crítico/Urgente, 🟠 Alto/Atenção, 🟡 Médio/Monitor, 🟢 Baixo/OK. Use para priorização visual.');
-    addStep(3, 'Atalhos de Teclado', 'Tab para navegar campos, Enter para salvar, Esc para cancelar diálogos.');
-    
-    
-    const problemas = [
-      {
-        problema: 'Sistema lento ou travando',
-        causa: 'Cache do navegador, muitos filtros ativos',
-        solucao: 'Ctrl+Shift+Delete para limpar cache. Remova filtros desnecessários.',
-        prevencao: 'Limite período de busca a 90 dias. Use filtros específicos.'
-      },
-      {
-        problema: '"Acesso Negado" ao carregar dados',
-        causa: 'Sessão expirada, role insuficiente',
-        solucao: 'Faça logout/login. Verifique permissões com administrador.',
-        prevencao: 'Renove sessão preventivamente. Não deixe sistema inativo >4h.'
-      },
-      {
-        problema: 'E-mails automáticos não enviando',
-        causa: 'Configuração SMTP, firewall corporativo',
-        solucao: 'Teste configuração em Configurações > Integrações. Contate TI.',
-        prevencao: 'Configure servidor backup. Monitor daily email status.'
-      },
-      {
-        problema: 'Upload de evidências falha',
-        causa: 'Arquivo muito grande, formato não suportado',
-        solucao: 'Comprima arquivo <10MB. Use PDF, DOCX, JPG, PNG.',
-        prevencao: 'Otimize arquivos antes do upload. Prefira PDF para documentos.'
-      },
-      {
-        problema: 'Dados não sincronizando entre abas',
-        causa: 'Múltiplas sessões, problemas de rede',
-        solucao: 'Feche outras abas do módulo. Refresh com F5.',
-        prevencao: 'Use uma sessão por vez. Conexão estável mandatória.'
-      }
-    ];
-    
-    problemas.forEach(prob => {
-      addPageIfNeeded(30);
-      
-      // Problema em destaque
-      doc.setFillColor(254, 242, 242);
-      doc.setDrawColor(248, 113, 113);
-      doc.rect(margin, yPosition, contentWidth, 25, 'FD');
-      
-      doc.setTextColor(185, 28, 28);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`⚠️ PROBLEMA: ${prob.problema}`, margin + 5, yPosition + 8);
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Causa: ${prob.causa}`, margin + 5, yPosition + 13);
-      
-      doc.setTextColor(5, 150, 105);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`✅ Solução: ${prob.solucao}`, margin + 5, yPosition + 17);
-      
-      doc.setTextColor(59, 130, 246);
-      doc.setFont('helvetica', 'italic');
-      doc.text(`💡 Prevenção: ${prob.prevencao}`, margin + 5, yPosition + 21);
-      
-      yPosition += 30;
-    });
-    
-    // ===== CASES DE SUCESSO FINAIS =====
-    
-    
-    
+    addSubTitle('4.2 Estrutura de um Plano');
     addHighlightBox(
-      '🏢 EMPRESA: TechGlobal Corp',
-      'Contexto: 15.000 funcionários, 22 países, IPO planejada para 2025. Necessitava demonstrar governança ética robusta para investidores.'
+      'METODOLOGIA',
+      'Define abordagem investigativa: entrevistas, analise documental, pericia tecnica, investigacao digital, consultoria externa.'
     );
     
-    
-    
-    
     addHighlightBox(
-      '💬 DEPOIMENTO CEO',
-      '"O módulo transformou nossa capacidade de resposta ética. Investidores ficaram impressionados com nossa maturidade em governança. Foi decisivo para o IPO." - Sarah Chen, CEO'
+      'ORCAMENTO',
+      'Controle financeiro detalhado: custos de pessoal interno, servicos externos, tecnologia, viagens, outros gastos operacionais.'
     );
     
-    // RODAPÉ E FINALIZAÇÃO
-    
-    
-    
+    addHighlightBox(
+      'CRONOGRAMA',
+      'Timeline estruturada: fases da investigacao, marcos importantes, entregaveis esperados, datas criticas.'
+    );
     
     addHighlightBox(
-      '📚 RECURSOS ADICIONAIS',
-      'Documentação técnica completa, vídeos tutoriais e webinars mensais disponíveis no portal de conhecimento: https://knowledge.grc-controller.com'
+      'EQUIPE',
+      'Definicao de responsaveis: investigador principal, especialistas tecnicos, apoio juridico, recursos externos.'
     );
-    // === RODAPÉ PROFISSIONAL ===
     
-    // Adicionar rodapé em todas as páginas
+    addSubTitle('4.3 Caso Pratico: Investigacao de Fraude Financeira');
+    addText('Cenario: Suspeita de manipulacao de relatorios financeiros por controller da filial');
+    
+    addStep(1, 'Criacao do Plano', 'Tipo: Investigacao Completa > Metodologia: Auditoria Forense + Analise Digital > Orcamento: R$ 35.000 > Prazo: 45 dias');
+    addStep(2, 'Equipe Definida', 'Investigador: Auditor Senior interno > Especialista: Perito contabil externo > Apoio: TI Forense > Juridico: Advogado trabalhista');
+    addStep(3, 'Fases Estruturadas', 'Semana 1-2: Coleta documental > Semana 3-4: Entrevistas > Semana 5-6: Analise sistemas > Semana 7: Relatorio final');
+    addStep(4, 'Controle Orcamentario', 'Auditoria externa: R$ 20.000 > Software forense: R$ 8.000 > Custos internos: R$ 7.000 > Total dentro do orcado');
+    addStep(5, 'Entregaveis', 'Relatorio executivo > Evidencias organizadas > Recomendacoes de controle > Plano de acao corretiva');
+    
+    // ===== CAPITULO 5: GESTAO DE EVIDENCIAS =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('5. GESTAO DE EVIDENCIAS', primaryColor);
+    
+    addText('Sistema forensico profissional para coleta, preservacao e gestao de evidencias com cadeia de custodia completa e protecao juridica.');
+    
+    addSubTitle('5.1 Tipos de Evidencia Suportados');
+    addStep(1, 'Documentos Digitais', 'PDF, DOCX, XLSX, PPT. Sistema gera hash SHA-256 automatico e preserva metadados originais.');
+    addStep(2, 'Emails e Comunicacoes', 'Arquivos EML, PST, mensagens WhatsApp, Teams, Slack. Preserva headers completos e timestamps.');
+    addStep(3, 'Midia Visual', 'Fotos JPG/PNG, videos MP4/AVI, gravacoes MP3/WAV. Validacao de integridade e analise de metadados EXIF.');
+    addStep(4, 'Logs de Sistema', 'Arquivos JSON, XML, TXT de sistemas corporativos. Analise automatica de padroes suspeitos.');
+    
+    addSubTitle('5.2 Cadeia de Custodia Digital');
+    addText('Cada evidencia recebe tratamento forensico completo:');
+    
+    addHighlightBox(
+      'COLETA SEGURA',
+      'Upload com verificacao de integridade, geracao automatica de hash criptografico, registro de data/hora e identificacao do coletor.'
+    );
+    
+    addHighlightBox(
+      'PRESERVACAO',
+      'Armazenamento imutavel, backups redundantes, protecao contra alteracao, logs de acesso completos.'
+    );
+    
+    addHighlightBox(
+      'RASTREABILIDADE',
+      'Historico completo de manuseio: quem acessou, quando, de onde, que acoes realizou. Auditoria total.'
+    );
+    
+    addHighlightBox(
+      'PROTECAO LEGAL',
+      'Opcoes de Legal Hold (ordem judicial), privilegio advogado-cliente, dados pessoais sensiveis (LGPD).'
+    );
+    
+    addSubTitle('5.3 Estados de Preservacao');
+    addStep(1, 'ATIVA', 'Evidencia em investigacao ativa. Pode ser acessada pela equipe autorizada para analise.');
+    addStep(2, 'ARQUIVADA', 'Investigacao concluida. Evidencia preservada por periodo de retencao definido (default: 7 anos).');
+    addStep(3, 'LEGAL HOLD', 'Evidencia sob protecao judicial. Nao pode ser alterada ou destruida ate liberacao do tribunal.');
+    addStep(4, 'DESTRUIDA', 'Evidencia eliminada apos periodo de retencao, conforme politica de dados da organizacao.');
+    
+    addSubTitle('5.4 Exemplo Pratico: Caso de Vazamento de Informacoes');
+    addStep(1, 'Coleta Imediata', 'Upload de emails suspeitos (arquivo PST 2.3GB), logs de acesso ao sistema (JSON 45MB), prints de tela (PNG).');
+    addStep(2, 'Verificacao Automatica', 'Sistema gera hashes: emails SHA-256:a1b2c3..., logs SHA-256:d4e5f6..., preserva metadados EXIF das imagens.');
+    addStep(3, 'Classificacao Legal', 'Emails marcados "Privilegio Advogado-Cliente", logs "Acesso Restrito RH", prints "LGPD - Dados Pessoais".');
+    addStep(4, 'Cadeia Documentada', 'Registro automatico: Coletado por João Silva (Auditor) em 20/01/2025 10:30, Hash verificado, Status: Ativa.');
+    addStep(5, 'Protecao Garantida', 'Evidencias protegidas por 84 meses, backups em 3 locais geograficos, acesso apenas equipe investigativa.');
+    
+    // ===== CAPITULO 6: ACOES CORRETIVAS =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('6. ACOES CORRETIVAS E PREVENTIVAS', primaryColor);
+    
+    addText('Modulo especializado para implementacao, monitoramento e avaliacao de eficacia de medidas corretivas e preventivas derivadas de casos eticos.');
+    
+    addSubTitle('6.1 Tipos de Acoes');
+    addStep(1, 'Acoes Imediatas', 'Medidas de protecao urgente: afastamento temporario, mudanca de setor, suspensao de acesso a sistemas.');
+    addStep(2, 'Acoes Corretivas', 'Medidas para corrigir problemas identificados: treinamentos, mudancas de processo, disciplinares.');
+    addStep(3, 'Acoes Preventivas', 'Medidas para evitar reincidencia: politicas, controles, monitoramento, campanhas de conscientizacao.');
+    addStep(4, 'Acoes Sistemicas', 'Mudancas estruturais: reorganizacao, novos sistemas, culturas organizacionais.');
+    
+    addSubTitle('6.2 Estrutura de uma Acao');
+    addHighlightBox(
+      'DEFINICAO CLARA',
+      'Descricao especifica da acao, objetivo esperado, resultado mensuravel, criterios de sucesso.'
+    );
+    
+    addHighlightBox(
+      'RESPONSABILIDADE',
+      'Responsavel pela implementacao, equipe de apoio, stakeholders envolvidos, aprovadores necessarios.'
+    );
+    
+    addHighlightBox(
+      'CRONOGRAMA',
+      'Data de inicio, marcos intermediarios, prazo final, dependencias criticas.'
+    );
+    
+    addHighlightBox(
+      'MEDICAO DE EFICACIA',
+      'KPIs especificos, metodo de avaliacao, frequencia de revisao, criterios de aprovacao.'
+    );
+    
+    addSubTitle('6.3 Status de Acompanhamento');
+    addStep(1, 'PLANEJADA', 'Acao definida mas ainda nao iniciada. Aguardando aprovacao ou recursos.');
+    addStep(2, 'EM PROGRESSO', 'Acao em implementacao ativa. Acompanhamento semanal do progresso.');
+    addStep(3, 'CONCLUIDA', 'Acao implementada completamente. Aguardando avaliacao de eficacia.');
+    addStep(4, 'EFICAZ', 'Acao concluida e comprovadamente eficaz. Objetivo atingido.');
+    addStep(5, 'INEFICAZ', 'Acao nao atingiu objetivo esperado. Requer replanejamento ou substituicao.');
+    
+    addSubTitle('6.4 Caso Pratico: Programa Anti-Assedio');
+    addText('Cenario: Implementacao de programa abrangente apos multiplos casos de assedio');
+    
+    addStep(1, 'Acao Imediata', 'Treinamento obrigatorio para gestores > Responsavel: RH > Prazo: 30 dias > Status: Em Progresso');
+    addStep(2, 'Acao Corretiva', 'Revisao de politica de conduta > Responsavel: Juridico > Prazo: 45 dias > Status: Planejada');
+    addStep(3, 'Acao Preventiva', 'Canal de denuncia anonimo > Responsavel: Compliance > Prazo: 60 dias > Status: Em Progresso');
+    addStep(4, 'Medicao Eficacia', 'KPI: Reducao 50% em casos de assedio em 12 meses > Metrica: Numero de casos/trimestre');
+    addStep(5, 'Resultado Obtido', 'Apos 6 meses: 73% reducao em casos, 95% dos gestores treinados, politica aprovada e divulgada');
+    
+    // ===== CAPITULO 7: NOTIFICACOES REGULATORIAS =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('7. NOTIFICACOES REGULATORIAS', primaryColor);
+    
+    addText('Sistema inteligente para identificacao automatica e gestao de notificacoes obrigatorias para orgaos fiscalizadores e autoridades competentes.');
+    
+    addSubTitle('7.1 Deteccao Automatica');
+    addText('O sistema utiliza IA para identificar casos que requerem notificacao:');
+    
+    addStep(1, 'Assedio Sexual/Moral', 'Deteccao: palavras-chave especificas > Orgao: Ministerio Publico do Trabalho > Prazo: 48h');
+    addStep(2, 'Discriminacao', 'Deteccao: indicadores de preconceito > Orgao: Ministerio da Justica > Prazo: 72h');
+    addStep(3, 'Corrupcao/Suborno', 'Deteccao: transacoes suspeitas > Orgao: CGU/TCU > Prazo: 24h');
+    addStep(4, 'Seguranca do Trabalho', 'Deteccao: acidentes/riscos > Orgao: Ministerio do Trabalho > Prazo: 24h');
+    addStep(5, 'Fraude Financeira', 'Deteccao: manipulacao contabil > Orgao: CVM/Banco Central > Prazo: 24h');
+    
+    addSubTitle('7.2 Processo de Notificacao');
+    addHighlightBox(
+      'IDENTIFICACAO',
+      'Sistema analisa automaticamente cada caso e identifica potencial necessidade de notificacao baseado em regulamentacoes vigentes.'
+    );
+    
+    addHighlightBox(
+      'PREPARACAO',
+      'Geracao automatica de minuta de notificacao com dados essenciais: natureza do caso, envolvidos, evidencias, acoes tomadas.'
+    );
+    
+    addHighlightBox(
+      'REVISAO JURIDICA',
+      'Notificacao preparada e enviada para aprovacao do juridico antes do envio oficial ao orgao competente.'
+    );
+    
+    addHighlightBox(
+      'ENVIO OFICIAL',
+      'Transmissao atraves dos canais oficiais de cada orgao, com protocolo de recebimento e acompanhamento de prazos.'
+    );
+    
+    addSubTitle('7.3 Status de Acompanhamento');
+    addStep(1, 'IDENTIFICADA', 'Sistema detectou necessidade de notificacao. Aguardando preparacao da comunicacao.');
+    addStep(2, 'PREPARANDO', 'Minuta em elaboracao com dados do caso e contexto legal necessario.');
+    addStep(3, 'REVISAO JURIDICA', 'Notificacao sob analise do departamento juridico para aprovacao.');
+    addStep(4, 'PENDENTE ENVIO', 'Aprovada pelo juridico. Aguardando transmissao oficial ao orgao.');
+    addStep(5, 'ENVIADA', 'Notificacao transmitida oficialmente. Protocolo de recebimento obtido.');
+    addStep(6, 'RESPONDIDA', 'Orgao fiscalizador respondeu a notificacao. Processo administrativo iniciado ou arquivado.');
+    
+    addSubTitle('7.4 Exemplo Pratico: Notificacao ao MPT');
+    addStep(1, 'Deteccao Automatica', 'Caso ETH-2025-008 sobre assedio moral > IA detecta palavras "intimidacao", "humilhacao" > Sistema sugere notificacao MPT');
+    addStep(2, 'Preparacao da Minuta', 'Sistema gera texto: "Comunicamos ocorrencia de possivel assedio moral envolvendo gestor e subordinado..."');
+    addStep(3, 'Revisao Interna', 'Juridico revisa e aprova minuta, adicionando contexto sobre medidas ja implementadas pela empresa');
+    addStep(4, 'Envio Oficial', 'Notificacao enviada via sistema PJe do MPT > Protocolo 2025.03.001234-5 > Prazo resposta: 30 dias');
+    addStep(5, 'Acompanhamento', 'MPT arquiva caso reconhecendo adequacao das medidas tomadas pela empresa > Status: Respondida/Arquivada');
+    
+    // ===== CAPITULO 8: CONFIGURACOES DO SISTEMA =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('8. CONFIGURACOES DO SISTEMA', primaryColor);
+    
+    addText('Parametrizacao avancada do modulo para adequacao as especificidades organizacionais, incluindo SLA, prazos, notificacoes e integracoes.');
+    
+    addSubTitle('8.1 Gestao de SLA (Service Level Agreement)');
+    addText('Definicao de prazos para cada fase do processo:');
+    
+    addStep(1, 'Confirmacao de Recebimento', 'Prazo padrao: 24 horas > Personalizavel: 1-72h > Trigger: Email automatico ao denunciante');
+    addStep(2, 'Inicio da Investigacao', 'Prazo padrao: 5 dias uteis > Personalizavel: 1-15 dias > Trigger: Atribuicao de investigador');
+    addStep(3, 'Resolucao do Caso', 'Prazo padrao: 30 dias corridos > Personalizavel: 7-90 dias > Trigger: Documentacao de conclusao');
+    addStep(4, 'Implementacao de Acoes', 'Prazo padrao: 60 dias corridos > Personalizavel: 15-180 dias > Trigger: Validacao de eficacia');
+    
+    addSubTitle('8.2 Sistema de Notificacoes');
+    addHighlightBox(
+      'EMAIL AUTOMATICO',
+      'Configuracao de SMTP corporativo para envio automatico de notificacoes de recebimento, status updates, lembretes de prazo.'
+    );
+    
+    addHighlightBox(
+      'ALERTAS DE SLA',
+      'Notificacoes automaticas quando casos se aproximam do vencimento: 75% do prazo (alerta amarelo), 90% (alerta vermelho).'
+    );
+    
+    addHighlightBox(
+      'NOTIFICACOES PUSH',
+      'Alertas em tempo real no dashboard para situacoes criticas: casos vencidos, evidencias em legal hold, aprovacoes pendentes.'
+    );
+    
+    addSubTitle('8.3 Templates de Comunicacao');
+    addText('Templates personalizaveis com variaveis dinamicas:');
+    
+    addStep(1, 'Confirmacao de Recebimento', 'Variáveis: {{PROTOCOLO}}, {{DATA}}, {{PRAZO_INVESTIGACAO}} > Personalização: logo, assinatura, contatos');
+    addStep(2, 'Update de Status', 'Variaveis: {{STATUS_ATUAL}}, {{PRÓXIMOS_PASSOS}}, {{PRAZO}} > Personalização: nivel de detalhe');
+    addStep(3, 'Solicitacao de Informacoes', 'Variaveis: {{INFORMACOES_SOLICITADAS}}, {{PRAZO_RESPOSTA}} > Personalização: tom formal/informal');
+    addStep(4, 'Comunicacao de Encerramento', 'Variaveis: {{RESUMO}}, {{ACOES_IMPLEMENTADAS}} > Personalização: nivel de transparencia');
+    
+    addSubTitle('8.4 Integracoes Externas');
+    addStep(1, 'SMTP Corporativo', 'Configuracao: servidor, porta, autenticacao, criptografia > Teste de conectividade > Logs de envio');
+    addStep(2, 'Active Directory', 'Sincronizacao de usuarios, grupos, permissoes > Mapeamento de roles > Autenticacao integrada');
+    addStep(3, 'SharePoint/OneDrive', 'Armazenamento de evidencias > Sincronizacao automatica > Controle de versoes');
+    addStep(4, 'APIs Personalizadas', 'Integracao com sistemas internos > Webhooks > Sincronizacao bidirecionais');
+    
+    // ===== CAPITULO 9: CASOS PRATICOS AVANCADOS =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('9. CASOS PRATICOS AVANCADOS', primaryColor);
+    
+    addSubTitle('9.1 CASO COMPLEXO: ESQUEMA DE CORRUPCAO MULTINACIONAL');
+    addText('Empresa: Construtora Global (50.000 funcionarios, 25 paises)');
+    addText('Situacao: Denuncia anonima sobre pagamentos irregulares em licitacao no exterior');
+    
+    addStep(1, 'Recepcao e Classificacao', 'Protocolo: ETH-2024-127 > IA classifica: CRITICA > Palavras-chave: "propina", "licitacao", "offshore"');
+    addStep(2, 'Escalonamento Imediato', 'Notificacao automatica para CEO, CLO, Board > Ativacao de protocolo de crise > Legal hold em todas evidencias');
+    addStep(3, 'Investigacao Externa', 'Contratacao de firma internacional > Orcamento: USD 500.000 > Prazo: 120 dias > Equipe: 12 especialistas');
+    addStep(4, 'Preservacao Massiva', 'Coleta de 15TB de dados > 50.000 emails > 200 contratos > Logs de 5 sistemas > Hash de tudo preservado');
+    addStep(5, 'Cooperacao Regulatoria', 'Notificacoes simultaneas: DOJ (EUA), SFO (Reino Unido), CGU (Brasil) > Protocolos diplomaticos');
+    addStep(6, 'Remediation Global', '250 acoes corretivas > Treinamento 10.000 funcionarios > Novos controles > Due diligence terceiros');
+    addStep(7, 'Resultado Final', '18 meses de investigacao > 5 desligamentos > USD 50M em multas evitadas > Programa compliance renovado');
+    
+    addSubTitle('9.2 CASO SENSIVEL: ASSEDIO EM C-LEVEL');
+    addText('Empresa: Tech Unicorn (2.000 funcionarios, pre-IPO)');
+    addText('Situacao: VP Comercial acusado de assedio sexual por multiplas funcionarias');
+    
+    addStep(1, 'Gestao de Crise', 'Protocolo especial C-Level > Investigacao externa obrigatoria > Comunicacao com Board em 2h');
+    addStep(2, 'Protecao das Vitimas', 'Afastamento imediato do acusado > Suporte psicologico > Garantia de nao-retaliacao');
+    addStep(3, 'Investigacao Especializada', 'Firma boutique especializada > 3 investigadores senior > Metodologia trauma-informed');
+    addStep(4, 'Evidencias Sensiveis', 'Mensagens WhatsApp > Testemunhos gravados > Cameras de seguranca > Protecao maxima');
+    addStep(5, 'Decisao Executiva', '45 dias de investigacao > 12 testemunhas ouvidas > Evidencias conclusivas > Demissao por justa causa');
+    addStep(6, 'Remediation Cultural', 'Programa cultural amplo > Novo codigo de conduta > Treinamento obrigatorio > Canal seguro');
+    addStep(7, 'Impacto no IPO', 'Transparencia com investidores > Demonstracao de governanca > Due diligence bem-sucedida');
+    
+    addSubTitle('9.3 CASO SISTEMICO: FRAUDE EM SUBSIDIARIA');
+    addText('Empresa: Multinacional Farmaceutica (80.000 funcionarios)');
+    addText('Situacao: Controller da filial brasileira manipulando demonstracoes financeiras');
+    
+    addStep(1, 'Deteccao por IA', 'Sistema detecta anomalias em reconciliacoes > Padroes suspeitos em lancamentos > Alerta automatico');
+    addStep(2, 'Auditoria Forense', 'Big Four contratada > Auditoria completa 24 meses > Analise de 2 milhoes de transacoes');
+    addStep(3, 'Impacto Financeiro', 'R$ 50M em receitas fictícias > 15 trimestres afetados > Necessidade de restatement');
+    addStep(4, 'Investigacao Criminal', 'Representacao na Policia Federal > Quebra de sigilo > Prisao preventiva do controller');
+    addStep(5, 'Remediation Sistemica', 'Novos controles internos > Segregacao de funcoes > Auditoria continua implementada');
+    addStep(6, 'Conformidade Regulatoria', 'Notificacao CVM > Acordo de leniencia > Monitoramento independente por 3 anos');
+    addStep(7, 'Licoes Aprendidas', 'Fortalecimento do programa de compliance > Tons at the top > Cultura de integridade');
+    
+    // ===== CAPITULO 10: SOLUCAO DE PROBLEMAS =====
+    
+    doc.addPage();
+    addHeader();
+    yPosition = margin + 35; // Mais espaço no topo
+    
+    addTitle('10. SOLUCAO DE PROBLEMAS E FAQ', primaryColor);
+    
+    addSubTitle('10.1 Problemas Tecnicos Comuns');
+    
+    addHighlightBox(
+      'PROBLEMA: Sistema lento ou travando',
+      'CAUSA: Cache do navegador sobrecarregado, muitos filtros ativos simultaneamente. SOLUCAO: Ctrl+Shift+Delete para limpar cache completo. Remover filtros desnecessarios. PREVENCAO: Limitar periodo de busca a 90 dias. Usar filtros especificos em vez de genericos.'
+    );
+    
+    addHighlightBox(
+      'PROBLEMA: Erro "Acesso Negado" ao carregar dados',
+      'CAUSA: Sessao expirada automaticamente, role de usuario insuficiente. SOLUCAO: Fazer logout completo e login novamente. Verificar permissoes com administrador do sistema. PREVENCAO: Renovar sessao preventivamente a cada 3 horas. Nao deixar sistema inativo por mais de 4 horas.'
+    );
+    
+    addHighlightBox(
+      'PROBLEMA: E-mails automaticos nao sendo enviados',
+      'CAUSA: Configuracao SMTP incorreta, firewall corporativo bloqueando. SOLUCAO: Testar configuracao em Configuracoes > Integracoes > SMTP Test. Contatar equipe de TI para liberacao de portas. PREVENCAO: Configurar servidor SMTP backup. Monitorar status de envio diariamente.'
+    );
+    
+    addHighlightBox(
+      'PROBLEMA: Upload de evidencias falhando',
+      'CAUSA: Arquivo muito grande (>10MB), formato nao suportado. SOLUCAO: Comprimir arquivo antes do upload. Usar formatos suportados: PDF, DOCX, JPG, PNG, MP3, MP4. PREVENCAO: Otimizar arquivos antes do upload. Preferir PDF para documentos.'
+    );
+    
+    addHighlightBox(
+      'PROBLEMA: Dados nao sincronizando entre abas',
+      'CAUSA: Multiplas sessoes abertas, problemas de conectividade. SOLUCAO: Fechar todas as outras abas do modulo. Fazer refresh da pagina com F5. PREVENCAO: Usar apenas uma sessao ativa por vez. Garantir conexao de internet estavel.'
+    );
+    
+    addSubTitle('10.2 Perguntas Frequentes (FAQ)');
+    
+    addStep(1, 'Como alterar prazos de SLA?', 'Acesse aba Configuracoes > SLA e Prazos > Altere valores desejados > Clique Salvar. Mudancas se aplicam apenas a novos casos.');
+    addStep(2, 'Posso recuperar caso excluido?', 'Nao. Exclusoes sao permanentes por seguranca. Use "Arquivar" em vez de "Excluir" para preservar historico.');
+    addStep(3, 'Como adicionar novos usuarios?', 'Gestao de usuarios e feita no modulo Admin principal. Canal de Etica herda permissoes do sistema central.');
+    addStep(4, 'Evidencias tem limite de tamanho?', 'Limite individual: 10MB por arquivo. Limite total por caso: 1GB. Para arquivos maiores, use compartilhamento externo.');
+    addStep(5, 'Como fazer backup dos dados?', 'Backups sao automaticos a cada 6 horas. Para backup manual: Configuracoes > Backup > Executar Agora.');
+    addStep(6, 'Posso personalizar campos do formulario?', 'Campos padrao nao podem ser alterados. Campos customizados podem ser adicionados via Configuracoes > Campos Personalizados.');
+    addStep(7, 'Como integrar com AD/LDAP?', 'Integracao e configurada pelo administrador do sistema no modulo de Configuracoes Gerais, nao no Canal de Etica.');
+    addStep(8, 'Dados ficam por quanto tempo?', 'Retencao padrao: 7 anos para casos concluidos, permanente para casos com legal hold. Configuravel por organizacao.');
+    
+    addSubTitle('10.3 Suporte Tecnico');
+    addHighlightBox(
+      'CANAIS DE SUPORTE',
+      'Email: suporte@grc-controller.com > Telefone: 0800-123-4567 > Chat: Disponivel no sistema 24/7 > Portal: https://suporte.grc-controller.com'
+    );
+    
+    addHighlightBox(
+      'RECURSOS ADICIONAIS',
+      'Base de Conhecimento: https://kb.grc-controller.com > Videos Tutoriais: Canal YouTube GRC Controller > Webinars: Mensais, inscricoes no portal > Treinamentos: Presenciais e remotos disponiveis'
+    );
+    // === RODAPE PROFISSIONAL ===
+    
+    // Adicionar rodape em todas as paginas
     const totalPages = doc.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       
-      // Linha divisória no rodapé
+      // Linha divisoria no rodape
       doc.setDrawColor(...grayColor);
       doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
       
-      // Informações do rodapé
-      doc.setFontSize(8);
+      // Informações do rodapé com formatação otimizada
+      doc.setFontSize(7);
       doc.setTextColor(...grayColor);
       doc.setFont('helvetica', 'normal');
       
-      // Esquerda
-      doc.text('GRC Controller - Módulo de Ética © 2025', margin, pageHeight - 12);
-      doc.text('Sistema Profissional de Gestão de Compliance Ético', margin, pageHeight - 8);
-      
-      // Centro
-      doc.text(`Versão 2.0 Professional`, pageWidth / 2, pageHeight - 12, { align: 'center' });
-      doc.text(`Documento Confidencial`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-      
-      // Direita
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 12, { align: 'right' });
-      doc.text(new Date().toLocaleDateString('pt-BR'), pageWidth - margin, pageHeight - 8, { align: 'right' });
+      // Linha única com informações essenciais
+      doc.text('GRC Controller - Canal de Etica © 2025 | Versao 3.0 Corporativa', margin, pageHeight - 8);
+      doc.text(`Pagina ${i} de ${totalPages} | ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
     }
 
     // === SALVAR ARQUIVO ===
-    const fileName = `GRC-Modulo-Etica-Manual-Profissional-${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `Canal-de-Etica-Manual-Completo-${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
     
-    toast.success('📚 Manual profissional baixado com sucesso! O PDF contém formatação visual moderna, casos de uso reais e instruções detalhadas.');
+    toast.success('📖 Manual completo do Canal de Etica baixado com sucesso! Documentacao profissional com casos praticos e instrucoes detalhadas.');
   };
 
   const renderDashboardTab = () => {
