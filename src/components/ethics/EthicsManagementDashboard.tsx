@@ -383,22 +383,22 @@ const EthicsManagementDashboard: React.FC = () => {
     // Configurar fontes para caracteres especiais
     doc.setFont('helvetica');
 
-    // Função para adicionar nova página se necessário com melhor espaçamento
+    // Função compacta para quebra de página
     const addPageIfNeeded = (additionalHeight = 0) => {
-      if (yPosition + additionalHeight > pageHeight - 50) { // Mais espaço para rodapé
+      if (yPosition + additionalHeight > pageHeight - 30) { // Menos espaço para rodapé
         doc.addPage();
         addHeader();
-        yPosition = margin + 35; // Mais espaço no topo
+        yPosition = margin + 15; // Muito menos espaço no topo
       }
     };
 
-    // Cabeçalho das páginas internas
+    // Cabeçalho minimalista e compacto
     const addHeader = () => {
-      doc.setDrawColor(...grayColor);
-      doc.line(margin, margin + 15, pageWidth - margin, margin + 15);
-      doc.setFontSize(8);
-      doc.setTextColor(...grayColor);
-      doc.text('GRC Controller - Módulo de Ética', margin, margin + 12);
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, margin + 8, pageWidth - margin, margin + 8);
+      doc.setFontSize(7);
+      doc.setTextColor(140, 140, 140);
+      doc.text('Canal de Etica', margin, margin + 6);
     };
 
     // Função para adicionar caixa colorida
@@ -408,8 +408,8 @@ const EthicsManagementDashboard: React.FC = () => {
       yPosition += height + 5;
     };
 
-    // Função para adicionar texto com quebra automática e melhor espaçamento
-    const addText = (text: string, fontSize = 9, isBold = false, color = [0, 0, 0], indent = 0, lineSpacing = 1.2) => {
+    // Função para adicionar texto compacto e otimizado
+    const addText = (text: string, fontSize = 9, isBold = false, color = [0, 0, 0], indent = 0) => {
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
       if (isBold) {
@@ -419,120 +419,107 @@ const EthicsManagementDashboard: React.FC = () => {
       }
       
       const lines = doc.splitTextToSize(text, contentWidth - indent);
-      const totalHeight = lines.length * fontSize * lineSpacing;
-      addPageIfNeeded(totalHeight + 8);
+      addPageIfNeeded(lines.length * 4 + 6);
       
-      for (let i = 0; i < lines.length; i++) {
-        doc.text(lines[i], margin + indent, yPosition + (i * fontSize * lineSpacing));
-      }
-      yPosition += totalHeight + 8;
+      doc.text(lines, margin + indent, yPosition);
+      yPosition += lines.length * 4 + 6; // Muito mais compacto
     };
 
-    // Função para adicionar título principal com melhor espaçamento
+    // Função para adicionar título compacto
     const addTitle = (text: string, color = primaryColor) => {
-      addPageIfNeeded(35);
-      yPosition += 8; // Espaço antes do título
-      addColorBox(color, 2);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...color);
-      doc.text(text, margin, yPosition);
-      yPosition += 20;
-    };
-
-    // Função para adicionar subtítulo com melhor formatação
-    const addSubTitle = (text: string, color = accentColor) => {
       addPageIfNeeded(20);
-      yPosition += 6; // Espaço antes do subtítulo
-      doc.setFontSize(11);
+      yPosition += 4; // Menos espaço antes
+      addColorBox(color, 1.5);
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...color);
       doc.text(text, margin, yPosition);
-      yPosition += 15;
+      yPosition += 14; // Muito mais compacto
     };
 
-    // Função para adicionar caixa de destaque com melhor formatação
+    // Função para adicionar subtítulo compacto
+    const addSubTitle = (text: string, color = accentColor) => {
+      addPageIfNeeded(15);
+      yPosition += 3; // Muito menos espaço
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...color);
+      doc.text(text, margin, yPosition);
+      yPosition += 10; // Mais compacto
+    };
+
+    // Função para adicionar caixa de destaque compacta
     const addHighlightBox = (title: string, content: string, bgColor = [248, 250, 252]) => {
-      const titleLines = doc.splitTextToSize(title, contentWidth - 15);
-      const contentLines = doc.splitTextToSize(content, contentWidth - 15);
-      const boxHeight = (titleLines.length * 5) + (contentLines.length * 4.5) + 18;
+      const titleLines = doc.splitTextToSize(title, contentWidth - 10);
+      const contentLines = doc.splitTextToSize(content, contentWidth - 10);
+      const boxHeight = (titleLines.length * 4) + (contentLines.length * 3.5) + 12;
       
-      addPageIfNeeded(boxHeight + 12);
+      addPageIfNeeded(boxHeight + 6);
       
       doc.setFillColor(...bgColor);
       doc.setDrawColor(...grayColor);
       doc.rect(margin, yPosition, contentWidth, boxHeight, 'FD');
       
       // Título da caixa
-      doc.setFontSize(9);
+      doc.setFontSize(8.5);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryColor);
-      doc.text(titleLines, margin + 8, yPosition + 10);
+      doc.text(titleLines, margin + 6, yPosition + 7);
       
       // Conteúdo da caixa
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
       doc.setFontSize(8);
-      const contentY = yPosition + 10 + (titleLines.length * 5) + 4;
-      doc.text(contentLines, margin + 8, contentY);
+      const contentY = yPosition + 7 + (titleLines.length * 4) + 2;
+      doc.text(contentLines, margin + 6, contentY);
       
-      yPosition += boxHeight + 12;
+      yPosition += boxHeight + 6; // Muito menos espaçamento
     };
 
-    // Função para adicionar passo numerado com melhor formatação
+    // Função para adicionar passo numerado com espaçamento mínimo
     const addStep = (stepNumber: number, title: string, description: string) => {
-      const titleLines = doc.splitTextToSize(title, contentWidth - 25);
-      const descLines = doc.splitTextToSize(description, contentWidth - 25);
-      const stepHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
+      addPageIfNeeded(15);
       
-      addPageIfNeeded(stepHeight + 5);
-      
-      // Círculo numerado menor
-      doc.setFillColor(...primaryColor);
-      doc.circle(margin + 6, yPosition + 4, 4, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'bold');
-      const numText = stepNumber.toString();
-      doc.text(numText, stepNumber < 10 ? margin + 4.5 : margin + 3.5, yPosition + 6);
-      
-      // Título do passo
+      // Número simples sem círculo
       doc.setTextColor(...primaryColor);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      doc.text(titleLines, margin + 16, yPosition + 6);
+      doc.text(`${stepNumber}.`, margin, yPosition);
       
-      // Descrição
+      // Título muito próximo ao número
+      doc.text(title, margin + 8, yPosition); // Reduzido de 12 para 8
+      
+      // Descrição compacta alinhada com o título
       doc.setTextColor(60, 60, 60);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      const descY = yPosition + 6 + (titleLines.length * 4) + 2;
-      doc.text(descLines, margin + 16, descY);
+      const descLines = doc.splitTextToSize(description, contentWidth - 10);
+      doc.text(descLines, margin + 8, yPosition + 4); // Alinhado com título
       
-      yPosition += stepHeight + 8;
+      yPosition += 4 + (descLines.length * 3.5) + 3; // Ainda mais compacto
     };
 
     // === CAPA DO DOCUMENTO ===
     
-    // Fundo gradiente simulado
+    // Cabeçalho compacto azul
     doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, pageWidth, 80, 'F');
+    doc.rect(0, 0, pageWidth, 50, 'F'); // Reduzido de 80 para 50
     
-    // Título principal
+    // Título principal compacto
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(20); // Reduzido de 24 para 20
     doc.setFont('helvetica', 'bold');
-    doc.text('CANAL DE ETICA', pageWidth / 2, 35, { align: 'center' });
+    doc.text('CANAL DE ETICA', pageWidth / 2, 20, { align: 'center' }); // Ajustado posição
     
-    doc.setFontSize(16);
+    doc.setFontSize(12); // Reduzido de 16 para 12
     doc.setFont('helvetica', 'normal');
-    doc.text('Manual do Usuario - Sistema GRC', pageWidth / 2, 50, { align: 'center' });
+    doc.text('Manual do Usuario - Sistema GRC', pageWidth / 2, 32, { align: 'center' }); // Ajustado posição
     
-    doc.setFontSize(12);
-    doc.text('Gestao Completa de Denuncias e Investigacoes', pageWidth / 2, 65, { align: 'center' });
+    doc.setFontSize(10); // Reduzido de 12 para 10
+    doc.text('Gestao Completa de Denuncias e Investigacoes', pageWidth / 2, 42, { align: 'center' }); // Ajustado posição
     
-    // Informações da versão
-    yPosition = 100;
+    // Informações da versão - posição ajustada
+    yPosition = 70; // Reduzido de 100 para 70
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -645,7 +632,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('2. DASHBOARD PRINCIPAL', primaryColor);
     
@@ -697,7 +684,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('3. GESTAO DE CASOS', primaryColor);
     
@@ -774,7 +761,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('4. PLANOS DE INVESTIGACAO', primaryColor);
     
@@ -819,7 +806,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('5. GESTAO DE EVIDENCIAS', primaryColor);
     
@@ -871,7 +858,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('6. ACOES CORRETIVAS E PREVENTIVAS', primaryColor);
     
@@ -924,7 +911,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('7. NOTIFICACOES REGULATORIAS', primaryColor);
     
@@ -979,7 +966,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('8. CONFIGURACOES DO SISTEMA', primaryColor);
     
@@ -1027,7 +1014,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('9. CASOS PRATICOS AVANCADOS', primaryColor);
     
@@ -1071,7 +1058,7 @@ const EthicsManagementDashboard: React.FC = () => {
     
     doc.addPage();
     addHeader();
-    yPosition = margin + 35; // Mais espaço no topo
+    yPosition = margin + 15; // Espaço compacto
     
     addTitle('10. SOLUCAO DE PROBLEMAS E FAQ', primaryColor);
     
@@ -1130,18 +1117,18 @@ const EthicsManagementDashboard: React.FC = () => {
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       
-      // Linha divisoria no rodape
-      doc.setDrawColor(...grayColor);
-      doc.line(margin, pageHeight - 20, pageWidth - margin, pageHeight - 20);
+      // Linha divisoria compacta no rodape
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
       
       // Informações do rodapé com formatação otimizada
       doc.setFontSize(7);
       doc.setTextColor(...grayColor);
       doc.setFont('helvetica', 'normal');
       
-      // Linha única com informações essenciais
-      doc.text('GRC Controller - Canal de Etica © 2025 | Versao 3.0 Corporativa', margin, pageHeight - 8);
-      doc.text(`Pagina ${i} de ${totalPages} | ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+      // Rodapé compacto
+      doc.text('Canal de Etica © 2025', margin, pageHeight - 6);
+      doc.text(`Pag. ${i}/${totalPages}`, pageWidth - margin, pageHeight - 6, { align: 'right' });
     }
 
     // === SALVAR ARQUIVO ===
