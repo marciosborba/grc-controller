@@ -30,7 +30,8 @@ import {
   Download,
   Printer,
   Mail,
-  Settings
+  Settings,
+  BookOpen
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -38,6 +39,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 import { sanitizeInput, sanitizeObject, secureLog, auditLog } from '@/utils/securityLogger';
 import { useCRUDRateLimit } from '@/hooks/useRateLimit';
+import { AuditDocumentationPDF } from '@/utils/auditDocumentationPDF';
 import { UniversoAuditavel } from './UniversoAuditavel';
 import { ProjetosAuditoria } from './ProjetosAuditoria';
 import { PapeisTrabalhoCompleto } from './PapeisTrabalhoCompleto';
@@ -114,6 +116,32 @@ export function AuditoriasDashboard() {
     hasCustomLevels: !!tenantSettings?.risk_matrix?.risk_levels_custom,
     timestamp: new Date().toISOString()
   });
+
+  // Função para gerar e baixar documentação em PDF
+  const openDocumentacao = () => {
+    try {
+      toast.info("Gerando Manual de Auditoria...", {
+        description: "Preparando documentação profissional em PDF",
+      });
+
+      // Pequeno delay para mostrar o toast
+      setTimeout(() => {
+        const pdfGenerator = new AuditDocumentationPDF();
+        pdfGenerator.save();
+        
+        toast.success("Manual gerado com sucesso!", {
+          description: "O PDF foi baixado e contém todas as funcionalidades e guias de uso.",
+          duration: 5000
+        });
+      }, 500);
+      
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      toast.error("Erro ao gerar documentação", {
+        description: "Houve um problema na geração do PDF. Tente novamente.",
+      });
+    }
+  };
 
   useEffect(() => {
     if (effectiveTenantId) {
@@ -434,6 +462,10 @@ export function AuditoriasDashboard() {
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             Filtros
+          </Button>
+          <Button variant="outline" onClick={openDocumentacao} title="Manual do Usuário">
+            <BookOpen className="h-4 w-4 mr-2" />
+            Documentação
           </Button>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
