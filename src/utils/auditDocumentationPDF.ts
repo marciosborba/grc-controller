@@ -31,49 +31,49 @@ export class AuditDocumentationPDF {
   }
 
   private addHeader1(title: string): void {
-    this.checkPageSpace(20);
-    this.currentY += 6;
+    this.checkPageSpace(15);
+    this.currentY += 4;
     
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(52, 152, 219); // Azul do padrão Ética
     
     this.doc.text(title, this.margins.left, this.currentY);
-    this.currentY += 6;
+    this.currentY += 4;
     
     // Linha separadora azul
     this.doc.setDrawColor(52, 152, 219);
     this.doc.setLineWidth(0.8);
     this.doc.line(this.margins.left, this.currentY, this.pageWidth - this.margins.right, this.currentY);
-    this.currentY += 8;
+    this.currentY += 5;
   }
 
   private addHeader2(title: string): void {
-    this.checkPageSpace(15);
-    this.currentY += 4;
+    this.checkPageSpace(12);
+    this.currentY += 3;
     
     this.doc.setFontSize(12);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(46, 125, 50); // Verde do padrão Ética
     
     this.doc.text(title, this.margins.left, this.currentY);
-    this.currentY += 6;
+    this.currentY += 4;
   }
 
   private addHeader3(title: string): void {
-    this.checkPageSpace(12);
-    this.currentY += 3;
+    this.checkPageSpace(10);
+    this.currentY += 2;
     
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'bold');
     this.doc.setTextColor(156, 39, 176); // Roxo do padrão Ética
     
     this.doc.text(title, this.margins.left, this.currentY);
-    this.currentY += 5;
+    this.currentY += 3.5;
   }
 
   private addParagraph(text: string): void {
-    this.checkPageSpace(12);
+    this.checkPageSpace(10);
     
     this.doc.setFontSize(9);
     this.doc.setFont('helvetica', 'normal');
@@ -88,7 +88,7 @@ export class AuditDocumentationPDF {
       this.currentY += this.lineHeight;
     }
     
-    this.currentY += 3;
+    this.currentY += 2;
   }
 
   private addBulletList(items: string[]): void {
@@ -114,10 +114,10 @@ export class AuditDocumentationPDF {
         if (i < lines.length - 1) this.currentY += this.lineHeight;
       }
       
-      this.currentY += this.lineHeight + 1.5;
+      this.currentY += this.lineHeight + 1;
     });
     
-    this.currentY += 3;
+    this.currentY += 2;
   }
 
   private addNumberedList(items: string[]): void {
@@ -145,10 +145,10 @@ export class AuditDocumentationPDF {
         if (i < lines.length - 1) this.currentY += this.lineHeight;
       }
       
-      this.currentY += this.lineHeight + 1.5;
+      this.currentY += this.lineHeight + 1;
     });
     
-    this.currentY += 3;
+    this.currentY += 2;
   }
 
   private addCaseStudy(title: string, scenario: string, steps: string[]): void {
@@ -253,7 +253,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(quickActions);
     
-    // CASE DE USO - DASHBOARD
+    // CASES DE USO - DASHBOARD
     this.addCaseStudy(
       'Monitoramento Executivo Diario',
       'O Diretor de Auditoria acessa o sistema para acompanhar o status geral das auditorias.',
@@ -263,6 +263,32 @@ export class AuditDocumentationPDF {
         'Analise card "Alto Risco" - processos nivel >= 4 precisam atencao',
         'Monitore "Taxa de Cobertura" - meta minima 80% anual',
         'Use "Novo Projeto" se identificar lacunas de cobertura'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Configuracao de KPIs para Comite',
+      'Preparacao de dados para reuniao mensal do Comite de Auditoria.',
+      [
+        'Acesse Dashboard e anote metricas atuais',
+        'Total de Projetos: registre numero para comparativo',
+        'Apontamentos Criticos: identifique trends negativas',
+        'Percentual de Conclusao: calcule media mensal',
+        'Use botao "Relatorios" para gerar sumario executivo',
+        'Exporte graficos para apresentacao'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Criacao Rapida de Projeto de Emergencia',
+      'Situacao de fraude descoberta - necessario criar auditoria imediata.',
+      [
+        'No Dashboard, clique "Novo Projeto"',
+        'Tipo: "Especial - Investigativa"',
+        'Prioridade: "Critica"',
+        'Prazo: Defina 15 dias uteis',
+        'Equipe: Selecione auditores senior disponiveis',
+        'Status: "Em Execucao" (pulando planejamento)'
       ]
     );
     
@@ -282,7 +308,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(universeFields);
     
-    // CASE DE USO - UNIVERSO AUDITAVEL
+    // CASES DE USO - UNIVERSO AUDITAVEL
     this.addCaseStudy(
       'Mapeamento de Novo Processo Critico',
       'A empresa implementou um novo sistema ERP financeiro que precisa ser incluido no universo auditavel.',
@@ -295,6 +321,33 @@ export class AuditDocumentationPDF {
         'Criticidade: "critica" (impacto alto em demonstracoes)',
         'Frequencia: 12 meses (sistema critico)',
         'Responsavel: Gerente de TI'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Reavaliacao de Criticidade pos-Pandemia',
+      'Processo de Work From Home mudou perfil de risco - necessaria reavaliacao.',
+      [
+        'Filtre por "Tipo: Operacional"',
+        'Localize "Processo de Gestao de Pessoas"',
+        'Clique no icone de edicao',
+        'Criticidade: Altere de "media" para "alta"',
+        'Justificativa: "Controles presenciais comprometidos"',
+        'Frequencia: Reduza de 36 para 24 meses',
+        'Salve as alteracoes'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Filtros Avancados para Planejamento Anual',
+      'Identificar todos os processos criticos que devem ser auditados no proximo ano.',
+      [
+        'Use filtro "Criticidade: critica"',
+        'Adicione filtro "Ultima Auditoria: > 12 meses"',
+        'Ordene por "Data Ultima Auditoria"',
+        'Exporte lista para Excel',
+        'Use dados para montar cronograma anual',
+        'Estime horas totais necessarias'
       ]
     );
     
@@ -321,7 +374,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(cardFeatures);
     
-    // CASE DE USO - PROJETOS
+    // CASES DE USO - PROJETOS
     this.addCaseStudy(
       'Criacao de Auditoria SOX Anual',
       'Inicio do ano fiscal - criar projeto de auditoria Sarbanes-Oxley para compliance.',
@@ -335,6 +388,45 @@ export class AuditDocumentationPDF {
         'Datas: 01/02/2025 a 30/04/2025',
         'Horas: 480 horas',
         'Status: "Planejamento"'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Gestao de Equipe em Projeto Complexo',
+      'Auditoria de multiplas filiais requer coordenacao de equipe distribuida.',
+      [
+        'Abra projeto "Auditoria Filiais Nordeste"',
+        'Aba "Equipe": Adicione 3 auditores junior',
+        'Defina supervisor para cada estado',
+        'Configure notificacoes automaticas',
+        'Estabeleca reunioes semanais de status',
+        'Use chat interno para comunicacao'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Reprogramacao de Projeto por Prioridade',
+      'Auditoria regular deve ser postergada devido a investigacao urgente.',
+      [
+        'Localize projeto "Auditoria Estoques Q4"',
+        'Altere status para "Suspenso"',
+        'Justificativa: "Prioridade dada a investigacao fraude"',
+        'Reagende datas: +60 dias',
+        'Notifique automaticamente a equipe',
+        'Atualize cronograma anual'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Filtros para Auditoria de Performance',
+      'Diretor quer visao consolidada de performance da area.',
+      [
+        'Filtro Status: "Concluido"',
+        'Filtro Periodo: "Ultimos 12 meses"',
+        'Filtro Chefe: "Maria Silva" (sua equipe)',
+        'Ordene por "Data Conclusao"',
+        'Analise tempo medio de execucao',
+        'Compare horas orcadas vs realizadas'
       ]
     );
     
@@ -354,7 +446,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(procedureTypes);
     
-    // CASE DE USO - PAPEIS DE TRABALHO
+    // CASES DE USO - PAPEIS DE TRABALHO
     this.addCaseStudy(
       'Teste de Controle de Aprovacao de Pagamentos',
       'Documentar teste de efetividade do controle de dupla aprovacao para pagamentos > R$ 10.000.',
@@ -368,6 +460,48 @@ export class AuditDocumentationPDF {
         'Criterio: "100% devem ter 2 aprovacoes"',
         'Anexar prints das aprovacoes',
         'Resultado: "2 excecoes - sem segunda aprovacao"'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Procedimento Analitico de Vendas',
+      'Identificar flutuacoes anormais nas receitas trimestrais usando analise horizontal.',
+      [
+        'Tipo: "ANALYTICAL"',
+        'Codigo: "PT-002-ANAL-VENDAS"',
+        'Periodo: "Q1 2024 vs Q1 2023"',
+        'Metodo: "Analise horizontal de receitas"',
+        'Expectativa: "Crescimento 15% baseado em mercado"',
+        'Realizado: "Crescimento 45% - investigate"',
+        'Conclusao: "Nova linha de produtos lancada"'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Walkthrough do Processo de Compras',
+      'Mapear fluxo completo desde requisicao ate pagamento para identificar controles.',
+      [
+        'Tipo: "WALKTHROUGH"',
+        'Selecione amostra: "Compra de equipamentos TI"',
+        'Etapa 1: Requisicao - verificar aprovacao gerencial',
+        'Etapa 2: Cotacao - minimo 3 fornecedores',
+        'Etapa 3: Aprovacao - conforme alcada',
+        'Etapa 4: Recebimento - conferencia fisica',
+        'Documente gaps de controle identificados'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Teste Substantivo de Provisoes',
+      'Validar adequacao de provisoes trabalhistas usando confirmacao com advogados.',
+      [
+        'Tipo: "SUBSTANTIVE"',
+        'Populacao: "Todas as provisoes trabalhistas"',
+        'Amostra: "Processos > R$ 50.000"',
+        'Procedimento: "Confirmacao com escritorios"',
+        'Criterio: "Diferenca < 5% considerada imaterial"',
+        'Anexar respostas dos advogados',
+        'Concluir sobre adequacao das provisoes'
       ]
     );
     
@@ -385,7 +519,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(matrixTypes);
     
-    // CASE DE USO - MATRIZ DE RISCO
+    // CASES DE USO - MATRIZ DE RISCO
     this.addCaseStudy(
       'Avaliacao de Risco de Fraude em Compras',
       'Avaliar risco de fraude no processo de compras usando matriz 5x5.',
@@ -397,6 +531,46 @@ export class AuditDocumentationPDF {
         'Impacto: 4 (Alto - perdas financeiras)',
         'Sistema calcula: 3 x 4 = 12 (Risco Alto)',
         'Acao: Incluir no plano proximo trimestre'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Configuracao de Matriz Customizada por Tenant',
+      'Empresa de pequeno porte prefere matriz 3x3 mais simples.',
+      [
+        'Acesse "Configuracoes da Matriz"',
+        'Selecione "Matriz 3x3"',
+        'Defina niveis: Baixo (1-3), Medio (4-6), Alto (7-9)',
+        'Configure cores: Verde, Amarelo, Vermelho',
+        'Salve configuracao para todo o tenant',
+        'Teste com risco piloto para validar'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Mapa de Calor Executivo',
+      'Preparar visualizacao consolidada para apresentacao ao board.',
+      [
+        'Filtre por "Criticidade: Alta"',
+        'Agrupe por "Area de Negocio"',
+        'Gere mapa de calor visual',
+        'Identifique concentracoes de risco',
+        'Anote top 3 riscos por area',
+        'Exporte grafico para slides'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Reavaliacao Trimestral de Riscos',
+      'Processo regular de atualizacao da matriz baseado em novos eventos.',
+      [
+        'Filtre riscos "Vencidos para reavaliacao"',
+        'Para cada risco, revisar:',
+        '- Mudancas no ambiente de controle',
+        '- Novos fatores externos (economia, regulacao)',
+        '- Efetividade de mitigacoes implementadas',
+        'Atualize scores conforme necessario',
+        'Documente justificativas das mudancas'
       ]
     );
     
@@ -415,7 +589,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(samplingMethods);
     
-    // CASE DE USO - AMOSTRAGEM
+    // CASES DE USO - AMOSTRAGEM
     this.addCaseStudy(
       'Amostragem MUS para Teste de Faturas',
       'Testar faturas usando Monetary Unit Sampling para focar nos valores maiores.',
@@ -428,6 +602,48 @@ export class AuditDocumentationPDF {
         'Erro toleravel: 3%',
         'Sistema calcula: 89 faturas para teste',
         'Exportar lista para equipe de campo'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Amostragem Estratificada por Regiao',
+      'Testar controles de vendas considerando diferencas regionais.',
+      [
+        'Metodo: "STRATIFIED"',
+        'Estratos: "Norte, Nordeste, Sul, Sudeste"',
+        'Populacao total: 50.000 vendas',
+        'Distribua proporcionalmente por regiao',
+        'Norte: 15% da populacao = 18 amostras',
+        'Configure diferentes criterios por estrato',
+        'Sistema gera amostra balanceada'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Amostragem Sistematica para Folha de Pagamento',
+      'Testar calculos de folha usando intervalos regulares.',
+      [
+        'Metodo: "SYSTEMATIC"',
+        'Populacao: 5.000 funcionarios',
+        'Amostra desejada: 100 funcionarios',
+        'Intervalo K = 5000/100 = 50',
+        'Inicio aleatorio: funcionario #23',
+        'Selecao: 23, 73, 123, 173... ate 100 itens',
+        'Exportar para planilha de teste'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Comparativo de Metodos para Auditoria de Estoques',
+      'Escolher melhor metodo considerando natureza heterogenea dos produtos.',
+      [
+        'Analise opcoes:',
+        '- RANDOM: Para produtos homogeneos',
+        '- MUS: Para focar em itens de alto valor',
+        '- STRATIFIED: Para categorias diferentes',
+        'Decisao: STRATIFIED por categoria',
+        'Estratos: A (alto giro), B (medio), C (baixo)',
+        'Configure amostras proporcionais'
       ]
     );
     
@@ -445,7 +661,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(planningLevels);
     
-    // CASE DE USO - PLANEJAMENTO
+    // CASES DE USO - PLANEJAMENTO
     this.addCaseStudy(
       'Criacao de Plano Estrategico Trienal',
       'Criar plano estrategico 2025-2027 com foco em transformacao digital.',
@@ -458,6 +674,47 @@ export class AuditDocumentationPDF {
         'Objetivo: "Automatizar 80% dos testes"',
         'Iniciativa: "Implementacao RPA"',
         'Monitorar pelos cards expansiveis'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Gestao de Objetivos com KPIs SMART',
+      'Definir objetivos mensuravelmente para aumento de cobertura de auditoria.',
+      [
+        'Clique "Novo Objetivo Estrategico"',
+        'Titulo: "Aumentar Cobertura Auditoria"',
+        'Meta SMART: "Auditar 85% do universo critico ate dez/2025"',
+        'Indicador: "% Processos criticos auditados"',
+        'Baseline: 65% (atual)',
+        'Meta: 85%',
+        'Configure alertas de acompanhamento mensal'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Iniciativa de Capacitacao da Equipe',
+      'Projeto especifico para desenvolvimento de competencias em auditoria digital.',
+      [
+        'Vinculado ao objetivo "Transformacao Digital"',
+        'Titulo: "Capacitacao Ferramentas Digitais"',
+        'Duracao: 6 meses',
+        'Budget: R$ 150.000',
+        'Entregas: Certificacao de 15 auditores',
+        'Status: Acompanhe por semaforo (Verde/Amarelo/Vermelho)',
+        'Milestone: Reviews mensais obrigatórios'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Dashboard de Performance Estrategica',
+      'Preparar visao consolidada do progresso estrategico para board.',
+      [
+        'Use cards expansiveis para visao rapida',
+        'Filtre por "Status: Em Andamento"',
+        'Ordene por "% Conclusao" (menor primeiro)',
+        'Identifique iniciativas em risco (vermelho)',
+        'Prepare plano de acao para iniciativas amarelas',
+        'Export summary para apresentacao'
       ]
     );
     
@@ -475,7 +732,7 @@ export class AuditDocumentationPDF {
     ];
     this.addBulletList(reportTypes);
     
-    // CASE DE USO - RELATORIOS
+    // CASES DE USO - RELATORIOS
     this.addCaseStudy(
       'Geracao de Relatorio Final de Auditoria',
       'Finalizar auditoria de TI e gerar relatorio final profissional.',
@@ -488,6 +745,61 @@ export class AuditDocumentationPDF {
         'Listar "Recomendacoes" por prioridade',
         'Status: Rascunho → Revisao → Aprovado',
         'Gerar PDF e distribuir'
+      ]
+    );
+    
+    this.addCaseStudy(
+      'Relatorio Preliminar para Gestao',
+      'Comunicacao rapida de achados criticos antes da finalizacao.',
+      [
+        'Tipo: "Preliminar"',
+        'Foco: Apenas achados criticos e altos',
+        'Template simplificado - 3 paginas max',
+        'Seções: Contexto, Achados, Next Steps',
+        'Prazo: 24h para revisao da gestao',
+        'Automaticamente notifica gestores',
+        'Agendar reuniao de alinhamento'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Dashboard Executivo Mensal',
+      'Relatorio automatico com KPIs para diretoria.',
+      [
+        'Tipo: "Executivo"',
+        'Periodicidade: Mensal automatica',
+        'Metricas: Projetos concluidos, riscos, cobertura',
+        'Graficos: Tendencias ultimos 12 meses',
+        'Benchmark: Comparacao com metas anuais',
+        'Distribuicao automatica via email',
+        'Agendar apresentacao mensal'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Relatorio de Follow-up de Recomendacoes',
+      'Acompanhar implementacao de recomendacoes de auditorias anteriores.',
+      [
+        'Tipo: "Seguimento"',
+        'Filtrar: Recomendacoes em aberto',
+        'Status: Implementado, Em Andamento, Pendente',
+        'Prazo: Destacar overdue em vermelho',
+        'Evidencias: Solicitar comprovacao de implementacao',
+        'Escalonamento: Identificar nao-conformidades',
+        'Proximos passos para cada recomendacao'
+      ]
+    );
+
+    this.addCaseStudy(
+      'Customizacao de Template por Area',
+      'Adaptar formato de relatorio conforme necessidade da area auditada.',
+      [
+        'Area TI: Foco em controles automatizados',
+        'Area Financeira: Enfase em compliance contábil',
+        'Area Operacional: Destaque para eficiencia',
+        'Salvar template personalizado',
+        'Configurar campos obrigatorios por area',
+        'Auto-aplicar template baseado no universo auditavel'
       ]
     );
     
