@@ -146,6 +146,7 @@ const VulnerabilityForm = lazy(() => import("@/components/vulnerabilities/Vulner
 const VulnerabilityList = lazy(() => import("@/components/vulnerabilities/VulnerabilityList"));
 const Applications = lazy(() => import("@/components/vulnerabilities/Applications"));
 const CMDB = lazy(() => import("@/components/vulnerabilities/CMDB"));
+const VulnerabilityFieldsCustomization = lazy(() => import("@/components/vulnerabilities/VulnerabilityFieldsCustomization"));
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
@@ -594,6 +595,11 @@ const App = () => (
                   <Route path="vulnerabilities/cmdb" element={
                     <Suspense fallback={<PageLoader />}>
                       <CMDB />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/fields-customization" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityFieldsCustomization />
                     </Suspense>
                   } />
                   <Route path="privacy" element={

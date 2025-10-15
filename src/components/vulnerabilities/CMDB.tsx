@@ -405,12 +405,12 @@ export default function CMDB() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Importação via Arquivo</h3>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-sm text-gray-600 mb-2">
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-2">
                       Arraste e solte arquivos aqui ou clique para selecionar
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground/70">
                       Formatos suportados: XML, CSV, TXT
                     </p>
                     <Button className="mt-4">
