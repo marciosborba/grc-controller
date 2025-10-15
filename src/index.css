@@ -1288,4 +1288,62 @@
     overflow-wrap: break-word !important;
     word-break: break-word !important;
   }
+
+  /* Switch component - force primary color when checked - ULTRA SPECIFIC */
+  [data-radix-collection-item][data-state="checked"],
+  button[role="switch"][data-state="checked"],
+  [role="switch"][data-state="checked"] {
+    background-color: hsl(198 87% 50%) !important;
+  }
+
+  /* More specific selector for Radix UI Switch */
+  [data-radix-switch-root][data-state="checked"] {
+    background-color: hsl(198 87% 50%) !important;
+  }
+
+  /* Ultra specific selector for our switch component */
+  .peer[data-state="checked"] {
+    background-color: hsl(198 87% 50%) !important;
+  }
+
+  /* Nuclear option - target all possible switch elements */
+  button[data-state="checked"],
+  [data-state="checked"][role="switch"],
+  [data-state="checked"].peer,
+  .peer.data-\[state\=checked\],
+  [data-state="checked"] {
+    background-color: hsl(198 87% 50%) !important;
+  }
+
+  /* Specific for our application form toggles */
+  #lgpd[data-state="checked"],
+  #sox[data-state="checked"],
+  #acn[data-state="checked"],
+  #internet[data-state="checked"] {
+    background-color: hsl(198 87% 50%) !important;
+  }
+
+  /* Switch thumb - ONLY for specific toggle IDs */
+  #lgpd span[class*="rounded-full"],
+  #sox span[class*="rounded-full"],
+  #acn span[class*="rounded-full"],
+  #internet span[class*="rounded-full"] {
+    background-color: white !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  /* Ensure thumb is visible in both states - ONLY for our specific toggles */
+  #lgpd[data-state="checked"] span[class*="rounded-full"],
+  #lgpd[data-state="unchecked"] span[class*="rounded-full"],
+  #sox[data-state="checked"] span[class*="rounded-full"],
+  #sox[data-state="unchecked"] span[class*="rounded-full"],
+  #acn[data-state="checked"] span[class*="rounded-full"],
+  #acn[data-state="unchecked"] span[class*="rounded-full"],
+  #internet[data-state="checked"] span[class*="rounded-full"],
+  #internet[data-state="unchecked"] span[class*="rounded-full"] {
+    background-color: white !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  }
 }

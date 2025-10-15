@@ -1,1 +1,272 @@
-import { useState, useEffect, useCallback } from 'react';\nimport { useAuth } from '@/contexts/AuthContextOptimized';\nimport { toast } from 'sonner';\n\n// Types for application custom fields\nexport interface ApplicationCustomField {\n  id: string;\n  name: string;\n  label: string;\n  type: 'text' | 'number' | 'date' | 'boolean' | 'select' | 'textarea' | 'email' | 'url' | 'phone';\n  required: boolean;\n  visible: boolean;\n  order: number;\n  tab: 'basic' | 'technical' | 'business' | 'security' | 'custom';\n  description?: string;\n  placeholder?: string;\n  defaultValue?: string;\n  options?: string[]; // For select type\n  validation?: {\n    min?: number;\n    max?: number;\n    pattern?: string;\n    message?: string;\n  };\n  importMapping?: {\n    csv?: string;\n    api?: string;\n    custom?: string;\n  };\n  created_at: Date;\n  updated_at: Date;\n  created_by: string;\n  tenant_id: string;\n}\n\ninterface UseApplicationCustomFieldsOptions {\n  includeHidden?: boolean;\n  tab?: ApplicationCustomField['tab'];\n}\n\nexport function useApplicationCustomFields(options: UseApplicationCustomFieldsOptions = {}) {\n  const { user } = useAuth();\n  const [customFields, setCustomFields] = useState<ApplicationCustomField[]>([]);\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n\n  const {\n    includeHidden = false,\n    tab\n  } = options;\n\n  // Get effective tenant ID\n  const effectiveTenantId = user?.tenant_id || user?.id;\n\n  // Check if user can manage custom fields (admin only)\n  const canManageFields = useCallback(() => {\n    if (!user) {\n      return false;\n    }\n    \n    const hasPermission = user.isPlatformAdmin || \n                         user.roles?.includes('admin') || \n                         user.roles?.includes('tenant_admin') ||\n                         user.roles?.includes('super_admin') ||\n                         user.roles?.includes('platform_admin');\n    \n    return hasPermission;\n  }, [user]);\n\n  // Load custom fields\n  const loadCustomFields = useCallback(async () => {\n    if (!effectiveTenantId) {\n      return;\n    }\n\n    setLoading(true);\n    setError(null);\n\n    try {\n      // In a real implementation, this would fetch from Supabase\n      // For now, we'll use mock data stored in localStorage\n      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);\n      let fields: ApplicationCustomField[] = [];\n\n      if (storedFields) {\n        fields = JSON.parse(storedFields).map((field: any) => ({\n          ...field,\n          created_at: new Date(field.created_at),\n          updated_at: new Date(field.updated_at)\n        }));\n      } else {\n        // Default fields for demo\n        fields = [\n          {\n            id: '1',\n            name: 'business_owner',\n            label: 'Proprietário do Negócio',\n            type: 'text',\n            required: false,\n            visible: true,\n            order: 1,\n            tab: 'business',\n            description: 'Responsável pelo negócio da aplicação',\n            importMapping: { csv: 'business_owner' },\n            created_at: new Date('2024-01-10'),\n            updated_at: new Date('2024-01-10'),\n            created_by: user?.id || 'system',\n            tenant_id: effectiveTenantId\n          },\n          {\n            id: '2',\n            name: 'criticality_level',\n            label: 'Nível de Criticidade',\n            type: 'select',\n            required: false,\n            visible: true,\n            order: 2,\n            tab: 'business',\n            options: ['Crítica', 'Alta', 'Média', 'Baixa'],\n            description: 'Nível de criticidade da aplicação para o negócio',\n            importMapping: { csv: 'criticality' },\n            created_at: new Date('2024-01-10'),\n            updated_at: new Date('2024-01-10'),\n            created_by: user?.id || 'system',\n            tenant_id: effectiveTenantId\n          }\n        ];\n      }\n\n      // Apply filters\n      let filteredFields = fields;\n      \n      if (!includeHidden) {\n        filteredFields = filteredFields.filter(field => field.visible);\n      }\n      \n      if (tab) {\n        filteredFields = filteredFields.filter(field => field.tab === tab);\n      }\n\n      // Sort by order\n      filteredFields.sort((a, b) => a.order - b.order);\n\n      setCustomFields(filteredFields);\n    } catch (err) {\n      console.error('Error loading application custom fields:', err);\n      setError(err instanceof Error ? err.message : 'Failed to load custom fields');\n      toast.error('Erro ao carregar campos customizados de aplicações');\n    } finally {\n      setLoading(false);\n    }\n  }, [effectiveTenantId, includeHidden, tab, user?.id]);\n\n  // Create custom field\n  const createCustomField = useCallback(async (fieldData: Omit<ApplicationCustomField, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'tenant_id'>) => {\n    if (!effectiveTenantId || !user || !canManageFields()) {\n      toast.error('Sem permissão para criar campos customizados');\n      return null;\n    }\n\n    try {\n      const newField: ApplicationCustomField = {\n        ...fieldData,\n        id: Date.now().toString(),\n        created_at: new Date(),\n        updated_at: new Date(),\n        created_by: user.id,\n        tenant_id: effectiveTenantId\n      };\n\n      // Get existing fields\n      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);\n      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];\n\n      // Add new field\n      const updatedFields = [...existingFields, newField];\n      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));\n\n      toast.success('Campo customizado de aplicação criado com sucesso');\n      await loadCustomFields();\n      \n      return newField;\n    } catch (err) {\n      console.error('Error creating application custom field:', err);\n      toast.error('Erro ao criar campo customizado de aplicação');\n      return null;\n    }\n  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);\n\n  // Update custom field\n  const updateCustomField = useCallback(async (fieldId: string, fieldData: Partial<Omit<ApplicationCustomField, 'id' | 'created_at' | 'created_by' | 'tenant_id'>>) => {\n    if (!effectiveTenantId || !user || !canManageFields()) {\n      toast.error('Sem permissão para atualizar campos customizados');\n      return null;\n    }\n\n    try {\n      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);\n      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];\n\n      const updatedFields = existingFields.map(field => \n        field.id === fieldId \n          ? { ...field, ...fieldData, updated_at: new Date() }\n          : field\n      );\n\n      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));\n\n      toast.success('Campo customizado de aplicação atualizado com sucesso');\n      await loadCustomFields();\n      \n      return updatedFields.find(f => f.id === fieldId) || null;\n    } catch (err) {\n      console.error('Error updating application custom field:', err);\n      toast.error('Erro ao atualizar campo customizado de aplicação');\n      return null;\n    }\n  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);\n\n  // Delete custom field\n  const deleteCustomField = useCallback(async (fieldId: string) => {\n    if (!effectiveTenantId || !user || !canManageFields()) {\n      toast.error('Sem permissão para excluir campos customizados');\n      return false;\n    }\n\n    try {\n      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);\n      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];\n\n      const updatedFields = existingFields.filter(field => field.id !== fieldId);\n      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));\n\n      toast.success('Campo customizado de aplicação excluído com sucesso');\n      await loadCustomFields();\n      \n      return true;\n    } catch (err) {\n      console.error('Error deleting application custom field:', err);\n      toast.error('Erro ao excluir campo customizado de aplicação');\n      return false;\n    }\n  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);\n\n  // Reorder fields\n  const reorderFields = useCallback(async (fieldIds: string[]) => {\n    if (!effectiveTenantId || !user || !canManageFields()) {\n      toast.error('Sem permissão para reordenar campos customizados');\n      return false;\n    }\n\n    try {\n      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);\n      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];\n\n      const updatedFields = existingFields.map(field => {\n        const newOrder = fieldIds.indexOf(field.id);\n        return newOrder !== -1 ? { ...field, order: newOrder + 1, updated_at: new Date() } : field;\n      });\n\n      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));\n\n      await loadCustomFields();\n      return true;\n    } catch (err) {\n      console.error('Error reordering application custom fields:', err);\n      toast.error('Erro ao reordenar campos customizados de aplicações');\n      return false;\n    }\n  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);\n\n  // Load fields on mount and when dependencies change\n  useEffect(() => {\n    loadCustomFields();\n  }, [loadCustomFields]);\n\n  return {\n    customFields,\n    loading,\n    error,\n    canManageFields,\n    createCustomField,\n    updateCustomField,\n    deleteCustomField,\n    reorderFields,\n    loadCustomFields\n  };\n}\n"
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { toast } from 'sonner';
+
+export interface ApplicationCustomField {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'boolean' | 'select' | 'textarea' | 'email' | 'url' | 'phone';
+  required: boolean;
+  visible: boolean;
+  order: number;
+  tab: 'basic' | 'technical' | 'business' | 'security' | 'custom';
+  description?: string;
+  placeholder?: string;
+  defaultValue?: string;
+  options?: string[];
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    message?: string;
+  };
+  importMapping?: {
+    csv?: string;
+    api?: string;
+    custom?: string;
+  };
+  created_at: Date;
+  updated_at: Date;
+  created_by: string;
+  tenant_id: string;
+}
+
+interface UseApplicationCustomFieldsOptions {
+  includeHidden?: boolean;
+  tab?: ApplicationCustomField['tab'];
+}
+
+export function useApplicationCustomFields(options: UseApplicationCustomFieldsOptions = {}) {
+  const { user } = useAuth();
+  const [customFields, setCustomFields] = useState<ApplicationCustomField[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    includeHidden = false,
+    tab
+  } = options;
+
+  const effectiveTenantId = user?.tenant_id || user?.id;
+
+  const canManageFields = useCallback(() => {
+    if (!user) {
+      return false;
+    }
+    
+    const hasPermission = user.isPlatformAdmin || 
+                         user.roles?.includes('admin') || 
+                         user.roles?.includes('tenant_admin') ||
+                         user.roles?.includes('super_admin') ||
+                         user.roles?.includes('platform_admin');
+    
+    return hasPermission;
+  }, [user]);
+
+  const loadCustomFields = useCallback(async () => {
+    if (!effectiveTenantId) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);
+      let fields: ApplicationCustomField[] = [];
+
+      if (storedFields) {
+        fields = JSON.parse(storedFields).map((field: any) => ({
+          ...field,
+          created_at: new Date(field.created_at),
+          updated_at: new Date(field.updated_at)
+        }));
+      } else {
+        fields = [
+          {
+            id: '1',
+            name: 'business_owner',
+            label: 'Business Owner',
+            type: 'text',
+            required: false,
+            visible: true,
+            order: 1,
+            tab: 'business',
+            description: 'Business responsible for the application',
+            importMapping: { csv: 'business_owner' },
+            created_at: new Date('2024-01-10'),
+            updated_at: new Date('2024-01-10'),
+            created_by: user?.id || 'system',
+            tenant_id: effectiveTenantId
+          },
+          {
+            id: '2',
+            name: 'criticality_level',
+            label: 'Criticality Level',
+            type: 'select',
+            required: false,
+            visible: true,
+            order: 2,
+            tab: 'business',
+            options: ['Critical', 'High', 'Medium', 'Low'],
+            description: 'Application criticality level for business',
+            importMapping: { csv: 'criticality' },
+            created_at: new Date('2024-01-10'),
+            updated_at: new Date('2024-01-10'),
+            created_by: user?.id || 'system',
+            tenant_id: effectiveTenantId
+          }
+        ];
+      }
+
+      let filteredFields = fields;
+      
+      if (!includeHidden) {
+        filteredFields = filteredFields.filter(field => field.visible);
+      }
+      
+      if (tab) {
+        filteredFields = filteredFields.filter(field => field.tab === tab);
+      }
+
+      filteredFields.sort((a, b) => a.order - b.order);
+
+      setCustomFields(filteredFields);
+    } catch (err) {
+      console.error('Error loading application custom fields:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load custom fields');
+      toast.error('Error loading custom application fields');
+    } finally {
+      setLoading(false);
+    }
+  }, [effectiveTenantId, includeHidden, tab, user?.id]);
+
+  const createCustomField = useCallback(async (fieldData: Omit<ApplicationCustomField, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'tenant_id'>) => {
+    if (!effectiveTenantId || !user || !canManageFields()) {
+      toast.error('No permission to create custom fields');
+      return null;
+    }
+
+    try {
+      const newField: ApplicationCustomField = {
+        ...fieldData,
+        id: Date.now().toString(),
+        created_at: new Date(),
+        updated_at: new Date(),
+        created_by: user.id,
+        tenant_id: effectiveTenantId
+      };
+
+      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);
+      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];
+
+      const updatedFields = [...existingFields, newField];
+      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));
+
+      toast.success('Application custom field created successfully');
+      await loadCustomFields();
+      
+      return newField;
+    } catch (err) {
+      console.error('Error creating application custom field:', err);
+      toast.error('Error creating application custom field');
+      return null;
+    }
+  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);
+
+  const updateCustomField = useCallback(async (fieldId: string, fieldData: Partial<Omit<ApplicationCustomField, 'id' | 'created_at' | 'created_by' | 'tenant_id'>>) => {
+    if (!effectiveTenantId || !user || !canManageFields()) {
+      toast.error('No permission to update custom fields');
+      return null;
+    }
+
+    try {
+      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);
+      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];
+
+      const updatedFields = existingFields.map(field => 
+        field.id === fieldId 
+          ? { ...field, ...fieldData, updated_at: new Date() }
+          : field
+      );
+
+      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));
+
+      toast.success('Application custom field updated successfully');
+      await loadCustomFields();
+      
+      return updatedFields.find(f => f.id === fieldId) || null;
+    } catch (err) {
+      console.error('Error updating application custom field:', err);
+      toast.error('Error updating application custom field');
+      return null;
+    }
+  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);
+
+  const deleteCustomField = useCallback(async (fieldId: string) => {
+    if (!effectiveTenantId || !user || !canManageFields()) {
+      toast.error('No permission to delete custom fields');
+      return false;
+    }
+
+    try {
+      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);
+      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];
+
+      const updatedFields = existingFields.filter(field => field.id !== fieldId);
+      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));
+
+      toast.success('Application custom field deleted successfully');
+      await loadCustomFields();
+      
+      return true;
+    } catch (err) {
+      console.error('Error deleting application custom field:', err);
+      toast.error('Error deleting application custom field');
+      return false;
+    }
+  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);
+
+  const reorderFields = useCallback(async (fieldIds: string[]) => {
+    if (!effectiveTenantId || !user || !canManageFields()) {
+      toast.error('No permission to reorder custom fields');
+      return false;
+    }
+
+    try {
+      const storedFields = localStorage.getItem(`application_custom_fields_${effectiveTenantId}`);
+      const existingFields: ApplicationCustomField[] = storedFields ? JSON.parse(storedFields) : [];
+
+      const updatedFields = existingFields.map(field => {
+        const newOrder = fieldIds.indexOf(field.id);
+        return newOrder !== -1 ? { ...field, order: newOrder + 1, updated_at: new Date() } : field;
+      });
+
+      localStorage.setItem(`application_custom_fields_${effectiveTenantId}`, JSON.stringify(updatedFields));
+
+      await loadCustomFields();
+      return true;
+    } catch (err) {
+      console.error('Error reordering application custom fields:', err);
+      toast.error('Error reordering application custom fields');
+      return false;
+    }
+  }, [effectiveTenantId, user, canManageFields, loadCustomFields]);
+
+  useEffect(() => {
+    loadCustomFields();
+  }, [loadCustomFields]);
+
+  return {
+    customFields,
+    loading,
+    error,
+    canManageFields,
+    createCustomField,
+    updateCustomField,
+    deleteCustomField,
+    reorderFields,
+    loadCustomFields
+  };
+}

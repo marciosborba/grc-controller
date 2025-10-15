@@ -22,7 +22,8 @@ import {
   Code,
   Database,
   Cloud,
-  Monitor
+  Monitor,
+  Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -166,6 +167,10 @@ export default function Applications() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
+            <Settings className="h-4 w-4 mr-2" />
+            Customizar Campos
+          </Button>
           <Button variant="outline" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
@@ -178,7 +183,7 @@ export default function Applications() {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-          <Button>
+          <Button onClick={() => navigate('/vulnerabilities/applications/create')}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Aplicação
           </Button>
@@ -326,13 +331,18 @@ export default function Applications() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" title="View Details">
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              title="Edit Application"
+                              onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" title="Delete Application">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

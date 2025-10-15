@@ -145,8 +145,10 @@ const VulnerabilityReports = lazy(() => import("@/components/vulnerabilities/Vul
 const VulnerabilityForm = lazy(() => import("@/components/vulnerabilities/VulnerabilityForm"));
 const VulnerabilityList = lazy(() => import("@/components/vulnerabilities/VulnerabilityList"));
 const Applications = lazy(() => import("@/components/vulnerabilities/Applications"));
+const ApplicationForm = lazy(() => import("@/components/vulnerabilities/ApplicationForm"));
 const CMDB = lazy(() => import("@/components/vulnerabilities/CMDB"));
 const VulnerabilityFieldsCustomization = lazy(() => import("@/components/vulnerabilities/VulnerabilityFieldsCustomization"));
+const ApplicationFieldsCustomization = lazy(() => import("@/components/vulnerabilities/ApplicationFieldsCustomizationFixed"));
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
@@ -590,6 +592,21 @@ const App = () => (
                   <Route path="vulnerabilities/applications" element={
                     <Suspense fallback={<PageLoader />}>
                       <Applications />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/applications/create" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ApplicationForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/applications/edit/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ApplicationForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/applications/fields-customization" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <ApplicationFieldsCustomization />
                     </Suspense>
                   } />
                   <Route path="vulnerabilities/cmdb" element={
