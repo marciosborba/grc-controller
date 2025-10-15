@@ -16,7 +16,7 @@ import {
   Eye,
   Edit,
   Trash2,
-  RefreshCw,
+
   Monitor,
   Smartphone,
   Wifi,
@@ -28,7 +28,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function CMDB() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -40,79 +40,79 @@ export default function CMDB() {
       id: 'SRV-001',
       name: 'Web Server 01',
       type: 'Server',
-      status: 'Active',
+      status: 'Ativo',
       ip_address: '192.168.1.10',
       location: 'Datacenter SP',
       os: 'Ubuntu 22.04 LTS',
       owner: 'Equipe Infraestrutura',
       vulnerabilities: 8,
       last_scan: '2024-01-15',
-      risk_level: 'Medium'
+      risk_level: 'Médio'
     },
     {
       id: 'WKS-001',
       name: 'Workstation Dev-01',
       type: 'Workstation',
-      status: 'Active',
+      status: 'Ativo',
       ip_address: '192.168.1.50',
       location: 'Escritório SP',
       os: 'Windows 11 Pro',
       owner: 'João Silva',
       vulnerabilities: 3,
       last_scan: '2024-01-14',
-      risk_level: 'Low'
+      risk_level: 'Baixo'
     },
     {
       id: 'NET-001',
       name: 'Switch Core',
       type: 'Network Device',
-      status: 'Active',
+      status: 'Ativo',
       ip_address: '192.168.1.1',
       location: 'Datacenter SP',
       os: 'Cisco IOS 15.2',
       owner: 'Equipe Rede',
       vulnerabilities: 12,
       last_scan: '2024-01-13',
-      risk_level: 'High'
+      risk_level: 'Alto'
     },
     {
       id: 'SRV-002',
       name: 'Database Server',
       type: 'Server',
-      status: 'Active',
+      status: 'Ativo',
       ip_address: '192.168.1.20',
       location: 'Datacenter RJ',
       os: 'CentOS 8',
       owner: 'Equipe DBA',
       vulnerabilities: 5,
       last_scan: '2024-01-12',
-      risk_level: 'Medium'
+      risk_level: 'Médio'
     },
     {
       id: 'MOB-001',
       name: 'Tablet Vendas',
       type: 'Mobile Device',
-      status: 'Active',
+      status: 'Ativo',
       ip_address: '192.168.1.100',
       location: 'Escritório RJ',
       os: 'Android 13',
       owner: 'Equipe Vendas',
       vulnerabilities: 2,
       last_scan: '2024-01-11',
-      risk_level: 'Low'
+      risk_level: 'Baixo'
     },
     {
       id: 'SRV-003',
       name: 'Backup Server',
       type: 'Server',
-      status: 'Maintenance',
+      status: 'Manutenção',
       ip_address: '192.168.1.30',
       location: 'Datacenter SP',
       os: 'Ubuntu 20.04 LTS',
       owner: 'Equipe Backup',
       vulnerabilities: 15,
       last_scan: '2024-01-10',
-      risk_level: 'High'
+      risk_level: 'Alto'
     }
   ];
 
@@ -131,28 +131,25 @@ export default function CMDB() {
 
   const getStatusBadgeColor = (status: string) => {
     const colors = {
-      Active: 'bg-green-100 text-green-800',
-      Inactive: 'bg-gray-100 text-gray-800',
-      Maintenance: 'bg-yellow-100 text-yellow-800',
-      Decommissioned: 'bg-red-100 text-red-800',
+      'Ativo': 'bg-green-600 text-white border border-green-700',
+      'Inativo': 'bg-gray-600 text-white border border-gray-700',
+      'Manutenção': 'bg-yellow-600 text-white border border-yellow-700',
+      'Descomissionado': 'bg-red-600 text-white border border-red-700',
     };
-    return colors[status as keyof typeof colors] || colors.Active;
+    return colors[status as keyof typeof colors] || colors['Ativo'];
   };
 
   const getRiskBadgeColor = (risk: string) => {
     const colors = {
-      High: 'bg-red-100 text-red-800',
-      Medium: 'bg-yellow-100 text-yellow-800',
-      Low: 'bg-green-100 text-green-800',
-      Critical: 'bg-red-200 text-red-900',
+      'Crítico': 'bg-red-600 text-white border border-red-700',
+      'Alto': 'bg-orange-600 text-white border border-orange-700',
+      'Médio': 'bg-yellow-600 text-white border border-yellow-700',
+      'Baixo': 'bg-green-600 text-white border border-green-700',
     };
-    return colors[risk as keyof typeof colors] || colors.Low;
+    return colors[risk as keyof typeof colors] || colors['Baixo'];
   };
 
-  const handleRefresh = async () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
-  };
+
 
   const filteredAssets = mockAssets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -168,12 +165,12 @@ export default function CMDB() {
 
   const assetStats = {
     total: mockAssets.length,
-    active: mockAssets.filter(asset => asset.status === 'Active').length,
+    active: mockAssets.filter(asset => asset.status === 'Ativo').length,
     servers: mockAssets.filter(asset => asset.type === 'Server').length,
     workstations: mockAssets.filter(asset => asset.type === 'Workstation').length,
     network: mockAssets.filter(asset => asset.type === 'Network Device').length,
     mobile: mockAssets.filter(asset => asset.type === 'Mobile Device').length,
-    highRisk: mockAssets.filter(asset => asset.risk_level === 'High').length,
+    highRisk: mockAssets.filter(asset => asset.risk_level === 'Alto').length,
   };
 
   return (
@@ -196,10 +193,6 @@ export default function CMDB() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
           <Button variant="outline">
             <Upload className="h-4 w-4 mr-2" />
             Importar
@@ -271,10 +264,10 @@ export default function CMDB() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Active">Ativo</SelectItem>
-                      <SelectItem value="Inactive">Inativo</SelectItem>
-                      <SelectItem value="Maintenance">Manutenção</SelectItem>
-                      <SelectItem value="Decommissioned">Descomissionado</SelectItem>
+                      <SelectItem value="Ativo">Ativo</SelectItem>
+                      <SelectItem value="Inativo">Inativo</SelectItem>
+                      <SelectItem value="Manutenção">Manutenção</SelectItem>
+                      <SelectItem value="Descomissionado">Descomissionado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

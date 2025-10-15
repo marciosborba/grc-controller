@@ -16,7 +16,6 @@ import {
   Eye,
   Edit,
   Trash2,
-  RefreshCw,
   Globe,
   Smartphone,
   Code,
@@ -26,10 +25,10 @@ import {
   Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Applications() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -40,61 +39,61 @@ export default function Applications() {
       id: 'APP-WEB-001',
       name: 'Portal Web Principal',
       type: 'Web Application',
-      status: 'Active',
+      status: 'Ativo',
       url: 'https://portal.empresa.com',
       technology: 'React/Node.js',
       owner: 'Equipe Frontend',
       vulnerabilities: 15,
       last_scan: '2024-01-15',
-      risk_level: 'High'
+      risk_level: 'Alto'
     },
     {
       id: 'APP-API-001',
       name: 'API Gateway',
       type: 'API',
-      status: 'Active',
+      status: 'Ativo',
       url: 'https://api.empresa.com',
       technology: 'Spring Boot',
       owner: 'Equipe Backend',
       vulnerabilities: 8,
       last_scan: '2024-01-14',
-      risk_level: 'Medium'
+      risk_level: 'Médio'
     },
     {
       id: 'APP-MOB-001',
       name: 'App Mobile iOS',
       type: 'Mobile App',
-      status: 'Active',
+      status: 'Ativo',
       url: 'App Store',
       technology: 'Swift',
       owner: 'Equipe Mobile',
       vulnerabilities: 3,
       last_scan: '2024-01-13',
-      risk_level: 'Low'
+      risk_level: 'Baixo'
     },
     {
       id: 'APP-WEB-002',
       name: 'Admin Dashboard',
       type: 'Web Application',
-      status: 'Development',
+      status: 'Desenvolvimento',
       url: 'https://admin.empresa.com',
       technology: 'Vue.js',
       owner: 'Equipe DevOps',
       vulnerabilities: 12,
       last_scan: '2024-01-12',
-      risk_level: 'High'
+      risk_level: 'Alto'
     },
     {
       id: 'APP-DB-001',
       name: 'Database Principal',
       type: 'Database',
-      status: 'Active',
+      status: 'Ativo',
       url: 'db.empresa.com:5432',
       technology: 'PostgreSQL',
       owner: 'Equipe DBA',
       vulnerabilities: 2,
       last_scan: '2024-01-11',
-      risk_level: 'Low'
+      risk_level: 'Baixo'
     }
   ];
 
@@ -113,29 +112,26 @@ export default function Applications() {
 
   const getStatusBadgeColor = (status: string) => {
     const colors = {
-      Active: 'bg-green-100 text-green-800',
-      Development: 'bg-yellow-100 text-yellow-800',
-      Testing: 'bg-blue-100 text-blue-800',
-      Deprecated: 'bg-gray-100 text-gray-800',
-      Maintenance: 'bg-orange-100 text-orange-800',
+      'Ativo': 'bg-green-600 text-white border border-green-700',
+      'Desenvolvimento': 'bg-yellow-600 text-white border border-yellow-700',
+      'Teste': 'bg-blue-600 text-white border border-blue-700',
+      'Descontinuado': 'bg-gray-600 text-white border border-gray-700',
+      'Manutenção': 'bg-orange-600 text-white border border-orange-700',
     };
-    return colors[status as keyof typeof colors] || colors.Active;
+    return colors[status as keyof typeof colors] || colors['Ativo'];
   };
 
   const getRiskBadgeColor = (risk: string) => {
     const colors = {
-      High: 'bg-red-100 text-red-800',
-      Medium: 'bg-yellow-100 text-yellow-800',
-      Low: 'bg-green-100 text-green-800',
-      Critical: 'bg-red-200 text-red-900',
+      'Crítico': 'bg-red-600 text-white border border-red-700',
+      'Alto': 'bg-orange-600 text-white border border-orange-700',
+      'Médio': 'bg-yellow-600 text-white border border-yellow-700',
+      'Baixo': 'bg-green-600 text-white border border-green-700',
     };
-    return colors[risk as keyof typeof colors] || colors.Low;
+    return colors[risk as keyof typeof colors] || colors['Baixo'];
   };
 
-  const handleRefresh = async () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
-  };
+
 
   const filteredApplications = mockApplications.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -146,6 +142,57 @@ export default function Applications() {
     
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const handleExport = () => {
+    try {
+      // Preparar dados para exportação
+      const exportData = filteredApplications.map(app => ({
+        'ID': app.id,
+        'Nome': app.name,
+        'Tipo': app.type,
+        'Status': app.status,
+        'URL': app.url,
+        'Tecnologia': app.technology,
+        'Responsável': app.owner,
+        'Vulnerabilidades': app.vulnerabilities,
+        'Nível de Risco': app.risk_level,
+        'Último Scan': app.last_scan
+      }));
+
+      // Converter para CSV
+      const headers = Object.keys(exportData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header as keyof typeof row];
+            // Escapar valores que contêm vírgulas ou aspas
+            return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
+              ? `"${value.replace(/"/g, '""')}"` 
+              : value;
+          }).join(',')
+        )
+      ].join('\n');
+
+      // Criar e baixar arquivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `aplicacoes_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Feedback para o usuário
+      const count = filteredApplications.length;
+      toast.success(`Exportação concluída! ${count} aplicação${count !== 1 ? 'ões' : ''} exportada${count !== 1 ? 's' : ''}.`);
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      toast.error('Erro ao exportar dados. Tente novamente.');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -166,36 +213,30 @@ export default function Applications() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
-            <Settings className="h-4 w-4 mr-2" />
-            Customizar Campos
-          </Button>
-          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Button variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            Importar
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button onClick={() => navigate('/vulnerabilities/applications/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Aplicação
-          </Button>
-        </div>
       </div>
 
       <Tabs defaultValue="list" className="w-full">
-        <TabsList>
-          <TabsTrigger value="list">Lista</TabsTrigger>
-          <TabsTrigger value="import">Importar</TabsTrigger>
-          <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="list">Lista</TabsTrigger>
+            <TabsTrigger value="import">Importar</TabsTrigger>
+            <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
+              <Settings className="h-4 w-4 mr-2" />
+              Customizar Campos
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+            <Button onClick={() => navigate('/vulnerabilities/applications/create')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Aplicação
+            </Button>
+          </div>
+        </div>
 
         <TabsContent value="list" className="space-y-6">
           {/* Filters */}
@@ -246,10 +287,10 @@ export default function Applications() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Active">Ativo</SelectItem>
-                      <SelectItem value="Development">Desenvolvimento</SelectItem>
-                      <SelectItem value="Testing">Teste</SelectItem>
-                      <SelectItem value="Deprecated">Descontinuado</SelectItem>
+                      <SelectItem value="Ativo">Ativo</SelectItem>
+                      <SelectItem value="Desenvolvimento">Desenvolvimento</SelectItem>
+                      <SelectItem value="Teste">Teste</SelectItem>
+                      <SelectItem value="Descontinuado">Descontinuado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -419,7 +460,7 @@ export default function Applications() {
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Aplicações Ativas</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {mockApplications.filter(app => app.status === 'Active').length}
+                    {mockApplications.filter(app => app.status === 'Ativo').length}
                   </p>
                 </div>
               </CardContent>
@@ -430,7 +471,7 @@ export default function Applications() {
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Alto Risco</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {mockApplications.filter(app => app.risk_level === 'High').length}
+                    {mockApplications.filter(app => app.risk_level === 'Alto').length}
                   </p>
                 </div>
               </CardContent>
