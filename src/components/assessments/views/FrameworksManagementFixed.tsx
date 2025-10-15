@@ -5,6 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { 
   BookOpen,
   Shield,
@@ -31,161 +37,257 @@ import {
   Zap,
   Globe,
   Scale,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Framework {
+  id: string;
+  nome: string;
+  versao: string;
+  tipo_framework: string;
+  categoria: string;
+  descricao: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  questionsCount?: number;
+  domainsCount?: number;
+}
 
 interface FrameworkMetrics {
   totalFrameworks: number;
   activeFrameworks: number;
-  standardFrameworks: number;
-  customFrameworks: number;
+  inactiveFrameworks: number;
   totalDomains: number;
-  totalControls: number;
   totalQuestions: number;
-  averageMaturity: number;
+  frameworkTypes: { [key: string]: number };
+  frameworkCategories: { [key: string]: number };
 }
 
-interface FrameworkTemplate {
-  id: string;
-  name: string;
-  type: string;
-  version: string;
-  description: string;
-  domains: number;
-  controls: number;
-  questions: number;
-  color: string;
-  icon: React.ComponentType<any>;
-  category: 'regulatory' | 'normative' | 'custom';
-}
-
-interface QuickAction {
-  title: string;
-  description: string;
-  icon: React.ComponentType<any>;
-  color: string;
-  action: () => void;
-  count?: number;
+interface NewFramework {
+  nome: string;
+  versao: string;
+  tipo_framework: string;
+  categoria: string;
+  descricao: string;
 }
 
 export default function FrameworksManagementFixed() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const effectiveTenantId = useCurrentTenantId();
+  
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [frameworks, setFrameworks] = useState<Framework[]>([]);
   const [metrics, setMetrics] = useState<FrameworkMetrics>({
-    totalFrameworks: 4,
-    activeFrameworks: 4,
-    standardFrameworks: 4,
-    customFrameworks: 0,
-    totalDomains: 29,
-    totalControls: 143,
-    totalQuestions: 389,
-    averageMaturity: 0
+    totalFrameworks: 0,
+    activeFrameworks: 0,
+    inactiveFrameworks: 0,
+    totalDomains: 0,
+    totalQuestions: 0,
+    frameworkTypes: {},
+    frameworkCategories: {}
+  });
+  const [error, setError] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newFramework, setNewFramework] = useState<NewFramework>({
+    nome: '',
+    versao: '1.0',
+    tipo_framework: '',
+    categoria: '',
+    descricao: ''
   });
 
-  const frameworkTemplates: FrameworkTemplate[] = [
-    {
-      id: 'iso27001',
-      name: 'ISO/IEC 27001:2022',
-      type: 'ISO27001',
-      version: '2022',
-      description: 'Framework internacional para gestão de segurança da informação',
-      domains: 14,
-      controls: 93,
-      questions: 200,
-      color: 'blue',
-      icon: Shield,
-      category: 'normative'
-    },
-    {
-      id: 'sox',
-      name: 'SOX - Sarbanes-Oxley',
-      type: 'SOX',
-      version: '2002',
-      description: 'Framework de compliance para controles internos e governança corporativa',
-      domains: 5,
-      controls: 15,
-      questions: 45,
-      color: 'green',
-      icon: Award,
-      category: 'regulatory'
-    },
-    {
-      id: 'nist',
-      name: 'NIST Cybersecurity Framework',
-      type: 'NIST',
-      version: '1.1',
-      description: 'Framework de cibersegurança para identificar, proteger, detectar, responder e recuperar',
-      domains: 5,
-      controls: 23,
-      questions: 108,
-      color: 'purple',
-      icon: Target,
-      category: 'normative'
-    },
-    {
-      id: 'lgpd',
-      name: 'LGPD - Lei Geral de Proteção de Dados',
-      type: 'LGPD',
-      version: '2020',
-      description: 'Framework de compliance para a Lei Geral de Proteção de Dados do Brasil',
-      domains: 5,
-      controls: 12,
-      questions: 36,
-      color: 'red',
-      icon: Scale,
-      category: 'regulatory'
-    }
-  ];
-
-  const quickActions: QuickAction[] = [
-    {
-      title: 'Novo Framework',
-      description: 'Criar framework customizado',
-      icon: Plus,
-      color: 'blue',
-      action: () => console.log('Criar framework'),
-      count: 0
-    },
-    {
-      title: 'Importar Template',
-      description: 'Importar framework padrão',
-      icon: Download,
-      color: 'green',
-      action: () => console.log('Importar template'),
-      count: frameworkTemplates.length
-    },
-    {
-      title: 'Biblioteca de Controles',
-      description: 'Catálogo de controles por framework',
-      icon: FileText,
-      color: 'purple',
-      action: () => navigate('/assessments/questions'),
-      count: metrics.totalControls
-    },
-    {
-      title: 'Configurações',
-      description: 'Configurar pesos e metodologias',
-      icon: Settings,
-      color: 'orange',
-      action: () => console.log('Configurações'),
-      count: 0
-    },
-    {
-      title: 'Relatórios',
-      description: 'Análise de frameworks',
-      icon: BarChart3,
-      color: 'indigo',
-      action: () => navigate('/assessments/reports'),
-      count: 0
-    }
-  ];
-
   useEffect(() => {
-    setTimeout(() => {
+    if (effectiveTenantId && user) {
+      loadFrameworks();
+    }
+  }, [effectiveTenantId, user]);
+
+  const loadFrameworks = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Carregar frameworks
+      const { data: frameworksData, error: frameworksError } = await supabase
+        .from('assessment_frameworks')
+        .select('*')
+        .eq('tenant_id', effectiveTenantId)
+        .order('nome');
+
+      if (frameworksError) {
+        console.error('Erro ao carregar frameworks:', frameworksError);
+        setError('Erro ao carregar frameworks');
+        return;
+      }
+
+      // Carregar contagem de questões para cada framework
+      const frameworksWithCounts = await Promise.all(
+        (frameworksData || []).map(async (framework) => {
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('assessment_questions')
+            .select('id, dominio')
+            .eq('framework_id', framework.id)
+            .eq('tenant_id', effectiveTenantId);
+
+          if (questionsError) {
+            console.error('Erro ao carregar questões:', questionsError);
+            return {
+              ...framework,
+              questionsCount: 0,
+              domainsCount: 0
+            };
+          }
+
+          const questionsCount = questionsData?.length || 0;
+          const domains = [...new Set(questionsData?.map(q => q.dominio).filter(Boolean))];
+          const domainsCount = domains.length;
+
+          return {
+            ...framework,
+            questionsCount,
+            domainsCount
+          };
+        })
+      );
+
+      setFrameworks(frameworksWithCounts);
+      calculateMetrics(frameworksWithCounts);
+    } catch (error) {
+      console.error('Erro geral ao carregar frameworks:', error);
+      setError('Erro ao carregar dados');
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
+
+  const calculateMetrics = (frameworksData: Framework[]) => {
+    const totalFrameworks = frameworksData.length;
+    const activeFrameworks = frameworksData.filter(f => f.status === 'ativo').length;
+    const inactiveFrameworks = frameworksData.filter(f => f.status === 'inativo').length;
+    const totalQuestions = frameworksData.reduce((sum, f) => sum + (f.questionsCount || 0), 0);
+    const totalDomains = frameworksData.reduce((sum, f) => sum + (f.domainsCount || 0), 0);
+
+    const frameworkTypes: { [key: string]: number } = {};
+    const frameworkCategories: { [key: string]: number } = {};
+
+    frameworksData.forEach(framework => {
+      if (framework.tipo_framework) {
+        frameworkTypes[framework.tipo_framework] = (frameworkTypes[framework.tipo_framework] || 0) + 1;
+      }
+      if (framework.categoria) {
+        frameworkCategories[framework.categoria] = (frameworkCategories[framework.categoria] || 0) + 1;
+      }
+    });
+
+    setMetrics({
+      totalFrameworks,
+      activeFrameworks,
+      inactiveFrameworks,
+      totalDomains,
+      totalQuestions,
+      frameworkTypes,
+      frameworkCategories
+    });
+  };
+
+  const handleCreateFramework = async () => {
+    if (!effectiveTenantId || !user) {
+      toast.error('Dados de autenticação não disponíveis');
+      return;
+    }
+
+    if (!newFramework.nome.trim()) {
+      toast.error('Nome do framework é obrigatório');
+      return;
+    }
+
+    if (!newFramework.tipo_framework.trim()) {
+      toast.error('Tipo do framework é obrigatório');
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('assessment_frameworks')
+        .insert([
+          {
+            tenant_id: effectiveTenantId,
+            nome: newFramework.nome,
+            versao: newFramework.versao,
+            tipo_framework: newFramework.tipo_framework,
+            categoria: newFramework.categoria,
+            descricao: newFramework.descricao,
+            status: 'ativo',
+            created_by: user.id,
+            updated_by: user.id
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao criar framework:', error);
+        toast.error('Erro ao criar framework: ' + error.message);
+        return;
+      }
+
+      toast.success('Framework criado com sucesso!');
+      setIsCreateModalOpen(false);
+      setNewFramework({
+        nome: '',
+        versao: '1.0',
+        tipo_framework: '',
+        categoria: '',
+        descricao: ''
+      });
+      await loadFrameworks();
+    } catch (error) {
+      console.error('Erro ao criar framework:', error);
+      toast.error('Erro ao criar framework');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteFramework = async (frameworkId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este framework? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('assessment_frameworks')
+        .update({ status: 'inativo' })
+        .eq('id', frameworkId)
+        .eq('tenant_id', effectiveTenantId);
+
+      if (error) {
+        console.error('Erro ao excluir framework:', error);
+        toast.error('Erro ao excluir framework');
+        return;
+      }
+
+      toast.success('Framework excluído com sucesso!');
+      await loadFrameworks();
+    } catch (error) {
+      console.error('Erro ao excluir framework:', error);
+      toast.error('Erro ao excluir framework');
+    }
+  };
+
+  const handleEditFramework = (framework: Framework) => {
+    navigate(`/assessments/questions?framework=${framework.id}`);
+  };
 
   if (loading) {
     return (
@@ -200,7 +302,7 @@ export default function FrameworksManagementFixed() {
 
   return (
     <div className="space-y-6">
-      {/* Header - Seguindo padrão dos outros módulos */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button
@@ -225,13 +327,23 @@ export default function FrameworksManagementFixed() {
             <Filter className="h-4 w-4 mr-2" />
             Filtros
           </Button>
-          <Button>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Framework
           </Button>
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+            <span className="text-red-800">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
@@ -241,7 +353,7 @@ export default function FrameworksManagementFixed() {
                 <p className="text-2xl font-bold">{metrics.totalFrameworks}</p>
                 <p className="text-xs text-muted-foreground flex items-center mt-1">
                   <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-                  Todos ativos
+                  {metrics.activeFrameworks} ativos
                 </p>
               </div>
               <BookOpen className="h-10 w-10 text-blue-600" />
@@ -253,46 +365,10 @@ export default function FrameworksManagementFixed() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Frameworks Padrão</p>
-                <p className="text-2xl font-bold">{metrics.standardFrameworks}</p>
+                <p className="text-sm text-muted-foreground">Frameworks Ativos</p>
+                <p className="text-2xl font-bold text-green-600">{metrics.activeFrameworks}</p>
               </div>
               <Shield className="h-10 w-10 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Frameworks Customizados</p>
-                <p className="text-2xl font-bold">{metrics.customFrameworks}</p>
-              </div>
-              <Settings className="h-10 w-10 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Controles</p>
-                <p className="text-2xl font-bold">{metrics.totalControls}</p>
-              </div>
-              <Target className="h-10 w-10 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Domínios</p>
-                <p className="text-2xl font-bold">{metrics.totalDomains}</p>
-              </div>
-              <Activity className="h-10 w-10 text-indigo-600" />
             </div>
           </CardContent>
         </Card>
@@ -304,7 +380,7 @@ export default function FrameworksManagementFixed() {
                 <p className="text-sm text-muted-foreground">Total Questões</p>
                 <p className="text-2xl font-bold">{metrics.totalQuestions}</p>
               </div>
-              <FileText className="h-10 w-10 text-teal-600" />
+              <FileText className="h-10 w-10 text-purple-600" />
             </div>
           </CardContent>
         </Card>
@@ -313,349 +389,153 @@ export default function FrameworksManagementFixed() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Maturidade Média</p>
-                <p className="text-2xl font-bold text-green-600">{metrics.averageMaturity}%</p>
+                <p className="text-sm text-muted-foreground">Total Domínios</p>
+                <p className="text-2xl font-bold">{metrics.totalDomains}</p>
               </div>
-              <Award className="h-10 w-10 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Templates Disponíveis</p>
-                <p className="text-2xl font-bold text-blue-600">{frameworkTemplates.length}</p>
-              </div>
-              <Download className="h-10 w-10 text-blue-600" />
+              <Activity className="h-10 w-10 text-orange-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => setSelectedTab('templates')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Download className="h-8 w-8 text-blue-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Templates</h3>
-            <p className="text-muted-foreground text-sm">Frameworks padrão prontos para importação</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => setSelectedTab('frameworks')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <BookOpen className="h-8 w-8 text-green-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Meus Frameworks</h3>
-            <p className="text-muted-foreground text-sm">Frameworks ativos na organização</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/questions')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <FileText className="h-8 w-8 text-purple-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Biblioteca</h3>
-            <p className="text-muted-foreground text-sm">Controles e questões por framework</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" 
-              onClick={() => navigate('/assessments/reports')}>
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <BarChart3 className="h-8 w-8 text-orange-600" />
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Relatórios</h3>
-            <p className="text-muted-foreground text-sm">Análise e métricas de frameworks</p>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-      </div>
-
-      <div>
-        <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Ações Rápidas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {quickActions.map((action, index) => (
-            <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden" onClick={action.action}>
-              <CardHeader className="p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                  <div className={`p-1.5 sm:p-2 rounded-lg bg-${action.color}-100 dark:bg-${action.color}-900/20`}>
-                    <action.icon className={`w-4 h-4 sm:w-5 sm:h-5 text-${action.color}-600 dark:text-${action.color}-400`} />
-                  </div>
-                  <div className="flex items-center space-x-1 sm:space-x-2">
-                    {action.count !== undefined && action.count > 0 && (
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{action.count}</Badge>
-                    )}
-                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </div>
-                </div>
-                <CardTitle className="text-sm sm:text-base leading-tight group-hover:text-primary transition-colors">{action.title}</CardTitle>
-                <CardDescription className="text-xs sm:text-sm leading-tight">{action.description}</CardDescription>
-              </CardHeader>
-              
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
-              }} />
-            </Card>
-          ))}
-        </div>
-      </div>
-
+      {/* Conteúdo Principal */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="frameworks">Meus Frameworks</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="border-orange-200 dark:border-orange-800">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
-                  <AlertTriangle className="h-5 w-5" />
-                  Regulatórios
-                </CardTitle>
-                <CardDescription>
-                  Frameworks obrigatórios e regulamentações setoriais
-                </CardDescription>
+                <CardTitle>Tipos de Framework</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {frameworkTemplates
-                  .filter(f => f.category === 'regulatory')
-                  .map(framework => {
-                    const IconComponent = framework.icon;
-                    return (
-                      <div key={framework.id} className="border rounded-lg p-3 bg-orange-50 dark:bg-orange-900/20">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-2">
-                            <IconComponent className="h-4 w-4 text-orange-600" />
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-sm">{framework.name}</h4>
-                              <p className="text-xs text-muted-foreground">v{framework.version}</p>
-                            </div>
-                          </div>
-                          <Badge className={`bg-${framework.color}-100 text-${framework.color}-800`}>
-                            {framework.type}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {framework.controls} controles
-                          </span>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                            Importar
-                          </Button>
-                        </div>
+              <CardContent>
+                {Object.keys(metrics.frameworkTypes).length === 0 ? (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Nenhum framework cadastrado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(metrics.frameworkTypes).map(([type, count]) => (
+                      <div key={type} className="flex justify-between items-center">
+                        <span className="text-sm capitalize">{type}</span>
+                        <Badge variant="secondary">{count}</Badge>
                       </div>
-                    );
-                  })}
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 dark:border-blue-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                  <CheckCircle className="h-5 w-5" />
-                  Normativos
-                </CardTitle>
-                <CardDescription>
-                  Padrões e boas práticas de mercado
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {frameworkTemplates
-                  .filter(f => f.category === 'normative')
-                  .map(framework => {
-                    const IconComponent = framework.icon;
-                    return (
-                      <div key={framework.id} className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex items-center gap-2">
-                            <IconComponent className="h-4 w-4 text-blue-600" />
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-sm">{framework.name}</h4>
-                              <p className="text-xs text-muted-foreground">v{framework.version}</p>
-                            </div>
-                          </div>
-                          <Badge className={`bg-${framework.color}-100 text-${framework.color}-800`}>
-                            {framework.type}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            {framework.controls} controles
-                          </span>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                            Importar
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Estatísticas
-                </CardTitle>
+                <CardTitle>Categorias</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">{metrics.totalFrameworks}</p>
-                  <p className="text-xs text-muted-foreground">Frameworks Disponíveis</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 text-center">
-                  <div>
-                    <p className="text-lg font-semibold text-orange-600">
-                      {frameworkTemplates.filter(f => f.category === 'regulatory').length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Regulatórios</p>
+              <CardContent>
+                {Object.keys(metrics.frameworkCategories).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Nenhuma categoria definida</p>
                   </div>
-                  <div>
-                    <p className="text-lg font-semibold text-blue-600">
-                      {frameworkTemplates.filter(f => f.category === 'normative').length}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Normativos</p>
+                ) : (
+                  <div className="space-y-3">
+                    {Object.entries(metrics.frameworkCategories).map(([category, count]) => (
+                      <div key={category} className="flex justify-between items-center">
+                        <span className="text-sm">{category}</span>
+                        <Badge variant="secondary">{count}</Badge>
+                      </div>
+                    ))}
                   </div>
-                </div>
-
-                <div className="pt-4 border-t space-y-2">
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Framework
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Importar Template
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start" size="sm">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Ver Relatórios
-                  </Button>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4">
+        <TabsContent value="frameworks" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Templates Disponíveis</CardTitle>
+              <CardTitle>Frameworks Cadastrados</CardTitle>
               <CardDescription>
-                Frameworks pré-configurados prontos para importação
+                {metrics.totalFrameworks} frameworks na sua organização
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {frameworkTemplates.map((template) => {
-                  const IconComponent = template.icon;
-                  
-                  return (
-                    <Card key={template.id} className="hover:shadow-lg transition-all duration-200">
+              {frameworks.length === 0 ? (
+                <div className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Nenhum framework cadastrado</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Comece criando seu primeiro framework de compliance
+                  </p>
+                  <Button onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeiro Framework
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {frameworks.map((framework) => (
+                    <Card key={framework.id} className="hover:shadow-lg transition-all duration-200">
                       <CardContent className="p-6">
-                        <div className="flex items-start gap-3 mb-4">
-                          <div className={`p-2 rounded-lg bg-${template.color}-100 dark:bg-${template.color}-900/20`}>
-                            <IconComponent className={`h-5 w-5 text-${template.color}-600`} />
-                          </div>
+                        <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg">{template.name}</h3>
-                            <p className="text-sm text-muted-foreground">v{template.version}</p>
+                            <h3 className="font-semibold text-lg mb-1">{framework.nome}</h3>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline">v{framework.versao}</Badge>
+                              <Badge className="capitalize">{framework.tipo_framework}</Badge>
+                              <Badge 
+                                variant={framework.status === 'ativo' ? 'default' : 'secondary'}
+                                className={framework.status === 'ativo' ? 'bg-green-100 text-green-800' : ''}
+                              >
+                                {framework.status}
+                              </Badge>
+                            </div>
+                            {framework.categoria && (
+                              <p className="text-sm text-muted-foreground mb-2">{framework.categoria}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">{framework.descricao}</p>
                           </div>
-                          <Badge className={`bg-${template.color}-100 text-${template.color}-800`}>
-                            {template.type}
-                          </Badge>
                         </div>
                         
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {template.description}
-                        </p>
-                        
-                        <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+                        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                           <div className="text-center">
-                            <p className="font-semibold text-blue-600">{template.domains}</p>
+                            <p className="font-semibold text-blue-600">{framework.domainsCount || 0}</p>
                             <p className="text-muted-foreground">Domínios</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-semibold text-green-600">{template.controls}</p>
-                            <p className="text-muted-foreground">Controles</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="font-semibold text-purple-600">{template.questions}</p>
+                            <p className="font-semibold text-purple-600">{framework.questionsCount || 0}</p>
                             <p className="text-muted-foreground">Questões</p>
                           </div>
                         </div>
                         
                         <div className="flex gap-2">
-                          <Button className="flex-1">
-                            <Download className="h-4 w-4 mr-2" />
-                            Importar
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="flex-1"
+                            onClick={() => handleEditFramework(framework)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
                           </Button>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteFramework(framework.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </CardContent>
                     </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="frameworks" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Meus Frameworks</CardTitle>
-              <CardDescription>
-                Frameworks ativos na sua organização
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Nenhum framework configurado</h3>
-                <p className="text-muted-foreground mb-4">
-                  Comece importando um template ou criando um framework customizado
-                </p>
-                <div className="flex justify-center gap-2">
-                  <Button onClick={() => setSelectedTab('templates')}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Importar Template
-                  </Button>
-                  <Button variant="outline">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Customizado
-                  </Button>
+                  ))}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -670,6 +550,117 @@ export default function FrameworksManagementFixed() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Criação */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Framework</DialogTitle>
+            <DialogDescription>
+              Configure um novo framework de compliance para sua organização
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome do Framework *</Label>
+              <Input
+                id="nome"
+                value={newFramework.nome}
+                onChange={(e) => setNewFramework(prev => ({ ...prev, nome: e.target.value }))}
+                placeholder="Ex: ISO 27001, LGPD, SOX..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="versao">Versão</Label>
+                <Input
+                  id="versao"
+                  value={newFramework.versao}
+                  onChange={(e) => setNewFramework(prev => ({ ...prev, versao: e.target.value }))}
+                  placeholder="1.0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tipo">Tipo *</Label>
+                <Select 
+                  value={newFramework.tipo_framework}
+                  onValueChange={(value) => setNewFramework(prev => ({ ...prev, tipo_framework: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compliance">Compliance</SelectItem>
+                    <SelectItem value="security">Segurança</SelectItem>
+                    <SelectItem value="governance">Governança</SelectItem>
+                    <SelectItem value="privacy">Privacidade</SelectItem>
+                    <SelectItem value="financial">Financeiro</SelectItem>
+                    <SelectItem value="operational">Operacional</SelectItem>
+                    <SelectItem value="custom">Customizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria</Label>
+              <Select 
+                value={newFramework.categoria}
+                onValueChange={(value) => setNewFramework(prev => ({ ...prev, categoria: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Regulatório">Regulatório</SelectItem>
+                  <SelectItem value="Normativo">Normativo</SelectItem>
+                  <SelectItem value="Boas Práticas">Boas Práticas</SelectItem>
+                  <SelectItem value="Interno">Interno</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="descricao">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={newFramework.descricao}
+                onChange={(e) => setNewFramework(prev => ({ ...prev, descricao: e.target.value }))}
+                placeholder="Descreva o objetivo e escopo deste framework..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsCreateModalOpen(false)}
+              disabled={isCreating}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCreateFramework}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Criando...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Framework
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

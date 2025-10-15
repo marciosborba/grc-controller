@@ -72,6 +72,7 @@ const FrameworksAssessment = lazy(() => import("@/components/assessments/Framewo
 const FrameworksManagement = lazy(() => import("@/components/assessments/views/FrameworksManagement"));
 const FrameworksManagementSimple = lazy(() => import("@/components/assessments/views/FrameworksManagementSimple"));
 const FrameworksManagementFixed = lazy(() => import("@/components/assessments/views/FrameworksManagementFixed"));
+
 const AssessmentExecution = lazy(() => import("@/components/assessments/AssessmentExecution"));
 const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
 // Componente corrigido após fix do RLS
@@ -134,6 +135,17 @@ const HelpPage = lazy(() => import("./pages/HelpPage"));
 
 // Tenant Settings module
 const TenantSettingsPage = lazy(() => import("@/components/tenant-settings/TenantSettingsPage"));
+
+// Vulnerabilities module
+const VulnerabilityDashboard = lazy(() => import("@/components/vulnerabilities/VulnerabilityDashboard"));
+const VulnerabilityManagement = lazy(() => import("@/components/vulnerabilities/VulnerabilityManagement"));
+const VulnerabilityImport = lazy(() => import("@/components/vulnerabilities/VulnerabilityImport"));
+const VulnerabilityClassification = lazy(() => import("@/components/vulnerabilities/VulnerabilityClassification"));
+const VulnerabilityReports = lazy(() => import("@/components/vulnerabilities/VulnerabilityReports"));
+const VulnerabilityForm = lazy(() => import("@/components/vulnerabilities/VulnerabilityForm"));
+const VulnerabilityList = lazy(() => import("@/components/vulnerabilities/VulnerabilityList"));
+const Applications = lazy(() => import("@/components/vulnerabilities/Applications"));
+const CMDB = lazy(() => import("@/components/vulnerabilities/CMDB"));
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
@@ -340,6 +352,7 @@ const App = () => (
                       <FrameworksAssessment />
                     </Suspense>
                   } />
+
                   <Route path="assessments/execution" element={
                     <Suspense fallback={<PageLoader />}>
                       <AssessmentExecutionComplete />
@@ -531,6 +544,56 @@ const App = () => (
                   <Route path="ethics/legacy" element={
                     <Suspense fallback={<PageLoader />}>
                       <EthicsChannelPage />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityDashboard />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/management" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityManagement />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/import" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityImport />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/classification" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityClassification />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/reports" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityReports />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/create" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/edit/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/list" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <VulnerabilityList />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/applications" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <Applications />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/cmdb" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <CMDB />
                     </Suspense>
                   } />
                   <Route path="privacy" element={

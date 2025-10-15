@@ -13,16 +13,24 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { toast } from 'sonner';
 import { Plus, Search, Edit, Trash2, HelpCircle, FileText, ArrowUp, ArrowDown, Copy, Eye, Settings, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AssessmentFramework, AssessmentDomain, AssessmentControl, AssessmentQuestion, QuestionFormData } from '@/types/assessment';
 import { sanitizeInput, sanitizeObject, auditLog } from '@/utils/securityLogger';
 import { useCRUDRateLimit } from '@/hooks/useRateLimit';
 
 export default function QuestionsManagement() {
-  const { user, effectiveTenantId } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const rateLimitCRUD = useCRUDRateLimit(user?.id || 'anonymous');
+  
+  // Usar contexto de tenant correto
+  const effectiveTenantId = useCurrentTenantId();
+  
+  // Debug auth context
+  console.log('🔐 Auth Context - User:', user?.id, 'Tenant:', effectiveTenantId);
 
   const [frameworks, setFrameworks] = useState<AssessmentFramework[]>([]);
   const [domains, setDomains] = useState<AssessmentDomain[]>([]);
@@ -71,8 +79,33 @@ export default function QuestionsManagement() {
   ];
 
   useEffect(() => {
-    loadFrameworks();
+    if (effectiveTenantId) {
+      loadFrameworks();
+    } else {
+      console.warn('⚠️ [AUTH] Tenant ID não disponível, aguardando...');
+      setLoading(false);
+    }
   }, [effectiveTenantId]);
+
+  // Carregar framework específico se passado como parâmetro
+  useEffect(() => {
+    const frameworkId = searchParams.get('framework');
+    console.log('🔍 Framework ID da URL:', frameworkId);
+    console.log('📋 Frameworks disponíveis:', frameworks.length);
+    
+    if (frameworkId && frameworks.length > 0) {
+      const framework = frameworks.find(f => f.id === frameworkId);
+      console.log('🎯 Framework encontrado:', framework?.nome || 'Não encontrado');
+      
+      if (framework) {
+        setSelectedFramework(framework);
+        console.log('✅ Framework selecionado:', framework.nome);
+      } else {
+        console.error('❌ Framework não encontrado com ID:', frameworkId);
+        toast.error('Framework não encontrado');
+      }
+    }
+  }, [searchParams, frameworks]);
 
   useEffect(() => {
     if (selectedFramework) {
@@ -97,6 +130,8 @@ export default function QuestionsManagement() {
 
   const loadFrameworks = async () => {
     try {
+      console.log('🔄 Carregando frameworks para tenant:', effectiveTenantId);
+      
       if (!rateLimitCRUD.checkRateLimit('read')) {
         toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
         return;
@@ -109,12 +144,16 @@ export default function QuestionsManagement() {
         .eq('status', 'ativo')
         .order('nome', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro SQL ao carregar frameworks:', error);
+        throw error;
+      }
 
+      console.log('📊 Frameworks carregados:', data?.length || 0);
       setFrameworks(data || []);
     } catch (error) {
-      console.error('Erro ao carregar frameworks:', error);
-      toast.error('Erro ao carregar frameworks');
+      console.error('❌ Erro ao carregar frameworks:', error);
+      toast.error('Erro ao carregar frameworks: ' + (error as any)?.message);
     } finally {
       setLoading(false);
     }
@@ -168,7 +207,11 @@ export default function QuestionsManagement() {
         .eq('ativa', true)
         .order('ordem', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao carregar questões:', error);
+        toast.error('Erro ao carregar questões: ' + error.message);
+        return;
+      }
 
       setQuestions(data || []);
     } catch (error) {
@@ -226,9 +269,15 @@ export default function QuestionsManagement() {
       }
 
       const questionData = {
-        ...sanitizedFormData,
-        control_id: selectedControl.id,
         tenant_id: effectiveTenantId,
+        control_id: selectedControl.id,
+        codigo: sanitizedFormData.codigo,
+        texto: sanitizedFormData.texto,
+        descricao: sanitizedFormData.descricao,
+        tipo_pergunta: sanitizedFormData.tipo_pergunta,
+        obrigatoria: sanitizedFormData.obrigatoria,
+        peso: sanitizedFormData.peso,
+        texto_ajuda: sanitizedFormData.texto_ajuda,
         ordem: questions.length + 1,
         opcoes_resposta,
         mapeamento_pontuacao,
@@ -508,6 +557,48 @@ export default function QuestionsManagement() {
     question.texto.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (question.codigo && question.codigo.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Verificar se há tenant ID
+  if (!effectiveTenantId) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium mb-2">Erro de Autenticação</h3>
+          <p className="text-muted-foreground mb-4">
+            Não foi possível identificar sua organização. Faça login novamente.
+          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>User ID: {user?.id || 'Não disponível'}</p>
+            <p>Tenant ID: {effectiveTenantId || 'Não disponível'}</p>
+          </div>
+          <Button onClick={() => navigate('/login')} className="mt-4">
+            Fazer Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug info para frameworks vazios
+  if (frameworks.length === 0 && !loading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium mb-2">Nenhum framework encontrado</h3>
+          <p className="text-muted-foreground mb-4">
+            Não foram encontrados frameworks ativos para esta organização.
+          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Tenant ID: {effectiveTenantId}</p>
+            <p>Frameworks carregados: {frameworks.length}</p>
+          </div>
+          <Button onClick={() => navigate('/assessments/frameworks')} className="mt-4">
+            Ir para Gestão de Frameworks
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
