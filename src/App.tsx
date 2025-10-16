@@ -147,6 +147,8 @@ const VulnerabilityList = lazy(() => import("@/components/vulnerabilities/Vulner
 const Applications = lazy(() => import("@/components/vulnerabilities/Applications"));
 const ApplicationForm = lazy(() => import("@/components/vulnerabilities/ApplicationForm"));
 const CMDB = lazy(() => import("@/components/vulnerabilities/CMDB"));
+const AssetForm = lazy(() => import("@/components/vulnerabilities/AssetForm"));
+const AssetFieldsCustomization = lazy(() => import("@/components/vulnerabilities/AssetFieldsCustomization"));
 const VulnerabilityFieldsCustomization = lazy(() => import("@/components/vulnerabilities/VulnerabilityFieldsCustomization"));
 const ApplicationFieldsCustomization = lazy(() => import("@/components/vulnerabilities/ApplicationFieldsCustomizationFixed"));
 
@@ -612,6 +614,21 @@ const App = () => (
                   <Route path="vulnerabilities/cmdb" element={
                     <Suspense fallback={<PageLoader />}>
                       <CMDB />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/cmdb/create" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssetForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/cmdb/edit/:id" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssetForm />
+                    </Suspense>
+                  } />
+                  <Route path="vulnerabilities/cmdb/fields-customization" element={
+                    <Suspense fallback={<PageLoader />}>
+                      <AssetFieldsCustomization />
                     </Suspense>
                   } />
                   <Route path="vulnerabilities/fields-customization" element={

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { 
   Server,
   ArrowLeft,
@@ -16,26 +17,43 @@ import {
   Eye,
   Edit,
   Trash2,
-
   Monitor,
   Smartphone,
   Wifi,
   HardDrive,
   Cpu,
-  Network
+  Network,
+  Settings
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export default function CMDB() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
 
+  // Check if user can manage custom fields (admin only)
+  const canManageFields = () => {
+    if (!user) {
+      return false;
+    }
+    
+    const hasPermission = user.isPlatformAdmin || 
+                         user.roles?.includes('admin') || 
+                         user.roles?.includes('tenant_admin') ||
+                         user.roles?.includes('super_admin') ||
+                         user.roles?.includes('platform_admin');
+    
+    return hasPermission;
+  };
+
   // Mock data
-  const mockAssets = [
+  const [mockAssets, setMockAssets] = useState([
     {
       id: 'SRV-001',
       name: 'Web Server 01',
@@ -114,7 +132,7 @@ export default function CMDB() {
       last_scan: '2024-01-10',
       risk_level: 'Alto'
     }
-  ];
+  ]);
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -173,6 +191,11 @@ export default function CMDB() {
     highRisk: mockAssets.filter(asset => asset.risk_level === 'Alto').length,
   };
 
+
+
+
+
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -192,29 +215,37 @@ export default function CMDB() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Upload className="h-4 w-4 mr-2" />
-            Importar
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Ativo
-          </Button>
-        </div>
       </div>
 
       <Tabs defaultValue="list" className="w-full">
-        <TabsList>
-          <TabsTrigger value="list">Lista</TabsTrigger>
-          <TabsTrigger value="import">Importar</TabsTrigger>
-          <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
-          <TabsTrigger value="topology">Topologia</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mb-6">
+          <TabsList>
+            <TabsTrigger value="list">Lista</TabsTrigger>
+            <TabsTrigger value="import">Importar</TabsTrigger>
+            <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
+            <TabsTrigger value="topology">Topologia</TabsTrigger>
+          </TabsList>
+          <div className="flex gap-2">
+            {canManageFields() && (
+              <Button variant="outline" onClick={() => navigate('/vulnerabilities/cmdb/fields-customization')}>
+                <Settings className="h-4 w-4 mr-2" />
+                Customizar
+              </Button>
+            )}
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Importar
+            </Button>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+            <Button onClick={() => navigate('/vulnerabilities/cmdb/create')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Ativo
+            </Button>
+          </div>
+        </div>
 
         <TabsContent value="list" className="space-y-6">
           {/* Filters */}
