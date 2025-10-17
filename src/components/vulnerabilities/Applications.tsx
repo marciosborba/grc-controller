@@ -5,7 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Layers,
   ArrowLeft,
@@ -22,16 +26,29 @@ import {
   Database,
   Cloud,
   Monitor,
-  Settings
+  Settings,
+  ChevronDown,
+  Shield,
+  FileText,
+  Target,
+  GitBranch
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContextSimple';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 
 export default function Applications() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const tenantId = useCurrentTenantId();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [selectedImportTool, setSelectedImportTool] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   // Mock data
   const mockApplications = [
@@ -131,6 +148,194 @@ export default function Applications() {
     return colors[risk as keyof typeof colors] || colors['Baixo'];
   };
 
+  // Real API integration functions
+  const testConnection = async () => {
+    if (!selectedImportTool || !tenantId) {
+      toast.error('Selecione uma ferramenta e verifique se está logado');
+      return;
+    }
+
+    setIsTestingConnection(true);
+    
+    try {
+      const credentials = getCredentialsFromForm();
+      
+      const response = await fetch('/api/integrations/applications/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: selectedImportTool,
+          credentials
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success('Conexão estabelecida com sucesso!');
+      } else {
+        toast.error(result.error || 'Falha na conexão');
+      }
+    } catch (error) {
+      console.error('Connection test error:', error);
+      toast.error('Erro ao testar conexão');
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const handleRealImport = async () => {
+    if (!selectedImportTool || !tenantId) {
+      toast.error('Selecione uma ferramenta e verifique se está logado');
+      return;
+    }
+
+    setIsImporting(true);
+    
+    try {
+      const credentials = getCredentialsFromForm();
+      const filters = getFiltersFromForm();
+      
+      const response = await fetch('/api/integrations/applications/import-applications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: selectedImportTool,
+          credentials,
+          tenantId,
+          filters
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(result.message);
+        setImportModalOpen(false);
+        // Refresh the page or update the application list
+        window.location.reload();
+      } else {
+        toast.error(result.error || 'Falha na importação');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Erro durante a importação');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const getCredentialsFromForm = () => {
+    const credentials: any = {};
+    
+    switch (selectedImportTool) {
+      case 'servicenow':
+        credentials.server = (document.getElementById('snow-instance') as HTMLInputElement)?.value;
+        credentials.username = (document.getElementById('snow-username') as HTMLInputElement)?.value;
+        credentials.password = (document.getElementById('snow-password') as HTMLInputElement)?.value;
+        credentials.table = (document.querySelector('[data-testid="snow-table"]') as HTMLSelectElement)?.value || 'cmdb_ci_appl';
+        credentials.filter = (document.getElementById('snow-filter') as HTMLInputElement)?.value;
+        break;
+        
+      case 'jira':
+        credentials.server = (document.getElementById('jira-server') as HTMLInputElement)?.value;
+        credentials.username = (document.getElementById('jira-username') as HTMLInputElement)?.value;
+        credentials.apiKey = (document.getElementById('jira-token') as HTMLInputElement)?.value;
+        credentials.projectKeys = (document.getElementById('jira-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
+        break;
+        
+      case 'github':
+        credentials.server = (document.getElementById('github-server') as HTMLInputElement)?.value || 'https://api.github.com';
+        credentials.token = (document.getElementById('github-token') as HTMLInputElement)?.value;
+        credentials.organization = (document.getElementById('github-org') as HTMLInputElement)?.value;
+        credentials.repositories = (document.getElementById('github-repos') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
+        break;
+        
+      case 'api':
+        credentials.server = (document.getElementById('app-api-url') as HTMLInputElement)?.value;
+        credentials.method = (document.querySelector('[data-testid="app-api-method"]') as HTMLSelectElement)?.value || 'GET';
+        credentials.authType = (document.querySelector('[data-testid="app-api-auth-type"]') as HTMLSelectElement)?.value || 'none';
+        credentials.apiKey = (document.getElementById('app-api-key') as HTMLInputElement)?.value;
+        credentials.token = (document.getElementById('app-api-token') as HTMLInputElement)?.value;
+        credentials.username = (document.getElementById('app-api-username') as HTMLInputElement)?.value;
+        credentials.password = (document.getElementById('app-api-password') as HTMLInputElement)?.value;
+        credentials.dataPath = (document.getElementById('app-api-data-path') as HTMLInputElement)?.value;
+        
+        const appHeaders = (document.getElementById('app-api-headers') as HTMLTextAreaElement)?.value;
+        const appBody = (document.getElementById('app-api-body') as HTMLTextAreaElement)?.value;
+        const appFieldMapping = (document.getElementById('app-api-field-mapping') as HTMLTextAreaElement)?.value;
+        
+        try {
+          credentials.headers = appHeaders ? JSON.parse(appHeaders) : {};
+          credentials.body = appBody ? JSON.parse(appBody) : undefined;
+          credentials.fieldMapping = appFieldMapping ? JSON.parse(appFieldMapping) : {};
+        } catch (e) {
+          console.error('JSON parse error for Application API:', e);
+        }
+        break;
+    }
+    
+    return credentials;
+  };
+
+  const getFiltersFromForm = () => {
+    const filters: any = {};
+    
+    // Add any additional filters based on the tool
+    if (selectedImportTool === 'servicenow') {
+      const table = (document.querySelector('[data-testid="snow-table"]') as HTMLSelectElement)?.value;
+      if (table) filters.table = table;
+    }
+    
+    if (selectedImportTool === 'github') {
+      const includeArchived = (document.getElementById('github-include-archived') as HTMLInputElement)?.checked;
+      filters.includeArchived = includeArchived;
+    }
+    
+    return filters;
+  };
+
+  const handleImportFromTool = (tool: string) => {
+    setSelectedImportTool(tool);
+    setImportModalOpen(true);
+  };
+
+  // Import tools configuration
+  const IMPORT_TOOLS = [
+    {
+      id: 'servicenow',
+      name: 'ServiceNow CMDB',
+      description: 'Importar aplicações do ServiceNow CMDB',
+      icon: Database,
+      fields: ['sys_id', 'name', 'version', 'install_status', 'operational_status', 'owned_by']
+    },
+    {
+      id: 'jira',
+      name: 'Atlassian Jira',
+      description: 'Importar projetos do Jira como aplicações',
+      icon: FileText,
+      fields: ['id', 'key', 'name', 'projectTypeKey', 'lead', 'description']
+    },
+    {
+      id: 'github',
+      name: 'GitHub',
+      description: 'Importar repositórios do GitHub como aplicações',
+      icon: GitBranch,
+      fields: ['id', 'name', 'full_name', 'html_url', 'language', 'description', 'owner']
+    },
+    {
+      id: 'api',
+      name: 'API Genérica',
+      description: 'Conectar com qualquer API REST para importar aplicações',
+      icon: Globe,
+      fields: ['customizable']
+    }
+  ];
+
 
 
   const filteredApplications = mockApplications.filter(app => {
@@ -215,18 +420,45 @@ export default function Applications() {
         </div>
       </div>
 
-      <Tabs defaultValue="list" className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="list">Lista</TabsTrigger>
-            <TabsTrigger value="import">Importar</TabsTrigger>
-            <TabsTrigger value="statistics">Estatísticas</TabsTrigger>
-          </TabsList>
+      <div className="space-y-6">
+        <div className="flex items-center justify-end">
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
               <Settings className="h-4 w-4 mr-2" />
-              Customizar Campos
+              Customizar
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                {IMPORT_TOOLS.map((tool) => {
+                  const IconComponent = tool.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={tool.id}
+                      onClick={() => handleImportFromTool(tool.id)}
+                      className="flex items-start gap-3 p-3"
+                    >
+                      <IconComponent className="h-5 w-5 mt-0.5 text-primary" />
+                      <div className="flex-1">
+                        <div className="font-medium">{tool.name}</div>
+                        <div className="text-sm text-muted-foreground">{tool.description}</div>
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleImportFromTool('manual')}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importação Manual (CSV, XML, JSON)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               Exportar
@@ -237,8 +469,6 @@ export default function Applications() {
             </Button>
           </div>
         </div>
-
-        <TabsContent value="list" className="space-y-6">
           {/* Filters */}
           <Card>
             <CardHeader>
@@ -395,90 +625,484 @@ export default function Applications() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+      </div>
 
-        <TabsContent value="import" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Importar Aplicações</CardTitle>
-              <CardDescription>
-                Importe aplicações via API, CSV, XML ou TXT
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Importação via Arquivo</h3>
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Arraste e solte arquivos aqui ou clique para selecionar
-                    </p>
-                    <p className="text-xs text-muted-foreground/70">
-                      Formatos suportados: CSV, XML, TXT
-                    </p>
-                    <Button className="mt-4">
-                      Selecionar Arquivo
-                    </Button>
+      {/* Import Modal */}
+      <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedImportTool && (() => {
+                const tool = IMPORT_TOOLS.find(t => t.id === selectedImportTool);
+                if (tool) {
+                  const IconComponent = tool.icon;
+                  return (
+                    <>
+                      <IconComponent className="h-5 w-5" />
+                      Importar de {tool.name}
+                    </>
+                  );
+                }
+                return 'Importar Aplicações';
+              })()}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedImportTool && (() => {
+                const tool = IMPORT_TOOLS.find(t => t.id === selectedImportTool);
+                return tool?.description || 'Configure a importação de aplicações';
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {selectedImportTool === 'servicenow' && (
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    Configuração ServiceNow
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure a conexão com o ServiceNow CMDB para importar aplicações
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="snow-instance">Instância ServiceNow *</Label>
+                  <Input
+                    id="snow-instance"
+                    placeholder="https://sua-empresa.service-now.com"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="snow-username">Usuário</Label>
+                    <Input id="snow-username" placeholder="usuario.api" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="snow-password">Senha/Token</Label>
+                    <Input id="snow-password" type="password" placeholder="••••••••" />
                   </div>
                 </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Importação via API</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">URL da API</label>
-                      <Input placeholder="https://api.exemplo.com/applications" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Token de Autenticação</label>
-                      <Input type="password" placeholder="Bearer token..." />
-                    </div>
-                    <Button className="w-full">
-                      Conectar e Importar
-                    </Button>
-                  </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="snow-table">Tabela CMDB</Label>
+                  <Select defaultValue="cmdb_ci_appl">
+                    <SelectTrigger data-testid="snow-table">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cmdb_ci_appl">cmdb_ci_appl (Applications)</SelectItem>
+                      <SelectItem value="cmdb_ci_service">cmdb_ci_service (Services)</SelectItem>
+                      <SelectItem value="cmdb_ci_business_app">cmdb_ci_business_app (Business Applications)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="snow-filter">Filtro (opcional)</Label>
+                  <Input
+                    id="snow-filter"
+                    placeholder="ex: install_status=1^operational_status=1"
+                  />
+                </div>
+                
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <Button 
+                    variant="outline" 
+                    onClick={testConnection}
+                    disabled={isTestingConnection}
+                    className="w-full"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        Testando Conexão...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-4 w-4 mr-2" />
+                        Testar Conexão
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            )}
 
-        <TabsContent value="statistics" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Total de Aplicações</p>
-                  <p className="text-2xl font-bold">{mockApplications.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Aplicações Ativas</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {mockApplications.filter(app => app.status === 'Ativo').length}
+            {selectedImportTool === 'jira' && (
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Configuração Jira
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure a conexão com o Atlassian Jira para importar projetos como aplicações
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Alto Risco</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {mockApplications.filter(app => app.risk_level === 'Alto').length}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="jira-server">Servidor Jira *</Label>
+                  <Input
+                    id="jira-server"
+                    placeholder="https://sua-empresa.atlassian.net"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="jira-username">Email</Label>
+                    <Input id="jira-username" placeholder="usuario@empresa.com" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="jira-token">API Token</Label>
+                    <Input id="jira-token" type="password" placeholder="••••••••" />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="jira-projects">Projetos (opcional)</Label>
+                  <Input
+                    id="jira-projects"
+                    placeholder="PROJ1,PROJ2,PROJ3 (deixe vazio para todos)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Chaves dos projetos separadas por vírgula. Deixe vazio para importar todos os projetos.
                   </p>
                 </div>
-              </CardContent>
-            </Card>
+                
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <Button 
+                    variant="outline" 
+                    onClick={testConnection}
+                    disabled={isTestingConnection}
+                    className="w-full"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        Testando Conexão...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Testar Conexão
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {selectedImportTool === 'github' && (
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <GitBranch className="h-5 w-5" />
+                    Configuração GitHub
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Configure a conexão com o GitHub para importar repositórios como aplicações
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="github-token">Token de Acesso *</Label>
+                  <Input
+                    id="github-token"
+                    type="password"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Personal Access Token ou GitHub App token
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="github-server">Servidor GitHub (opcional)</Label>
+                  <Input
+                    id="github-server"
+                    placeholder="https://api.github.com (padrão)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Para GitHub Enterprise, use: https://github.empresa.com/api/v3
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="github-org">Organização (opcional)</Label>
+                    <Input id="github-org" placeholder="nome-da-organizacao" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="github-repos">Repositórios (opcional)</Label>
+                    <Input id="github-repos" placeholder="org/repo1,org/repo2" />
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="github-include-archived"
+                    className="rounded"
+                  />
+                  <Label htmlFor="github-include-archived">Incluir repositórios arquivados</Label>
+                </div>
+                
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <Button 
+                    variant="outline" 
+                    onClick={testConnection}
+                    disabled={isTestingConnection}
+                    className="w-full"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        Testando Conexão...
+                      </>
+                    ) : (
+                      <>
+                        <GitBranch className="h-4 w-4 mr-2" />
+                        Testar Conexão
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {selectedImportTool === 'api' && (
+              <div className="space-y-6">
+                {/* Configuração Básica */}
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Globe className="h-5 w-5" />
+                      Configuração da API
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Configure a URL e método HTTP para conectar com sua API de aplicações
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="app-api-url">URL da API *</Label>
+                    <Input
+                      id="app-api-url"
+                      placeholder="https://api.exemplo.com/applications"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-method">Método HTTP</Label>
+                      <Select defaultValue="GET">
+                        <SelectTrigger data-testid="app-api-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="GET">GET</SelectItem>
+                          <SelectItem value="POST">POST</SelectItem>
+                          <SelectItem value="PUT">PUT</SelectItem>
+                          <SelectItem value="PATCH">PATCH</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-auth-type">Tipo de Autenticação</Label>
+                      <Select defaultValue="none">
+                        <SelectTrigger data-testid="app-api-auth-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          <SelectItem value="bearer">Bearer Token</SelectItem>
+                          <SelectItem value="basic">Basic Auth</SelectItem>
+                          <SelectItem value="apikey">API Key</SelectItem>
+                          <SelectItem value="custom">Custom Headers</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Autenticação */}
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Shield className="h-5 w-5" />
+                      Credenciais de Acesso
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-key">API Key</Label>
+                      <Input
+                        id="app-api-key"
+                        type="password"
+                        placeholder="sua-api-key"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-token">Bearer Token</Label>
+                      <Input
+                        id="app-api-token"
+                        type="password"
+                        placeholder="seu-bearer-token"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-username">Usuário</Label>
+                      <Input
+                        id="app-api-username"
+                        placeholder="usuario"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="app-api-password">Senha</Label>
+                      <Input
+                        id="app-api-password"
+                        type="password"
+                        placeholder="senha"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configuração de Dados */}
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Processamento de Dados
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="app-api-data-path">Caminho dos Dados (JSONPath)</Label>
+                    <Input
+                      id="app-api-data-path"
+                      placeholder="data.applications ou response.projects"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="app-api-field-mapping">Mapeamento de Campos (JSON)</Label>
+                    <Textarea
+                      id="app-api-field-mapping"
+                      placeholder='{"name": "app_name", "type": "category", "owner": "responsible"}'
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                {/* Configuração Avançada */}
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Configuração Avançada
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="app-api-headers">Headers Customizados (JSON)</Label>
+                    <Textarea
+                      id="app-api-headers"
+                      placeholder='{"X-Custom-Header": "valor", "Accept": "application/json"}'
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="app-api-body">Body da Requisição (JSON)</Label>
+                    <Textarea
+                      id="app-api-body"
+                      placeholder='{"filters": {"status": "active"}, "limit": 100}'
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Teste de Conexão */}
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="h-4 w-4" />
+                    <span className="font-medium">Teste de Conectividade</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Teste a conexão com a API antes de iniciar a importação
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={testConnection}
+                    disabled={isTestingConnection}
+                    className="w-full"
+                  >
+                    {isTestingConnection ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                        Testando Conexão...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="h-4 w-4 mr-2" />
+                        Testar Conexão
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {selectedImportTool === 'manual' && (
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                  <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Selecione arquivos para importação manual
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mb-4">
+                    Formatos suportados: CSV, XML, JSON, TXT
+                  </p>
+                  <Button variant="outline">
+                    Selecionar Arquivos
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setImportModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => handleRealImport()}
+                disabled={isImporting || isTestingConnection}
+              >
+                {isImporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Iniciar Importação
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

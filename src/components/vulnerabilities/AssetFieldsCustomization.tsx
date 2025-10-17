@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAssetCustomFields, AssetCustomField } from './hooks/useAssetCustomFields';
-import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextSimple';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Texto' },
