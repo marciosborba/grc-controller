@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextSimple';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 
