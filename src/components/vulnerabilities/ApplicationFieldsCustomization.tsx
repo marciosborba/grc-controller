@@ -37,7 +37,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useApplicationCustomFields, ApplicationCustomField } from './hooks/useApplicationCustomFields';
-import { useAuth } from '@/contexts/AuthContextSimple';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 interface FieldTemplate {
   id: string;

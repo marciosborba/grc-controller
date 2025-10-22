@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Vulnerability, VulnerabilityFilter, VulnerabilityMetrics } from '../types/vulnerability';
-import { useAuth } from '@/contexts/AuthContextSimple';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';

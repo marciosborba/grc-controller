@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContextSimple';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 
 export interface ApplicationCustomField {
