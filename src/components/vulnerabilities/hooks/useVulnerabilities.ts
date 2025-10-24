@@ -1,8 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Vulnerability, VulnerabilityFilter, VulnerabilityMetrics } from '../types/vulnerability';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
+
+// Temporary test client - reverting to normal supabase client
+// The service role key in .env has example values, so let's use the normal client
+// and check if RLS is the issue
 import { toast } from 'sonner';
 
 interface UseVulnerabilitiesOptions {
@@ -22,6 +27,13 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [tableExists, setTableExists] = useState<boolean | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const [suppressToasts, setSuppressToasts] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [forceRefresh, setForceRefresh] = useState(false);
+  const loadedTenantRef = useRef<string | null>(null);
+  const isLoadingRef = useRef(false);
 
   const {
     filters = {},
@@ -33,12 +45,55 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
 
   // Load vulnerabilities with filters
   const loadVulnerabilities = useCallback(async () => {
-    if (!effectiveTenantId) return;
+    if (!effectiveTenantId) {
+      console.log('❌ [HOOK] No effectiveTenantId, returning early');
+      return;
+    }
+    
+    // Prevent multiple simultaneous loads
+    if (isLoadingRef.current) {
+      console.log('🔄 [HOOK] Already loading, skipping...');
+      return;
+    }
+    
+    console.log('🔍 [HOOK] Loading vulnerabilities for tenant:', effectiveTenantId);
+    isLoadingRef.current = true;
+    
+    // If we already know the table doesn't exist, don't try again (unless forced)
+    if (tableExists === false && !forceRefresh) {
+      setVulnerabilities([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+    
+    // Reset force refresh flag
+    if (forceRefresh) {
+      setForceRefresh(false);
+      setTableExists(null);
+      setInitialized(false);
+      setAttemptCount(0);
+      setSuppressToasts(false);
+    }
+    
+    // If we've tried multiple times and failed, assume table doesn't exist
+    if (attemptCount >= 3) {
+      console.warn('Multiple attempts failed, assuming table does not exist');
+      setTableExists(false);
+      setInitialized(true);
+      setSuppressToasts(true);
+      setVulnerabilities([]);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    setAttemptCount(prev => prev + 1);
 
     try {
+      // Use normal supabase client (with RLS)
       let query = supabase
         .from('vulnerabilities')
         .select('*', { count: 'exact' })
@@ -88,21 +143,98 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       const { data, error, count } = await query;
 
       if (error) throw error;
-
       setVulnerabilities(data || []);
       setTotalCount(count || 0);
+      setTableExists(true);
+      setInitialized(true);
+      setAttemptCount(0); // Reset attempt count on success
+      loadedTenantRef.current = effectiveTenantId;
     } catch (err) {
       console.error('Error loading vulnerabilities:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load vulnerabilities');
-      toast.error('Failed to load vulnerabilities');
+      
+      // Check if the error is due to table not existing
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      
+      // More comprehensive check for table not existing
+      const tableNotExistsPatterns = [
+        'relation "vulnerabilities" does not exist',
+        'table "vulnerabilities" does not exist',
+        'relation does not exist',
+        'table does not exist',
+        'does not exist',
+        'relation "public.vulnerabilities" does not exist',
+        'table "public.vulnerabilities" does not exist'
+      ];
+      
+      const isTableNotExist = tableNotExistsPatterns.some(pattern => 
+        errorMessage.toLowerCase().includes(pattern.toLowerCase())
+      );
+      
+      if (isTableNotExist) {
+        console.warn('Vulnerabilities table does not exist in database');
+        setTableExists(false);
+        setInitialized(true);
+        setSuppressToasts(true);
+        setError('Vulnerabilities table not found. Please create the table in your database.');
+        // Don't show toast error for missing table, just log it
+      } else {
+        setError(errorMessage);
+        // Only show toast for non-table-missing errors and if not suppressed
+        if (!suppressToasts) {
+          toast.error('Failed to load vulnerabilities');
+        }
+      }
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [effectiveTenantId, filters, page, limit, sortBy, sortOrder]);
+  }, [effectiveTenantId, JSON.stringify(filters), page, limit, sortBy, sortOrder, tableExists, attemptCount, forceRefresh]);
 
   // Load metrics
   const loadMetrics = useCallback(async () => {
     if (!effectiveTenantId) return;
+    
+    // If table doesn't exist, return empty metrics
+    if (tableExists === false) {
+      const emptyMetrics: VulnerabilityMetrics = {
+        total_vulnerabilities: 0,
+        by_severity: {
+          Critical: 0,
+          High: 0,
+          Medium: 0,
+          Low: 0,
+          Info: 0,
+        },
+        by_status: {
+          Open: 0,
+          In_Progress: 0,
+          Testing: 0,
+          Resolved: 0,
+          Accepted: 0,
+          False_Positive: 0,
+          Duplicate: 0,
+        },
+        by_source: {
+          Pentest: 0,
+          SAST: 0,
+          DAST: 0,
+          Cloud: 0,
+          Infrastructure: 0,
+          Manual: 0,
+          Risk_Register: 0,
+          Bug_Bounty: 0,
+          Compliance_Audit: 0,
+        },
+        sla_compliance: 100,
+        avg_resolution_time: 0,
+        overdue_count: 0,
+        critical_open: 0,
+        high_open: 0,
+        trend_data: [],
+      };
+      setMetrics(emptyMetrics);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -164,6 +296,13 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       setMetrics(metrics);
     } catch (err) {
       console.error('Error loading metrics:', err);
+      // If metrics fail to load due to table not existing, handle gracefully
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      if (errorMessage.includes('relation "vulnerabilities" does not exist') || 
+          errorMessage.includes('table "vulnerabilities" does not exist') ||
+          errorMessage.includes('relation does not exist')) {
+        setTableExists(false);
+      }
     }
   }, [effectiveTenantId]);
 
@@ -278,13 +417,27 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
     }
   }, [user, effectiveTenantId, loadVulnerabilities, loadMetrics]);
 
-  useEffect(() => {
-    loadVulnerabilities();
-  }, [loadVulnerabilities]);
+  // Force refresh function
+  const forceRefreshData = useCallback(() => {
+    console.log('Forcing refresh of vulnerability data...');
+    setForceRefresh(true);
+  }, []);
 
+  // Load data when tenant changes or on force refresh
   useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
+    if (effectiveTenantId && (loadedTenantRef.current !== effectiveTenantId || forceRefresh)) {
+      loadVulnerabilities();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTenantId, forceRefresh]);
+
+  // Load metrics after vulnerabilities are loaded
+  useEffect(() => {
+    if (effectiveTenantId && initialized && tableExists === true) {
+      loadMetrics();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTenantId, initialized, tableExists]);
 
   return {
     vulnerabilities,
@@ -292,12 +445,14 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
     loading,
     error,
     totalCount,
+    tableExists,
     createVulnerability,
     updateVulnerability,
     deleteVulnerability,
     bulkUpdateVulnerabilities,
     refetch: loadVulnerabilities,
     refetchMetrics: loadMetrics,
+    forceRefresh: forceRefreshData,
   };
 };
 

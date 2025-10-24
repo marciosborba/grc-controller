@@ -229,6 +229,14 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           permissions: userPermissions,
           isPlatformAdmin
         };
+        
+        console.log('🔍 [AUTH] Final userData created:', {
+          id: userData.id,
+          email: userData.email,
+          tenantId: userData.tenantId,
+          profileTenantId: profile?.tenant_id,
+          isPlatformAdmin: userData.isPlatformAdmin
+        });
 
         // Cache o resultado
         setCachedUser(supabaseUser.id, userData);

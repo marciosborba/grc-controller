@@ -63,6 +63,8 @@ export default function Applications() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [selectedExportFormat, setSelectedExportFormat] = useState<string | null>(null);
   
   // Advanced Filters State
   const [advancedFiltersModalOpen, setAdvancedFiltersModalOpen] = useState(false);
@@ -596,6 +598,143 @@ export default function Applications() {
     toast.success(`Filtros avançados aplicados! ${getActiveFiltersCount()} filtro${getActiveFiltersCount() > 1 ? 's' : ''} ativo${getActiveFiltersCount() > 1 ? 's' : ''}.`);
   };
 
+  // Export tool configurations
+  const EXPORT_FORMATS = [
+    {
+      id: 'csv',
+      name: 'CSV',
+      description: 'Arquivo de valores separados por vírgula',
+      icon: FileText,
+      extension: '.csv'
+    },
+    {
+      id: 'excel',
+      name: 'Excel',
+      description: 'Planilha do Microsoft Excel',
+      icon: FileText,
+      extension: '.xlsx'
+    },
+    {
+      id: 'json',
+      name: 'JSON',
+      description: 'Formato de dados JavaScript Object Notation',
+      icon: FileText,
+      extension: '.json'
+    },
+    {
+      id: 'xml',
+      name: 'XML',
+      description: 'Arquivo de marcação extensível',
+      icon: FileText,
+      extension: '.xml'
+    },
+    {
+      id: 'pdf',
+      name: 'PDF',
+      description: 'Relatório em PDF para apresentação',
+      icon: FileText,
+      extension: '.pdf'
+    }
+  ];
+
+  // Export handlers
+  const handleExportToFormat = (format: string) => {
+    setSelectedExportFormat(format);
+    setExportModalOpen(true);
+  };
+
+  const executeExport = (format: string, options: any = {}) => {
+    const dataToExport = filteredApplications.map(app => ({
+      ID: app.id,
+      Nome: app.name,
+      Tipo: app.type,
+      Status: app.status,
+      URL: app.url,
+      Tecnologia: app.technology,
+      Responsável: app.owner,
+      Vulnerabilidades: app.vulnerabilities,
+      'Nível de Risco': app.risk_level,
+      'Último Scan': app.last_scan
+    }));
+
+    switch (format) {
+      case 'csv':
+        exportToCSV(dataToExport, options);
+        break;
+      case 'excel':
+        exportToExcel(dataToExport, options);
+        break;
+      case 'pdf':
+        exportToPDF(dataToExport, options);
+        break;
+      case 'json':
+        exportToJSON(dataToExport, options);
+        break;
+      case 'xml':
+        exportToXML(dataToExport, options);
+        break;
+      default:
+        console.error('Formato de exportação não suportado:', format);
+    }
+  };
+
+  const exportToCSV = (data: any[], options: any) => {
+    const delimiter = options.delimiter || ',';
+    const headers = Object.keys(data[0]).join(delimiter);
+    const rows = data.map(row => Object.values(row).join(delimiter));
+    const csvContent = [headers, ...rows].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    const count = data.length;
+    toast.success(`Exportação concluída! ${count} aplicação${count !== 1 ? 'ões' : ''} exportada${count !== 1 ? 's' : ''}.`);
+  };
+
+  const exportToJSON = (data: any[], options: any) => {
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    toast.success('Exportação JSON concluída!');
+  };
+
+  const exportToXML = (data: any[], options: any) => {
+    let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n<aplicacoes>\n';
+    data.forEach(item => {
+      xmlContent += '  <aplicacao>\n';
+      Object.entries(item).forEach(([key, value]) => {
+        xmlContent += `    <${key.toLowerCase().replace(/\s+/g, '_')}>${value}</${key.toLowerCase().replace(/\s+/g, '_')}>\n`;
+      });
+      xmlContent += '  </aplicacao>\n';
+    });
+    xmlContent += '</aplicacoes>';
+    
+    const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.xml`;
+    link.click();
+    
+    toast.success('Exportação XML concluída!');
+  };
+
+  const exportToExcel = (data: any[], options: any) => {
+    console.log('Exportação Excel não implementada. Use CSV como alternativa.');
+    exportToCSV(data, { delimiter: ',' });
+  };
+
+  const exportToPDF = (data: any[], options: any) => {
+    console.log('Exportação PDF não implementada. Use CSV como alternativa.');
+    exportToCSV(data, { delimiter: ',' });
+  };
+
   const handleExport = () => {
     try {
       // Preparar dados para exportação
@@ -703,10 +842,38 @@ export default function Applications() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
+                {EXPORT_FORMATS.map((format) => {
+                  const IconComponent = format.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={format.id}
+                      onClick={() => handleExportToFormat(format.id)}
+                      className="flex items-start gap-3 p-3"
+                    >
+                      <IconComponent className="h-4 w-4 mt-0.5 text-primary" />
+                      <div className="flex-1">
+                        <div className="font-medium">{format.name}</div>
+                        <div className="text-sm text-muted-foreground">{format.description}</div>
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => executeExport('csv', { delimiter: ',' })}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportação Rápida (CSV)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
               <Settings className="h-4 w-4 mr-2" />
               Customizar
@@ -2239,6 +2406,121 @@ export default function Applications() {
                     Iniciar Importação
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Modal */}
+      <Dialog open={exportModalOpen} onOpenChange={setExportModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Exportar Aplicações
+              {selectedExportFormat && (() => {
+                const format = EXPORT_FORMATS.find(f => f.id === selectedExportFormat);
+                return format ? ` - ${format.name}` : '';
+              })()}
+            </DialogTitle>
+            <DialogDescription>
+              Configure as opções de exportação para {filteredApplications.length} aplicação{filteredApplications.length !== 1 ? 'ões' : ''}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Dados a serem exportados:</h4>
+              <p className="text-sm text-muted-foreground">
+                {filteredApplications.length} aplicação{filteredApplications.length !== 1 ? 'ões' : ''} filtrada{filteredApplications.length !== 1 ? 's' : ''} da lista atual
+              </p>
+              <div className="text-xs text-muted-foreground mt-2">
+                Campos: ID, Nome, Tipo, Status, URL, Tecnologia, Responsável, Vulnerabilidades, Risco, Último Scan
+              </div>
+            </div>
+
+            {selectedExportFormat === 'csv' && (
+              <div className="space-y-2">
+                <Label htmlFor="csv-delimiter">Delimitador</Label>
+                <Select defaultValue="comma">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="comma">Vírgula (,)</SelectItem>
+                    <SelectItem value="semicolon">Ponto e vírgula (;)</SelectItem>
+                    <SelectItem value="tab">Tab (\t)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {selectedExportFormat === 'pdf' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pdf-orientation">Orientação</Label>
+                  <Select defaultValue="landscape">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="portrait">Retrato</SelectItem>
+                      <SelectItem value="landscape">Paisagem</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pdf-title">Título do Relatório</Label>
+                  <Input
+                    id="pdf-title"
+                    placeholder="Relatório de Aplicações"
+                    defaultValue="Relatório de Aplicações"
+                  />
+                </div>
+              </div>
+            )}
+
+            {selectedExportFormat === 'excel' && (
+              <div className="space-y-2">
+                <Label htmlFor="excel-sheet">Nome da Planilha</Label>
+                <Input
+                  id="excel-sheet"
+                  placeholder="Aplicações"
+                  defaultValue="Aplicações"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setExportModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={() => {
+                if (selectedExportFormat) {
+                  const options: any = {};
+                  
+                  if (selectedExportFormat === 'csv') {
+                    const delimiterSelect = document.querySelector('[data-testid="csv-delimiter"]') as HTMLSelectElement;
+                    options.delimiter = delimiterSelect?.value === 'semicolon' ? ';' : delimiterSelect?.value === 'tab' ? '\t' : ',';
+                  }
+                  
+                  if (selectedExportFormat === 'pdf') {
+                    const titleInput = document.getElementById('pdf-title') as HTMLInputElement;
+                    options.title = titleInput?.value || 'Relatório de Aplicações';
+                  }
+                  
+                  if (selectedExportFormat === 'excel') {
+                    const sheetInput = document.getElementById('excel-sheet') as HTMLInputElement;
+                    options.sheetName = sheetInput?.value || 'Aplicações';
+                  }
+                  
+                  executeExport(selectedExportFormat, options);
+                  setExportModalOpen(false);
+                }
+              }}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
               </Button>
             </div>
           </div>

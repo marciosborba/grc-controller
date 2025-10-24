@@ -43,8 +43,15 @@ export const TenantSelectorProvider: React.FC<{ children: ReactNode }> = ({ chil
   // Determinar tenant ID efetivo
   const getEffectiveTenantId = (): string => {
     if (isPlatformAdmin) {
-      return selectedTenantId || user?.tenantId || '';
+      // Para platform admin, priorizar selectedTenantId, depois user.tenantId
+      let result = selectedTenantId;
+      if (!result && user?.tenantId && user.tenantId !== 'default') {
+        result = user.tenantId;
+      }
+      return result || '';
     }
+    
+    // Para usuários normais, sempre usar o tenant do usuário
     return user?.tenantId || '';
   };
 
@@ -111,11 +118,16 @@ export const TenantSelectorProvider: React.FC<{ children: ReactNode }> = ({ chil
   useEffect(() => {
     if (isPlatformAdmin) {
       loadAvailableTenants();
+      // Para platform admin, se não há seleção, usar o tenant do usuário como padrão
+      if (!selectedTenantId && user?.tenantId && user.tenantId !== 'default') {
+        console.log('🎯 [TENANT_SELECTOR] Setting platform admin default tenant:', user.tenantId);
+        setSelectedTenantIdState(user.tenantId);
+      }
     } else if (user?.tenantId) {
       // Para usuários normais, usar o tenant ID do usuário
       setSelectedTenantIdState(user.tenantId);
     }
-  }, [isPlatformAdmin, user?.tenantId]);
+  }, [isPlatformAdmin, user?.tenantId, selectedTenantId]);
 
   // Recuperar seleção salva do localStorage
   useEffect(() => {

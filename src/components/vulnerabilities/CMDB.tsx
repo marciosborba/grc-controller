@@ -10,6 +10,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Calendar } from '@/components/ui/calendar';
 
 import { 
   Server,
@@ -32,7 +38,23 @@ import {
   Database,
   Cloud,
   FileText,
-  Globe
+  Globe,
+  Filter,
+  Sliders,
+  X,
+  CalendarIcon,
+  User,
+  Shield,
+  Target,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  RotateCcw,
+  Building,
+  MapPin,
+  Zap,
+  Activity,
+  MoreHorizontal
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -54,23 +76,45 @@ export default function CMDB() {
   const [selectedExportFormat, setSelectedExportFormat] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [ownerSearchOpen, setOwnerSearchOpen] = useState(false);
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState('');
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    assetTypes: [] as string[],
+    riskLevels: [] as string[],
+    owners: [] as string[],
+    dateRange: {
+      from: undefined as Date | undefined,
+      to: undefined as Date | undefined
+    },
+    vulnerabilityRange: {
+      min: undefined as number | undefined,
+      max: undefined as number | undefined
+    },
+    operatingSystems: [] as string[],
+    hasVulnerabilities: 'all' as 'all' | 'with' | 'without'
+  });
 
-  // Check if user can manage custom fields (admin only)
-  const canManageFields = () => {
-    if (!user) {
-      return false;
-    }
-    
-    const hasPermission = user.isPlatformAdmin || 
-                         user.roles?.includes('admin') || 
-                         user.roles?.includes('tenant_admin') ||
-                         user.roles?.includes('super_admin') ||
-                         user.roles?.includes('platform_admin');
-    
-    return hasPermission;
-  };
+  // Available options for advanced filters
+  const assetTypeOptions = [
+    { value: 'Server', label: 'Servidor', icon: Server, color: 'bg-blue-500 text-white' },
+    { value: 'Workstation', label: 'Workstation', icon: Monitor, color: 'bg-green-500 text-white' },
+    { value: 'Network Device', label: 'Dispositivo de Rede', icon: Network, color: 'bg-purple-500 text-white' },
+    { value: 'Mobile Device', label: 'Dispositivo Móvel', icon: Smartphone, color: 'bg-orange-500 text-white' },
+    { value: 'Storage', label: 'Armazenamento', icon: HardDrive, color: 'bg-red-500 text-white' },
+    { value: 'Infrastructure', label: 'Infraestrutura', icon: Cpu, color: 'bg-yellow-500 text-black' }
+  ];
 
-  // Mock data
+  const riskLevelOptions = [
+    { value: 'Crítico', label: 'Crítico', icon: AlertTriangle, color: 'bg-red-600 text-white' },
+    { value: 'Alto', label: 'Alto', icon: Zap, color: 'bg-orange-600 text-white' },
+    { value: 'Médio', label: 'Médio', icon: Activity, color: 'bg-yellow-600 text-white' },
+    { value: 'Baixo', label: 'Baixo', icon: CheckCircle2, color: 'bg-green-600 text-white' }
+  ];
+
+  // Mock data - moved here to be available for the functions below
   const [mockAssets, setMockAssets] = useState([
     {
       id: 'SRV-001',
@@ -151,6 +195,112 @@ export default function CMDB() {
       risk_level: 'Alto'
     }
   ]);
+
+  // Generate owner options from mock data
+  const generateOwnerOptions = () => {
+    const owners = Array.from(new Set(mockAssets.map(asset => asset.owner)));
+    return owners.map(owner => ({
+      value: owner,
+      label: owner,
+      team: owner.includes('Equipe') ? owner.replace('Equipe ', '') : 'Individual'
+    }));
+  };
+
+  const ownerOptions = generateOwnerOptions();
+
+  // Generate OS options from mock data
+  const generateOSOptions = () => {
+    const osList = Array.from(new Set(mockAssets.map(asset => asset.os)));
+    return osList.map(os => ({
+      value: os,
+      label: os,
+      type: os.includes('Windows') ? 'Windows' : os.includes('Ubuntu') || os.includes('CentOS') ? 'Linux' : os.includes('Android') ? 'Mobile' : 'Other'
+    }));
+  };
+
+  const osOptions = generateOSOptions();
+
+  // Check if user can manage custom fields (admin only)
+  const canManageFields = () => {
+    if (!user) {
+      return false;
+    }
+    
+    const hasPermission = user.isPlatformAdmin || 
+                         user.roles?.includes('admin') || 
+                         user.roles?.includes('tenant_admin') ||
+                         user.roles?.includes('super_admin') ||
+                         user.roles?.includes('platform_admin');
+    
+    return hasPermission;
+  };
+
+  // Advanced filters functions
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (advancedFilters.assetTypes.length > 0) count++;
+    if (advancedFilters.riskLevels.length > 0) count++;
+    if (advancedFilters.owners.length > 0) count++;
+    if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) count++;
+    if (advancedFilters.vulnerabilityRange.min !== undefined || advancedFilters.vulnerabilityRange.max !== undefined) count++;
+    if (advancedFilters.operatingSystems.length > 0) count++;
+    if (advancedFilters.hasVulnerabilities !== 'all') count++;
+    return count;
+  };
+
+  const clearAllAdvancedFilters = () => {
+    setAdvancedFilters({
+      assetTypes: [],
+      riskLevels: [],
+      owners: [],
+      dateRange: { from: undefined, to: undefined },
+      vulnerabilityRange: { min: undefined, max: undefined },
+      operatingSystems: [],
+      hasVulnerabilities: 'all'
+    });
+  };
+
+  // Filter owners based on search term
+  const filteredOwnerOptions = ownerOptions.filter(owner => 
+    owner.value.toLowerCase().includes(ownerSearchTerm.toLowerCase()) ||
+    owner.label.toLowerCase().includes(ownerSearchTerm.toLowerCase()) ||
+    owner.team.toLowerCase().includes(ownerSearchTerm.toLowerCase())
+  );
+
+  const addOwner = (ownerId: string) => {
+    if (!advancedFilters.owners.includes(ownerId)) {
+      setAdvancedFilters(prev => ({
+        ...prev,
+        owners: [...prev.owners, ownerId]
+      }));
+    }
+    setOwnerSearchTerm('');
+    setOwnerSearchOpen(false);
+  };
+
+  const removeOwner = (ownerId: string) => {
+    setAdvancedFilters(prev => ({
+      ...prev,
+      owners: prev.owners.filter(id => id !== ownerId)
+    }));
+  };
+
+  // Asset action handlers
+  const handleViewAsset = (asset: any) => {
+    console.log('Visualizar ativo clicado:', asset);
+    setSelectedAsset(asset);
+    setViewModalOpen(true);
+  };
+
+  const handleDeleteAsset = (assetId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este ativo?')) {
+      console.log('Excluindo ativo:', assetId);
+      toast.success(`Ativo ${assetId} excluído com sucesso!`);
+      // Aqui você implementaria a lógica real de exclusão
+    }
+  };
+
+
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -562,7 +712,48 @@ export default function CMDB() {
     const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
     const matchesLocation = locationFilter === 'all' || asset.location === locationFilter;
     
-    return matchesSearch && matchesType && matchesStatus && matchesLocation;
+    // Advanced filters
+    const matchesAdvancedAssetType = advancedFilters.assetTypes.length === 0 || 
+                                    advancedFilters.assetTypes.includes(asset.type);
+    const matchesRiskLevel = advancedFilters.riskLevels.length === 0 || 
+                            advancedFilters.riskLevels.includes(asset.risk_level);
+    const matchesOwner = advancedFilters.owners.length === 0 || 
+                        advancedFilters.owners.includes(asset.owner);
+    const matchesOS = advancedFilters.operatingSystems.length === 0 || 
+                     advancedFilters.operatingSystems.includes(asset.os);
+    
+    // Date range filter
+    let matchesDateRange = true;
+    if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) {
+      const assetDate = new Date(asset.last_scan);
+      if (advancedFilters.dateRange.from && assetDate < advancedFilters.dateRange.from) {
+        matchesDateRange = false;
+      }
+      if (advancedFilters.dateRange.to && assetDate > advancedFilters.dateRange.to) {
+        matchesDateRange = false;
+      }
+    }
+    
+    // Vulnerability range filter
+    let matchesVulnRange = true;
+    if (advancedFilters.vulnerabilityRange.min !== undefined || advancedFilters.vulnerabilityRange.max !== undefined) {
+      const vulnCount = asset.vulnerabilities;
+      if (advancedFilters.vulnerabilityRange.min !== undefined && vulnCount < advancedFilters.vulnerabilityRange.min) {
+        matchesVulnRange = false;
+      }
+      if (advancedFilters.vulnerabilityRange.max !== undefined && vulnCount > advancedFilters.vulnerabilityRange.max) {
+        matchesVulnRange = false;
+      }
+    }
+    
+    // Has vulnerabilities filter
+    const matchesHasVulnerabilities = advancedFilters.hasVulnerabilities === 'all' ||
+                                     (advancedFilters.hasVulnerabilities === 'with' && asset.vulnerabilities > 0) ||
+                                     (advancedFilters.hasVulnerabilities === 'without' && asset.vulnerabilities === 0);
+    
+    return matchesSearch && matchesType && matchesStatus && matchesLocation && 
+           matchesAdvancedAssetType && matchesRiskLevel && matchesOwner && matchesOS &&
+           matchesDateRange && matchesVulnRange && matchesHasVulnerabilities;
   });
 
   const assetStats = {
@@ -753,13 +944,164 @@ export default function CMDB() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Ações</label>
-                  <Button variant="outline" className="w-full">
+                  <Button 
+                    variant={getActiveFiltersCount() > 0 ? "default" : "outline"} 
+                    className="w-full relative" 
+                    onClick={() => setAdvancedFiltersOpen(true)}
+                  >
+                    <Sliders className="h-4 w-4 mr-2" />
                     Filtros Avançados
+                    {getActiveFiltersCount() > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                      >
+                        {getActiveFiltersCount()}
+                      </Badge>
+                    )}
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* Active Advanced Filters */}
+          {getActiveFiltersCount() > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Filtros Avançados Ativos</span>
+                    <Badge variant="secondary">
+                      {getActiveFiltersCount()}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllAdvancedFilters}
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar Todos
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {advancedFilters.assetTypes.map((type) => {
+                    const option = assetTypeOptions.find(o => o.value === type);
+                    return (
+                      <Badge key={type} variant="outline" className="gap-1 pr-1">
+                        {option?.icon && <option.icon className="h-3 w-3" />}
+                        {option?.label}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                          onClick={() => setAdvancedFilters(prev => ({
+                            ...prev,
+                            assetTypes: prev.assetTypes.filter(t => t !== type)
+                          }))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                  {advancedFilters.riskLevels.map((risk) => {
+                    const option = riskLevelOptions.find(o => o.value === risk);
+                    return (
+                      <Badge key={risk} variant="outline" className="gap-1 pr-1">
+                        {option?.icon && <option.icon className="h-3 w-3" />}
+                        {option?.label}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                          onClick={() => setAdvancedFilters(prev => ({
+                            ...prev,
+                            riskLevels: prev.riskLevels.filter(r => r !== risk)
+                          }))}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                  {advancedFilters.owners.length > 0 && (
+                    <Badge variant="outline" className="gap-1 pr-1">
+                      <User className="h-3 w-3" />
+                      {advancedFilters.owners.length} responsável{advancedFilters.owners.length > 1 ? 'eis' : ''} selecionado{advancedFilters.owners.length > 1 ? 's' : ''}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, owners: [] }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {advancedFilters.operatingSystems.length > 0 && (
+                    <Badge variant="outline" className="gap-1 pr-1">
+                      <Monitor className="h-3 w-3" />
+                      {advancedFilters.operatingSystems.length} SO selecionado{advancedFilters.operatingSystems.length > 1 ? 's' : ''}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, operatingSystems: [] }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {(advancedFilters.dateRange.from || advancedFilters.dateRange.to) && (
+                    <Badge variant="outline" className="gap-1 pr-1">
+                      <CalendarIcon className="h-3 w-3" />
+                      Período Personalizado
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, dateRange: { from: undefined, to: undefined } }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {(advancedFilters.vulnerabilityRange.min !== undefined || advancedFilters.vulnerabilityRange.max !== undefined) && (
+                    <Badge variant="outline" className="gap-1 pr-1">
+                      <Shield className="h-3 w-3" />
+                      Faixa de Vulnerabilidades
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, vulnerabilityRange: { min: undefined, max: undefined } }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {advancedFilters.hasVulnerabilities !== 'all' && (
+                    <Badge variant="outline" className="gap-1 pr-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {advancedFilters.hasVulnerabilities === 'with' ? 'Com Vulnerabilidades' : 'Sem Vulnerabilidades'}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground ml-1"
+                        onClick={() => setAdvancedFilters(prev => ({ ...prev, hasVulnerabilities: 'all' }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Assets Table */}
           <Card>
@@ -775,70 +1117,91 @@ export default function CMDB() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="text-xs">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>IP</TableHead>
-                      <TableHead>Localização</TableHead>
-                      <TableHead>SO</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Vulnerabilidades</TableHead>
-                      <TableHead>Risco</TableHead>
-                      <TableHead>Último Scan</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-xs">ID</TableHead>
+                      <TableHead className="text-xs">Nome</TableHead>
+                      <TableHead className="text-xs">Tipo</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs">IP</TableHead>
+                      <TableHead className="text-xs">SO</TableHead>
+                      <TableHead className="text-xs">Vulnerabilidades</TableHead>
+                      <TableHead className="text-xs">Risco</TableHead>
+                      <TableHead className="text-xs">Último Scan</TableHead>
+                      <TableHead className="text-xs w-16">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredAssets.map((asset) => (
                       <TableRow key={asset.id}>
-                        <TableCell className="font-medium">{asset.id}</TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium text-xs p-2">{asset.id}</TableCell>
+                        <TableCell className="p-2">
                           <div className="flex items-center gap-2">
                             {getTypeIcon(asset.type)}
-                            <span className="font-medium">{asset.name}</span>
+                            <span className="font-medium text-xs truncate max-w-[120px]">{asset.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{asset.type}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadgeColor(asset.status)}>
+                        <TableCell className="text-xs p-2">{asset.type}</TableCell>
+                        <TableCell className="p-2">
+                          <Badge className={`${getStatusBadgeColor(asset.status)} text-xs px-1.5 py-0.5`}>
                             {asset.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{asset.ip_address}</TableCell>
-                        <TableCell>{asset.location}</TableCell>
-                        <TableCell>{asset.os}</TableCell>
-                        <TableCell>{asset.owner}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
+                        <TableCell className="font-mono text-xs p-2">{asset.ip_address}</TableCell>
+                        <TableCell className="text-xs p-2 truncate max-w-[100px]">{asset.os}</TableCell>
+                        <TableCell className="p-2">
+                          <Badge variant="outline" className="text-xs px-1.5 py-0.5">
                             {asset.vulnerabilities} vuln.
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge className={getRiskBadgeColor(asset.risk_level)}>
+                        <TableCell className="p-2">
+                          <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-xs px-1.5 py-0.5`}>
                             {asset.risk_level}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
+                        <TableCell className="p-2">
+                          <span className="text-xs">
                             {new Date(asset.last_scan).toLocaleDateString()}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                        <TableCell className="p-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                title="Ações"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => handleViewAsset(asset)}
+                                className="cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Visualizar Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/vulnerabilities/cmdb/edit/${asset.id}`)}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar Ativo
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteAsset(asset.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir Ativo
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1394,6 +1757,781 @@ export default function CMDB() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Advanced Filters Modal */}
+      <Dialog open={advancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Sliders className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-semibold">
+                    Filtros Avançados - CMDB
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Configure filtros detalhados para refinar sua busca por ativos
+                  </DialogDescription>
+                </div>
+              </div>
+              {getActiveFiltersCount() > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="px-3 py-1">
+                    {getActiveFiltersCount()} filtro{getActiveFiltersCount() > 1 ? 's' : ''} ativo{getActiveFiltersCount() > 1 ? 's' : ''}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllAdvancedFilters}
+                    className="h-8 px-2"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Limpar Tudo
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Asset Types */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Server className="h-4 w-4" />
+                      Tipos de Ativo
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Selecione os tipos de ativos para filtrar
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {assetTypeOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`asset-type-${option.value}`}
+                              checked={advancedFilters.assetTypes.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    assetTypes: [...prev.assetTypes, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    assetTypes: prev.assetTypes.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`asset-type-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Risk Levels */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Níveis de Risco
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por nível de risco dos ativos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {riskLevelOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`risk-${option.value}`}
+                              checked={advancedFilters.riskLevels.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    riskLevels: [...prev.riskLevels, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    riskLevels: prev.riskLevels.filter(r => r !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`risk-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Date Range */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4" />
+                      Período do Último Scan
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre ativos por data do último scan de segurança
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {advancedFilters.dateRange.from ? (
+                              advancedFilters.dateRange.to ? (
+                                <>
+                                  {new Date(advancedFilters.dateRange.from).toLocaleDateString('pt-BR')} - {new Date(advancedFilters.dateRange.to).toLocaleDateString('pt-BR')}
+                                </>
+                              ) : (
+                                new Date(advancedFilters.dateRange.from).toLocaleDateString('pt-BR')
+                              )
+                            ) : (
+                              <span className="text-muted-foreground">Selecione um período</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="p-4 space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Data Inicial</Label>
+                              <Input
+                                type="date"
+                                value={advancedFilters.dateRange.from ? 
+                                  new Date(advancedFilters.dateRange.from.getTime() - advancedFilters.dateRange.from.getTimezoneOffset() * 60000)
+                                    .toISOString().split('T')[0] : ''}
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    const date = new Date(e.target.value + 'T00:00:00');
+                                    setAdvancedFilters(prev => ({
+                                      ...prev,
+                                      dateRange: {
+                                        ...prev.dateRange,
+                                        from: date
+                                      }
+                                    }));
+                                  } else {
+                                    setAdvancedFilters(prev => ({
+                                      ...prev,
+                                      dateRange: {
+                                        ...prev.dateRange,
+                                        from: undefined
+                                      }
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Data Final</Label>
+                              <Input
+                                type="date"
+                                value={advancedFilters.dateRange.to ? 
+                                  new Date(advancedFilters.dateRange.to.getTime() - advancedFilters.dateRange.to.getTimezoneOffset() * 60000)
+                                    .toISOString().split('T')[0] : ''}
+                                min={advancedFilters.dateRange.from ? 
+                                  new Date(advancedFilters.dateRange.from.getTime() - advancedFilters.dateRange.from.getTimezoneOffset() * 60000)
+                                    .toISOString().split('T')[0] : undefined}
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    const date = new Date(e.target.value + 'T23:59:59');
+                                    setAdvancedFilters(prev => ({
+                                      ...prev,
+                                      dateRange: {
+                                        ...prev.dateRange,
+                                        to: date
+                                      }
+                                    }));
+                                  } else {
+                                    setAdvancedFilters(prev => ({
+                                      ...prev,
+                                      dateRange: {
+                                        ...prev.dateRange,
+                                        to: undefined
+                                      }
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    dateRange: { from: undefined, to: undefined }
+                                  }));
+                                }}
+                              >
+                                Limpar
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const today = new Date();
+                                  const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    dateRange: { from: lastWeek, to: today }
+                                  }));
+                                }}
+                              >
+                                Últimos 7 dias
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const today = new Date();
+                                  const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    dateRange: { from: lastMonth, to: today }
+                                  }));
+                                }}
+                              >
+                                Últimos 30 dias
+                              </Button>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Owners */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Responsáveis
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Busque e selecione responsáveis pelos ativos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Search Input */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Buscar Responsáveis</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Digite nome ou equipe..."
+                          value={ownerSearchTerm}
+                          onChange={(e) => setOwnerSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Search Results */}
+                    {ownerSearchTerm && filteredOwnerOptions.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Resultados da Busca</Label>
+                        <div className="border rounded-lg max-h-48 overflow-y-auto">
+                          {filteredOwnerOptions.slice(0, 10).map((owner) => (
+                            <div
+                              key={owner.value}
+                              className={`p-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                advancedFilters.owners.includes(owner.value) ? 'bg-primary/10' : ''
+                              }`}
+                              onClick={() => addOwner(owner.value)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm truncate">{owner.label}</div>
+                                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs px-1 py-0">
+                                      {owner.team}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                {advancedFilters.owners.includes(owner.value) && (
+                                  <CheckCircle2 className="h-4 w-4 text-primary ml-2" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected Owners */}
+                    {advancedFilters.owners.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Responsáveis Selecionados</Label>
+                        <div className="border rounded-lg p-3 max-h-32 overflow-y-auto">
+                          <div className="space-y-2">
+                            {advancedFilters.owners.map((ownerId) => {
+                              const owner = ownerOptions.find(o => o.value === ownerId);
+                              return (
+                                <div key={ownerId} className="flex items-center justify-between p-2 bg-muted/50 rounded border">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm truncate">
+                                      {owner?.label || ownerId}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                      {owner && (
+                                        <Badge variant="outline" className="text-xs px-1 py-0">
+                                          {owner.team}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                    onClick={() => removeOwner(ownerId)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Operating Systems */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Monitor className="h-4 w-4" />
+                      Sistemas Operacionais
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por sistema operacional dos ativos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {osOptions.map((os) => (
+                        <div key={os.value} className="flex items-center space-x-3 p-2 border rounded hover:bg-muted/50 transition-colors">
+                          <Checkbox
+                            id={`os-${os.value}`}
+                            checked={advancedFilters.operatingSystems.includes(os.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAdvancedFilters(prev => ({
+                                  ...prev,
+                                  operatingSystems: [...prev.operatingSystems, os.value]
+                                }));
+                              } else {
+                                setAdvancedFilters(prev => ({
+                                  ...prev,
+                                  operatingSystems: prev.operatingSystems.filter(o => o !== os.value)
+                                }));
+                              }
+                            }}
+                          />
+                          <div className="flex items-center gap-2 flex-1">
+                            <Badge variant="outline" className="text-xs px-1 py-0">
+                              {os.type}
+                            </Badge>
+                            <Label htmlFor={`os-${os.value}`} className="text-sm cursor-pointer truncate">
+                              {os.label}
+                            </Label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Vulnerability Filters */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Vulnerabilidades
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por quantidade e presença de vulnerabilidades
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Presença de Vulnerabilidades</Label>
+                      <Select 
+                        value={advancedFilters.hasVulnerabilities} 
+                        onValueChange={(value: 'all' | 'with' | 'without') => 
+                          setAdvancedFilters(prev => ({ ...prev, hasVulnerabilities: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os Ativos</SelectItem>
+                          <SelectItem value="with">Apenas com Vulnerabilidades</SelectItem>
+                          <SelectItem value="without">Apenas sem Vulnerabilidades</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Mínimo</Label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          min="0"
+                          value={advancedFilters.vulnerabilityRange.min || ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : undefined;
+                            setAdvancedFilters(prev => ({
+                              ...prev,
+                              vulnerabilityRange: {
+                                ...prev.vulnerabilityRange,
+                                min: value
+                              }
+                            }));
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Máximo</Label>
+                        <Input
+                          type="number"
+                          placeholder="100"
+                          min="0"
+                          value={advancedFilters.vulnerabilityRange.max || ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value) : undefined;
+                            setAdvancedFilters(prev => ({
+                              ...prev,
+                              vulnerabilityRange: {
+                                ...prev.vulnerabilityRange,
+                                max: value
+                              }
+                            }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-6 border-t bg-background">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Filter className="h-4 w-4" />
+                {getActiveFiltersCount() > 0 ? (
+                  <span>{getActiveFiltersCount()} filtro{getActiveFiltersCount() > 1 ? 's' : ''} aplicado{getActiveFiltersCount() > 1 ? 's' : ''}</span>
+                ) : (
+                  <span>Nenhum filtro aplicado</span>
+                )}
+              </div>
+              
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={clearAllAdvancedFilters}
+                  disabled={getActiveFiltersCount() === 0}
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Limpar Filtros
+                </Button>
+                <Button variant="outline" onClick={() => setAdvancedFiltersOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => {
+                  setAdvancedFiltersOpen(false);
+                  toast.success(`Filtros aplicados! ${getActiveFiltersCount()} filtro${getActiveFiltersCount() > 1 ? 's' : ''} ativo${getActiveFiltersCount() > 1 ? 's' : ''}.`);
+                }}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Aplicar Filtros
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Asset Modal */}
+      <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Server className="h-6 w-6 text-primary" />
+                  </div>
+                  {selectedAsset?.name || 'Detalhes do Ativo'}
+                </DialogTitle>
+                <DialogDescription className="text-base">
+                  Ativo identificado no CMDB - {selectedAsset?.id}
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={`${getStatusBadgeColor(selectedAsset?.status)} text-sm px-3 py-1`}>
+                  {selectedAsset?.status}
+                </Badge>
+                <Badge className={`${getRiskBadgeColor(selectedAsset?.risk_level)} text-sm px-3 py-1`}>
+                  {selectedAsset?.risk_level}
+                </Badge>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedAsset && (
+            <div className="space-y-6">
+              {/* Métricas Principais */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="border-l-4 border-l-primary">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-full bg-primary/10">
+                        <Server className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tipo</p>
+                        <p className="font-medium">{selectedAsset.type}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-l-4 border-l-destructive">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-full bg-destructive/10">
+                        <Shield className="h-4 w-4 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Vulnerabilidades</p>
+                        <p className="text-2xl font-bold text-destructive">{selectedAsset.vulnerabilities}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/20">
+                        <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Risco</p>
+                        <Badge className={getRiskBadgeColor(selectedAsset.risk_level)}>
+                          {selectedAsset.risk_level}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                        <CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Último Scan</p>
+                        <p className="text-sm font-medium">{new Date(selectedAsset.last_scan).toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Informações Detalhadas */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/20">
+                        <Server className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      Informações Básicas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">ID do Ativo</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="p-1 bg-blue-100 rounded">
+                              <FileText className="h-3 w-3 text-blue-600" />
+                            </div>
+                            <span className="font-mono text-sm font-medium">{selectedAsset.id}</span>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold text-muted-foreground">Endereço IP</Label>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="p-1 bg-green-100 rounded">
+                              <Network className="h-3 w-3 text-green-600" />
+                            </div>
+                            <span className="font-mono text-sm font-medium">{selectedAsset.ip_address}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-semibold text-muted-foreground">Sistema Operacional</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="p-1 bg-purple-100 rounded">
+                            <Monitor className="h-3 w-3 text-purple-600" />
+                          </div>
+                          <span className="text-sm font-medium">{selectedAsset.os}</span>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-semibold text-muted-foreground">Localização</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="p-1 bg-orange-100 rounded">
+                            <MapPin className="h-3 w-3 text-orange-600" />
+                          </div>
+                          <span className="text-sm font-medium">{selectedAsset.location}</span>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-semibold text-muted-foreground">Responsável</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="p-1 bg-indigo-100 rounded">
+                            <User className="h-3 w-3 text-indigo-600" />
+                          </div>
+                          <span className="text-sm font-medium">{selectedAsset.owner}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/20">
+                        <Shield className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </div>
+                      Segurança e Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border border-red-200 dark:border-red-800">
+                      <div>
+                        <p className="text-sm font-medium text-red-700 dark:text-red-300">Vulnerabilidades Ativas</p>
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">{selectedAsset.vulnerabilities}</p>
+                      </div>
+                      <div className="p-3 rounded-full bg-red-100 dark:bg-red-900/30">
+                        <Shield className="h-6 w-6 text-red-600 dark:text-red-400" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-1">Nível de Risco</p>
+                        <Badge className={getRiskBadgeColor(selectedAsset.risk_level)}>
+                          {selectedAsset.risk_level}
+                        </Badge>
+                      </div>
+                      <div className="p-3 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <Badge className={getStatusBadgeColor(selectedAsset.status)}>
+                          {selectedAsset.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Última Verificação</p>
+                        <p className="text-xs text-muted-foreground">{new Date(selectedAsset.last_scan).toLocaleDateString('pt-BR', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric'
+                        })}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Server className="h-4 w-4" />
+                  <span>Ativo {selectedAsset.id}</span>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+                    <X className="h-4 w-4 mr-2" />
+                    Fechar
+                  </Button>
+                  <Button onClick={() => {
+                    setViewModalOpen(false);
+                    navigate(`/vulnerabilities/cmdb/edit/${selectedAsset.id}`);
+                  }}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Ativo
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
