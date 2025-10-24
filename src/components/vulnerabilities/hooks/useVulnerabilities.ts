@@ -50,6 +50,8 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       return;
     }
     
+    console.log('🔍 [HOOK] Starting loadVulnerabilities with tenant:', effectiveTenantId);
+    
     // Prevent multiple simultaneous loads
     if (isLoadingRef.current) {
       console.log('🔄 [HOOK] Already loading, skipping...');
@@ -143,12 +145,24 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       const { data, error, count } = await query;
 
       if (error) throw error;
+      
+      console.log('✅ [HOOK] Successfully loaded vulnerabilities:', {
+        count: data?.length || 0,
+        totalCount: count || 0,
+        tenant: effectiveTenantId
+      });
+      
       setVulnerabilities(data || []);
       setTotalCount(count || 0);
       setTableExists(true);
       setInitialized(true);
       setAttemptCount(0); // Reset attempt count on success
       loadedTenantRef.current = effectiveTenantId;
+      
+      // Load metrics immediately after vulnerabilities are loaded
+      console.log('📊 [HOOK] Triggering metrics load after vulnerabilities loaded');
+      // Call loadMetrics directly since we have the data
+      await loadMetrics();
     } catch (err) {
       console.error('Error loading vulnerabilities:', err);
       
@@ -192,9 +206,15 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
 
   // Load metrics
   const loadMetrics = useCallback(async () => {
-    if (!effectiveTenantId) return;
+    console.log('📊 [HOOK] loadMetrics called with tenant:', effectiveTenantId);
+    
+    if (!effectiveTenantId) {
+      console.log('❌ [HOOK] No effectiveTenantId for metrics, returning early');
+      return;
+    }
     
     // If table doesn't exist, return empty metrics
+    console.log('📊 [HOOK] Checking tableExists:', tableExists);
     if (tableExists === false) {
       const emptyMetrics: VulnerabilityMetrics = {
         total_vulnerabilities: 0,
@@ -237,10 +257,14 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
     }
 
     try {
+      console.log('📊 [HOOK] Executing metrics query for tenant:', effectiveTenantId);
+      
       const { data, error } = await supabase
         .from('vulnerabilities')
         .select('severity, status, source_type, created_at, resolved_at, due_date, sla_breach')
         .eq('tenant_id', effectiveTenantId);
+        
+      console.log('📊 [HOOK] Metrics query result:', { data: data?.length, error });
 
       if (error) throw error;
 
@@ -293,6 +317,12 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
         trend_data: calculateTrendData(vulnerabilities),
       };
 
+      console.log('✅ [HOOK] Metrics calculated successfully:', {
+        total: metrics.total_vulnerabilities,
+        critical: metrics.by_severity.Critical,
+        high: metrics.by_severity.High
+      });
+      
       setMetrics(metrics);
     } catch (err) {
       console.error('Error loading metrics:', err);
@@ -425,6 +455,13 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
 
   // Load data when tenant changes or on force refresh
   useEffect(() => {
+    console.log('🔄 [HOOK] useEffect triggered:', {
+      effectiveTenantId,
+      loadedTenant: loadedTenantRef.current,
+      forceRefresh,
+      shouldLoad: effectiveTenantId && (loadedTenantRef.current !== effectiveTenantId || forceRefresh)
+    });
+    
     if (effectiveTenantId && (loadedTenantRef.current !== effectiveTenantId || forceRefresh)) {
       loadVulnerabilities();
     }
@@ -433,7 +470,15 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
 
   // Load metrics after vulnerabilities are loaded
   useEffect(() => {
+    console.log('📊 [HOOK] Metrics useEffect triggered:', {
+      effectiveTenantId,
+      initialized,
+      tableExists,
+      shouldLoadMetrics: effectiveTenantId && initialized && tableExists === true
+    });
+    
     if (effectiveTenantId && initialized && tableExists === true) {
+      console.log('📊 [HOOK] Loading metrics...');
       loadMetrics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -463,8 +508,8 @@ function calculateAverageResolutionTime(vulnerabilities: any[]): number {
 
   const totalTime = resolved.reduce((sum, v) => {
     const created = new Date(v.created_at);
-    const resolved = new Date(v.resolved_at);
-    return sum + (resolved.getTime() - created.getTime());
+    const resolvedDate = new Date(v.resolved_at);
+    return sum + (resolvedDate.getTime() - created.getTime());
   }, 0);
 
   return Math.round(totalTime / resolved.length / (1000 * 60 * 60 * 24)); // Days
