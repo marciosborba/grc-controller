@@ -10,6 +10,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Layers,
   ArrowLeft,
@@ -36,7 +38,12 @@ import {
   Calendar,
   ExternalLink,
   User,
-  Clock
+  Clock,
+  Sliders,
+  RotateCcw,
+  Filter,
+  X,
+  MoreHorizontal
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -56,10 +63,27 @@ export default function Applications() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
-  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
-  const [riskFilter, setRiskFilter] = useState('all');
-  const [ownerFilter, setOwnerFilter] = useState('all');
-  const [technologyFilter, setTechnologyFilter] = useState('all');
+  
+  // Advanced Filters State
+  const [advancedFiltersModalOpen, setAdvancedFiltersModalOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    sourceTypes: [] as string[],
+    environments: [] as string[],
+    criticalities: [] as string[],
+    cloudProviders: [] as string[],
+    containerPlatforms: [] as string[],
+    complianceFlags: [] as string[],
+    dateRange: {
+      from: undefined as Date | undefined,
+      to: undefined as Date | undefined
+    },
+    vulnerabilityRange: {
+      min: undefined as number | undefined,
+      max: undefined as number | undefined
+    },
+    hasCI: undefined as boolean | undefined,
+    isMicroservices: undefined as boolean | undefined
+  });
 
   // Mock data
   const mockApplications = [
@@ -413,26 +437,93 @@ export default function Applications() {
                          app.owner.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || app.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    const matchesRisk = riskFilter === 'all' || app.risk_level === riskFilter;
-    const matchesOwner = ownerFilter === 'all' || app.owner === ownerFilter;
-    const matchesTechnology = technologyFilter === 'all' || app.technology.includes(technologyFilter);
     
-    return matchesSearch && matchesType && matchesStatus && matchesRisk && matchesOwner && matchesTechnology;
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   // Get unique values for filters
   const uniqueOwners = [...new Set(mockApplications.map(app => app.owner))];
   const uniqueTechnologies = [...new Set(mockApplications.map(app => app.technology))];
   const uniqueRisks = [...new Set(mockApplications.map(app => app.risk_level))];
+  
+  // Advanced Filter Options
+  const sourceTypeOptions = [
+    { value: 'ServiceNow', label: 'ServiceNow CMDB', icon: Database, color: 'bg-blue-600 text-white' },
+    { value: 'Jira', label: 'Atlassian Jira', icon: FileText, color: 'bg-indigo-600 text-white' },
+    { value: 'GitHub', label: 'GitHub', icon: GitBranch, color: 'bg-gray-700 text-white' },
+    { value: 'GitLab', label: 'GitLab', icon: GitBranch, color: 'bg-orange-600 text-white' },
+    { value: 'Azure DevOps', label: 'Azure DevOps', icon: Cloud, color: 'bg-sky-600 text-white' },
+    { value: 'Manual', label: 'Entrada Manual', icon: User, color: 'bg-green-600 text-white' }
+  ];
+  
+  const environmentOptions = [
+    { value: 'Production', label: 'Produção', icon: Shield, color: 'bg-red-600 text-white' },
+    { value: 'Staging', label: 'Homologação', icon: AlertTriangle, color: 'bg-yellow-600 text-white' },
+    { value: 'Development', label: 'Desenvolvimento', icon: Code, color: 'bg-blue-600 text-white' },
+    { value: 'Testing', label: 'Teste', icon: Target, color: 'bg-purple-600 text-white' }
+  ];
+  
+  const cloudProviderOptions = [
+    { value: 'AWS', label: 'Amazon AWS', icon: Cloud, color: 'bg-orange-600 text-white' },
+    { value: 'Azure', label: 'Microsoft Azure', icon: Cloud, color: 'bg-blue-600 text-white' },
+    { value: 'GCP', label: 'Google Cloud', icon: Cloud, color: 'bg-green-600 text-white' },
+    { value: 'Multi-cloud', label: 'Multi-cloud', icon: Cloud, color: 'bg-purple-600 text-white' }
+  ];
+  
+  const containerPlatformOptions = [
+    { value: 'Docker', label: 'Docker', icon: Database, color: 'bg-cyan-600 text-white' },
+    { value: 'Kubernetes', label: 'Kubernetes', icon: Database, color: 'bg-indigo-600 text-white' },
+    { value: 'OpenShift', label: 'OpenShift', icon: Database, color: 'bg-red-600 text-white' }
+  ];
+  
+  const complianceOptions = [
+    { value: 'GDPR', label: 'GDPR', icon: Shield, color: 'bg-blue-600 text-white' },
+    { value: 'SOX', label: 'SOX', icon: Shield, color: 'bg-green-600 text-white' },
+    { value: 'PCI', label: 'PCI DSS', icon: Shield, color: 'bg-red-600 text-white' },
+    { value: 'HIPAA', label: 'HIPAA', icon: Shield, color: 'bg-purple-600 text-white' },
+    { value: 'ISO27001', label: 'ISO 27001', icon: Shield, color: 'bg-amber-600 text-white' }
+  ];
 
   const clearAllFilters = () => {
     setSearchTerm('');
     setTypeFilter('all');
     setStatusFilter('all');
-    setRiskFilter('all');
-    setOwnerFilter('all');
-    setTechnologyFilter('all');
-    setAdvancedFiltersOpen(false);
+  };
+  
+  // Advanced Filters Functions
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (advancedFilters.sourceTypes.length > 0) count++;
+    if (advancedFilters.environments.length > 0) count++;
+    if (advancedFilters.criticalities.length > 0) count++;
+    if (advancedFilters.cloudProviders.length > 0) count++;
+    if (advancedFilters.containerPlatforms.length > 0) count++;
+    if (advancedFilters.complianceFlags.length > 0) count++;
+    if (advancedFilters.dateRange.from || advancedFilters.dateRange.to) count++;
+    if (advancedFilters.vulnerabilityRange.min !== undefined || advancedFilters.vulnerabilityRange.max !== undefined) count++;
+    if (advancedFilters.hasCI !== undefined) count++;
+    if (advancedFilters.isMicroservices !== undefined) count++;
+    return count;
+  };
+  
+  const clearAllAdvancedFilters = () => {
+    setAdvancedFilters({
+      sourceTypes: [],
+      environments: [],
+      criticalities: [],
+      cloudProviders: [],
+      containerPlatforms: [],
+      complianceFlags: [],
+      dateRange: { from: undefined, to: undefined },
+      vulnerabilityRange: { min: undefined, max: undefined },
+      hasCI: undefined,
+      isMicroservices: undefined
+    });
+  };
+  
+  const applyAdvancedFilters = () => {
+    setAdvancedFiltersModalOpen(false);
+    toast.success(`Filtros avançados aplicados! ${getActiveFiltersCount()} filtro${getActiveFiltersCount() > 1 ? 's' : ''} ativo${getActiveFiltersCount() > 1 ? 's' : ''}.`);
   };
 
   const handleExport = () => {
@@ -501,7 +592,7 @@ export default function Applications() {
               Inventário de Aplicações
             </h1>
             <p className="text-muted-foreground">
-              Gerencie o inventário das aplicações da organização - Atualizado
+              Gerencie o inventário das aplicações
             </p>
           </div>
         </div>
@@ -510,10 +601,6 @@ export default function Applications() {
       <div className="space-y-6">
         <div className="flex items-center justify-end">
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Customizar
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -549,6 +636,10 @@ export default function Applications() {
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4 mr-2" />
               Exportar
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
+              <Settings className="h-4 w-4 mr-2" />
+              Customizar
             </Button>
             <Button onClick={() => navigate('/vulnerabilities/applications/create')}>
               <Plus className="h-4 w-4 mr-2" />
@@ -617,77 +708,20 @@ export default function Applications() {
                   <Button 
                     variant="outline" 
                     className="w-full"
-                    onClick={() => {
-                      console.log('Filtros avançados clicado:', !advancedFiltersOpen);
-                      setAdvancedFiltersOpen(!advancedFiltersOpen);
-                    }}
+                    onClick={() => setAdvancedFiltersModalOpen(true)}
                   >
-                    {advancedFiltersOpen ? 'Ocultar' : 'Mostrar'} Filtros Avançados
+                    <Sliders className="h-4 w-4 mr-2" />
+                    Filtros Avançados
+                    {getActiveFiltersCount() > 0 && (
+                      <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
+                        {getActiveFiltersCount()}
+                      </Badge>
+                    )}
                   </Button>
                 </div>
               </div>
               
-              {/* Filtros Avançados */}
-              {advancedFiltersOpen && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">Filtros Avançados</h4>
-                      <Button variant="ghost" size="sm" onClick={clearAllFilters}>
-                        Limpar Todos
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Nível de Risco</label>
-                        <Select value={riskFilter} onValueChange={setRiskFilter}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {uniqueRisks.map(risk => (
-                              <SelectItem key={risk} value={risk}>{risk}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Responsável</label>
-                        <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            {uniqueOwners.map(owner => (
-                              <SelectItem key={owner} value={owner}>{owner}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Tecnologia</label>
-                        <Select value={technologyFilter} onValueChange={setTechnologyFilter}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas</SelectItem>
-                            {uniqueTechnologies.map(tech => (
-                              <SelectItem key={tech} value={tech}>{tech}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+
             </CardContent>
           </Card>
 
@@ -705,87 +739,97 @@ export default function Applications() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="text-sm">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Tecnologia</TableHead>
-                      <TableHead>Responsável</TableHead>
-                      <TableHead>Vulnerabilidades</TableHead>
-                      <TableHead>Risco</TableHead>
-                      <TableHead>Último Scan</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableHead className="text-xs font-medium">ID</TableHead>
+                      <TableHead className="text-xs font-medium">Nome</TableHead>
+                      <TableHead className="text-xs font-medium">Tipo</TableHead>
+                      <TableHead className="text-xs font-medium">Status</TableHead>
+                      <TableHead className="text-xs font-medium">Tecnologia</TableHead>
+                      <TableHead className="text-xs font-medium">Responsável</TableHead>
+                      <TableHead className="text-xs font-medium">Vulnerabilidades</TableHead>
+                      <TableHead className="text-xs font-medium">Risco</TableHead>
+                      <TableHead className="text-xs font-medium">Último Scan</TableHead>
+                      <TableHead className="text-xs font-medium">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="text-xs">
                     {filteredApplications.map((app) => (
                       <TableRow key={app.id}>
-                        <TableCell className="font-medium">{app.id}</TableCell>
+                        <TableCell className="font-medium text-xs">{app.id}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {getTypeIcon(app.type)}
                             <div>
-                              <p className="font-medium">{app.name}</p>
+                              <p className="font-medium text-xs">{app.name}</p>
                               <p className="text-xs text-muted-foreground">{app.url}</p>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{app.type}</TableCell>
+                        <TableCell className="text-xs">{app.type}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusBadgeColor(app.status)}>
+                          <Badge className={`${getStatusBadgeColor(app.status)} text-xs px-2 py-1`}>
                             {getStatusDisplayText(app.status)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{app.technology}</TableCell>
-                        <TableCell>{app.owner}</TableCell>
+                        <TableCell className="text-xs">{app.technology}</TableCell>
+                        <TableCell className="text-xs">{app.owner}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="text-xs px-2 py-1">
                             {app.vulnerabilities} vuln.
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getRiskBadgeColor(app.risk_level)}>
+                          <Badge className={`${getRiskBadgeColor(app.risk_level)} text-xs px-2 py-1`}>
                             {app.risk_level}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">
+                          <span className="text-xs">
                             {new Date(app.last_scan).toLocaleDateString()}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              title="Visualizar Detalhes"
-                              onClick={() => {
-                                console.log('Visualizar clicado:', app);
-                                handleViewApplication(app);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              title="Editar Aplicação"
-                              onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              title="Excluir Aplicação"
-                              onClick={() => handleDeleteApplication(app.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                title="Ações"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  console.log('Visualizar clicado:', app);
+                                  handleViewApplication(app);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Visualizar Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar Aplicação
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteApplication(app.id)}
+                                className="cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir Aplicação
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -795,6 +839,411 @@ export default function Applications() {
             </CardContent>
           </Card>
       </div>
+
+      {/* Advanced Filters Modal */}
+      <Dialog open={advancedFiltersModalOpen} onOpenChange={setAdvancedFiltersModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Sliders className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-semibold">
+                    Filtros Avançados
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Configure filtros detalhados para refinar sua busca por aplicações
+                  </DialogDescription>
+                </div>
+              </div>
+              {getActiveFiltersCount() > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="px-3 py-1">
+                    {getActiveFiltersCount()} filtro{getActiveFiltersCount() > 1 ? 's' : ''} ativo{getActiveFiltersCount() > 1 ? 's' : ''}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllAdvancedFilters}
+                    className="h-8 px-2"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-1" />
+                    Limpar Tudo
+                  </Button>
+                </div>
+              )}
+            </div>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Source Types */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Database className="h-4 w-4" />
+                      Ferramentas de Origem
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Selecione as ferramentas de onde as aplicações foram importadas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {sourceTypeOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`source-${option.value}`}
+                              checked={advancedFilters.sourceTypes.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    sourceTypes: [...prev.sourceTypes, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    sourceTypes: prev.sourceTypes.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`source-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Environments */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Ambientes
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por ambiente de implantação
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {environmentOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`env-${option.value}`}
+                              checked={advancedFilters.environments.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    environments: [...prev.environments, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    environments: prev.environments.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`env-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Cloud Providers */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Cloud className="h-4 w-4" />
+                      Provedores de Nuvem
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por provedor de nuvem
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {cloudProviderOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`cloud-${option.value}`}
+                              checked={advancedFilters.cloudProviders.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    cloudProviders: [...prev.cloudProviders, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    cloudProviders: prev.cloudProviders.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`cloud-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Container Platforms */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Database className="h-4 w-4" />
+                      Plataformas de Container
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por plataforma de containerização
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {containerPlatformOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`container-${option.value}`}
+                              checked={advancedFilters.containerPlatforms.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    containerPlatforms: [...prev.containerPlatforms, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    containerPlatforms: prev.containerPlatforms.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`container-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Compliance */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Compliance
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtre por requisitos de compliance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {complianceOptions.map((option) => {
+                        const IconComponent = option.icon;
+                        return (
+                          <div key={option.value} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <Checkbox
+                              id={`compliance-${option.value}`}
+                              checked={advancedFilters.complianceFlags.includes(option.value)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    complianceFlags: [...prev.complianceFlags, option.value]
+                                  }));
+                                } else {
+                                  setAdvancedFilters(prev => ({
+                                    ...prev,
+                                    complianceFlags: prev.complianceFlags.filter(t => t !== option.value)
+                                  }));
+                                }
+                              }}
+                            />
+                            <div className="flex items-center gap-2 flex-1">
+                              <div className={`p-1.5 rounded ${option.color}`}>
+                                <IconComponent className="h-3 w-3" />
+                              </div>
+                              <Label htmlFor={`compliance-${option.value}`} className="text-sm font-medium cursor-pointer">
+                                {option.label}
+                              </Label>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Additional Filters */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Filtros Adicionais
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Filtros especiais para arquitetura e CI/CD
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <Checkbox
+                          id="has-ci"
+                          checked={advancedFilters.hasCI === true}
+                          onCheckedChange={(checked) => {
+                            setAdvancedFilters(prev => ({
+                              ...prev,
+                              hasCI: checked ? true : undefined
+                            }));
+                          }}
+                        />
+                        <Label htmlFor="has-ci" className="text-sm font-medium cursor-pointer">
+                          Possui CI/CD Pipeline
+                        </Label>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <Checkbox
+                          id="is-microservices"
+                          checked={advancedFilters.isMicroservices === true}
+                          onCheckedChange={(checked) => {
+                            setAdvancedFilters(prev => ({
+                              ...prev,
+                              isMicroservices: checked ? true : undefined
+                            }));
+                          }}
+                        />
+                        <Label htmlFor="is-microservices" className="text-sm font-medium cursor-pointer">
+                          Arquitetura de Microsserviços
+                        </Label>
+                      </div>
+                    </div>
+                    
+                    {/* Vulnerability Range */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Faixa de Vulnerabilidades</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Mínimo</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={advancedFilters.vulnerabilityRange.min || ''}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseInt(e.target.value) : undefined;
+                              setAdvancedFilters(prev => ({
+                                ...prev,
+                                vulnerabilityRange: {
+                                  ...prev.vulnerabilityRange,
+                                  min: value
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Máximo</Label>
+                          <Input
+                            type="number"
+                            placeholder="100"
+                            value={advancedFilters.vulnerabilityRange.max || ''}
+                            onChange={(e) => {
+                              const value = e.target.value ? parseInt(e.target.value) : undefined;
+                              setAdvancedFilters(prev => ({
+                                ...prev,
+                                vulnerabilityRange: {
+                                  ...prev.vulnerabilityRange,
+                                  max: value
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="flex justify-between items-center pt-4 border-t bg-muted/20 -mx-6 -mb-6 px-6 py-4">
+            <div className="text-sm text-muted-foreground">
+              {getActiveFiltersCount() > 0 ? (
+                <span>{getActiveFiltersCount()} filtro{getActiveFiltersCount() > 1 ? 's' : ''} configurado{getActiveFiltersCount() > 1 ? 's' : ''}</span>
+              ) : (
+                <span>Nenhum filtro avançado configurado</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setAdvancedFiltersModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={applyAdvancedFilters}>
+                <Filter className="h-4 w-4 mr-2" />
+                Aplicar Filtros
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* View Application Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>

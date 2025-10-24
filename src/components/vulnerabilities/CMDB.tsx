@@ -591,12 +591,6 @@ export default function CMDB() {
       <div className="space-y-6">
         <div className="flex items-center justify-end mb-6">
           <div className="flex gap-2">
-            {canManageFields() && (
-              <Button variant="outline" onClick={() => navigate('/vulnerabilities/cmdb/fields-customization')}>
-                <Settings className="h-4 w-4 mr-2" />
-                Customizar
-              </Button>
-            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
@@ -661,6 +655,12 @@ export default function CMDB() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {canManageFields() && (
+              <Button variant="outline" onClick={() => navigate('/vulnerabilities/cmdb/fields-customization')}>
+                <Settings className="h-4 w-4 mr-2" />
+                Customizar
+              </Button>
+            )}
             <Button onClick={() => navigate('/vulnerabilities/cmdb/create')}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Ativo
