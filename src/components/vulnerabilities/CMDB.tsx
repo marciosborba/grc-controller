@@ -871,6 +871,86 @@ export default function CMDB() {
             </Button>
           </div>
         </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total de Ativos */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Ativos</p>
+                  <p className="text-2xl font-bold">
+                    {assetStats.total}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Server className="h-3 w-3 mr-1 text-blue-600" />
+                    Inventário completo
+                  </p>
+                </div>
+                <Server className="h-10 w-10 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Ativos Ativos */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Ativos Ativos</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {assetStats.active}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <CheckCircle2 className="h-3 w-3 mr-1 text-green-600" />
+                    Em operação
+                  </p>
+                </div>
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Servidores */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Servidores</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {assetStats.servers}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Database className="h-3 w-3 mr-1 text-purple-600" />
+                    Infraestrutura crítica
+                  </p>
+                </div>
+                <Database className="h-10 w-10 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Risco Alto */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Risco Alto</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {assetStats.highRisk}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <AlertTriangle className="h-3 w-3 mr-1 text-red-600" />
+                    Requer atenção
+                  </p>
+                </div>
+                <AlertTriangle className="h-10 w-10 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
           {/* Filters */}
           <Card>
             <CardHeader>

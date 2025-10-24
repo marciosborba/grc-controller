@@ -884,6 +884,86 @@ export default function Applications() {
             </Button>
           </div>
         </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total de Aplicações */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Aplicações</p>
+                  <p className="text-2xl font-bold">
+                    {mockApplications.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Layers className="h-3 w-3 mr-1 text-blue-600" />
+                    Inventário completo
+                  </p>
+                </div>
+                <Layers className="h-10 w-10 text-blue-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Aplicações Ativas */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Aplicações Ativas</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {mockApplications.filter(app => app.status === 'Ativo').length}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Shield className="h-3 w-3 mr-1 text-green-600" />
+                    Em produção
+                  </p>
+                </div>
+                <Shield className="h-10 w-10 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Aplicações com Risco Alto */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Risco Alto</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {mockApplications.filter(app => app.risk_level === 'Alto').length}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <AlertTriangle className="h-3 w-3 mr-1 text-red-600" />
+                    Requer atenção
+                  </p>
+                </div>
+                <AlertTriangle className="h-10 w-10 text-red-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total de Vulnerabilidades */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Vulnerabilidades</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {mockApplications.reduce((sum, app) => sum + app.vulnerabilities, 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center mt-1">
+                    <Target className="h-3 w-3 mr-1 text-orange-600" />
+                    Todas as aplicações
+                  </p>
+                </div>
+                <Target className="h-10 w-10 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
           {/* Filters */}
           <Card>
             <CardHeader>
