@@ -265,14 +265,14 @@ export default function FieldMappingInterface({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <Select
-                value={currentMapping || ''}
-                onValueChange={(value) => handleFieldMappingChange(field.key, value)}
+                value={currentMapping || 'none'}
+                onValueChange={(value) => handleFieldMappingChange(field.key, value === 'none' ? '' : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o campo de origem" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Não mapear</SelectItem>
+                  <SelectItem value="none">Não mapear</SelectItem>
                   {preview.detected_fields.map(sourceField => (
                     <SelectItem key={sourceField} value={sourceField}>
                       {sourceField}
