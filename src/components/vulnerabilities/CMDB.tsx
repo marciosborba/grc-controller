@@ -453,52 +453,65 @@ export default function CMDB() {
   const IMPORT_TOOLS = [
     {
       id: 'servicenow',
-      name: 'ServiceNow',
-      description: 'Importar ativos do ServiceNow CMDB',
+      name: 'ServiceNow CMDB',
+      description: 'Importar ativos do ServiceNow CMDB (API v2)',
       icon: Database,
-      fields: ['sys_id', 'name', 'ip_address', 'serial_number', 'model_id', 'location', 'assigned_to']
+      apiVersion: 'v2',
+      fields: ['sys_id', 'name', 'ip_address', 'serial_number', 'model_id', 'location', 'assigned_to', 'discovery_source', 'environment', 'business_criticality'],
+      authMethods: ['basic', 'oauth2', 'jwt'],
+      tables: ['cmdb_ci', 'cmdb_ci_computer', 'cmdb_ci_server', 'cmdb_ci_netgear', 'cmdb_ci_cloud_service']
     },
     {
       id: 'lansweeper',
       name: 'Lansweeper',
-      description: 'Importar descoberta de ativos do Lansweeper',
+      description: 'Importar descoberta de ativos do Lansweeper (API v2)',
       icon: Network,
-      fields: ['AssetName', 'IPAddress', 'Domain', 'Username', 'OS', 'Model', 'SerialNumber']
+      apiVersion: 'v2',
+      fields: ['AssetName', 'IPAddress', 'Domain', 'Username', 'OS', 'Model', 'SerialNumber', 'LastSeen', 'AssetType', 'Manufacturer'],
+      authMethods: ['basic', 'token', 'windows_auth']
     },
     {
       id: 'sccm',
       name: 'Microsoft SCCM',
-      description: 'Importar inventário do System Center Configuration Manager',
+      description: 'Importar inventário do System Center Configuration Manager (WMI/PowerShell)',
       icon: Monitor,
-      fields: ['Name', 'IPAddresses', 'OperatingSystem', 'Model', 'SerialNumber', 'LastLogonUser']
+      apiVersion: '2022',
+      fields: ['Name', 'IPAddresses', 'OperatingSystem', 'Model', 'SerialNumber', 'LastLogonUser', 'InstallDate', 'TotalPhysicalMemory'],
+      authMethods: ['windows_auth', 'powershell', 'wmi']
     },
     {
       id: 'aws',
       name: 'AWS Config',
-      description: 'Importar recursos da AWS via Config Service',
+      description: 'Importar recursos da AWS via Config Service (API 2023-01-01)',
       icon: Cloud,
-      fields: ['resourceId', 'resourceName', 'resourceType', 'availabilityZone', 'tags']
+      apiVersion: '2023-01-01',
+      fields: ['resourceId', 'resourceName', 'resourceType', 'availabilityZone', 'tags', 'configuration', 'relationships', 'compliance'],
+      authMethods: ['access_key', 'iam_role', 'sts_assume_role']
     },
     {
       id: 'azure',
       name: 'Azure Resource Graph',
-      description: 'Importar recursos do Azure Resource Manager',
+      description: 'Importar recursos do Azure Resource Manager (API 2022-10-01)',
       icon: Cloud,
-      fields: ['id', 'name', 'type', 'location', 'resourceGroup', 'tags']
+      apiVersion: '2022-10-01',
+      fields: ['id', 'name', 'type', 'location', 'resourceGroup', 'tags', 'properties', 'sku', 'identity'],
+      authMethods: ['service_principal', 'managed_identity', 'azure_cli']
     },
     {
       id: 'csv',
       name: 'Arquivo CSV',
       description: 'Importar ativos de arquivo CSV personalizado',
       icon: FileText,
-      fields: ['customizable']
+      fields: ['customizable'],
+      authMethods: ['none']
     },
     {
       id: 'api',
       name: 'API Genérica',
       description: 'Conectar com qualquer API REST para importar ativos',
       icon: Globe,
-      fields: ['url', 'method', 'auth', 'headers', 'body', 'mapping']
+      fields: ['customizable'],
+      authMethods: ['none', 'basic', 'bearer', 'apikey', 'oauth2', 'jwt']
     }
   ];
 

@@ -281,38 +281,94 @@ export default function Applications() {
     switch (selectedImportTool) {
       case 'servicenow':
         credentials.server = (document.getElementById('snow-instance') as HTMLInputElement)?.value;
+        credentials.apiVersion = 'v2'; // Updated to latest API version
+        credentials.authType = (document.querySelector('[data-testid="snow-auth-type"]') as HTMLSelectElement)?.value || 'basic';
         credentials.username = (document.getElementById('snow-username') as HTMLInputElement)?.value;
         credentials.password = (document.getElementById('snow-password') as HTMLInputElement)?.value;
         credentials.table = (document.querySelector('[data-testid="snow-table"]') as HTMLSelectElement)?.value || 'cmdb_ci_appl';
         credentials.filter = (document.getElementById('snow-filter') as HTMLInputElement)?.value;
+        
+        // OAuth 2.0 credentials
+        if (credentials.authType === 'oauth2') {
+          credentials.clientId = (document.getElementById('snow-client-id') as HTMLInputElement)?.value;
+          credentials.clientSecret = (document.getElementById('snow-client-secret') as HTMLInputElement)?.value;
+        }
+        
+        // JWT credentials (new)
+        if (credentials.authType === 'jwt') {
+          credentials.jwtToken = (document.getElementById('snow-jwt-token') as HTMLInputElement)?.value;
+          credentials.keyId = (document.getElementById('snow-key-id') as HTMLInputElement)?.value;
+        }
         break;
         
       case 'jira':
         credentials.server = (document.getElementById('jira-server') as HTMLInputElement)?.value;
+        credentials.apiVersion = 'v3'; // Updated to latest API version
+        credentials.authType = (document.querySelector('[data-testid="jira-auth-type"]') as HTMLSelectElement)?.value || 'token';
         credentials.username = (document.getElementById('jira-username') as HTMLInputElement)?.value;
         credentials.apiKey = (document.getElementById('jira-token') as HTMLInputElement)?.value;
         credentials.projectKeys = (document.getElementById('jira-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
+        
+        // OAuth 2.0 with PKCE (new)
+        if (credentials.authType === 'oauth2_pkce') {
+          credentials.clientId = (document.getElementById('jira-client-id') as HTMLInputElement)?.value;
+          credentials.codeVerifier = (document.getElementById('jira-code-verifier') as HTMLInputElement)?.value;
+        }
         break;
         
       case 'github':
         credentials.server = (document.getElementById('github-server') as HTMLInputElement)?.value || 'https://api.github.com';
+        credentials.apiVersion = '2024-01-01'; // Updated to latest API version
+        credentials.authType = (document.querySelector('[data-testid="github-auth-type"]') as HTMLSelectElement)?.value || 'token';
         credentials.token = (document.getElementById('github-token') as HTMLInputElement)?.value;
         credentials.organization = (document.getElementById('github-org') as HTMLInputElement)?.value;
         credentials.repositories = (document.getElementById('github-repos') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
+        credentials.useGraphQL = (document.getElementById('github-use-graphql') as HTMLInputElement)?.checked;
+        
+        // GitHub App credentials (enhanced)
+        if (credentials.authType === 'github_app') {
+          credentials.appId = (document.getElementById('github-app-id') as HTMLInputElement)?.value;
+          credentials.privateKey = (document.getElementById('github-private-key') as HTMLTextAreaElement)?.value;
+          credentials.installationId = (document.getElementById('github-installation-id') as HTMLInputElement)?.value;
+        }
         break;
         
       case 'gitlab':
         credentials.server = (document.getElementById('gitlab-server') as HTMLInputElement)?.value || 'https://gitlab.com';
+        credentials.apiVersion = 'v4'; // Confirmed latest version
+        credentials.authType = (document.querySelector('[data-testid="gitlab-auth-type"]') as HTMLSelectElement)?.value || 'token';
         credentials.token = (document.getElementById('gitlab-token') as HTMLInputElement)?.value;
         credentials.group = (document.getElementById('gitlab-group') as HTMLInputElement)?.value;
         credentials.projects = (document.getElementById('gitlab-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
         credentials.includeArchived = (document.getElementById('gitlab-include-archived') as HTMLInputElement)?.checked;
+        
+        // OAuth 2.0 with PKCE (new)
+        if (credentials.authType === 'oauth2_pkce') {
+          credentials.clientId = (document.getElementById('gitlab-client-id') as HTMLInputElement)?.value;
+          credentials.codeVerifier = (document.getElementById('gitlab-code-verifier') as HTMLInputElement)?.value;
+          credentials.redirectUri = (document.getElementById('gitlab-redirect-uri') as HTMLInputElement)?.value;
+        }
         break;
         
       case 'azure-devops':
         credentials.organization = (document.getElementById('azure-org') as HTMLInputElement)?.value;
+        credentials.apiVersion = '7.1-preview'; // Updated to latest API version
+        credentials.authType = (document.querySelector('[data-testid="azure-auth-type"]') as HTMLSelectElement)?.value || 'pat';
         credentials.token = (document.getElementById('azure-token') as HTMLInputElement)?.value;
         credentials.projects = (document.getElementById('azure-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
+        
+        // Azure AD authentication (new)
+        if (credentials.authType === 'azure_ad') {
+          credentials.tenantId = (document.getElementById('azure-tenant-id') as HTMLInputElement)?.value;
+          credentials.clientId = (document.getElementById('azure-client-id') as HTMLInputElement)?.value;
+          credentials.clientSecret = (document.getElementById('azure-client-secret') as HTMLInputElement)?.value;
+        }
+        
+        // Service Principal (new)
+        if (credentials.authType === 'service_principal') {
+          credentials.servicePrincipalId = (document.getElementById('azure-sp-id') as HTMLInputElement)?.value;
+          credentials.servicePrincipalSecret = (document.getElementById('azure-sp-secret') as HTMLInputElement)?.value;
+        }
         break;
         
       case 'api':
@@ -324,6 +380,12 @@ export default function Applications() {
         credentials.username = (document.getElementById('app-api-username') as HTMLInputElement)?.value;
         credentials.password = (document.getElementById('app-api-password') as HTMLInputElement)?.value;
         credentials.dataPath = (document.getElementById('app-api-data-path') as HTMLInputElement)?.value;
+        
+        // JWT support (new)
+        if (credentials.authType === 'jwt') {
+          credentials.jwtToken = (document.getElementById('app-api-jwt-token') as HTMLInputElement)?.value;
+          credentials.jwtSecret = (document.getElementById('app-api-jwt-secret') as HTMLInputElement)?.value;
+        }
         
         const appHeaders = (document.getElementById('app-api-headers') as HTMLTextAreaElement)?.value;
         const appBody = (document.getElementById('app-api-body') as HTMLTextAreaElement)?.value;
@@ -364,47 +426,55 @@ export default function Applications() {
     setImportModalOpen(true);
   };
 
-  // Import tools configuration
+  // Import tools configuration - Updated to latest API versions and auth methods
   const IMPORT_TOOLS = [
     {
       id: 'servicenow',
       name: 'ServiceNow CMDB',
-      description: 'Importar aplicações do ServiceNow CMDB',
+      description: 'Importar aplicações do ServiceNow CMDB (API v2)',
       icon: Database,
-      fields: ['sys_id', 'name', 'version', 'install_status', 'operational_status', 'owned_by'],
-      authMethods: ['basic', 'oauth2']
+      apiVersion: 'v2',
+      fields: ['sys_id', 'name', 'version', 'install_status', 'operational_status', 'owned_by', 'discovery_source', 'environment', 'business_criticality', 'data_classification'],
+      authMethods: ['basic', 'oauth2', 'jwt'],
+      tables: ['cmdb_ci_appl', 'cmdb_ci_service', 'cmdb_ci_business_app', 'cmdb_ci_cloud_service', 'cmdb_ci_container']
     },
     {
       id: 'jira',
       name: 'Atlassian Jira',
-      description: 'Importar projetos do Jira como aplicações',
+      description: 'Importar projetos do Jira como aplicações (API v3)',
       icon: FileText,
-      fields: ['id', 'key', 'name', 'projectTypeKey', 'lead', 'description'],
-      authMethods: ['basic', 'token']
+      apiVersion: 'v3',
+      fields: ['id', 'key', 'name', 'projectTypeKey', 'lead', 'description', 'projectCategory', 'components', 'issueTypes', 'permissions'],
+      authMethods: ['basic', 'token', 'oauth2_pkce'],
+      endpoints: ['/rest/api/3/project/search', '/rest/api/3/project']
     },
     {
       id: 'github',
       name: 'GitHub',
-      description: 'Importar repositórios do GitHub como aplicações',
+      description: 'Importar repositórios do GitHub como aplicações (REST API 2024-01-01 + GraphQL v4)',
       icon: GitBranch,
-      fields: ['id', 'name', 'full_name', 'html_url', 'language', 'description', 'owner'],
-      authMethods: ['token', 'github_app']
+      apiVersion: '2024-01-01',
+      fields: ['id', 'name', 'full_name', 'html_url', 'language', 'description', 'owner', 'topics', 'security_and_analysis', 'environments', 'deployments'],
+      authMethods: ['token', 'github_app', 'oauth_app'],
+      supportsGraphQL: true
     },
     {
       id: 'gitlab',
       name: 'GitLab',
-      description: 'Importar projetos do GitLab como aplicações',
+      description: 'Importar projetos do GitLab como aplicações (API v4 - 16.x)',
       icon: GitBranch,
-      fields: ['id', 'name', 'path_with_namespace', 'web_url', 'description', 'topics'],
-      authMethods: ['token', 'oauth2']
+      apiVersion: 'v4',
+      fields: ['id', 'name', 'path_with_namespace', 'web_url', 'description', 'topics', 'compliance_frameworks', 'security_and_compliance', 'merge_pipelines'],
+      authMethods: ['token', 'oauth2_pkce', 'job_token']
     },
     {
       id: 'azure-devops',
       name: 'Azure DevOps',
-      description: 'Importar projetos do Azure DevOps como aplicações',
+      description: 'Importar projetos do Azure DevOps como aplicações (API v7.1)',
       icon: Cloud,
-      fields: ['id', 'name', 'description', 'url', 'state', 'visibility'],
-      authMethods: ['pat', 'oauth2']
+      apiVersion: '7.1-preview',
+      fields: ['id', 'name', 'description', 'url', 'state', 'visibility', 'capabilities', 'properties', 'defaultTeam'],
+      authMethods: ['pat', 'azure_ad', 'service_principal']
     },
     {
       id: 'api',
@@ -412,7 +482,7 @@ export default function Applications() {
       description: 'Conectar com qualquer API REST para importar aplicações',
       icon: Globe,
       fields: ['customizable'],
-      authMethods: ['none', 'basic', 'bearer', 'apikey', 'oauth2']
+      authMethods: ['none', 'basic', 'bearer', 'apikey', 'oauth2', 'jwt']
     }
   ];
 
@@ -1569,6 +1639,7 @@ export default function Applications() {
                     <SelectContent>
                       <SelectItem value="basic">Basic Authentication</SelectItem>
                       <SelectItem value="oauth2">OAuth 2.0 (Recomendado)</SelectItem>
+                      <SelectItem value="jwt">JWT Token (Mais Seguro)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1595,6 +1666,18 @@ export default function Applications() {
                   </div>
                 </div>
                 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="snow-jwt-token">JWT Token</Label>
+                    <Input id="snow-jwt-token" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+                    <p className="text-xs text-muted-foreground">Token JWT para autenticação avançada</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="snow-key-id">Key ID (JWT)</Label>
+                    <Input id="snow-key-id" placeholder="key-id-jwt" />
+                  </div>
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="snow-table">Tabela CMDB</Label>
                   <Select defaultValue="cmdb_ci_appl">
@@ -1605,6 +1688,8 @@ export default function Applications() {
                       <SelectItem value="cmdb_ci_appl">cmdb_ci_appl (Applications)</SelectItem>
                       <SelectItem value="cmdb_ci_service">cmdb_ci_service (Services)</SelectItem>
                       <SelectItem value="cmdb_ci_business_app">cmdb_ci_business_app (Business Applications)</SelectItem>
+                      <SelectItem value="cmdb_ci_cloud_service">cmdb_ci_cloud_service (Cloud Services)</SelectItem>
+                      <SelectItem value="cmdb_ci_container">cmdb_ci_container (Containers)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
