@@ -1,0 +1,19 @@
+interface ClassificationTemplate {
+  id: string;
+  name: string;
+  description: string;
+  vulnerability_class: VulnerabilityClass; // Mantido para compatibilidade
+  vulnerability_classes: VulnerabilityClass[]; // Novo campo para múltiplas classes
+  enabled: boolean;
+  priority: number;
+  conditions: RuleCondition[];
+  actions: RuleAction[];
+  analysis_template: string;
+  recommendation_template: string;
+  created_at: Date;
+  updated_at: Date;
+  created_by: string;
+  last_executed?: Date;
+  execution_count: number;
+  success_rate: number;
+}
