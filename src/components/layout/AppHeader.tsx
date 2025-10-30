@@ -82,19 +82,6 @@ export const AppHeader = () => {
             )}
           </Button>
 
-          {/* Debug: Refresh Permissions Button */}
-          {user?.isPlatformAdmin && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 sm:h-10 sm:w-10 text-orange-600"
-              onClick={refreshUser}
-              title="Refresh Permissions (Debug)"
-            >
-              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          )}
-
           {/* Theme Toggle */}
           <div className="hidden sm:block">
             <ThemeToggle />
