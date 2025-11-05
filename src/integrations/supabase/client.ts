@@ -2,16 +2,15 @@
 import { createClient } from '@supabase/supabase-js';
 // import type { Database } from './types'; // disabled: types file is empty to avoid TS issues
 
-// Configuração para Supabase REMOTO (produção)
+// Configuração para Supabase REMOTO (produção) - ATIVO
 const SUPABASE_URL = "https://myxvxponlmulnjstbjwd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15eHZ4cG9ubG11bG5qc3RiandkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMTQzNTMsImV4cCI6MjA2ODU5MDM1M30.V9yqc2cgrRCLxlXF2HkISzPT9WQ7Hw14r_yE8UROgD4";
 
-// NOTA: As chaves acima são as corretas para o projeto myxvxponlmulnjstbjwd
-// As chaves no .env estão com valores de exemplo e não funcionam
-
 // Configuração para Supabase LOCAL (desenvolvimento) - comentado
-// const SUPABASE_URL = "http://localhost:54321";
+// const SUPABASE_URL = "http://127.0.0.1:54321";
 // const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
+
+// NOTA: Usando Supabase REMOTO para produção
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
