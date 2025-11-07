@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { 
@@ -92,7 +93,15 @@ interface TrabalhoAuditoria {
   };
 }
 
+import { AuditDashboardNew } from './AuditDashboardNew';
+
 export function AuditoriasDashboard() {
+  // Usar o novo dashboard integrado
+  return <AuditDashboardNew />;
+}
+
+// Manter o componente antigo como backup
+export function AuditoriasDashboardOld() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const selectedTenantId = useCurrentTenantId();
@@ -337,9 +346,14 @@ export function AuditoriasDashboard() {
     switch (status) {
       case 'concluido': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       case 'em_andamento': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'em_execucao': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'agendado': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       case 'pendente': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      case 'planejado': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'iniciado': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
+      case 'aprovado': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200';
       case 'suspenso': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      case 'cancelado': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
@@ -416,6 +430,328 @@ export function AuditoriasDashboard() {
 
 
 
+
+  // Função para criar relatório de projeto específico
+  const handleCreateProjectReport = async (projeto) => {
+    console.log('🔥 [DEBUG] === GERANDO RELATÓRIO DE PROJETO ===');
+    console.log('🔥 [DEBUG] Projeto selecionado:', projeto);
+    
+    const currentEffectiveTenantId = getEffectiveTenantId();
+    
+    if (!currentEffectiveTenantId) {
+      const errorMsg = user?.isPlatformAdmin 
+        ? 'Selecione uma organização no seletor de tenant no canto superior direito.'
+        : 'Erro: Tenant não identificado. Verifique se você está associado a uma organização.';
+      
+      toast.error(errorMsg);
+      return;
+    }
+
+    setGeneratingReport(true);
+    
+    try {
+      toast.loading('Gerando relatório do projeto...', { id: 'project-report-generation' });
+      
+      // Carregar dados específicos do projeto
+      const { data: projetoDetalhado, error: projetoError } = await supabase
+        .from('projetos_auditoria')
+        .select(`
+          *,
+          trabalhos_auditoria(*),
+          apontamentos_auditoria(*),
+          planos_acao(*)
+        `)
+        .eq('id', projeto.id)
+        .eq('tenant_id', currentEffectiveTenantId)
+        .single();
+      
+      if (projetoError) {
+        throw projetoError;
+      }
+      
+      // Gerar relatório HTML estilo vulnerabilidades
+      const reportContent = generateProjectReportHTML(projeto, projetoDetalhado);
+      
+      const blob = new Blob([reportContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      const newWindow = window.open(url, '_blank');
+      if (newWindow) {
+        newWindow.document.title = `Relatório do Projeto ${projeto.codigo} - ${new Date().toLocaleDateString('pt-BR')}`;
+        
+        setTimeout(() => {
+          const printButton = newWindow.document.createElement('button');
+          printButton.innerHTML = '🖨️ Imprimir/Salvar como PDF';
+          printButton.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 12px 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-family: system-ui;
+          `;
+          printButton.onclick = () => newWindow.print();
+          newWindow.document.body.appendChild(printButton);
+        }, 1000);
+      }
+      
+      toast.success('Relatório do projeto gerado com sucesso!', {
+        id: 'project-report-generation',
+        description: `Use Ctrl+P para salvar como PDF. Projeto: ${projeto.titulo}`
+      });
+      
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Erro ao gerar relatório do projeto:', error);
+      toast.error('Erro ao gerar relatório do projeto', { id: 'project-report-generation' });
+      secureLog('error', 'Erro ao gerar relatório do projeto', {
+        projetoId: projeto.id,
+        error: error
+      });
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Função para gerar HTML do relatório do projeto
+  const generateProjectReportHTML = (projeto, projetoDetalhado) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    const totalApontamentos = projetoDetalhado?.apontamentos_auditoria?.length || 0;
+    const apontamentosCriticos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'critica').length || 0;
+    const apontamentosAltos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'alta').length || 0;
+    const apontamentosMedios = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'media').length || 0;
+    const apontamentosBaixos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'baixa').length || 0;
+    const totalTrabalhos = projetoDetalhado?.trabalhos_auditoria?.length || 0;
+    const planosAcao = projetoDetalhado?.planos_acao?.length || 0;
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Relatório Executivo - ${projeto.titulo}</title>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+          .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+          .header { text-align: center; border-bottom: 4px solid #3b82f6; padding-bottom: 30px; margin-bottom: 40px; }
+          .title { font-size: 32px; font-weight: bold; color: #1e293b; margin-bottom: 10px; }
+          .subtitle { font-size: 16px; color: #64748b; margin-bottom: 5px; }
+          .metrics-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 40px 0; }
+          .metric-card { background: white; padding: 16px; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-left: 4px solid #3b82f6; }
+          .metric-value { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+          .metric-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
+          .critical { color: #dc2626; border-left-color: #dc2626; }
+          .high { color: #ea580c; border-left-color: #ea580c; }
+          .success { color: #059669; border-left-color: #059669; }
+          .warning { color: #d97706; border-left-color: #d97706; }
+          .section { margin: 50px 0; }
+          .section-title { font-size: 24px; font-weight: bold; color: #1e293b; margin-bottom: 20px; border-bottom: 3px solid #e2e8f0; padding-bottom: 12px; }
+          .executive-summary { background: #fafafa; padding: 30px; border-radius: 12px; margin: 30px 0; border: 2px solid #e2e8f0; }
+          table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+          th, td { padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+          th { background: #f8fafc; font-weight: 700; color: #374151; }
+          .risk-alto { background: #fef2f2; color: #dc2626; font-weight: bold; }
+          .risk-medio { background: #fff7ed; color: #ea580c; font-weight: bold; }
+          .risk-baixo { background: #f0fdf4; color: #059669; font-weight: bold; }
+          .progress-bar { width: 100%; background: #e5e7eb; border-radius: 6px; height: 8px; margin: 10px 0; }
+          .progress-fill { background: linear-gradient(90deg, #3b82f6, #1d4ed8); height: 8px; border-radius: 6px; transition: width 0.3s ease; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="title">📈 Relatório Executivo de Projeto de Auditoria</h1>
+            <p class="subtitle"><strong>${projeto.titulo}</strong></p>
+            <p class="subtitle">Código: ${projeto.codigo || 'N/A'} | Status: ${projeto.status?.toUpperCase() || 'N/A'}</p>
+            <p class="subtitle">Gerado em: ${timestamp}</p>
+            <p class="subtitle">Confidencial - Uso Interno</p>
+          </div>
+          
+          <div class="executive-summary">
+            <h2 style="margin-top: 0; color: #3b82f6;">📊 Executive Summary - Visão Geral do Projeto</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 25px 0;">
+              <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 12px; border-left: 6px solid #0ea5e9; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">🎯</div>
+                <div style="font-size: 24px; font-weight: bold; color: #0ea5e9; margin-bottom: 5px;">PROJETO</div>
+                <div style="font-size: 18px; font-weight: bold; color: #0ea5e9;">${projeto.progresso || 0}%</div>
+                <div style="font-size: 14px; color: #0ea5e9;">Progresso de execução</div>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, ${apontamentosCriticos > 0 ? '#fef2f2 0%, #fee2e2 100%' : '#f0fdf4 0%, #dcfce7 100%'}); padding: 20px; border-radius: 12px; border-left: 6px solid ${apontamentosCriticos > 0 ? '#dc2626' : '#059669'}; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">${apontamentosCriticos > 0 ? '🚨' : '✅'}</div>
+                <div style="font-size: 24px; font-weight: bold; color: ${apontamentosCriticos > 0 ? '#dc2626' : '#059669'}; margin-bottom: 5px;">ACHADOS</div>
+                <div style="font-size: 18px; font-weight: bold; color: ${apontamentosCriticos > 0 ? '#dc2626' : '#059669'};">${totalApontamentos}</div>
+                <div style="font-size: 14px; color: ${apontamentosCriticos > 0 ? '#dc2626' : '#059669'};">Total identificados</div>
+              </div>
+              
+              <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 20px; border-radius: 12px; border-left: 6px solid #3b82f6; text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 10px;">📝</div>
+                <div style="font-size: 24px; font-weight: bold; color: #3b82f6; margin-bottom: 5px;">AÇÕES</div>
+                <div style="font-size: 18px; font-weight: bold; color: #3b82f6;">${planosAcao}</div>
+                <div style="font-size: 14px; color: #3b82f6;">Planos de ação</div>
+              </div>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 25px; border-radius: 12px; border-left: 6px solid #64748b; margin: 20px 0;">
+              <h3 style="color: #374151; margin-top: 0;">📄 Resumo Executivo</h3>
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+                O projeto de auditoria "<strong>${projeto.titulo}</strong>" foi executado sob a liderança de ${projeto.auditor_lider || 'auditor não definido'}, 
+                encontrando-se atualmente ${projeto.progresso >= 100 ? 'concluído' : `${projeto.progresso}% concluído`}.
+              </p>
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+                <strong>Resultados dos Trabalhos:</strong> Durante a execução foram identificados ${totalApontamentos} apontamentos, 
+                sendo ${apontamentosCriticos} críticos, ${apontamentosAltos} altos, ${apontamentosMedios} médios e ${apontamentosBaixos} baixos.
+              </p>
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                <strong>Planos de Ação:</strong> ${planosAcao > 0 ? `Foram elaborados ${planosAcao} planos de ação para endereçar as deficiências identificadas.` : 'Não foram necessários planos de ação adicionais.'}
+              </p>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2 class="section-title">📈 Indicadores do Projeto</h2>
+            
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-value">${totalApontamentos}</div>
+                <div class="metric-label">Total de Apontamentos</div>
+              </div>
+              <div class="metric-card critical">
+                <div class="metric-value">${apontamentosCriticos}</div>
+                <div class="metric-label">Apontamentos Críticos</div>
+              </div>
+              <div class="metric-card high">
+                <div class="metric-value">${apontamentosAltos}</div>
+                <div class="metric-label">Apontamentos Altos</div>
+              </div>
+              <div class="metric-card warning">
+                <div class="metric-value">${apontamentosMedios}</div>
+                <div class="metric-label">Apontamentos Médios</div>
+              </div>
+              <div class="metric-card success">
+                <div class="metric-value">${totalTrabalhos}</div>
+                <div class="metric-label">Trabalhos Executados</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-value">${planosAcao}</div>
+                <div class="metric-label">Planos de Ação</div>
+              </div>
+            </div>
+          </div>
+          
+          ${totalApontamentos > 0 ? `
+          <div class="section">
+            <h2 class="section-title">🚨 Principais Apontamentos</h2>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Criticidade</th>
+                  <th>Descrição</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${projetoDetalhado?.apontamentos_auditoria?.sort((a, b) => {
+                  const ordem = { 'critica': 4, 'alta': 3, 'media': 2, 'baixa': 1 };
+                  return (ordem[b.criticidade] || 0) - (ordem[a.criticidade] || 0);
+                }).slice(0, 10).map(apontamento => `
+                  <tr>
+                    <td><strong>${apontamento.titulo || 'Sem título'}</strong></td>
+                    <td>
+                      <span class="${apontamento.criticidade === 'critica' ? 'risk-alto' : apontamento.criticidade === 'alta' ? 'risk-medio' : 'risk-baixo'}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                        ${(apontamento.criticidade || 'baixa').toUpperCase()}
+                      </span>
+                    </td>
+                    <td>${apontamento.descricao ? (apontamento.descricao.length > 100 ? apontamento.descricao.substring(0, 100) + '...' : apontamento.descricao) : 'Sem descrição'}</td>
+                    <td>${apontamento.status || 'Pendente'}</td>
+                  </tr>
+                `).join('') || '<tr><td colspan="4" style="text-align: center; color: #64748b;">Nenhum apontamento disponível</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+          
+          ${planosAcao > 0 ? `
+          <div class="section">
+            <h2 class="section-title">📝 Planos de Ação</h2>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Prioridade</th>
+                  <th>Responsável</th>
+                  <th>Prazo</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${projetoDetalhado?.planos_acao?.slice(0, 10).map(plano => `
+                  <tr>
+                    <td><strong>${plano.titulo || 'Sem título'}</strong></td>
+                    <td>
+                      <span class="${plano.prioridade === 'alta' ? 'risk-alto' : plano.prioridade === 'media' ? 'risk-medio' : 'risk-baixo'}" style="padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                        ${(plano.prioridade || 'baixa').toUpperCase()}
+                      </span>
+                    </td>
+                    <td>${plano.responsavel || 'Não definido'}</td>
+                    <td>${plano.prazo_implementacao ? new Date(plano.prazo_implementacao).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                    <td>${plano.status || 'Pendente'}</td>
+                  </tr>
+                `).join('') || '<tr><td colspan="5" style="text-align: center; color: #64748b;">Nenhum plano de ação disponível</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+          
+          <div class="section">
+            <h2 class="section-title">🎯 Conclusões e Recomendações</h2>
+            
+            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 25px; border-radius: 12px; border-left: 6px solid #059669; margin: 20px 0;">
+              <h3 style="color: #059669; margin-top: 0;">📄 Conclusão Geral</h3>
+              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+                Com base nos trabalhos executados no projeto "<strong>${projeto.titulo}</strong>", concluímos que:
+              </p>
+              <ul style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+                <li>${totalApontamentos > 0 ? `Foram identificadas ${totalApontamentos} oportunidades de melhoria nos controles avaliados` : 'Os controles avaliados estão adequados e funcionando conforme esperado'}</li>
+                <li>${apontamentosCriticos > 0 ? `${apontamentosCriticos} apontamentos são de criticidade alta e requerem ação imediata` : 'Não foram identificadas deficiências críticas nos controles'}</li>
+                <li>O projeto encontra-se ${projeto.progresso >= 100 ? 'concluído com sucesso' : `${projeto.progresso}% concluído e em andamento`}</li>
+                <li>${planosAcao > 0 ? `${planosAcao} planos de ação foram elaborados para endereçar as deficiências` : 'Não foram necessários planos de ação adicionais'}</li>
+              </ul>
+            </div>
+            
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 25px; border-radius: 12px; border-left: 6px solid #d97706; margin: 20px 0;">
+              <h3 style="color: #92400e; margin-top: 0;">📝 Recomendações Principais</h3>
+              <ol style="font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                ${apontamentosCriticos > 0 ? '<li><strong>Prioridade Alta:</strong> Implementar imediatamente as ações corretivas para os apontamentos críticos identificados</li>' : ''}
+                <li><strong>Monitoramento:</strong> Estabelecer acompanhamento periódico da implementação das melhorias propostas</li>
+                <li><strong>Capacitação:</strong> Promover treinamento das equipes sobre os controles e procedimentos atualizados</li>
+                <li><strong>Follow-up:</strong> Agendar auditoria de seguimento em ${apontamentosCriticos > 0 ? '6 meses' : '12 meses'} para verificar a efetividade das ações implementadas</li>
+              </ol>
+            </div>
+          </div>
+          
+          <div style="margin-top: 50px; padding-top: 30px; border-top: 3px solid #e2e8f0; text-align: center; color: #64748b;">
+            <p><strong>Relatório gerado automaticamente pelo Sistema GRC</strong></p>
+            <p>Auditor Líder: ${projeto.auditor_lider || 'Não definido'} | Data: ${timestamp}</p>
+            <p>Documento confidencial - Distribuição restrita</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
 
   // Função para criar relatório de um tipo específico
   const handleCreateReportByType = async (tipo) => {
@@ -575,8 +911,8 @@ export function AuditoriasDashboard() {
       
       toast.success(`${reportInfo.name} criado com sucesso!`);
       
-      // Gerar PDF automaticamente
-      console.log('📄 [DEBUG] === INICIANDO GERAÇÃO DE PDF COM DADOS REAIS ===');
+      // Gerar PDF automaticamente - VERSÃO PROFISSIONAL PARA RELATÓRIO EXECUTIVO
+      console.log('📄 [DEBUG] === INICIANDO GERAÇÃO DE PDF PROFISSIONAL ===');
       try {
         console.log('📄 [DEBUG] Carregando dados reais do banco...');
         
@@ -590,314 +926,493 @@ export function AuditoriasDashboard() {
           `)
           .eq('tenant_id', currentEffectiveTenantId)
           .order('created_at', { ascending: false })
-          .limit(10);
+          .limit(15);
         
         const { data: apontamentosData } = await supabase
           .from('apontamentos_auditoria')
           .select('*')
           .eq('tenant_id', currentEffectiveTenantId)
-          .limit(20);
+          .order('created_at', { ascending: false })
+          .limit(30);
         
         const { data: projetosData } = await supabase
           .from('projetos_auditoria')
           .select('*')
           .eq('tenant_id', currentEffectiveTenantId)
-          .limit(10);
+          .order('created_at', { ascending: false })
+          .limit(15);
+        
+        const { data: planosAcaoData } = await supabase
+          .from('planos_acao')
+          .select('*')
+          .eq('tenant_id', currentEffectiveTenantId)
+          .order('created_at', { ascending: false })
+          .limit(20);
         
         console.log('📄 [DEBUG] Dados carregados:', {
           relatorios: dadosReais?.length || 0,
           apontamentos: apontamentosData?.length || 0,
-          projetos: projetosData?.length || 0
+          projetos: projetosData?.length || 0,
+          planosAcao: planosAcaoData?.length || 0
         });
         
         // Importar jsPDF dinamicamente para gerar PDF do relatório
         const { default: jsPDF } = await import('jspdf');
         const doc = new jsPDF('p', 'mm', 'a4');
         
-        console.log('📄 [DEBUG] Configurando layout ultra-compacto do PDF...');
+        console.log('📄 [DEBUG] Configurando layout PROFISSIONAL do PDF...');
         
-        // Configurações do documento ultra-compactas
+        // Configurações do documento PROFISSIONAIS
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        const margins = { top: 15, left: 15, right: 15, bottom: 15 };
+        const margins = { top: 25, left: 20, right: 20, bottom: 25 };
         let currentY = margins.top;
         
         // Calcular estatísticas dos dados reais
         const totalRelatorios = dadosReais?.length || 0;
         const totalApontamentos = apontamentosData?.length || 0;
         const apontamentosCriticos = apontamentosData?.filter(a => a.criticidade === 'critica').length || 0;
-        // Buscar projetos ativos (em_andamento, em_execucao, iniciado, aprovado)
+        const apontamentosAltos = apontamentosData?.filter(a => a.criticidade === 'alta').length || 0;
+        const apontamentosMedios = apontamentosData?.filter(a => a.criticidade === 'media').length || 0;
+        const apontamentosBaixos = apontamentosData?.filter(a => a.criticidade === 'baixa').length || 0;
+        
         const projetosAtivos = projetosData?.filter(p => 
           ['em_andamento', 'em_execucao', 'iniciado', 'aprovado'].includes(p.status)
         ).length || 0;
-        const ultimosRelatorios = dadosReais?.slice(0, 5) || [];
-        const apontamentosRecentes = apontamentosData?.slice(0, 8) || [];
+        const projetosConcluidos = projetosData?.filter(p => p.status === 'concluido').length || 0;
+        
+        const planosAcaoAbertos = planosAcaoData?.filter(p => 
+          ['pendente', 'em_andamento'].includes(p.status)
+        ).length || 0;
+        const planosAcaoImplementados = planosAcaoData?.filter(p => p.status === 'implementado').length || 0;
+        
+        // Calcular scores de compliance e eficiência
+        const complianceScore = totalApontamentos > 0 
+          ? Math.round(((totalApontamentos - apontamentosCriticos - apontamentosAltos) / totalApontamentos) * 100)
+          : 95;
+        const eficienciaScore = projetosData?.length > 0
+          ? Math.round((projetosConcluidos / projetosData.length) * 100)
+          : 85;
         
         console.log('📄 [DEBUG] Estatísticas calculadas:', {
-          totalRelatorios,
-          totalApontamentos,
-          apontamentosCriticos,
-          projetosAtivos,
-          statusProjetos: projetosData?.map(p => p.status) || []
+          totalRelatorios, totalApontamentos, apontamentosCriticos, apontamentosAltos,
+          projetosAtivos, projetosConcluidos, planosAcaoAbertos, complianceScore, eficienciaScore
         });
         
         // Função para adicionar nova página se necessário
         const checkPageBreak = (requiredSpace) => {
           if (currentY + requiredSpace > pageHeight - margins.bottom) {
             doc.addPage();
-            currentY = margins.top;
+            addHeader();
             return true;
           }
           return false;
         };
         
-        // Função para adicionar cabeçalho compacto
+        // Função para adicionar cabeçalho PROFISSIONAL
         const addHeader = () => {
-          // Linha superior azul mais fina
-          doc.setFillColor(52, 152, 219);
-          doc.rect(0, 0, pageWidth, 5, 'F');
+          currentY = margins.top;
           
-          // Logo/Título da empresa compacto
-          doc.setFontSize(12);
+          // Faixa superior corporativa
+          doc.setFillColor(25, 47, 89); // Azul corporativo escuro
+          doc.rect(0, 0, pageWidth, 12, 'F');
+          
+          // Logo/Título da empresa PROFISSIONAL
+          doc.setFontSize(16);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(52, 152, 219);
-          doc.text('AUDITORIA INTERNA', margins.left, 18);
+          doc.setTextColor(255, 255, 255);
+          doc.text('AUDITORIA INTERNA', margins.left, 8);
           
+          // Subtítulo corporativo
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.text('DEPARTAMENTO DE AUDITORIA INTERNA E COMPLIANCE', margins.left, 20);
+          
+          // Data e hora no canto direito
+          const agora = new Date();
+          const dataHora = `${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(8);
+          doc.text(dataHora, pageWidth - margins.right - 35, 20);
+          
+          // Linha separadora elegante
+          doc.setDrawColor(25, 47, 89);
+          doc.setLineWidth(0.8);
+          doc.line(margins.left, 25, pageWidth - margins.right, 25);
+          
+          // Linha secundária mais fina
+          doc.setDrawColor(180, 180, 180);
+          doc.setLineWidth(0.3);
+          doc.line(margins.left, 27, pageWidth - margins.right, 27);
+          
+          currentY = 35;
+        };
+        
+        // Função para adicionar rodapé PROFISSIONAL
+        const addFooter = (pageNum, totalPages) => {
+          // Linha superior do rodapé
+          doc.setDrawColor(180, 180, 180);
+          doc.setLineWidth(0.3);
+          doc.line(margins.left, pageHeight - 20, pageWidth - margins.right, pageHeight - 20);
+          
+          // Informações do rodapé
           doc.setFontSize(8);
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(100, 100, 100);
-          doc.text('Sistema GRC', margins.left, 24);
           
-          // Data no canto direito
-          doc.text(new Date().toLocaleDateString('pt-BR'), pageWidth - margins.right - 25, 18);
+          // Classificação de confidencialidade
+          doc.setFont('helvetica', 'bold');
+          doc.text('CONFIDENCIAL - USO RESTRITO', margins.left, pageHeight - 15);
           
-          // Linha separadora mais fina
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.line(margins.left, 26, pageWidth - margins.right, 26);
-          
-          currentY = 32;
-        };
-        
-        // Função para adicionar rodapé compacto
-        const addFooter = (pageNum, totalPages) => {
-          doc.setFontSize(7);
+          // Numeração de páginas
           doc.setFont('helvetica', 'normal');
-          doc.setTextColor(150, 150, 150);
+          doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth - margins.right - 25, pageHeight - 15);
           
-          // Linha superior do rodapé mais fina
-          doc.setDrawColor(200, 200, 200);
-          doc.line(margins.left, pageHeight - 12, pageWidth - margins.right, pageHeight - 12);
+          // Data de geração
+          doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, pageWidth / 2 - 20, pageHeight - 15);
           
-          // Texto do rodapé compacto
-          doc.text('Confidencial', margins.left, pageHeight - 8);
-          doc.text(`${pageNum}/${totalPages}`, pageWidth - margins.right - 15, pageHeight - 8);
+          // Assinatura digital (simulada)
+          doc.setFontSize(7);
+          doc.setTextColor(120, 120, 120);
+          doc.text('Documento gerado eletronicamente - Válido sem assinatura física', margins.left, pageHeight - 10);
         };
         
-        // PÁGINA ÚNICA - CONTEÚDO COMPLETO ULTRA-COMPACTO
+        // ===== PÁGINA 1: CAPA E RESUMO EXECUTIVO =====
         addHeader();
         
-        // Título principal compacto
-        doc.setFontSize(14);
+        // TÍTULO PRINCIPAL PROFISSIONAL
+        checkPageBreak(30);
+        doc.setFontSize(20);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 152, 219);
+        doc.setTextColor(25, 47, 89);
         const titleLines = doc.splitTextToSize(relatorio.titulo, pageWidth - margins.left - margins.right);
         titleLines.forEach((line, index) => {
-          doc.text(line, margins.left, currentY + (index * 5));
+          doc.text(line, margins.left, currentY + (index * 8));
         });
-        currentY += titleLines.length * 5 + 6;
+        currentY += titleLines.length * 8 + 15;
         
-        // Informações básicas em linha
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        const tipoFormatado = reportInfo.name || `Relatório ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
-        doc.text(`${tipoFormatado} | ID: ${relatorio.id.substring(0, 8)} | Status: ${relatorio.status.toUpperCase()}`, margins.left, currentY);
-        currentY += 8;
+        // CAIXA DE INFORMAÇÕES EXECUTIVAS
+        checkPageBreak(40);
+        doc.setFillColor(245, 248, 252); // Fundo azul muito claro
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(0.5);
+        doc.rect(margins.left, currentY, pageWidth - margins.left - margins.right, 35, 'FD');
         
-        // ESTATÍSTICAS GERAIS (2 colunas)
-        checkPageBreak(25);
-        doc.setFontSize(10);
+        // Informações básicas do relatório
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 152, 219);
-        doc.text('ESTATÍSTICAS GERAIS', margins.left, currentY);
-        currentY += 6;
+        doc.setTextColor(25, 47, 89);
+        doc.text('INFORMAÇÕES DO RELATÓRIO', margins.left + 5, currentY + 8);
         
-        doc.setFontSize(8);
+        doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(60, 60, 60);
         
-        // Coluna 1
-        const col1X = margins.left;
-        const col2X = margins.left + 90;
-        
-        doc.text(`Total de Relatórios: ${totalRelatorios}`, col1X, currentY);
-        doc.text(`Projetos Ativos: ${projetosAtivos}`, col2X, currentY);
-        currentY += 4;
-        
-        doc.text(`Total de Apontamentos: ${totalApontamentos}`, col1X, currentY);
-        doc.text(`Apontamentos Críticos: ${apontamentosCriticos}`, col2X, currentY);
-        currentY += 8;
-        
-        // RESUMO EXECUTIVO compacto
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 152, 219);
-        doc.text('RESUMO EXECUTIVO', margins.left, currentY);
-        currentY += 6;
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(60, 60, 60);
-        const resumoLines = doc.splitTextToSize(relatorio.resumo_executivo, pageWidth - margins.left - margins.right);
-        resumoLines.forEach((line) => {
-          checkPageBreak(4);
-          doc.text(line, margins.left, currentY);
-          currentY += 4;
-        });
-        currentY += 6;
-        
-        // ÚLTIMOS RELATÓRIOS (dados reais)
-        if (ultimosRelatorios.length > 0) {
-          checkPageBreak(20);
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(52, 152, 219);
-          doc.text('ÚLTIMOS RELATÓRIOS', margins.left, currentY);
-          currentY += 6;
-          
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(60, 60, 60);
-          
-          ultimosRelatorios.forEach((rel, index) => {
-            if (index < 4) { // Limitar a 4 para economizar espaço
-              checkPageBreak(4);
-              const dataRel = new Date(rel.created_at).toLocaleDateString('pt-BR');
-              const titulo = rel.titulo.length > 50 ? rel.titulo.substring(0, 50) + '...' : rel.titulo;
-              doc.text(`• ${titulo} (${dataRel})`, margins.left + 2, currentY);
-              currentY += 3.5;
-            }
-          });
-          currentY += 4;
-        }
-        
-        // APONTAMENTOS RECENTES (dados reais)
-        if (apontamentosRecentes.length > 0) {
-          checkPageBreak(20);
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(52, 152, 219);
-          doc.text('APONTAMENTOS RECENTES', margins.left, currentY);
-          currentY += 6;
-          
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(60, 60, 60);
-          
-          apontamentosRecentes.slice(0, 6).forEach((apt, index) => {
-            checkPageBreak(4);
-            const criticidade = apt.criticidade || 'media';
-            const cor = criticidade === 'critica' ? [220, 53, 69] : 
-                       criticidade === 'alta' ? [255, 193, 7] : [40, 167, 69];
-            
-            doc.setTextColor(...cor);
-            doc.text('•', margins.left + 2, currentY);
-            doc.setTextColor(60, 60, 60);
-            
-            const descricao = apt.descricao?.length > 60 ? apt.descricao.substring(0, 60) + '...' : apt.descricao || 'Sem descrição';
-            doc.text(`${descricao} [${criticidade.toUpperCase()}]`, margins.left + 8, currentY);
-            currentY += 3.5;
-          });
-          currentY += 4;
-        }
-        
-        // PROJETOS EM ANDAMENTO (dados reais)
-        if (projetosData && projetosData.length > 0) {
-          checkPageBreak(20);
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(52, 152, 219);
-          doc.text('PROJETOS ATIVOS', margins.left, currentY);
-          currentY += 6;
-          
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(60, 60, 60);
-          
-          // Filtrar projetos ativos com status corretos
-          const projetosAtivosLista = projetosData.filter(p => 
-            ['em_andamento', 'em_execucao', 'iniciado', 'aprovado'].includes(p.status)
-          ).slice(0, 4);
-          
-          console.log('📄 [DEBUG] Projetos ativos encontrados:', {
-            total: projetosData.length,
-            ativos: projetosAtivosLista.length,
-            statusDisponiveis: projetosData.map(p => p.status),
-            projetosAtivos: projetosAtivosLista.map(p => ({ titulo: p.titulo, status: p.status }))
-          });
-          
-          if (projetosAtivosLista.length > 0) {
-            projetosAtivosLista.forEach((proj, index) => {
-              checkPageBreak(4);
-              const titulo = proj.titulo?.length > 55 ? proj.titulo.substring(0, 55) + '...' : proj.titulo || 'Sem título';
-              const tipo = proj.tipo_auditoria || proj.tipo || 'Geral';
-              const status = proj.status || 'N/A';
-              doc.text(`• ${titulo} [${tipo} - ${status.toUpperCase()}]`, margins.left + 2, currentY);
-              currentY += 3.5;
-            });
-          } else {
-            doc.text('• Nenhum projeto ativo encontrado', margins.left + 2, currentY);
-            currentY += 3.5;
-          }
-          currentY += 4;
-        }
-        
-        // RECOMENDAÇÕES PRINCIPAIS
-        checkPageBreak(15);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 152, 219);
-        doc.text('RECOMENDAÇÕES PRINCIPAIS', margins.left, currentY);
-        currentY += 6;
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(60, 60, 60);
-        
-        const recomendacoes = [
-          'Fortalecer controles internos nos processos críticos identificados',
-          'Implementar monitoramento contínuo dos indicadores de risco',
-          'Capacitar equipes sobre políticas e procedimentos atualizados',
-          'Estabelecer cronograma de acompanhamento das ações corretivas'
+        const infoItems = [
+          `Código: ${relatorio.id.substring(0, 8).toUpperCase()}`,
+          `Tipo: ${reportInfo.name}`,
+          `Status: ${relatorio.status.toUpperCase()}`,
+          `Autor: ${user?.email || 'Sistema'}`,
+          `Data de Emissão: ${new Date().toLocaleDateString('pt-BR')}`,
+          `Classificação: CONFIDENCIAL`,
+          `Versão: 1.0`
         ];
         
-        recomendacoes.forEach((recomendacao, index) => {
-          checkPageBreak(4);
-          doc.text(`${index + 1}. ${recomendacao}`, margins.left + 2, currentY);
-          currentY += 4;
+        const col1Items = infoItems.slice(0, 4);
+        const col2Items = infoItems.slice(4);
+        
+        col1Items.forEach((item, index) => {
+          doc.text(`• ${item}`, margins.left + 8, currentY + 15 + (index * 4));
         });
-        currentY += 6;
         
-        // CONCLUSÃO
-        checkPageBreak(15);
-        doc.setFontSize(10);
+        col2Items.forEach((item, index) => {
+          doc.text(`• ${item}`, margins.left + 100, currentY + 15 + (index * 4));
+        });
+        
+        currentY += 45;
+        
+        // RESUMO EXECUTIVO PROFISSIONAL
+        checkPageBreak(30);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(52, 152, 219);
-        doc.text('CONCLUSÃO', margins.left, currentY);
-        currentY += 6;
+        doc.setTextColor(25, 47, 89);
+        doc.text('RESUMO EXECUTIVO', margins.left, currentY);
+        currentY += 10;
         
-        doc.setFontSize(8);
+        // Linha decorativa sob o título
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(1);
+        doc.line(margins.left, currentY - 5, margins.left + 50, currentY - 5);
+        
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(60, 60, 60);
         
-        const conclusaoTexto = `Este relatório ${tipo} apresenta ${totalApontamentos} apontamentos identificados, sendo ${apontamentosCriticos} de criticidade alta. As recomendações propostas visam fortalecer o ambiente de controle. Recomenda-se acompanhamento trimestral da implementação das ações corretivas.`;
-        const conclusaoLines = doc.splitTextToSize(conclusaoTexto, pageWidth - margins.left - margins.right);
-        conclusaoLines.forEach((line) => {
-          checkPageBreak(4);
+        const resumoExecutivo = tipo === 'executivo' 
+          ? `Este relatório executivo apresenta uma análise abrangente dos controles internos e processos de governança da organização. Durante o período analisado, foram identificados ${totalApontamentos} pontos de atenção, sendo ${apontamentosCriticos} de criticidade alta que requerem ação imediata da administração. O índice de compliance atual é de ${complianceScore}%, demonstrando um ambiente de controle adequado com oportunidades de melhoria específicas. As recomendações apresentadas visam fortalecer a estrutura de governança e mitigar os riscos identificados.`
+          : relatorio.resumo_executivo;
+        
+        const resumoLines = doc.splitTextToSize(resumoExecutivo, pageWidth - margins.left - margins.right);
+        resumoLines.forEach((line) => {
+          checkPageBreak(5);
           doc.text(line, margins.left, currentY);
-          currentY += 4;
+          currentY += 5;
         });
+        currentY += 15;
+        
+        // PRINCIPAIS INDICADORES - DASHBOARD EXECUTIVO
+        checkPageBreak(50);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 47, 89);
+        doc.text('PRINCIPAIS INDICADORES', margins.left, currentY);
+        currentY += 10;
+        
+        // Linha decorativa
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(1);
+        doc.line(margins.left, currentY - 5, margins.left + 60, currentY - 5);
+        
+        // Grid de indicadores profissionais
+        const indicadores = [
+          { label: 'Total de Apontamentos', valor: totalApontamentos.toString(), cor: [52, 152, 219] },
+          { label: 'Apontamentos Críticos', valor: apontamentosCriticos.toString(), cor: [231, 76, 60] },
+          { label: 'Compliance Score', valor: `${complianceScore}%`, cor: [46, 204, 113] },
+          { label: 'Eficiência Score', valor: `${eficienciaScore}%`, cor: [155, 89, 182] },
+          { label: 'Projetos Ativos', valor: projetosAtivos.toString(), cor: [241, 196, 15] },
+          { label: 'Planos de Ação Abertos', valor: planosAcaoAbertos.toString(), cor: [230, 126, 34] }
+        ];
+        
+        // Desenhar caixas de indicadores
+        indicadores.forEach((indicador, index) => {
+          const col = index % 3;
+          const row = Math.floor(index / 3);
+          const x = margins.left + (col * 55);
+          const y = currentY + (row * 25);
+          
+          // Caixa do indicador
+          doc.setFillColor(250, 250, 250);
+          doc.setDrawColor(...indicador.cor);
+          doc.setLineWidth(0.8);
+          doc.rect(x, y, 50, 20, 'FD');
+          
+          // Valor do indicador
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...indicador.cor);
+          doc.text(indicador.valor, x + 25, y + 8, { align: 'center' });
+          
+          // Label do indicador
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 80, 80);
+          const labelLines = doc.splitTextToSize(indicador.label, 48);
+          labelLines.forEach((line, lineIndex) => {
+            doc.text(line, x + 25, y + 13 + (lineIndex * 3), { align: 'center' });
+          });
+        });
+        
+        currentY += 60;
+        
+        // ANÁLISE DE RISCOS E CONTROLES
+        checkPageBreak(40);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 47, 89);
+        doc.text('ANÁLISE DE RISCOS E CONTROLES', margins.left, currentY);
+        currentY += 10;
+        
+        // Linha decorativa
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(1);
+        doc.line(margins.left, currentY - 5, margins.left + 80, currentY - 5);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        
+        // Distribuição de apontamentos por criticidade
+        const distribuicaoTexto = `A análise dos controles internos revelou uma distribuição de apontamentos que reflete o estado atual da governança organizacional: ${apontamentosCriticos} apontamentos críticos (${totalApontamentos > 0 ? Math.round((apontamentosCriticos/totalApontamentos)*100) : 0}%), ${apontamentosAltos} de alta prioridade (${totalApontamentos > 0 ? Math.round((apontamentosAltos/totalApontamentos)*100) : 0}%), ${apontamentosMedios} de média prioridade e ${apontamentosBaixos} de baixa prioridade. Esta distribuição indica ${apontamentosCriticos > 0 ? 'a necessidade de ações corretivas imediatas' : 'um ambiente de controle adequado'} nos processos auditados.`;
+        
+        const distribuicaoLines = doc.splitTextToSize(distribuicaoTexto, pageWidth - margins.left - margins.right);
+        distribuicaoLines.forEach((line) => {
+          checkPageBreak(5);
+          doc.text(line, margins.left, currentY);
+          currentY += 5;
+        });
+        currentY += 10;
+        
+        // PRINCIPAIS APONTAMENTOS CRÍTICOS
+        if (apontamentosCriticos > 0 && apontamentosData?.length > 0) {
+          checkPageBreak(30);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(231, 76, 60);
+          doc.text('APONTAMENTOS CRÍTICOS - AÇÃO IMEDIATA REQUERIDA', margins.left, currentY);
+          currentY += 8;
+          
+          const apontamentosCriticosLista = apontamentosData.filter(a => a.criticidade === 'critica').slice(0, 3);
+          
+          apontamentosCriticosLista.forEach((apontamento, index) => {
+            checkPageBreak(15);
+            
+            // Caixa de destaque para apontamento crítico
+            doc.setFillColor(254, 242, 242);
+            doc.setDrawColor(231, 76, 60);
+            doc.setLineWidth(0.5);
+            doc.rect(margins.left, currentY, pageWidth - margins.left - margins.right, 12, 'FD');
+            
+            // Número e título do apontamento
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(231, 76, 60);
+            doc.text(`${index + 1}. ${apontamento.titulo || 'Apontamento Crítico'}`, margins.left + 3, currentY + 5);
+            
+            // Descrição resumida
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(80, 80, 80);
+            const descricao = apontamento.descricao?.length > 100 
+              ? apontamento.descricao.substring(0, 100) + '...'
+              : apontamento.descricao || 'Descrição não disponível';
+            doc.text(descricao, margins.left + 3, currentY + 9);
+            
+            currentY += 15;
+          });
+          
+          currentY += 5;
+        }
+        
+        // NOVA PÁGINA PARA RECOMENDAÇÕES E CONCLUSÕES
+        doc.addPage();
+        addHeader();
+        
+        // PRINCIPAIS RECOMENDAÇÕES
+        checkPageBreak(30);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 47, 89);
+        doc.text('PRINCIPAIS RECOMENDAÇÕES', margins.left, currentY);
+        currentY += 10;
+        
+        // Linha decorativa
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(1);
+        doc.line(margins.left, currentY - 5, margins.left + 70, currentY - 5);
+        
+        const recomendacoesProfissionais = [
+          {
+            titulo: 'Fortalecimento dos Controles Internos',
+            descricao: 'Implementar controles automatizados nos processos críticos identificados, com foco na segregação de funções e aprovações hierárquicas.',
+            prioridade: 'ALTA',
+            prazo: '90 dias'
+          },
+          {
+            titulo: 'Programa de Monitoramento Contínuo',
+            descricao: 'Estabelecer indicadores de performance e dashboards executivos para monitoramento em tempo real dos controles implementados.',
+            prioridade: 'MÉDIA',
+            prazo: '120 dias'
+          },
+          {
+            titulo: 'Capacitação e Treinamento',
+            descricao: 'Desenvolver programa de capacitação para colaboradores sobre políticas, procedimentos e controles internos atualizados.',
+            prioridade: 'MÉDIA',
+            prazo: '180 dias'
+          },
+          {
+            titulo: 'Governança e Compliance',
+            descricao: 'Estruturar comitê de governança para acompanhamento sistemático da implementação das recomendações e monitoramento de riscos.',
+            prioridade: 'ALTA',
+            prazo: '60 dias'
+          }
+        ];
+        
+        recomendacoesProfissionais.forEach((recomendacao, index) => {
+          checkPageBreak(20);
+          
+          // Caixa da recomendação
+          const corPrioridade = recomendacao.prioridade === 'ALTA' ? [231, 76, 60] : [241, 196, 15];
+          doc.setFillColor(248, 249, 250);
+          doc.setDrawColor(...corPrioridade);
+          doc.setLineWidth(0.8);
+          doc.rect(margins.left, currentY, pageWidth - margins.left - margins.right, 18, 'FD');
+          
+          // Título da recomendação
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(25, 47, 89);
+          doc.text(`${index + 1}. ${recomendacao.titulo}`, margins.left + 3, currentY + 6);
+          
+          // Prioridade e prazo
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(...corPrioridade);
+          doc.text(`PRIORIDADE: ${recomendacao.prioridade} | PRAZO: ${recomendacao.prazo}`, pageWidth - margins.right - 60, currentY + 6);
+          
+          // Descrição
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(60, 60, 60);
+          const descLines = doc.splitTextToSize(recomendacao.descricao, pageWidth - margins.left - margins.right - 6);
+          descLines.slice(0, 2).forEach((line, lineIndex) => {
+            doc.text(line, margins.left + 3, currentY + 10 + (lineIndex * 4));
+          });
+          
+          currentY += 22;
+        });
+        
+        // CONCLUSÃO EXECUTIVA
+        checkPageBreak(25);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 47, 89);
+        doc.text('CONCLUSÃO EXECUTIVA', margins.left, currentY);
+        currentY += 10;
+        
+        // Linha decorativa
+        doc.setDrawColor(25, 47, 89);
+        doc.setLineWidth(1);
+        doc.line(margins.left, currentY - 5, margins.left + 55, currentY - 5);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        
+        const conclusaoExecutiva = `Com base na análise realizada, a organização apresenta um ambiente de controle ${complianceScore >= 80 ? 'adequado' : 'que requer melhorias'} com índice de compliance de ${complianceScore}%. Os ${totalApontamentos} apontamentos identificados, sendo ${apontamentosCriticos} críticos, ${apontamentosAltos} altos, ${apontamentosMedios} médios e ${apontamentosBaixos} baixos, refletem oportunidades específicas de fortalecimento dos controles internos. A implementação das recomendações propostas, com foco prioritário nos itens críticos e de alta prioridade, resultará em significativa melhoria do ambiente de governança e redução dos riscos operacionais. Recomenda-se o acompanhamento trimestral do plano de ação para assegurar a efetiva implementação das melhorias propostas.`;
+        
+        const conclusaoLines = doc.splitTextToSize(conclusaoExecutiva, pageWidth - margins.left - margins.right);
+        conclusaoLines.forEach((line) => {
+          checkPageBreak(5);
+          doc.text(line, margins.left, currentY);
+          currentY += 5;
+        });
+        currentY += 15;
+        
+        // ASSINATURA E RESPONSABILIDADES
+        checkPageBreak(25);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(25, 47, 89);
+        doc.text('RESPONSABILIDADES E APROVAÇÕES', margins.left, currentY);
+        currentY += 10;
+        
+        // Caixa de assinaturas
+        doc.setFillColor(248, 249, 250);
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.5);
+        doc.rect(margins.left, currentY, pageWidth - margins.left - margins.right, 20, 'FD');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        
+        doc.text('Elaborado por: Departamento de Auditoria Interna', margins.left + 5, currentY + 6);
+        doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, margins.left + 5, currentY + 10);
+        doc.text('Aprovado por: ________________________', margins.left + 5, currentY + 16);
+        
+        doc.text('Revisado por: Gerência de Auditoria', pageWidth - margins.right - 60, currentY + 6);
+        doc.text('Status: CONFIDENCIAL', pageWidth - margins.right - 60, currentY + 10);
+        doc.text('Distribuição: Restrita', pageWidth - margins.right - 60, currentY + 16);
         
         // Adicionar rodapés em todas as páginas
         const totalPages = doc.internal.pages.length - 1;
@@ -906,12 +1421,14 @@ export function AuditoriasDashboard() {
           addFooter(i, totalPages);
         }
         
-        console.log('📄 [DEBUG] Salvando PDF profissional...');
-        const fileName = `Relatorio_${tipo}_${new Date().toISOString().split('T')[0]}_${relatorio.id.substring(0, 8)}.pdf`;
+        console.log('📄 [DEBUG] Salvando PDF PROFISSIONAL...');
+        const fileName = `Relatorio_Executivo_${new Date().toISOString().split('T')[0]}_${relatorio.id.substring(0, 8)}.pdf`;
         doc.save(fileName);
         
-        console.log('✅ [DEBUG] PDF profissional gerado e baixado com sucesso!');
-        toast.success('Relatório profissional em PDF baixado automaticamente!');
+        console.log('✅ [DEBUG] PDF PROFISSIONAL gerado e baixado com sucesso!');
+        toast.success('Relatório Executivo Profissional gerado com sucesso!', {
+          description: 'Documento formatado com padrões corporativos de auditoria'
+        });
         
       } catch (pdfError) {
         console.error('❌ [DEBUG] Erro ao gerar PDF:', pdfError);
@@ -1289,6 +1806,103 @@ export function AuditoriasDashboard() {
               </Card>
             </div>
 
+            {/* Seleção de Projeto para Relatório */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Gerar Relatório de Projeto de Auditoria</CardTitle>
+                <CardDescription>
+                  Selecione um projeto de auditoria para gerar o relatório executivo detalhado
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Seletor de Projeto */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Projeto de Auditoria</Label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um projeto..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {auditProjects.map((projeto) => (
+                            <SelectItem key={projeto.id} value={projeto.id}>
+                              {projeto.codigo} - {projeto.titulo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <Label>Tipo de Relatório</Label>
+                      <Select defaultValue="executivo">
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="executivo">Relatório Executivo</SelectItem>
+                          <SelectItem value="tecnico">Relatório Técnico</SelectItem>
+                          <SelectItem value="seguimento">Relatório de Follow-up</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {/* Lista de Projetos Disponíveis */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm">Projetos Disponíveis para Relatório:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {auditProjects.slice(0, 6).map((projeto) => (
+                        <Card key={projeto.id} className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                                <FileText className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-xs">{projeto.codigo}</h5>
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{projeto.titulo}</p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <Badge className={getStatusColor(projeto.status)} variant="secondary">
+                                    {projeto.status.replace('_', ' ')}
+                                  </Badge>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={() => {
+                                      console.log('💆 [DEBUG] Botão RELATÓRIO clicado para projeto:', projeto.id);
+                                      handleCreateProjectReport(projeto);
+                                    }}
+                                    disabled={generatingReport}
+                                  >
+                                    {generatingReport ? 'Gerando...' : 'Gerar'}
+                                  </Button>
+                                </div>
+                                <div className="mt-2">
+                                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                    <span>Progresso</span>
+                                    <span>{projeto.progresso}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div 
+                                      className="bg-blue-600 h-1.5 rounded-full" 
+                                      style={{ width: `${projeto.progresso}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
             {/* Tipos de Relatórios Disponíveis */}
             <Card>
               <CardHeader>
@@ -1316,11 +1930,11 @@ export function AuditoriasDashboard() {
                               variant="ghost" 
                               onClick={() => {
                                 console.log('💆 [DEBUG] Botão EXECUTIVO clicado!');
-                                handleCreateReportByType('executivo');
+                                toast.info('Selecione um projeto específico acima para gerar o relatório executivo');
                               }}
                               disabled={generatingReport}
                             >
-                              {generatingReport ? 'Criando...' : 'Criar'}
+                              Selecionar Projeto
                             </Button>
                           </div>
                         </div>
