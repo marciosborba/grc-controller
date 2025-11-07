@@ -120,9 +120,6 @@ export function AuditoriasDashboard() {
   const [trabalhos, setTrabalhos] = useState<TrabalhoAuditoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('overview');
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState('');
-  const [selectedFormat, setSelectedFormat] = useState('pdf');
   const [generatingReport, setGeneratingReport] = useState(false);
   const [relatoriosData, setRelatoriosData] = useState({
     total: 0,
@@ -416,195 +413,9 @@ export function AuditoriasDashboard() {
     }
   };
 
-  // Definição dos tipos de relatórios disponíveis
-  const reportTypes = [
-    {
-      id: 'audit_universe_summary',
-      name: 'Resumo do Universo Auditável',
-      description: 'Relatório completo dos processos auditáveis e níveis de risco',
-      icon: Target
-    },
-    {
-      id: 'audit_projects_status',
-      name: 'Status dos Projetos de Auditoria',
-      description: 'Relatório detalhado do andamento dos projetos',
-      icon: ClipboardList
-    },
-    {
-      id: 'risk_assessment_report',
-      name: 'Relatório de Avaliação de Riscos',
-      description: 'Análise consolidada dos riscos identificados',
-      icon: AlertTriangle
-    },
-    {
-      id: 'audit_plan_compliance',
-      name: 'Conformidade do Plano de Auditoria',
-      description: 'Acompanhamento da execução do plano anual',
-      icon: CheckCircle
-    },
-    {
-      id: 'working_papers_summary',
-      name: 'Resumo dos Papéis de Trabalho',
-      description: 'Consolidação das evidências coletadas',
-      icon: FileText
-    },
-    {
-      id: 'executive_dashboard',
-      name: 'Dashboard Executivo',
-      description: 'Visão gerencial com KPIs e métricas principais',
-      icon: BarChart3
-    }
-  ];
 
-  // Função para gerar relatórios
-  const handleGenerateReport = async () => {
-    if (!selectedReportType) {
-      toast.error('Selecione um tipo de relatório');
-      return;
-    }
 
-    const currentEffectiveTenantId = getEffectiveTenantId();
-    
-    if (!currentEffectiveTenantId) {
-      const errorMsg = user?.isPlatformAdmin 
-        ? 'Selecione uma organização no seletor de tenant no canto superior direito.'
-        : 'Erro: Tenant não identificado. Verifique se você está associado a uma organização.';
-      
-      toast.error(errorMsg);
-      return;
-    }
 
-    setGeneratingReport(true);
-    
-    secureLog('info', 'Iniciando geração de relatório', {
-      selectedReportType,
-      selectedFormat,
-      effectiveTenantId: currentEffectiveTenantId,
-      userId: user?.id
-    });
-    
-    try {
-      const reportInfo = reportTypes.find(r => r.id === selectedReportType);
-      
-      // Criar novo relatório no banco de dados
-      const novoRelatorio = {
-        tenant_id: currentEffectiveTenantId,
-        titulo: `${reportInfo?.name} - ${new Date().toLocaleDateString('pt-BR')}`,
-        tipo: selectedReportType,
-        resumo_executivo: `Relatório ${reportInfo?.name} gerado automaticamente em ${new Date().toLocaleDateString('pt-BR')}.`,
-        status: 'rascunho'
-      };
-      
-      // Adicionar campos opcionais se disponíveis
-      if (user?.id) {
-        novoRelatorio.autor_id = user.id;
-        novoRelatorio.created_by = user.id;
-      }
-
-      secureLog('info', 'Tentando inserir relatório', novoRelatorio);
-      
-      const { data: relatorio, error: relatorioError } = await supabase
-        .from('relatorios_auditoria')
-        .insert(novoRelatorio)
-        .select()
-        .single();
-
-      console.log('📊 [DEBUG] Resultado da inserção:', {
-        success: !relatorioError,
-        relatorio,
-        error: relatorioError
-      });
-
-      if (relatorioError) {
-        secureLog('error', 'Erro detalhado ao inserir relatório', {
-          error: relatorioError,
-          message: relatorioError.message,
-          details: relatorioError.details,
-          hint: relatorioError.hint,
-          code: relatorioError.code
-        });
-        throw relatorioError;
-      }
-
-      // Criar registro de exportação
-      const exportData = {
-        tenant_id: currentEffectiveTenantId,
-        relatorio_id: relatorio.id,
-        relatorio_titulo: relatorio.titulo,
-        formato: selectedFormat,
-        status: 'processando',
-        progresso: 0,
-        configuracao: {
-          formato: selectedFormat,
-          qualidade: 'alta',
-          incluir_anexos: true,
-          incluir_assinaturas: true
-        }
-      };
-      
-      // Adicionar campo opcional se disponível
-      if (user?.id) {
-        exportData.criado_por = user.id;
-      }
-
-      const { data: exportacao, error: exportError } = await supabase
-        .from('relatorios_exportacoes')
-        .insert(exportData)
-        .select()
-        .single();
-
-      if (exportError) {
-        throw exportError;
-      }
-
-      // Simular progresso de exportação
-      let progress = 0;
-      const progressInterval = setInterval(async () => {
-        progress += Math.random() * 25 + 10;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(progressInterval);
-          
-          // Finalizar exportação
-          await supabase
-            .from('relatorios_exportacoes')
-            .update({
-              status: 'concluido',
-              progresso: 100,
-              url_download: `/api/reports/download/${exportacao.id}`,
-              tamanho_arquivo: Math.floor(Math.random() * 5000000) + 1000000
-            })
-            .eq('id', exportacao.id);
-          
-          toast.success(`Relatório "${reportInfo?.name}" gerado com sucesso!`);
-          setGeneratingReport(false);
-          setReportDialogOpen(false);
-          setSelectedReportType('');
-          setSelectedFormat('pdf');
-          
-          // Recarregar dados
-          loadAuditData();
-          
-          // Log de sucesso
-          secureLog('info', 'Relatório criado com sucesso', {
-            relatorioId: relatorio.id,
-            tipo: selectedReportType,
-            formato: selectedFormat
-          });
-        } else {
-          await supabase
-            .from('relatorios_exportacoes')
-            .update({ progresso: Math.floor(progress) })
-            .eq('id', exportacao.id);
-        }
-      }, 500);
-      
-    } catch (error) {
-      secureLog('error', 'Erro ao gerar relatório', error);
-      toast.error('Erro ao gerar relatório. Tente novamente.');
-      setGeneratingReport(false);
-    }
-  };
 
   // Função para criar relatório de um tipo específico
   const handleCreateReportByType = async (tipo) => {
@@ -1123,31 +934,7 @@ export function AuditoriasDashboard() {
     }
   };
 
-  // Função para enviar relatório por email
-  const handleEmailReport = async () => {
-    if (!selectedReportType) {
-      toast.error('Selecione um tipo de relatório');
-      return;
-    }
 
-    setGeneratingReport(true);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const reportInfo = reportTypes.find(r => r.id === selectedReportType);
-      toast.success(`Relatório "${reportInfo?.name}" enviado por email!`);
-      
-      setReportDialogOpen(false);
-      setSelectedReportType('');
-      
-    } catch (error) {
-      secureLog('error', 'Erro ao enviar relatório por email', error);
-      toast.error('Erro ao enviar relatório por email.');
-    } finally {
-      setGeneratingReport(false);
-    }
-  };
 
   const calculateMetrics = () => {
     const totalProcesses = auditUniverse.length;
@@ -1303,153 +1090,18 @@ export function AuditoriasDashboard() {
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
 
-        <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-          <DialogTrigger asChild>
-            <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-              <CardContent className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
-                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-base sm:text-lg mb-2">📊 Relatórios Avançados</h3>
-                <p className="text-muted-foreground text-sm">Geração automática de relatórios em múltiplos formatos</p>
-              </CardContent>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-            </Card>
-          </DialogTrigger>
-          
-          <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-orange-600" />
-                Central de Relatórios de Auditoria
-              </DialogTitle>
-              <DialogDescription>
-                Selecione o tipo de relatório e formato para geração ou exportação
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-6">
-              {/* Seleção do Tipo de Relatório */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">Tipo de Relatório</label>
-                <div className="grid gap-3">
-                  {reportTypes.map((report) => {
-                    const IconComponent = report.icon;
-                    return (
-                      <Card 
-                        key={report.id}
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          selectedReportType === report.id ? 'ring-2 ring-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedReportType(report.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${
-                              selectedReportType === report.id ? 'bg-primary text-primary-foreground' : 'bg-muted'
-                            }`}>
-                              <IconComponent className="h-4 w-4" />
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm">{report.name}</h4>
-                              <p className="text-xs text-muted-foreground mt-1">{report.description}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Seleção do Formato */}
-              {selectedReportType && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Formato de Exportação</label>
-                  <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pdf">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-red-600" />
-                          PDF - Portable Document Format
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="excel">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-green-600" />
-                          Excel - Planilha eletrônica
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="csv">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          CSV - Valores separados por vírgula
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="png">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-purple-600" />
-                          PNG - Imagem do relatório
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Opções Avançadas */}
-              {selectedReportType && (
-                <div className="space-y-3">
-                  <label className="text-sm font-medium">Opções Avançadas</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" className="justify-start">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Filtros
-                    </Button>
-                    <Button variant="outline" size="sm" className="justify-start">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Período
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Botões de Ação */}
-              <div className="flex gap-3 pt-4 border-t">
-                <Button 
-                  onClick={handleGenerateReport}
-                  disabled={!selectedReportType || generatingReport}
-                  className="flex-1"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  {generatingReport ? 'Gerando...' : 'Gerar Relatório'}
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  onClick={handleEmailReport}
-                  disabled={!selectedReportType || generatingReport}
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email
-                </Button>
-                
-                <Button 
-                  variant="outline"
-                  disabled={!selectedReportType || generatingReport}
-                  onClick={() => toast.info('Função de impressão será implementada')}
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Imprimir
-                </Button>
-              </div>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('relatorios')}>
+          <CardContent className="p-6 relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </div>
-          </DialogContent>
-        </Dialog>
+            <h3 className="font-semibold text-base sm:text-lg mb-2">Relatórios</h3>
+            <p className="text-muted-foreground text-sm">Sistema profissional de relatórios de auditoria</p>
+          </CardContent>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+        </Card>
+
       </div>
 
       {/* Módulos Principais */}
