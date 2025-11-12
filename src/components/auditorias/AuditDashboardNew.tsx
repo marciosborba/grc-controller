@@ -437,7 +437,7 @@ export function AuditDashboardNew() {
             </CardContent>
           </Card>
         ) : (
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6' : 'space-y-4'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-6' : 'space-y-4'}>
             {filteredProjects.map((project) => (
               <AuditProjectCard
                 key={project.id}

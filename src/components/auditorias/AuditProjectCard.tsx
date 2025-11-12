@@ -24,7 +24,7 @@ import {
   Trash2,
   Copy
 } from 'lucide-react';
-import { AuditWorkflow } from './AuditWorkflow';
+import { AuditWorkflowFixed } from './AuditWorkflowFixed';
 
 interface AuditProject {
   id: string;
@@ -296,13 +296,13 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
                   isActive 
                     ? 'border-primary bg-primary/5' 
                     : isCompleted 
-                    ? 'border-green-500 bg-green-50' 
-                    : 'border-gray-200 bg-gray-50'
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border bg-muted'
                 }`}
               >
                 <div className="flex flex-col items-center text-center">
                   <IconComponent className={`h-5 w-5 mb-1 ${
-                    isActive ? 'text-primary' : isCompleted ? 'text-green-600' : 'text-gray-400'
+                    isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
                   }`} />
                   <span className="text-xs font-medium">{phase.name}</span>
                   <span className="text-xs text-muted-foreground">{Math.round(completeness)}%</span>
@@ -315,7 +315,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
         {/* Workflow Expandido */}
         {isExpanded && (
           <div className="border-t pt-6">
-            <AuditWorkflow 
+            <AuditWorkflowFixed 
               project={project}
               activePhase={activePhase}
               onPhaseChange={setActivePhase}

@@ -144,23 +144,23 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
 
   const getStatusColor = (status: string) => {
     const colors = {
-      pendente: 'bg-gray-100 text-gray-800',
-      em_andamento: 'bg-blue-100 text-blue-800',
-      implementado: 'bg-green-100 text-green-800',
-      verificado: 'bg-purple-100 text-purple-800',
-      atrasado: 'bg-red-100 text-red-800'
+      pendente: 'bg-muted text-muted-foreground',
+      em_andamento: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      implementado: 'bg-primary/10 text-primary',
+      verificado: 'bg-primary/20 text-primary',
+      atrasado: 'bg-destructive/10 text-destructive'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-muted text-muted-foreground';
   };
 
   const getPriorityColor = (priority: string) => {
     const colors = {
-      baixa: 'bg-green-100 text-green-800',
-      media: 'bg-yellow-100 text-yellow-800',
-      alta: 'bg-orange-100 text-orange-800',
-      critica: 'bg-red-100 text-red-800'
+      baixa: 'bg-muted text-muted-foreground',
+      media: 'bg-secondary text-secondary-foreground',
+      alta: 'bg-primary/10 text-primary',
+      critica: 'bg-destructive/10 text-destructive'
     };
-    return colors[priority] || 'bg-gray-100 text-gray-800';
+    return colors[priority] || 'bg-muted text-muted-foreground';
   };
 
   const getStatusIcon = (status: string) => {
@@ -255,10 +255,10 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Implementados</p>
-                  <p className="text-2xl font-bold text-green-600">{summary.implementados}</p>
+                  <p className="text-2xl font-bold text-primary">{summary.implementados}</p>
                 </div>
               </div>
             </CardContent>
@@ -279,10 +279,10 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTriangle className="h-5 w-5 text-destructive" />
                 <div>
                   <p className="text-sm text-muted-foreground">Atrasados</p>
-                  <p className="text-2xl font-bold text-red-600">{summary.atrasados}</p>
+                  <p className="text-2xl font-bold text-destructive">{summary.atrasados}</p>
                 </div>
               </div>
             </CardContent>
@@ -291,10 +291,10 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
+                <BarChart3 className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Taxa de Implementação</p>
-                  <p className="text-2xl font-bold text-purple-600">{summary.taxa_implementacao}%</p>
+                  <p className="text-2xl font-bold text-primary">{summary.taxa_implementacao}%</p>
                 </div>
               </div>
             </CardContent>
@@ -314,14 +314,14 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
                   placeholder="Buscar planos de ação..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full px-3 py-2 border rounded-md"
+                  className="pl-10 w-full px-3 py-2 border rounded-md bg-background text-foreground border-border"
                 />
               </div>
               
               <select 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border rounded-md"
+                className="px-3 py-2 border rounded-md bg-background text-foreground border-border"
               >
                 <option value="all">Todos os Status</option>
                 <option value="pendente">Pendente</option>
@@ -334,7 +334,7 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
               <select 
                 value={filterPriority} 
                 onChange={(e) => setFilterPriority(e.target.value)}
-                className="px-3 py-2 border rounded-md"
+                className="px-3 py-2 border rounded-md bg-background text-foreground border-border"
               >
                 <option value="all">Todas as Prioridades</option>
                 <option value="critica">Crítica</option>
@@ -383,10 +383,10 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
                         <StatusIcon className={`h-5 w-5 mt-1 ${
-                          plan.status === 'implementado' || plan.status === 'verificado' ? 'text-green-600' :
-                          plan.status === 'atrasado' ? 'text-red-600' :
-                          plan.status === 'em_andamento' ? 'text-blue-600' :
-                          'text-gray-600'
+                          plan.status === 'implementado' || plan.status === 'verificado' ? 'text-primary' :
+                          plan.status === 'atrasado' ? 'text-destructive' :
+                          plan.status === 'em_andamento' ? 'text-primary' :
+                          'text-muted-foreground'
                         }`} />
                         <div>
                           <CardTitle className="text-base">{plan.codigo}</CardTitle>
@@ -431,9 +431,9 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
                         <div>
                           <p className="text-muted-foreground">Prazo</p>
                           <p className={`font-medium ${
-                            daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'text-red-600' :
-                            daysUntilDeadline !== null && daysUntilDeadline < 7 ? 'text-yellow-600' :
-                            'text-green-600'
+                            daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'text-destructive' :
+                            daysUntilDeadline !== null && daysUntilDeadline < 7 ? 'text-primary' :
+                            'text-muted-foreground'
                           }`}>
                             {daysUntilDeadline !== null ? (
                               daysUntilDeadline < 0 ? `${Math.abs(daysUntilDeadline)} dias atrasado` :
@@ -481,7 +481,7 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle className={`h-4 w-4 ${completeness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
+              <CheckCircle className={`h-4 w-4 ${completeness >= 80 ? 'text-primary' : 'text-muted-foreground'}`} />
               <span className="text-sm text-muted-foreground">
                 {completeness >= 80 ? 'Follow-up completo' : `${completeness}% implementado - Implemente pelo menos 80% para concluir`}
               </span>

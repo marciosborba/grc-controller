@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,15 @@ import {
   Trash2,
   Clock,
   DollarSign,
-  BarChart3
+  BarChart3,
+  Save,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { secureLog } from '@/utils/securityLogger';
 
 interface PlanningData {
   objetivos: string[];
@@ -66,7 +69,7 @@ interface PlanningPhaseProps {
   project: any;
 }
 
-export function PlanningPhase({ project }: PlanningPhaseProps) {
+export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
@@ -84,12 +87,25 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [newObjective, setNewObjective] = useState('');
   const [newCriteria, setNewCriteria] = useState('');
   const [showResourceDialog, setShowResourceDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [newResource, setNewResource] = useState({ nome: '', funcao: '', horas_alocadas: 0, custo_hora: 0 });
   const [newTimelineItem, setNewTimelineItem] = useState({ atividade: '', data_inicio: '', data_fim: '', responsavel: '' });
+
+  // Auto-save a cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (planningData && !saving) {
+        autoSavePlanningData();
+      }
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, [planningData, saving]);
 
   useEffect(() => {
     loadPlanningData();
@@ -133,9 +149,91 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
     }
   };
 
+  // Função para calcular completude de forma mais precisa
+  const calculateCompleteness = useCallback(() => {
+    let score = 0;
+    const maxScore = 100;
+
+    // Objetivos (20 pontos)
+    if (planningData.objetivos.length > 0) {
+      score += Math.min(20, planningData.objetivos.length * 5); // 5 pontos por objetivo, máximo 20
+    }
+
+    // Escopo (15 pontos)
+    if (planningData.escopo.trim()) {
+      const escopoLength = planningData.escopo.trim().length;
+      score += Math.min(15, Math.floor(escopoLength / 20)); // 1 ponto a cada 20 caracteres, máximo 15
+    }
+
+    // Metodologia (15 pontos)
+    if (planningData.metodologia.trim()) {
+      const metodologiaLength = planningData.metodologia.trim().length;
+      score += Math.min(15, Math.floor(metodologiaLength / 20)); // 1 ponto a cada 20 caracteres, máximo 15
+    }
+
+    // Critérios de auditoria (15 pontos)
+    if (planningData.criterios_auditoria.length > 0) {
+      score += Math.min(15, planningData.criterios_auditoria.length * 3); // 3 pontos por critério, máximo 15
+    }
+
+    // Recursos humanos (15 pontos)
+    if (planningData.recursos_humanos.length > 0) {
+      score += Math.min(15, planningData.recursos_humanos.length * 5); // 5 pontos por recurso, máximo 15
+    }
+
+    // Cronograma (10 pontos)
+    if (planningData.cronograma.length > 0) {
+      score += Math.min(10, planningData.cronograma.length * 2); // 2 pontos por atividade, máximo 10
+    }
+
+    // Orçamento (10 pontos)
+    if (planningData.orcamento > 0 || calculateTotalBudget() > 0) {
+      score += 10;
+    }
+
+    return Math.min(maxScore, score);
+  }, [planningData]);
+
+  // Auto-save silencioso
+  const autoSavePlanningData = async () => {
+    try {
+      setAutoSaving(true);
+      
+      const completeness = calculateCompleteness();
+      
+      const { error: projectError } = await supabase
+        .from('projetos_auditoria')
+        .update({
+          objetivos: planningData.objetivos,
+          escopo: planningData.escopo,
+          orcamento_estimado: calculateTotalBudget(),
+          metodologia: planningData.metodologia,
+          criterios_auditoria: planningData.criterios_auditoria,
+          completude_planejamento: completeness,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', project.id);
+
+      if (projectError) throw projectError;
+
+      setLastSaved(new Date());
+      secureLog('info', 'Auto-save do planejamento realizado', { 
+        projectId: project.id, 
+        completeness 
+      });
+    } catch (error) {
+      secureLog('error', 'Erro no auto-save do planejamento', error);
+    } finally {
+      setAutoSaving(false);
+    }
+  };
+
+  // Save manual com feedback
   const savePlanningData = async () => {
     try {
       setSaving(true);
+      
+      const completeness = calculateCompleteness();
       
       // Salvar dados do projeto
       const { error: projectError } = await supabase
@@ -146,16 +244,20 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
           orcamento_estimado: calculateTotalBudget(),
           metodologia: planningData.metodologia,
           criterios_auditoria: planningData.criterios_auditoria,
+          completude_planejamento: completeness,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id);
 
       if (projectError) throw projectError;
 
-      // Salvar recursos humanos (simulado - em uma implementação real, você salvaria em uma tabela separada)
-      // Para este exemplo, vamos apenas manter os dados no estado local
+      setLastSaved(new Date());
+      toast.success(`Dados de planejamento salvos! Completude: ${completeness}%`);
       
-      toast.success('Dados de planejamento salvos com sucesso!');
+      secureLog('info', 'Planejamento salvo manualmente', { 
+        projectId: project.id, 
+        completeness 
+      });
     } catch (error) {
       console.error('Erro ao salvar dados de planejamento:', error);
       toast.error('Erro ao salvar dados de planejamento');
@@ -260,20 +362,6 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
     return resourcesCost + planningData.orcamento;
   };
 
-  const calculateCompleteness = () => {
-    let completed = 0;
-    const total = 6; // Total de seções
-
-    if (planningData.objetivos.length > 0) completed++;
-    if (planningData.escopo.trim()) completed++;
-    if (planningData.recursos_humanos.length > 0) completed++;
-    if (planningData.cronograma.length > 0) completed++;
-    if (planningData.metodologia.trim()) completed++;
-    if (planningData.criterios_auditoria.length > 0) completed++;
-
-    return Math.round((completed / total) * 100);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -286,7 +374,7 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header com Progresso */}
+      {/* Header com Progresso MELHORADO */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -294,20 +382,71 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-5 w-5" />
                 Planejamento da Auditoria
+                {autoSaving && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
               </CardTitle>
               <CardDescription>
                 Defina objetivos, escopo, recursos e metodologia
+                {lastSaved && (
+                  <span className="block text-xs text-green-600 mt-1">
+                    Último salvamento: {lastSaved.toLocaleTimeString('pt-BR')}
+                  </span>
+                )}
               </CardDescription>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Completude</p>
                 <p className="text-lg font-bold">{completeness}%</p>
+                <Badge variant={completeness >= 80 ? 'default' : completeness >= 50 ? 'secondary' : 'outline'}>
+                  {completeness >= 80 ? 'Excelente' : completeness >= 50 ? 'Bom' : 'Em progresso'}
+                </Badge>
               </div>
               <Progress value={completeness} className="w-24 h-3" />
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      {/* Indicadores de Progresso por Seção */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Progresso por Seção</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {planningData.objetivos.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Objetivos</div>
+              <Progress value={Math.min(100, planningData.objetivos.length * 25)} className="h-2 mt-1" />
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {planningData.criterios_auditoria.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Critérios</div>
+              <Progress value={Math.min(100, planningData.criterios_auditoria.length * 20)} className="h-2 mt-1" />
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {planningData.recursos_humanos.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Recursos</div>
+              <Progress value={Math.min(100, planningData.recursos_humanos.length * 33)} className="h-2 mt-1" />
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {planningData.cronograma.length}
+              </div>
+              <div className="text-sm text-muted-foreground">Atividades</div>
+              <Progress value={Math.min(100, planningData.cronograma.length * 20)} className="h-2 mt-1" />
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -317,6 +456,7 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Objetivos da Auditoria
+              <Badge variant="outline">{planningData.objetivos.length}</Badge>
             </CardTitle>
             <CardDescription>
               Defina os objetivos específicos desta auditoria
@@ -335,10 +475,10 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               </Button>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {planningData.objetivos.map((objetivo, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <span className="text-sm">{objetivo}</span>
+                  <span className="text-sm flex-1">{objetivo}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -364,6 +504,9 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Escopo da Auditoria
+              <Badge variant="outline">
+                {planningData.escopo.length} caracteres
+              </Badge>
             </CardTitle>
             <CardDescription>
               Descreva o escopo e limitações da auditoria
@@ -376,6 +519,9 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               onChange={(e) => setPlanningData(prev => ({ ...prev, escopo: e.target.value }))}
               rows={6}
             />
+            <div className="mt-2 text-xs text-muted-foreground">
+              Recomendado: pelo menos 100 caracteres para uma descrição adequada
+            </div>
           </CardContent>
         </Card>
 
@@ -385,6 +531,9 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Metodologia
+              <Badge variant="outline">
+                {planningData.metodologia.length} caracteres
+              </Badge>
             </CardTitle>
             <CardDescription>
               Descreva a metodologia e abordagem da auditoria
@@ -397,6 +546,9 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               onChange={(e) => setPlanningData(prev => ({ ...prev, metodologia: e.target.value }))}
               rows={4}
             />
+            <div className="mt-2 text-xs text-muted-foreground">
+              Inclua: técnicas de auditoria, amostragem, ferramentas e abordagem
+            </div>
           </CardContent>
         </Card>
 
@@ -406,6 +558,7 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
               Critérios de Auditoria
+              <Badge variant="outline">{planningData.criterios_auditoria.length}</Badge>
             </CardTitle>
             <CardDescription>
               Defina os critérios e padrões de avaliação
@@ -424,10 +577,10 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               </Button>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {planningData.criterios_auditoria.map((criterio, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <span className="text-sm">{criterio}</span>
+                  <span className="text-sm flex-1">{criterio}</span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -455,19 +608,20 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Recursos Humanos
+              <Badge variant="outline">{planningData.recursos_humanos.length + 1}</Badge>
             </CardTitle>
             <CardDescription>
-              {planningData.recursos_humanos.length} recursos alocados
+              {planningData.recursos_humanos.length} recursos alocados + líder
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-primary/5">
                 <div>
-                  <p className="font-medium">Auditor Líder</p>
-                  <p className="text-sm text-muted-foreground">{project.auditor_lider}</p>
+                  <p className="font-medium">{project.auditor_lider}</p>
+                  <p className="text-sm text-muted-foreground">Auditor Líder</p>
                 </div>
-                <Badge variant="secondary">Líder</Badge>
+                <Badge variant="default">Líder</Badge>
               </div>
               
               {planningData.recursos_humanos.map((resource) => (
@@ -542,7 +696,7 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
               </div>
               
               <div className="text-xs text-muted-foreground">
-                <p>Recursos: {planningData.recursos_humanos.length}</p>
+                <p>Recursos: {planningData.recursos_humanos.length + 1}</p>
                 <p>Horas totais: {planningData.recursos_humanos.reduce((sum, r) => sum + r.horas_alocadas, 0)}h</p>
               </div>
             </div>
@@ -554,6 +708,7 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Cronograma
+              <Badge variant="outline">{planningData.cronograma.length}</Badge>
             </CardTitle>
             <CardDescription>
               {planningData.cronograma.length} atividades planejadas
@@ -566,31 +721,33 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
                 <p><strong>Fim Previsto:</strong> {new Date(project.data_fim_prevista).toLocaleDateString('pt-BR')}</p>
               </div>
               
-              {planningData.cronograma.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{item.atividade}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(item.data_inicio).toLocaleDateString('pt-BR')} - {new Date(item.data_fim).toLocaleDateString('pt-BR')}
-                    </p>
-                    {item.responsavel && (
-                      <p className="text-xs text-muted-foreground">Responsável: {item.responsavel}</p>
-                    )}
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {planningData.cronograma.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium">{item.atividade}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(item.data_inicio).toLocaleDateString('pt-BR')} - {new Date(item.data_fim).toLocaleDateString('pt-BR')}
+                      </p>
+                      {item.responsavel && (
+                        <p className="text-xs text-muted-foreground">Responsável: {item.responsavel}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={item.status === 'concluido' ? 'default' : 'secondary'}>
+                        {item.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTimelineItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={item.status === 'concluido' ? 'default' : 'secondary'}>
-                      {item.status}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeTimelineItem(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
               
               <Button 
                 variant="outline" 
@@ -605,23 +762,33 @@ export function PlanningPhase({ project }: PlanningPhaseProps) {
         </Card>
       </div>
 
-      {/* Ações */}
+      {/* Ações MELHORADAS */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle className={`h-4 w-4 ${completeness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
               <span className="text-sm text-muted-foreground">
-                {completeness >= 80 ? 'Planejamento completo' : `${completeness}% completo - Complete pelo menos 80% para avançar`}
+                {completeness >= 80 ? 'Planejamento completo - Pronto para próxima fase' : 
+                 completeness >= 50 ? `${completeness}% completo - Bom progresso` :
+                 `${completeness}% completo - Continue preenchendo`}
               </span>
+              {autoSaving && (
+                <Badge variant="outline" className="ml-2">
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  Auto-salvando...
+                </Badge>
+              )}
             </div>
             
             <div className="flex gap-2">
               <Button variant="outline" onClick={loadPlanningData}>
+                <RefreshCw className="h-4 w-4 mr-1" />
                 Recarregar
               </Button>
               <Button onClick={savePlanningData} disabled={saving}>
-                {saving ? 'Salvando...' : 'Salvar Planejamento'}
+                <Save className="h-4 w-4 mr-1" />
+                {saving ? 'Salvando...' : 'Salvar Agora'}
               </Button>
             </div>
           </div>

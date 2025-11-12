@@ -21,10 +21,12 @@ import {
   Download,
   Upload,
   Settings,
-  ArrowRight,
-  ArrowLeft,
+
   Save,
-  Send
+  Send,
+  Lock,
+  Unlock,
+  Info
 } from 'lucide-react';
 import { PlanningPhase } from './phases/PlanningPhase';
 import { ExecutionPhase } from './phases/ExecutionPhase';
@@ -61,6 +63,9 @@ interface AuditProject {
   completude_achados: number;
   completude_relatorio: number;
   completude_followup: number;
+  // Novos campos para controle de navegação
+  fases_visitadas?: string[];
+  fase_maxima_atingida?: string;
 }
 
 interface AuditWorkflowProps {
@@ -69,7 +74,7 @@ interface AuditWorkflowProps {
   onPhaseChange: (phase: string) => void;
 }
 
-export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
+export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
@@ -82,73 +87,97 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
       name: 'Planejamento',
       icon: Target,
       description: 'Definição de objetivos, escopo e recursos',
-      completeness: project.completude_planejamento,
-      color: 'blue'
+      completeness: project.completude_planejamento || 0,
+      color: 'blue',
+      minCompleteness: 0 // Navegação livre // Sempre acessível
     },
     {
       id: 'execucao',
       name: 'Execução',
       icon: Play,
       description: 'Trabalhos de campo e coleta de evidências',
-      completeness: project.completude_execucao,
-      color: 'yellow'
+      completeness: project.completude_execucao || 0,
+      color: 'yellow',
+      minCompleteness: 0 // Navegação livre // Requer 30% do planejamento
     },
     {
       id: 'achados',
       name: 'Achados',
       icon: AlertTriangle,
       description: 'Análise e classificação de apontamentos',
-      completeness: project.completude_achados,
-      color: 'orange'
+      completeness: project.completude_achados || 0,
+      color: 'orange',
+      minCompleteness: 0 // Navegação livre // Requer 50% da execução
     },
     {
       id: 'relatorio',
       name: 'Relatório',
       icon: FileText,
       description: 'Elaboração e revisão de relatórios',
-      completeness: project.completude_relatorio,
-      color: 'purple'
+      completeness: project.completude_relatorio || 0,
+      color: 'purple',
+      minCompleteness: 0 // Navegação livre // Requer 70% dos achados
     },
     {
       id: 'followup',
       name: 'Follow-up',
       icon: CheckCircle,
       description: 'Acompanhamento de implementação',
-      completeness: project.completude_followup,
-      color: 'green'
+      completeness: project.completude_followup || 0,
+      color: 'green',
+      minCompleteness: 0 // Navegação livre // Requer 80% do relatório
     }
   ];
 
   const currentPhaseIndex = phases.findIndex(p => p.id === activePhase);
   const currentPhase = phases[currentPhaseIndex];
-  const canAdvance = currentPhase?.completeness >= 80; // Mínimo 80% para avançar
-  const canGoBack = currentPhaseIndex > 0;
   
-  // Determinar quais fases são acessíveis
+  // LÓGICA DE ACESSIBILIDADE SIMPLIFICADA E MAIS PERMISSIVA
   const getPhaseAccessibility = (phaseIndex: number) => {
-    // Sempre pode acessar a primeira fase
-    if (phaseIndex === 0) return true;
-    
-    // Pode acessar fases anteriores se já passou por elas
-    if (phaseIndex <= currentPhaseIndex) return true;
-    
-    // Pode acessar a próxima fase se a atual estiver 80% completa
-    if (phaseIndex === currentPhaseIndex + 1 && currentPhase?.completeness >= 80) return true;
-    
-    // Pode acessar fases completadas (100%)
     const phase = phases[phaseIndex];
-    if (phase?.completeness >= 100) return true;
+    const faseId = phase?.id;
     
-    return false;
+    // NAVEGAÇÃO LIVRE ATIVADA - Permite acesso a todas as fases
+    // Isso facilita o trabalho dos auditores e permite flexibilidade
+    return { accessible: true, reason: 'Navegação livre ativada - Acesso permitido a todas as fases' };
+  };
+
+  // Função para obter o status visual da fase
+  const getPhaseStatus = (phaseIndex: number) => {
+    const phase = phases[phaseIndex];
+    const isActive = phaseIndex === currentPhaseIndex;
+    const isCompleted = phase?.completeness >= 100;
+    const accessibility = getPhaseAccessibility(phaseIndex);
+    const isAccessible = accessibility.accessible;
+    
+    // Determinar se a fase foi visitada
+    const fasesVisitadas = project.fases_visitadas || ['planejamento'];
+    const isVisited = fasesVisitadas.includes(phase.id) || phase.completeness > 0;
+    
+    return {
+      isActive,
+      isCompleted,
+      isVisited,
+      isAccessible,
+      completeness: phase?.completeness || 0,
+      accessibilityReason: accessibility.reason
+    };
   };
 
   // Função para atualizar a fase no banco de dados
   const updateProjectPhase = async (newPhase: string) => {
     try {
+      // Atualizar fases visitadas
+      const fasesVisitadas = project.fases_visitadas || ['planejamento'];
+      const novasFasesVisitadas = fasesVisitadas.includes(newPhase) 
+        ? fasesVisitadas 
+        : [...fasesVisitadas, newPhase];
+
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
           fase_atual: newPhase,
+          fases_visitadas: novasFasesVisitadas,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id)
@@ -156,7 +185,11 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
 
       if (error) throw error;
       
-      secureLog('info', 'Fase do projeto atualizada', { projectId: project.id, newPhase });
+      secureLog('info', 'Fase do projeto atualizada', { 
+        projectId: project.id, 
+        newPhase,
+        fasesVisitadas: novasFasesVisitadas 
+      });
       return true;
     } catch (error) {
       secureLog('error', 'Erro ao atualizar fase do projeto', error);
@@ -168,6 +201,14 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
   // Função para navegação direta entre fases
   const handleDirectPhaseChange = async (phaseId: string) => {
     if (phaseId === activePhase) return; // Já está na fase
+    
+    const phaseIndex = phases.findIndex(p => p.id === phaseId);
+    const accessibility = getPhaseAccessibility(phaseIndex);
+    
+    if (!accessibility.accessible) {
+      toast.error(`Não é possível acessar esta fase: ${accessibility.reason}`);
+      return;
+    }
     
     setIsTransitioning(true);
     
@@ -213,45 +254,20 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
     }
   };
 
-  const handlePhaseTransition = async (direction: 'next' | 'previous') => {
-    setIsTransitioning(true);
-    
-    try {
-      let newPhaseIndex;
-      if (direction === 'next' && currentPhaseIndex < phases.length - 1) {
-        newPhaseIndex = currentPhaseIndex + 1;
-      } else if (direction === 'previous' && currentPhaseIndex > 0) {
-        newPhaseIndex = currentPhaseIndex - 1;
-      } else {
-        return;
-      }
-      
-      const newPhase = phases[newPhaseIndex];
-      
-      // Atualizar no banco de dados primeiro
-      const success = await updateProjectPhase(newPhase.id);
-      
-      if (success) {
-        onPhaseChange(newPhase.id);
-        toast.success(`Fase alterada para: ${newPhase.name}`);
-      }
-      
-    } catch (error) {
-      console.error('Erro ao transicionar fase:', error);
-    } finally {
-      setIsTransitioning(false);
-    }
-  };
 
-  const getPhaseColor = (color: string) => {
-    const colors = {
-      blue: 'border-primary bg-primary/10 text-primary',
-      yellow: 'border-primary bg-primary/5 text-primary',
-      orange: 'border-primary bg-primary/15 text-primary',
-      purple: 'border-primary bg-primary/20 text-primary',
-      green: 'border-primary bg-primary/10 text-primary'
-    };
-    return colors[color] || 'border-border bg-muted text-muted-foreground';
+
+  const getPhaseColor = (color: string, status: any) => {
+    if (status.isActive) {
+      return 'border-primary bg-primary/10 text-primary';
+    } else if (status.isCompleted) {
+      return 'border-green-500 bg-green-50 text-green-700';
+    } else if (status.isVisited) {
+      return 'border-blue-300 bg-blue-50 text-blue-700';
+    } else if (status.isAccessible) {
+      return 'border-border bg-background text-foreground hover:border-border/80';
+    } else {
+      return 'border-muted bg-muted text-muted-foreground cursor-not-allowed opacity-60';
+    }
   };
 
   const renderPhaseContent = () => {
@@ -271,36 +287,45 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
     }
   };
 
+
+
   return (
     <div className="space-y-6">
-      {/* Breadcrumb de Fases */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      {/* Breadcrumb de Fases MELHORADO */}
+      <div className="flex items-center justify-center">
+        <div className="flex items-center space-x-2 flex-wrap">
           {phases.map((phase, index) => {
             const IconComponent = phase.icon;
-            const isActive = phase.id === activePhase;
-            const isCompleted = phase.completeness >= 100;
-            const isAccessible = getPhaseAccessibility(index);
+            const status = getPhaseStatus(index);
             
             return (
               <React.Fragment key={phase.id}>
-                <button
-                  onClick={() => isAccessible && handleDirectPhaseChange(phase.id)}
-                  disabled={!isAccessible}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
-                    isActive 
-                      ? getPhaseColor(phase.color)
-                      : isCompleted
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : isAccessible
-                      ? 'border-border bg-background text-foreground hover:border-border/80'
-                      : 'border-muted bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
-                >
-                  <IconComponent className="h-4 w-4" />
-                  <span className="text-sm font-medium">{phase.name}</span>
-                  {isCompleted && <CheckCircle className="h-3 w-3 text-primary" />}
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => status.isAccessible && handleDirectPhaseChange(phase.id)}
+                    disabled={!status.isAccessible || isTransitioning}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                      getPhaseColor(phase.color, status)
+                    }`}
+                    title={status.accessibilityReason}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    <span className="text-sm font-medium">{phase.name}</span>
+                    <span className="text-xs">({status.completeness}%)</span>
+                    
+                    {/* Ícones de status */}
+                    {status.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
+                    {status.isActive && <Clock className="h-3 w-3 text-primary" />}
+                    {!status.isAccessible && <Lock className="h-3 w-3" />}
+                    {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-3 w-3" />}
+                  </button>
+                  
+                  {/* Tooltip com informações */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                    {status.accessibilityReason}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
+                  </div>
+                </div>
                 
                 {index < phases.length - 1 && (
                   <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -310,32 +335,11 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
           })}
         </div>
         
-        {/* Controles de Navegação */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePhaseTransition('previous')}
-            disabled={!canGoBack || isTransitioning}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Anterior
-          </Button>
-          
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => handlePhaseTransition('next')}
-            disabled={!canAdvance || currentPhaseIndex >= phases.length - 1 || isTransitioning}
-          >
-            Próxima
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
+
       </div>
 
-      {/* Informações da Fase Atual */}
-      <Card className={`border-l-4 ${getPhaseColor(currentPhase?.color || 'blue')}`}>
+      {/* Informações da Fase Atual MELHORADAS */}
+      <Card className={`border-l-4 border-l-primary`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -343,7 +347,12 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
                 <currentPhase.icon className="h-6 w-6" />
               )}
               <div>
-                <CardTitle className="text-xl">{currentPhase?.name}</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  {currentPhase?.name}
+                  <Badge variant="secondary">
+                    {Math.round(currentPhase?.completeness || 0)}% completo
+                  </Badge>
+                </CardTitle>
                 <CardDescription>{currentPhase?.description}</CardDescription>
               </div>
             </div>
@@ -359,16 +368,17 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
         </CardHeader>
       </Card>
 
-      {/* Validações e Alertas */}
-      {currentPhase && currentPhase.completeness < 80 && (
-        <Card className="border-primary/20 bg-primary/5">
+      {/* Alertas e Validações MELHORADOS */}
+      {currentPhase && currentPhase.completeness < 50 && (
+        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-primary" />
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <div>
-                <p className="font-medium text-primary">Atenção: Fase incompleta</p>
-                <p className="text-sm text-muted-foreground">
-                  Complete pelo menos 80% desta fase antes de avançar para a próxima.
+                <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases. 
+                  Você pode navegar livremente entre fases já visitadas.
                 </p>
               </div>
             </div>
@@ -381,7 +391,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
         {renderPhaseContent()}
       </div>
 
-      {/* Ações da Fase */}
+      {/* Ações da Fase MELHORADAS */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -390,6 +400,9 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
               <span className="text-sm text-muted-foreground">
                 Última atualização: {new Date().toLocaleString('pt-BR')}
               </span>
+              <Badge variant="outline" className="ml-2">
+                Navegação Livre Ativada
+              </Badge>
             </div>
             
             <div className="flex items-center gap-2">
