@@ -133,6 +133,7 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
         setTimeout(() => {
           const printButton = newWindow.document.createElement('button');
           printButton.innerHTML = '🖨️ Imprimir/Salvar como PDF';
+          printButton.className = 'print-button';
           printButton.style.cssText = `
             position: fixed;
             top: 20px;
@@ -148,8 +149,33 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             font-family: system-ui;
           `;
-          printButton.onclick = () => newWindow.print();
+          
+          printButton.onclick = () => {
+            // Tentar remover título da janela para evitar aparecer na impressão
+            const originalTitle = newWindow.document.title;
+            newWindow.document.title = '';
+            
+            // Executar impressão
+            newWindow.print();
+            
+            // Restaurar título após impressão
+            setTimeout(() => {
+              newWindow.document.title = originalTitle;
+            }, 1000);
+          };
+          
           newWindow.document.body.appendChild(printButton);
+          
+          // Configurar meta tags para melhor controle de impressão
+          const metaViewport = newWindow.document.createElement('meta');
+          metaViewport.name = 'viewport';
+          metaViewport.content = 'width=device-width, initial-scale=1.0';
+          newWindow.document.head.appendChild(metaViewport);
+          
+          const metaPrint = newWindow.document.createElement('meta');
+          metaPrint.name = 'print';
+          metaPrint.content = 'no-header-footer';
+          newWindow.document.head.appendChild(metaPrint);
         }, 1000);
       }
       
@@ -187,6 +213,10 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
     const trabalhosConcluidos = projetoDetalhado?.trabalhos_auditoria?.filter(t => t.status === 'concluido').length || 0;
     const planosAcao = projetoDetalhado?.planos_acao?.length || 0;
     
+    // Novos indicadores baseados em dados reais
+    const planosConcluidos = projetoDetalhado?.planos_acao?.filter(p => p.status === 'concluido').length || 0;
+    const totalHorasAuditoria = projetoDetalhado?.trabalhos_auditoria?.reduce((sum, t) => sum + (t.horas_trabalhadas || 0), 0) || 0;
+    
     // Cálculo do score de compliance
     const complianceScore = totalApontamentos > 0 ? 
       Math.max(0, 100 - (apontamentosCriticos * 25 + apontamentosAltos * 15 + apontamentosMedios * 8 + apontamentosBaixos * 3)) : 95;
@@ -221,10 +251,10 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           
           body { 
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-            line-height: 1.6; 
+            line-height: 1.4; 
             color: #1a1a1a; 
             background: #ffffff;
-            font-size: 14px;
+            font-size: 13px;
           }
           
           .page { 
@@ -238,7 +268,7 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           .header-page {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             color: white;
-            padding: 60px 40px;
+            padding: 45px 35px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -257,140 +287,117 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           
           .header-content { position: relative; z-index: 1; }
           
-          .company-logo {
-            width: 80px;
-            height: 80px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            margin: 0 auto 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
-            font-weight: bold;
-          }
+
           
           .main-title {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 700;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             letter-spacing: -0.5px;
           }
           
           .project-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 500;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             opacity: 0.95;
           }
           
           .header-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
           }
           
           .info-item {
             background: rgba(255,255,255,0.15);
-            padding: 20px;
-            border-radius: 12px;
+            padding: 15px;
+            border-radius: 8px;
             backdrop-filter: blur(10px);
           }
           
           .info-label {
-            font-size: 12px;
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
             opacity: 0.8;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
           }
           
           .info-value {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
           }
           
           .content {
-            padding: 50px 40px;
+            padding: 35px 30px;
           }
           
           .section {
-            margin-bottom: 50px;
+            margin-bottom: 35px;
             page-break-inside: avoid;
           }
           
           .section-title {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 700;
             color: #1e3a8a;
-            margin-bottom: 25px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid #e5e7eb;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            margin-bottom: 18px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
           }
           
-          .section-icon {
-            width: 32px;
-            height: 32px;
-            background: #1e3a8a;
-            color: white;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-          }
+
           
           .executive-summary {
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             border: 1px solid #cbd5e1;
-            border-left: 6px solid #1e3a8a;
-            padding: 35px;
-            border-radius: 12px;
-            margin: 30px 0;
+            border-left: 4px solid #1e3a8a;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
             position: relative;
           }
           
           .summary-highlight {
             background: #1e3a8a;
             color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 25px 0;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 18px 0;
             text-align: center;
+            font-size: 14px;
           }
           
           .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
           }
           
           .metric-card {
             background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 25px;
+            border-radius: 8px;
+            padding: 18px 15px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             transition: transform 0.2s;
           }
           
-          .metric-card:hover { transform: translateY(-2px); }
+          .metric-card:hover { transform: translateY(-1px); }
           
           .metric-value {
-            font-size: 42px;
+            font-size: 32px;
             font-weight: 700;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             line-height: 1;
           }
           
           .metric-label {
-            font-size: 13px;
+            font-size: 11px;
             color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -398,19 +405,19 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           }
           
           .metric-description {
-            font-size: 12px;
+            font-size: 10px;
             color: #9ca3af;
-            margin-top: 8px;
+            margin-top: 6px;
           }
           
           .risk-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 12px;
             background: ${corRisco};
             color: white;
           }
@@ -418,29 +425,30 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           .findings-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 25px 0;
+            margin: 18px 0;
             background: white;
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
           
           .findings-table th {
             background: #f8fafc;
-            padding: 18px;
+            padding: 12px 15px;
             text-align: left;
             font-weight: 600;
             color: #374151;
             border-bottom: 2px solid #e5e7eb;
-            font-size: 13px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
           
           .findings-table td {
-            padding: 18px;
+            padding: 12px 15px;
             border-bottom: 1px solid #f3f4f6;
             vertical-align: top;
+            font-size: 12px;
           }
           
           .findings-table tr:hover {
@@ -448,9 +456,9 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           }
           
           .severity-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 9px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -464,33 +472,33 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           .recommendations {
             background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
             border: 1px solid #a7f3d0;
-            border-left: 6px solid #059669;
-            padding: 35px;
-            border-radius: 12px;
-            margin: 30px 0;
+            border-left: 4px solid #059669;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 20px 0;
           }
           
           .recommendation-item {
             background: white;
             border: 1px solid #d1fae5;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 15px 0;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 12px 0;
             display: flex;
             align-items: flex-start;
-            gap: 15px;
+            gap: 12px;
           }
           
           .recommendation-priority {
             background: #059669;
             color: white;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 600;
             flex-shrink: 0;
           }
@@ -498,27 +506,28 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           .footer {
             background: #f8fafc;
             border-top: 1px solid #e5e7eb;
-            padding: 40px;
+            padding: 25px;
             text-align: center;
             color: #6b7280;
-            font-size: 12px;
+            font-size: 10px;
           }
           
           .footer-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 30px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
           }
           
           .footer-section h4 {
             color: #374151;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 11px;
           }
           
           .compliance-score {
-            font-size: 48px;
+            font-size: 32px;
             font-weight: 700;
             color: ${complianceScore >= 80 ? '#059669' : complianceScore >= 60 ? '#d97706' : '#dc2626'};
           }
@@ -528,6 +537,52 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           @media print {
             .page { box-shadow: none; margin: 0; }
             body { background: white; }
+            .print-button { display: none !important; }
+            
+            /* Configurar margens adequadas para impressão SEM cabeçalho/rodapé */
+            @page {
+              margin: 0.75in 0.5in 0.5in 0.5in; /* top right bottom left */
+              size: A4;
+              /* Forçar remoção de headers e footers */
+              @top-left { content: none; }
+              @top-center { content: none; }
+              @top-right { content: none; }
+              @bottom-left { content: none; }
+              @bottom-center { content: none; }
+              @bottom-right { content: none; }
+            }
+            
+            /* Ocultar informações de impressão do navegador */
+            html {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            
+            /* Ajustar espaçamento do conteúdo */
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            
+            .page {
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            
+            .header-page {
+              margin-top: 0 !important;
+              padding-top: 30px !important;
+            }
+            
+            .content {
+              padding: 25px 20px !important;
+            }
+            
+            /* Garantir que não aparecem informações de URL/título */
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
           }
         </style>
       </head>
@@ -536,7 +591,6 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           <!-- PÁGINA DE CAPA -->
           <div class="header-page">
             <div class="header-content">
-              <div class="company-logo">🏢</div>
               <h1 class="main-title">${tipoTitulos[tipo]}</h1>
               <h2 class="project-title">${projeto.titulo}</h2>
               
@@ -574,12 +628,11 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
             <!-- RESUMO EXECUTIVO -->
             <div class="section">
               <h2 class="section-title">
-                <div class="section-icon">📋</div>
                 RESUMO EXECUTIVO
               </h2>
               
               <div class="executive-summary">
-                <p style="font-size: 16px; margin-bottom: 20px; font-weight: 500;">
+                <p style="font-size: 13px; margin-bottom: 15px; font-weight: 500; line-height: 1.4;">
                   <strong>Objetivo:</strong> Este relatório apresenta os resultados da auditoria realizada em "${projeto.titulo}", 
                   executada no período de ${new Date(projeto.data_inicio).toLocaleDateString('pt-BR')} a ${new Date(projeto.data_fim_prevista).toLocaleDateString('pt-BR')}, 
                   com o objetivo de avaliar a eficácia dos controles internos e identificar oportunidades de melhoria.
@@ -592,16 +645,16 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
                   }
                 </div>
                 
-                <p style="font-size: 15px; margin-bottom: 15px;">
+                <p style="font-size: 12px; margin-bottom: 12px; line-height: 1.4;">
                   <strong>Escopo da Auditoria:</strong> ${projeto.escopo || 'Avaliação abrangente dos processos e controles internos da área auditada, incluindo análise de conformidade regulatória e eficiência operacional.'}
                 </p>
                 
-                <p style="font-size: 15px; margin-bottom: 15px;">
+                <p style="font-size: 12px; margin-bottom: 12px; line-height: 1.4;">
                   <strong>Metodologia:</strong> ${projeto.metodologia || 'Aplicação de técnicas de auditoria baseadas em riscos, incluindo testes de controles, análises substantivas e entrevistas com gestores responsáveis.'}
                 </p>
                 
-                <div style="display: flex; align-items: center; gap: 15px; margin-top: 25px;">
-                  <span style="font-weight: 600;">Classificação de Risco:</span>
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 18px;">
+                  <span style="font-weight: 600; font-size: 12px;">Classificação de Risco:</span>
                   <span class="risk-indicator">🚨 ${nivelRisco}</span>
                 </div>
               </div>
@@ -610,7 +663,6 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
             <!-- INDICADORES PRINCIPAIS -->
             <div class="section">
               <h2 class="section-title">
-                <div class="section-icon">📊</div>
                 INDICADORES PRINCIPAIS
               </h2>
               
@@ -650,6 +702,18 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
                   <div class="metric-label">Planos de Ação</div>
                   <div class="metric-description">Ações corretivas propostas</div>
                 </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #059669;">${planosConcluidos}</div>
+                  <div class="metric-label">Planos Concluídos</div>
+                  <div class="metric-description">Ações implementadas com sucesso</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #7c3aed;">${totalHorasAuditoria}h</div>
+                  <div class="metric-label">Horas de Auditoria</div>
+                  <div class="metric-description">Tempo total investido no projeto</div>
+                </div>
               </div>
             </div>
             
@@ -657,7 +721,6 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
             <!-- PRINCIPAIS APONTAMENTOS -->
             <div class="section">
               <h2 class="section-title">
-                <div class="section-icon">⚠️</div>
                 PRINCIPAIS APONTAMENTOS
               </h2>
               
@@ -701,19 +764,18 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
             <!-- RECOMENDAÇÕES -->
             <div class="section">
               <h2 class="section-title">
-                <div class="section-icon">💡</div>
                 RECOMENDAÇÕES ESTRATÉGICAS
               </h2>
               
               <div class="recommendations">
-                <h3 style="color: #059669; margin-bottom: 25px; font-size: 20px;">Plano de Ação Recomendado</h3>
+                <h3 style="color: #059669; margin-bottom: 18px; font-size: 16px;">Plano de Ação Recomendado</h3>
                 
                 ${apontamentosCriticos > 0 ? `
                 <div class="recommendation-item">
                   <div class="recommendation-priority">1</div>
                   <div>
-                    <strong>Ação Imediata - Apontamentos Críticos</strong>
-                    <p>Implementar correções urgentes para os ${apontamentosCriticos} apontamentos de criticidade alta identificados. 
+                    <strong style="font-size: 12px;">Ação Imediata - Apontamentos Críticos</strong>
+                    <p style="font-size: 11px; margin: 6px 0 0 0; line-height: 1.4;">Implementar correções urgentes para os ${apontamentosCriticos} apontamentos de criticidade alta identificados. 
                     Prazo recomendado: 30 dias. Responsabilidade: Alta Administração.</p>
                   </div>
                 </div>
@@ -723,8 +785,8 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
                 <div class="recommendation-item">
                   <div class="recommendation-priority">2</div>
                   <div>
-                    <strong>Melhorias Prioritárias</strong>
-                    <p>Desenvolver planos de ação para os ${apontamentosAltos} apontamentos de criticidade média-alta. 
+                    <strong style="font-size: 12px;">Melhorias Prioritárias</strong>
+                    <p style="font-size: 11px; margin: 6px 0 0 0; line-height: 1.4;">Desenvolver planos de ação para os ${apontamentosAltos} apontamentos de criticidade média-alta. 
                     Prazo recomendado: 60-90 dias. Responsabilidade: Gestores de Área.</p>
                   </div>
                 </div>
@@ -733,8 +795,8 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
                 <div class="recommendation-item">
                   <div class="recommendation-priority">3</div>
                   <div>
-                    <strong>Fortalecimento do Ambiente de Controle</strong>
-                    <p>Implementar programa de monitoramento contínuo e revisões periódicas dos controles internos. 
+                    <strong style="font-size: 12px;">Fortalecimento do Ambiente de Controle</strong>
+                    <p style="font-size: 11px; margin: 6px 0 0 0; line-height: 1.4;">Implementar programa de monitoramento contínuo e revisões periódicas dos controles internos. 
                     Estabelecer indicadores de performance e métricas de efetividade.</p>
                   </div>
                 </div>
@@ -742,8 +804,8 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
                 <div class="recommendation-item">
                   <div class="recommendation-priority">4</div>
                   <div>
-                    <strong>Capacitação e Treinamento</strong>
-                    <p>Desenvolver programa de capacitação para equipes sobre melhores práticas de controles internos 
+                    <strong style="font-size: 12px;">Capacitação e Treinamento</strong>
+                    <p style="font-size: 11px; margin: 6px 0 0 0; line-height: 1.4;">Desenvolver programa de capacitação para equipes sobre melhores práticas de controles internos 
                     e gestão de riscos. Foco em conscientização e cultura de compliance.</p>
                   </div>
                 </div>
@@ -771,10 +833,10 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
               </div>
             </div>
             
-            <div style="border-top: 1px solid #d1d5db; padding-top: 20px; margin-top: 20px;">
-              <p><strong>Sistema GRC - Governance, Risk & Compliance</strong></p>
-              <p>Relatório gerado automaticamente em ${timestamp}</p>
-              <p style="font-size: 11px; margin-top: 10px;">
+            <div style="border-top: 1px solid #d1d5db; padding-top: 15px; margin-top: 15px;">
+              <p style="font-size: 11px;"><strong>Sistema GRC - Governance, Risk & Compliance</strong></p>
+              <p style="font-size: 10px;">Relatório gerado automaticamente em ${timestamp}</p>
+              <p style="font-size: 9px; margin-top: 8px; line-height: 1.3;">
                 Este documento contém informações confidenciais e deve ser tratado de acordo com as políticas de segurança da informação da organização.
               </p>
             </div>
