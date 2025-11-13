@@ -170,141 +170,614 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
 
   const generateReportHTML = (projeto: any, projetoDetalhado: any, tipo: string) => {
     const timestamp = new Date().toLocaleString('pt-BR');
+    const dataFormatada = new Date().toLocaleDateString('pt-BR', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Análise detalhada dos dados
     const totalApontamentos = projetoDetalhado?.apontamentos_auditoria?.length || 0;
     const apontamentosCriticos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'critica').length || 0;
+    const apontamentosAltos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'alta').length || 0;
+    const apontamentosMedios = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'media').length || 0;
+    const apontamentosBaixos = projetoDetalhado?.apontamentos_auditoria?.filter(a => a.criticidade === 'baixa').length || 0;
+    
     const totalTrabalhos = projetoDetalhado?.trabalhos_auditoria?.length || 0;
+    const trabalhosConcluidos = projetoDetalhado?.trabalhos_auditoria?.filter(t => t.status === 'concluido').length || 0;
     const planosAcao = projetoDetalhado?.planos_acao?.length || 0;
     
+    // Cálculo do score de compliance
+    const complianceScore = totalApontamentos > 0 ? 
+      Math.max(0, 100 - (apontamentosCriticos * 25 + apontamentosAltos * 15 + apontamentosMedios * 8 + apontamentosBaixos * 3)) : 95;
+    
+    // Análise de risco
+    const nivelRisco = apontamentosCriticos > 0 ? 'ALTO' : 
+                      apontamentosAltos > 2 ? 'MÉDIO-ALTO' : 
+                      apontamentosAltos > 0 ? 'MÉDIO' : 'BAIXO';
+    
+    const corRisco = nivelRisco === 'ALTO' ? '#dc2626' : 
+                     nivelRisco === 'MÉDIO-ALTO' ? '#ea580c' : 
+                     nivelRisco === 'MÉDIO' ? '#d97706' : '#059669';
+    
     const tipoTitulos = {
-      executivo: 'Relatório Executivo',
-      tecnico: 'Relatório Técnico',
-      compliance: 'Relatório de Compliance',
-      seguimento: 'Relatório de Seguimento'
+      executivo: 'RELATÓRIO EXECUTIVO DE AUDITORIA',
+      tecnico: 'RELATÓRIO TÉCNICO DE AUDITORIA',
+      compliance: 'RELATÓRIO DE COMPLIANCE',
+      seguimento: 'RELATÓRIO DE SEGUIMENTO'
     };
     
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="pt-BR">
       <head>
         <title>${tipoTitulos[tipo]} - ${projeto.titulo}</title>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
-          .container { max-width: 1200px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
-          .header { text-align: center; border-bottom: 4px solid #3b82f6; padding-bottom: 30px; margin-bottom: 40px; }
-          .title { font-size: 32px; font-weight: bold; color: #1e293b; margin-bottom: 10px; }
-          .subtitle { font-size: 16px; color: #64748b; margin-bottom: 5px; }
-          .section { margin: 40px 0; }
-          .section-title { font-size: 24px; font-weight: bold; color: #1e293b; margin-bottom: 20px; border-bottom: 3px solid #e2e8f0; padding-bottom: 12px; }
-          .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 30px 0; }
-          .metric-card { background: white; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-left: 6px solid #3b82f6; }
-          .metric-value { font-size: 32px; font-weight: bold; margin-bottom: 8px; }
-          .metric-label { font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-          .critical { color: #dc2626; border-left-color: #dc2626; }
-          .high { color: #ea580c; border-left-color: #ea580c; }
-          .success { color: #059669; border-left-color: #059669; }
-          .warning { color: #d97706; border-left-color: #d97706; }
-          table { width: 100%; border-collapse: collapse; margin: 25px 0; }
-          th, td { padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; }
-          th { background: #f8fafc; font-weight: 700; color: #374151; }
-          .executive-summary { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 30px; border-radius: 12px; margin: 30px 0; border-left: 6px solid #0ea5e9; }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+          
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          
+          body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            line-height: 1.6; 
+            color: #1a1a1a; 
+            background: #ffffff;
+            font-size: 14px;
+          }
+          
+          .page { 
+            max-width: 210mm; 
+            margin: 0 auto; 
+            background: white; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            min-height: 297mm;
+          }
+          
+          .header-page {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .header-page::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23ffffff" stroke-width="0.5" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            z-index: 0;
+          }
+          
+          .header-content { position: relative; z-index: 1; }
+          
+          .company-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+          }
+          
+          .main-title {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            letter-spacing: -0.5px;
+          }
+          
+          .project-title {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 30px;
+            opacity: 0.95;
+          }
+          
+          .header-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
+          }
+          
+          .info-item {
+            background: rgba(255,255,255,0.15);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+          }
+          
+          .info-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+          }
+          
+          .info-value {
+            font-size: 16px;
+            font-weight: 600;
+          }
+          
+          .content {
+            padding: 50px 40px;
+          }
+          
+          .section {
+            margin-bottom: 50px;
+            page-break-inside: avoid;
+          }
+          
+          .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          
+          .section-icon {
+            width: 32px;
+            height: 32px;
+            background: #1e3a8a;
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+          }
+          
+          .executive-summary {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 1px solid #cbd5e1;
+            border-left: 6px solid #1e3a8a;
+            padding: 35px;
+            border-radius: 12px;
+            margin: 30px 0;
+            position: relative;
+          }
+          
+          .summary-highlight {
+            background: #1e3a8a;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 25px 0;
+            text-align: center;
+          }
+          
+          .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+          }
+          
+          .metric-card {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+          }
+          
+          .metric-card:hover { transform: translateY(-2px); }
+          
+          .metric-value {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            line-height: 1;
+          }
+          
+          .metric-label {
+            font-size: 13px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+          }
+          
+          .metric-description {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 8px;
+          }
+          
+          .risk-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            background: ${corRisco};
+            color: white;
+          }
+          
+          .findings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+          }
+          
+          .findings-table th {
+            background: #f8fafc;
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .findings-table td {
+            padding: 18px;
+            border-bottom: 1px solid #f3f4f6;
+            vertical-align: top;
+          }
+          
+          .findings-table tr:hover {
+            background: #f9fafb;
+          }
+          
+          .severity-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .severity-critica { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+          .severity-alta { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+          .severity-media { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+          .severity-baixa { background: #f0fdf4; color: #059669; border: 1px solid #bbf7d0; }
+          
+          .recommendations {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
+            border-left: 6px solid #059669;
+            padding: 35px;
+            border-radius: 12px;
+            margin: 30px 0;
+          }
+          
+          .recommendation-item {
+            background: white;
+            border: 1px solid #d1fae5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+          }
+          
+          .recommendation-priority {
+            background: #059669;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+          }
+          
+          .footer {
+            background: #f8fafc;
+            border-top: 1px solid #e5e7eb;
+            padding: 40px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          
+          .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+          }
+          
+          .footer-section h4 {
+            color: #374151;
+            font-weight: 600;
+            margin-bottom: 10px;
+          }
+          
+          .compliance-score {
+            font-size: 48px;
+            font-weight: 700;
+            color: ${complianceScore >= 80 ? '#059669' : complianceScore >= 60 ? '#d97706' : '#dc2626'};
+          }
+          
+          .page-break { page-break-before: always; }
+          
+          @media print {
+            .page { box-shadow: none; margin: 0; }
+            body { background: white; }
+          }
         </style>
       </head>
       <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="title">📊 ${tipoTitulos[tipo]}</h1>
-            <p class="subtitle"><strong>${projeto.titulo}</strong></p>
-            <p class="subtitle">Código: ${projeto.codigo} | Status: ${projeto.status?.toUpperCase()}</p>
-            <p class="subtitle">Gerado em: ${timestamp}</p>
-            <p class="subtitle">Confidencial - Uso Interno</p>
-          </div>
-          
-          <div class="executive-summary">
-            <h2 style="margin-top: 0; color: #0ea5e9;">📋 Resumo Executivo</h2>
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
-              O projeto de auditoria "${projeto.titulo}" foi executado conforme planejado, 
-              resultando em ${totalApontamentos} apontamentos identificados, sendo ${apontamentosCriticos} de criticidade alta.
-            </p>
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 0;">
-              Foram executados ${totalTrabalhos} trabalhos de auditoria e elaborados ${planosAcao} planos de ação 
-              para endereçar as deficiências identificadas.
-            </p>
-          </div>
-          
-          <div class="section">
-            <h2 class="section-title">📈 Indicadores Principais</h2>
-            <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-value">${totalApontamentos}</div>
-                <div class="metric-label">Total de Apontamentos</div>
-              </div>
-              <div class="metric-card critical">
-                <div class="metric-value">${apontamentosCriticos}</div>
-                <div class="metric-label">Apontamentos Críticos</div>
-              </div>
-              <div class="metric-card success">
-                <div class="metric-value">${totalTrabalhos}</div>
-                <div class="metric-label">Trabalhos Executados</div>
-              </div>
-              <div class="metric-card warning">
-                <div class="metric-value">${planosAcao}</div>
-                <div class="metric-label">Planos de Ação</div>
+        <div class="page">
+          <!-- PÁGINA DE CAPA -->
+          <div class="header-page">
+            <div class="header-content">
+              <div class="company-logo">🏢</div>
+              <h1 class="main-title">${tipoTitulos[tipo]}</h1>
+              <h2 class="project-title">${projeto.titulo}</h2>
+              
+              <div class="header-info">
+                <div class="info-item">
+                  <div class="info-label">Código do Projeto</div>
+                  <div class="info-value">${projeto.codigo}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Período de Execução</div>
+                  <div class="info-value">${new Date(projeto.data_inicio).toLocaleDateString('pt-BR')} - ${new Date(projeto.data_fim_prevista).toLocaleDateString('pt-BR')}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Auditor Líder</div>
+                  <div class="info-value">${projeto.auditor_lider || projeto.chefe_auditoria}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Data do Relatório</div>
+                  <div class="info-value">${dataFormatada}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Nível de Risco</div>
+                  <div class="info-value">${nivelRisco}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Score de Compliance</div>
+                  <div class="info-value">${complianceScore}%</div>
+                </div>
               </div>
             </div>
           </div>
           
-          ${totalApontamentos > 0 ? `
-          <div class="section">
-            <h2 class="section-title">🚨 Principais Apontamentos</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Criticidade</th>
-                  <th>Categoria</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${projetoDetalhado?.apontamentos_auditoria?.slice(0, 10).map(apontamento => `
+          <!-- CONTEÚDO PRINCIPAL -->
+          <div class="content">
+            <!-- RESUMO EXECUTIVO -->
+            <div class="section">
+              <h2 class="section-title">
+                <div class="section-icon">📋</div>
+                RESUMO EXECUTIVO
+              </h2>
+              
+              <div class="executive-summary">
+                <p style="font-size: 16px; margin-bottom: 20px; font-weight: 500;">
+                  <strong>Objetivo:</strong> Este relatório apresenta os resultados da auditoria realizada em "${projeto.titulo}", 
+                  executada no período de ${new Date(projeto.data_inicio).toLocaleDateString('pt-BR')} a ${new Date(projeto.data_fim_prevista).toLocaleDateString('pt-BR')}, 
+                  com o objetivo de avaliar a eficácia dos controles internos e identificar oportunidades de melhoria.
+                </p>
+                
+                <div class="summary-highlight">
+                  <strong>CONCLUSÃO GERAL:</strong> ${totalApontamentos === 0 ? 
+                    'Os controles avaliados demonstram adequação e efetividade, com ambiente de controle robusto.' :
+                    `Foram identificadas ${totalApontamentos} oportunidades de melhoria, sendo ${apontamentosCriticos} de criticidade alta que requerem ação imediata da administração.`
+                  }
+                </div>
+                
+                <p style="font-size: 15px; margin-bottom: 15px;">
+                  <strong>Escopo da Auditoria:</strong> ${projeto.escopo || 'Avaliação abrangente dos processos e controles internos da área auditada, incluindo análise de conformidade regulatória e eficiência operacional.'}
+                </p>
+                
+                <p style="font-size: 15px; margin-bottom: 15px;">
+                  <strong>Metodologia:</strong> ${projeto.metodologia || 'Aplicação de técnicas de auditoria baseadas em riscos, incluindo testes de controles, análises substantivas e entrevistas com gestores responsáveis.'}
+                </p>
+                
+                <div style="display: flex; align-items: center; gap: 15px; margin-top: 25px;">
+                  <span style="font-weight: 600;">Classificação de Risco:</span>
+                  <span class="risk-indicator">🚨 ${nivelRisco}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- INDICADORES PRINCIPAIS -->
+            <div class="section">
+              <h2 class="section-title">
+                <div class="section-icon">📊</div>
+                INDICADORES PRINCIPAIS
+              </h2>
+              
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #1e3a8a;">${totalApontamentos}</div>
+                  <div class="metric-label">Total de Apontamentos</div>
+                  <div class="metric-description">Oportunidades de melhoria identificadas</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #dc2626;">${apontamentosCriticos}</div>
+                  <div class="metric-label">Criticidade Alta</div>
+                  <div class="metric-description">Requerem ação imediata</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value compliance-score">${complianceScore}%</div>
+                  <div class="metric-label">Score de Compliance</div>
+                  <div class="metric-description">Índice de conformidade geral</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #059669;">${trabalhosConcluidos}/${totalTrabalhos}</div>
+                  <div class="metric-label">Trabalhos Executados</div>
+                  <div class="metric-description">Procedimentos de auditoria realizados</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #ea580c;">${apontamentosAltos}</div>
+                  <div class="metric-label">Criticidade Média-Alta</div>
+                  <div class="metric-description">Atenção prioritária necessária</div>
+                </div>
+                
+                <div class="metric-card">
+                  <div class="metric-value" style="color: #d97706;">${planosAcao}</div>
+                  <div class="metric-label">Planos de Ação</div>
+                  <div class="metric-description">Ações corretivas propostas</div>
+                </div>
+              </div>
+            </div>
+            
+            ${totalApontamentos > 0 ? `
+            <!-- PRINCIPAIS APONTAMENTOS -->
+            <div class="section">
+              <h2 class="section-title">
+                <div class="section-icon">⚠️</div>
+                PRINCIPAIS APONTAMENTOS
+              </h2>
+              
+              <table class="findings-table">
+                <thead>
                   <tr>
-                    <td><strong>${apontamento.titulo || 'Sem título'}</strong></td>
-                    <td>
-                      <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; background: ${
-                        apontamento.criticidade === 'critica' ? '#fef2f2; color: #dc2626' :
-                        apontamento.criticidade === 'alta' ? '#fff7ed; color: #ea580c' :
-                        '#f0fdf4; color: #059669'
-                      };">
-                        ${(apontamento.criticidade || 'baixa').toUpperCase()}
-                      </span>
-                    </td>
-                    <td>${apontamento.categoria || 'Não categorizado'}</td>
-                    <td>${apontamento.status || 'Pendente'}</td>
+                    <th style="width: 40%;">Descrição do Apontamento</th>
+                    <th style="width: 15%;">Criticidade</th>
+                    <th style="width: 20%;">Categoria</th>
+                    <th style="width: 15%;">Status</th>
+                    <th style="width: 10%;">Impacto</th>
                   </tr>
-                `).join('') || '<tr><td colspan="4" style="text-align: center; color: #64748b;">Nenhum apontamento disponível</td></tr>'}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  ${projetoDetalhado?.apontamentos_auditoria?.slice(0, 10).map((apontamento, index) => `
+                    <tr>
+                      <td>
+                        <strong>${apontamento.titulo || `Apontamento ${index + 1}`}</strong>
+                        <br><small style="color: #6b7280;">${apontamento.descricao ? apontamento.descricao.substring(0, 100) + '...' : 'Descrição não disponível'}</small>
+                      </td>
+                      <td>
+                        <span class="severity-badge severity-${apontamento.criticidade || 'baixa'}">
+                          ${(apontamento.criticidade || 'baixa').toUpperCase()}
+                        </span>
+                      </td>
+                      <td>${(apontamento.categoria || 'Não categorizado').replace('_', ' ')}</td>
+                      <td>${apontamento.status || 'Identificado'}</td>
+                      <td style="text-align: right;">
+                        ${apontamento.valor_impacto ? 
+                          'R$ ' + apontamento.valor_impacto.toLocaleString('pt-BR') : 
+                          'N/A'
+                        }
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
+            
+            <!-- RECOMENDAÇÕES -->
+            <div class="section">
+              <h2 class="section-title">
+                <div class="section-icon">💡</div>
+                RECOMENDAÇÕES ESTRATÉGICAS
+              </h2>
+              
+              <div class="recommendations">
+                <h3 style="color: #059669; margin-bottom: 25px; font-size: 20px;">Plano de Ação Recomendado</h3>
+                
+                ${apontamentosCriticos > 0 ? `
+                <div class="recommendation-item">
+                  <div class="recommendation-priority">1</div>
+                  <div>
+                    <strong>Ação Imediata - Apontamentos Críticos</strong>
+                    <p>Implementar correções urgentes para os ${apontamentosCriticos} apontamentos de criticidade alta identificados. 
+                    Prazo recomendado: 30 dias. Responsabilidade: Alta Administração.</p>
+                  </div>
+                </div>
+                ` : ''}
+                
+                ${apontamentosAltos > 0 ? `
+                <div class="recommendation-item">
+                  <div class="recommendation-priority">2</div>
+                  <div>
+                    <strong>Melhorias Prioritárias</strong>
+                    <p>Desenvolver planos de ação para os ${apontamentosAltos} apontamentos de criticidade média-alta. 
+                    Prazo recomendado: 60-90 dias. Responsabilidade: Gestores de Área.</p>
+                  </div>
+                </div>
+                ` : ''}
+                
+                <div class="recommendation-item">
+                  <div class="recommendation-priority">3</div>
+                  <div>
+                    <strong>Fortalecimento do Ambiente de Controle</strong>
+                    <p>Implementar programa de monitoramento contínuo e revisões periódicas dos controles internos. 
+                    Estabelecer indicadores de performance e métricas de efetividade.</p>
+                  </div>
+                </div>
+                
+                <div class="recommendation-item">
+                  <div class="recommendation-priority">4</div>
+                  <div>
+                    <strong>Capacitação e Treinamento</strong>
+                    <p>Desenvolver programa de capacitação para equipes sobre melhores práticas de controles internos 
+                    e gestão de riscos. Foco em conscientização e cultura de compliance.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          ` : ''}
           
-          <div class="section">
-            <h2 class="section-title">🎯 Conclusões e Recomendações</h2>
-            <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 25px; border-radius: 12px; border-left: 6px solid #059669;">
-              <h3 style="color: #059669; margin-top: 0;">📄 Conclusão</h3>
-              <p style="font-size: 16px; line-height: 1.6;">
-                Com base nos trabalhos executados, concluímos que ${totalApontamentos > 0 ? 
-                  `foram identificadas ${totalApontamentos} oportunidades de melhoria` : 
-                  'os controles avaliados estão adequados'}.
-                ${apontamentosCriticos > 0 ? ` ${apontamentosCriticos} apontamentos requerem ação imediata.` : ''}
+          <!-- RODAPÉ -->
+          <div class="footer">
+            <div class="footer-grid">
+              <div class="footer-section">
+                <h4>Equipe de Auditoria</h4>
+                <p>Auditor Líder: ${projeto.auditor_lider || projeto.chefe_auditoria}</p>
+                <p>Data de Conclusão: ${dataFormatada}</p>
+              </div>
+              <div class="footer-section">
+                <h4>Classificação</h4>
+                <p>Documento: Confidencial</p>
+                <p>Distribuição: Restrita</p>
+              </div>
+              <div class="footer-section">
+                <h4>Próximos Passos</h4>
+                <p>Follow-up: 30 dias</p>
+                <p>Revisão: Trimestral</p>
+              </div>
+            </div>
+            
+            <div style="border-top: 1px solid #d1d5db; padding-top: 20px; margin-top: 20px;">
+              <p><strong>Sistema GRC - Governance, Risk & Compliance</strong></p>
+              <p>Relatório gerado automaticamente em ${timestamp}</p>
+              <p style="font-size: 11px; margin-top: 10px;">
+                Este documento contém informações confidenciais e deve ser tratado de acordo com as políticas de segurança da informação da organização.
               </p>
             </div>
-          </div>
-          
-          <div style="margin-top: 50px; padding-top: 30px; border-top: 3px solid #e2e8f0; text-align: center; color: #64748b;">
-            <p><strong>Relatório gerado automaticamente pelo Sistema GRC</strong></p>
-            <p>Auditor Líder: ${projeto.auditor_lider} | Data: ${timestamp}</p>
-            <p>Documento confidencial - Distribuição restrita</p>
           </div>
         </div>
       </body>
