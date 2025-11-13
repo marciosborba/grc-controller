@@ -151,17 +151,19 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           `;
           
           printButton.onclick = () => {
-            // Tentar remover título da janela para evitar aparecer na impressão
+            // Remover título para evitar aparecer na impressão
             const originalTitle = newWindow.document.title;
-            newWindow.document.title = '';
+            newWindow.document.title = ' '; // Espaço em branco em vez de string vazia
             
-            // Executar impressão
-            newWindow.print();
-            
-            // Restaurar título após impressão
+            // Executar impressão imediatamente
             setTimeout(() => {
-              newWindow.document.title = originalTitle;
-            }, 1000);
+              newWindow.print();
+              
+              // Restaurar título após impressão
+              setTimeout(() => {
+                newWindow.document.title = originalTitle;
+              }, 500);
+            }, 100);
           };
           
           newWindow.document.body.appendChild(printButton);
@@ -333,6 +335,8 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           .content {
             padding: 35px 30px;
           }
+          
+
           
           .section {
             margin-bottom: 35px;
@@ -536,52 +540,62 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
           
           @media print {
             .page { box-shadow: none; margin: 0; }
-            body { background: white; }
+            body { background: white; margin: 0 !important; padding: 0 !important; }
             .print-button { display: none !important; }
             
-            /* Configurar margens adequadas para impressão SEM cabeçalho/rodapé */
+            /* Configurar margens adequadas para impressão */
             @page {
               margin: 0.75in 0.5in 0.5in 0.5in; /* top right bottom left */
               size: A4;
-              /* Forçar remoção de headers e footers */
-              @top-left { content: none; }
-              @top-center { content: none; }
-              @top-right { content: none; }
-              @bottom-left { content: none; }
-              @bottom-center { content: none; }
-              @bottom-right { content: none; }
             }
             
-            /* Ocultar informações de impressão do navegador */
-            html {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            
-            /* Ajustar espaçamento do conteúdo */
-            body {
-              margin: 0 !important;
-              padding: 0 !important;
-            }
-            
+            /* Ajustar conteúdo para margens da página */
             .page {
               padding: 0 !important;
               margin: 0 !important;
             }
             
             .header-page {
-              margin-top: 0 !important;
-              padding-top: 30px !important;
+              padding: 30px 20px !important;
             }
             
             .content {
-              padding: 25px 20px !important;
+              padding: 20px !important;
             }
             
-            /* Garantir que não aparecem informações de URL/título */
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
+            .footer {
+              padding: 20px !important;
+            }
+            
+            /* Espaçamento das seções */
+            .section {
+              margin-bottom: 30px !important;
+              page-break-inside: avoid;
+            }
+            
+            .section-title {
+              margin-top: 20px !important;
+              margin-bottom: 15px !important;
+            }
+            
+            .findings-table {
+              margin: 20px 0 !important;
+            }
+            
+            .metrics-grid {
+              margin: 20px 0 !important;
+              gap: 15px !important;
+            }
+            
+            .executive-summary, .recommendations {
+              margin: 20px 0 !important;
+              padding: 20px !important;
+            }
+            
+            /* Ocultar informações de impressão */
+            html {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
           }
         </style>
