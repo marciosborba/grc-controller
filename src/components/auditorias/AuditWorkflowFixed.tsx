@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,8 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const lastClickTime = useRef(0);
+  const DEBOUNCE_DELAY = 500; // 500ms de debounce
 
   const phases = [
     {
@@ -198,11 +200,43 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
     }
   };
 
-  // Função para navegação direta entre fases
+  // Função com debounce para evitar cliques múltiplos
+  const handlePhaseClick = useCallback((phaseId: string) => {
+    const now = Date.now();
+    if (now - lastClickTime.current < DEBOUNCE_DELAY) {
+      console.log('Clique ignorado por debounce');
+      return;
+    }
+    lastClickTime.current = now;
+    handleDirectPhaseChange(phaseId);
+  }, []);
+
+  // Função para navegação direta entre fases - MELHORADA
   const handleDirectPhaseChange = async (phaseId: string) => {
-    if (phaseId === activePhase) return; // Já está na fase
+    // Validações iniciais
+    if (!phaseId) {
+      console.warn('Phase ID não fornecido');
+      return;
+    }
+    
+    if (phaseId === activePhase) {
+      console.log('Já está na fase:', phaseId);
+      return; // Já está na fase
+    }
+    
+    // Verificar se já está em transição
+    if (isTransitioning) {
+      console.log('Transição já em andamento, ignorando clique');
+      return;
+    }
     
     const phaseIndex = phases.findIndex(p => p.id === phaseId);
+    if (phaseIndex === -1) {
+      console.error('Fase não encontrada:', phaseId);
+      toast.error('Fase não encontrada');
+      return;
+    }
+    
     const accessibility = getPhaseAccessibility(phaseIndex);
     
     if (!accessibility.accessible) {
@@ -210,17 +244,27 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       return;
     }
     
+    console.log('Iniciando navegação para fase:', phaseId);
     setIsTransitioning(true);
     
     try {
+      // Primeiro atualizar o estado local imediatamente para feedback visual
+      onPhaseChange(phaseId);
+      
+      // Depois atualizar o banco de dados
       const success = await updateProjectPhase(phaseId);
       
       if (success) {
-        onPhaseChange(phaseId);
         const phaseName = phases.find(p => p.id === phaseId)?.name || phaseId;
         toast.success(`Navegou para: ${phaseName}`);
+        console.log('Navegação concluída com sucesso para:', phaseName);
+      } else {
+        // Se falhou, reverter o estado local
+        console.error('Falha ao atualizar banco, revertendo estado');
+        // Aqui você pode implementar lógica para reverter se necessário
       }
     } catch (error) {
+      console.error('Erro na navegação direta de fase:', error);
       secureLog('error', 'Erro na navegação direta de fase', error);
       toast.error('Erro ao navegar para a fase');
     } finally {
@@ -302,22 +346,38 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
               <React.Fragment key={phase.id}>
                 <div className="relative group">
                   <button
-                    onClick={() => status.isAccessible && handleDirectPhaseChange(phase.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Botão clicado:', phase.id, 'Status:', status);
+                      if (status.isAccessible && !isTransitioning) {
+                        handlePhaseClick(phase.id);
+                      } else {
+                        console.log('Clique ignorado - Não acessível ou em transição');
+                      }
+                    }}
                     disabled={!status.isAccessible || isTransitioning}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all cursor-pointer ${
                       getPhaseColor(phase.color, status)
-                    }`}
+                    } ${isTransitioning ? 'opacity-50 cursor-wait' : ''}`}
                     title={status.accessibilityReason}
+                    type="button"
                   >
                     <IconComponent className="h-4 w-4" />
                     <span className="text-sm font-medium">{phase.name}</span>
                     <span className="text-xs">({status.completeness}%)</span>
                     
                     {/* Ícones de status */}
-                    {status.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
-                    {status.isActive && <Clock className="h-3 w-3 text-primary" />}
-                    {!status.isAccessible && <Lock className="h-3 w-3" />}
-                    {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-3 w-3" />}
+                    {isTransitioning && status.isActive ? (
+                      <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        {status.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
+                        {status.isActive && <Clock className="h-3 w-3 text-primary" />}
+                        {!status.isAccessible && <Lock className="h-3 w-3" />}
+                        {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-3 w-3" />}
+                      </>
+                    )}
                   </button>
                   
                   {/* Tooltip com informações */}

@@ -164,7 +164,7 @@ export function FindingsPhase({ project }: FindingsPhaseProps) {
         status: 'identificado',
         data_identificacao: new Date().toISOString(),
         evidencias: [],
-        trabalho_origem: 'Auditoria Geral'
+        trabalho_origem: null
       };
 
       const { data, error } = await supabase
