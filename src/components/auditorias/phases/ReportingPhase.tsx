@@ -23,6 +23,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateTechnicalReportHTML } from './TechnicalReportGenerator';
+import { generateExecutiveReportHTML } from './ExecutiveReportGenerator';
 
 interface Report {
   id: string;
@@ -198,9 +199,13 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
   };
 
   const generateReportHTML = (projeto: any, projetoDetalhado: any, tipo: string) => {
-    // DIFERENCIAÇÃO REAL: Se for técnico, usar o gerador específico
+    // DIFERENCIAÇÃO REAL: Usar geradores específicos
     if (tipo === 'tecnico') {
       return generateTechnicalReportHTML(projeto, projetoDetalhado);
+    }
+    
+    if (tipo === 'executivo') {
+      return generateExecutiveReportHTML(projeto, projetoDetalhado);
     }
     
     // Código original para outros tipos (executivo, compliance, seguimento)
