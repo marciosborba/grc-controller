@@ -634,10 +634,6 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
               <div class="info-value">${projeto.codigo}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">Responsável Seguimento</div>
-              <div class="info-value">${projeto.auditor_lider || projeto.chefe_auditoria}</div>
-            </div>
-            <div class="info-item">
               <div class="info-label">Status Geral</div>
               <div class="info-value">${statusSeguimento}</div>
             </div>
@@ -648,10 +644,6 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
             <div class="info-item">
               <div class="info-label">Ações Concluídas</div>
               <div class="info-value">${planosConcluidos}/${planosAcao}</div>
-            </div>
-            <div class="info-item">
-              <div class="info-label">Data do Seguimento</div>
-              <div class="info-value">${dataFormatada}</div>
             </div>
           </div>
         </div>
