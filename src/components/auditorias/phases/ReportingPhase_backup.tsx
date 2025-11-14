@@ -22,7 +22,6 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generateTechnicalReportHTML } from './TechnicalReportGenerator';
 
 interface Report {
   id: string;
@@ -198,12 +197,6 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
   };
 
   const generateReportHTML = (projeto: any, projetoDetalhado: any, tipo: string) => {
-    // DIFERENCIAÇÃO REAL: Se for técnico, usar o gerador específico
-    if (tipo === 'tecnico') {
-      return generateTechnicalReportHTML(projeto, projetoDetalhado);
-    }
-    
-    // Código original para outros tipos (executivo, compliance, seguimento)
     const timestamp = new Date().toLocaleString('pt-BR');
     const dataFormatada = new Date().toLocaleDateString('pt-BR', { 
       year: 'numeric', 
