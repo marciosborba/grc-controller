@@ -36,10 +36,12 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
   const efetividadeAcoes = planosConcluidos > 0 ? 'EFETIVA' : 
                           planosEmAndamento > 0 ? 'PARCIAL' : 'INSUFICIENTE';
   
-  // Cálculo de prazos
-  const prazosMedios = planosAcao > 0 ? Math.round(planosAcao * 30) : 90; // Estimativa em dias
-  const acoesPrazo = planosConcluidos;
-  const acoesAtrasadas = planosPendentes;
+  // Cálculo de prazos e riscos
+  const prazoMedioImplementacao = planosAcao > 0 ? Math.round(planosAcao * 30) : 90; // Estimativa em dias
+  const nivelRisco = apontamentosCriticos > 5 ? 'ALTO' : 
+                     apontamentosCriticos > 2 ? 'MÉDIO' : 
+                     apontamentosCriticos > 0 ? 'BAIXO' : 'CONTROLADO';
+  const taxaImplementacao = implementationScore;
   
   return `
     <!DOCTYPE html>
@@ -176,9 +178,15 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
         
         .status-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(3, 1fr);
           gap: 15px;
           margin: 15px 0;
+        }
+        
+        @media (max-width: 768px) {
+          .status-grid {
+            grid-template-columns: 1fr;
+          }
         }
         
         .status-card {
@@ -424,9 +432,15 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
         
         .effectiveness-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(3, 1fr);
           gap: 12px;
           margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+          .effectiveness-grid {
+            grid-template-columns: 1fr;
+          }
         }
         
         .effectiveness-component {
@@ -630,20 +644,20 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
           
           <div class="header-info">
             <div class="info-item">
-              <div class="info-label">Código do Projeto</div>
-              <div class="info-value">${projeto.codigo}</div>
+              <div class="info-label">Total de Planos</div>
+              <div class="info-value">${planosAcao}</div>
             </div>
             <div class="info-item">
-              <div class="info-label">Status Geral</div>
-              <div class="info-value">${statusSeguimento}</div>
+              <div class="info-label">Taxa de Implementação</div>
+              <div class="info-value">${taxaImplementacao}%</div>
             </div>
             <div class="info-item">
-              <div class="info-label">Score de Implementação</div>
-              <div class="info-value">${implementationScore}%</div>
+              <div class="info-label">Prazo Médio</div>
+              <div class="info-value">${prazoMedioImplementacao} dias</div>
             </div>
             <div class="info-item">
-              <div class="info-label">Ações Concluídas</div>
-              <div class="info-value">${planosConcluidos}/${planosAcao}</div>
+              <div class="info-label">Nível de Risco</div>
+              <div class="info-value">${nivelRisco}</div>
             </div>
           </div>
         </div>
@@ -719,14 +733,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                 <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Percentual: ${planosAcao > 0 ? Math.round((planosPendentes / planosAcao) * 100) : 0}%</p>
               </div>
               
-              <div class="status-card">
-                <h4>📈 Score Geral <span class="implementation-status status-${implementationScore >= 90 ? 'excelente' : implementationScore >= 70 ? 'satisfatorio' : implementationScore >= 50 ? 'em-progresso' : 'critico'}">${implementationScore}%</span></h4>
-                <p style="font-size: 11px; margin: 6px 0;">Índice geral de implementação das ações corretivas propostas.</p>
-                <div class="progress-bar">
-                  <div class="progress-fill progress-${implementationScore >= 90 ? '100' : implementationScore >= 70 ? '75' : implementationScore >= 50 ? '50' : '25'}"></div>
-                </div>
-                <p style="font-size: 10px; color: #6b7280; margin-top: 4px;">Meta: ≥ 90% para conclusão</p>
-              </div>
+
             </div>
           </div>
           
@@ -941,14 +948,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                   </div>
                 </div>
                 
-                <div class="effectiveness-component">
-                  <h4>📈 Melhoria Contínua</h4>
-                  <p>Verificação da sustentabilidade e continuidade das melhorias implementadas.</p>
-                  <div class="effectiveness-score">
-                    <span class="score-indicator score-${implementationScore >= 80 ? 'efetiva' : implementationScore >= 50 ? 'parcial' : 'insuficiente'}"></span>
-                    <span style="font-size: 10px; font-weight: 600;">${implementationScore >= 80 ? 'EFETIVA' : implementationScore >= 50 ? 'PARCIAL' : 'INSUFICIENTE'}</span>
-                  </div>
-                </div>
+
                 
                 <div class="effectiveness-component">
                   <h4>⚡ Tempestividade</h4>
@@ -1125,10 +1125,10 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
               <p>Confidencialidade: Restrita</p>
             </div>
             <div class="footer-section">
-              <h4>📊 Indicadores de Seguimento</h4>
-              <p>Score de Implementação: ${implementationScore}%</p>
-              <p>Ações Concluídas: ${planosConcluidos}/${planosAcao}</p>
-              <p>Status Geral: ${statusSeguimento}</p>
+              <h4>📊 Indicadores de Controle</h4>
+              <p>Nível de Risco: ${nivelRisco}</p>
+              <p>Efetividade: ${efetividadeAcoes}</p>
+              <p>Prazo Médio: ${prazoMedioImplementacao}d</p>
             </div>
             <div class="footer-section">
               <h4>🎯 Próximas Etapas</h4>
