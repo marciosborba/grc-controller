@@ -174,20 +174,44 @@ export function AuditDashboardNew() {
   };
 
   const calculatePhaseCompleteness = (project: any, phase: string): number => {
-    // Lógica simplificada - pode ser expandida baseada em critérios específicos
+    // Debug: Log dos dados de completude
+    console.log(`calculatePhaseCompleteness - Phase: ${phase}`, {
+      project_id: project.id,
+      completude_field: `completude_${phase}`,
+      completude_value: project[`completude_${phase}`],
+      apontamentos: project.apontamentos_auditoria?.length || 0
+    });
+    
+    // Usar os valores reais de completude do banco de dados se disponíveis
+    const completudeField = `completude_${phase}`;
+    if (project[completudeField] !== undefined && project[completudeField] !== null) {
+      return Math.round(project[completudeField]);
+    }
+    
+    // Fallback para lógica de cálculo se não houver dados no banco
     switch (phase) {
       case 'planejamento':
-        return project.objetivos && project.escopo ? 100 : 50;
+        let planejamentoScore = 0;
+        if (project.objetivos) planejamentoScore += 25;
+        if (project.escopo) planejamentoScore += 25;
+        if (project.metodologia) planejamentoScore += 25;
+        if (project.cronograma) planejamentoScore += 25;
+        return planejamentoScore;
       case 'execucao':
         const trabalhos = project.trabalhos_auditoria || [];
-        return trabalhos.length > 0 ? (trabalhos.filter((t: any) => t.status === 'concluido').length / trabalhos.length) * 100 : 0;
+        return trabalhos.length > 0 ? Math.round((trabalhos.filter((t: any) => t.status === 'concluido').length / trabalhos.length) * 100) : 0;
       case 'achados':
-        return project.apontamentos_auditoria?.length > 0 ? 100 : 0;
+        const apontamentos = project.apontamentos_auditoria || [];
+        if (apontamentos.length === 0) return 0;
+        
+        // Calcular baseado no status dos apontamentos
+        const validados = apontamentos.filter(a => ['validado', 'comunicado', 'aceito'].includes(a.status)).length;
+        return Math.round((validados / apontamentos.length) * 100);
       case 'relatorio':
         return project.relatorio_final ? 100 : 0;
       case 'followup':
         const planos = project.planos_acao || [];
-        return planos.length > 0 ? (planos.filter((p: any) => p.status === 'implementado').length / planos.length) * 100 : 0;
+        return planos.length > 0 ? Math.round((planos.filter((p: any) => p.status === 'implementado').length / planos.length) * 100) : 0;
       default:
         return 0;
     }

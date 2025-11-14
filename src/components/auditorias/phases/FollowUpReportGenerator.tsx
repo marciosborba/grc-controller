@@ -1,5 +1,22 @@
 import React from 'react';
 
+// Função helper para formatar datas corretamente (evita problemas de fuso horário)
+const formatDateSafe = (dateString: string) => {
+  if (!dateString) return 'A definir';
+  
+  // Se a data já está no formato correto (YYYY-MM-DD), parse manualmente
+  const dateParts = dateString.split('T')[0].split('-'); // Remove hora se existir e pega apenas a data
+  if (dateParts.length === 3) {
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1; // JavaScript months são 0-indexed
+    const day = parseInt(dateParts[2]);
+    return new Date(year, month, day).toLocaleDateString('pt-BR');
+  }
+  
+  // Fallback para outros formatos
+  return new Date(dateString).toLocaleDateString('pt-BR');
+};
+
 // Gerador específico para Relatório de Seguimento - Monitoramento de Ações Corretivas
 export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) => {
   const timestamp = new Date().toLocaleString('pt-BR');
@@ -756,14 +773,14 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                 </tr>
               </thead>
               <tbody>
-                ${projetoDetalhado?.planos_acao?.map((plano, index) => `
+                ${(projetoDetalhado?.planos_acao || []).map((plano, index) => `
                   <tr>
                     <td>
                       <strong style="font-size: 11px;">${plano.titulo || 'Plano de Ação ' + (index + 1)}</strong>
                       <br><small style="color: #6b7280; font-size: 9px;">${plano.descricao ? plano.descricao.substring(0, 60) + '...' : 'Implementar ações corretivas conforme recomendações'}</small>
                     </td>
                     <td style="font-size: 10px;">${plano.responsavel || 'A definir'}</td>
-                    <td style="font-size: 10px;">${plano.prazo ? new Date(plano.prazo).toLocaleDateString('pt-BR') : 'A definir'}</td>
+                    <td style="font-size: 10px;">${formatDateSafe(plano.prazo_implementacao)}</td>
                     <td>
                       <span class="timeline-status status-${plano.status === 'concluido' ? 'concluido' : plano.status === 'em_andamento' ? 'em-andamento' : 'pendente'}">
                         ${plano.status === 'concluido' ? 'CONCLUÍDO' : plano.status === 'em_andamento' ? 'EM ANDAMENTO' : 'PENDENTE'}
@@ -773,7 +790,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                       <div class="progress-bar">
                         <div class="progress-fill progress-${plano.status === 'concluido' ? '100' : plano.status === 'em_andamento' ? '50' : '0'}"></div>
                       </div>
-                      <small style="font-size: 9px; color: #6b7280;">${plano.percentual_conclusao || (plano.status === 'concluido' ? 100 : plano.status === 'em_andamento' ? 50 : 0)}%</small>
+                      <small style="font-size: 9px; color: #6b7280;">${plano.progresso || (plano.status === 'concluido' ? 100 : plano.status === 'em_andamento' ? 50 : 0)}%</small>
                     </td>
                     <td style="text-align: center;">
                       ${plano.status === 'concluido' ? '✅' : plano.status === 'em_andamento' ? '🔄' : '⏳'}
@@ -795,7 +812,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
               Detalhamento do progresso de cada ação corretiva com evidências de implementação e avaliação de efetividade.
             </p>
             
-            ${projetoDetalhado?.planos_acao?.map((plano, index) => `
+            ${(projetoDetalhado?.planos_acao || []).map((plano, index) => `
               <div class="action-item">
                 <div class="action-header">
                   <h4 style="display: flex; align-items: center;">
@@ -820,7 +837,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                   
                   <div class="detail-field">
                     <label>Prazo Estabelecido</label>
-                    <span>${plano.prazo ? new Date(plano.prazo).toLocaleDateString('pt-BR') : 'A definir'}</span>
+                    <span>${formatDateSafe(plano.prazo_implementacao)}</span>
                   </div>
                   
                   <div class="detail-field">
@@ -830,12 +847,12 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                   
                   <div class="detail-field">
                     <label>% Conclusão</label>
-                    <span>${plano.percentual_conclusao || (plano.status === 'concluido' ? 100 : plano.status === 'em_andamento' ? 50 : 0)}%</span>
+                    <span>${plano.progresso || (plano.status === 'concluido' ? 100 : plano.status === 'em_andamento' ? 50 : 0)}%</span>
                   </div>
                   
                   <div class="detail-field">
                     <label>Custo Estimado</label>
-                    <span>${plano.custo ? 'R$ ' + plano.custo.toLocaleString('pt-BR') : 'N/A'}</span>
+                    <span>${plano.custo_estimado ? 'R$ ' + plano.custo_estimado.toLocaleString('pt-BR') : 'N/A'}</span>
                   </div>
                 </div>
                 
@@ -868,7 +885,7 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
               CRONOGRAMA E MARCOS DE IMPLEMENTAÇÃO
             </h2>
             
-            ${projetoDetalhado?.planos_acao?.map((plano, index) => `
+            ${(projetoDetalhado?.planos_acao || []).map((plano, index) => `
               <div class="timeline-item">
                 <div class="timeline-header">
                   <h4 style="display: flex; align-items: center;">
@@ -886,8 +903,8 @@ export const generateFollowUpReportHTML = (projeto: any, projetoDetalhado: any) 
                       <span class="milestone-icon">📅</span>
                       CRONOGRAMA PLANEJADO
                     </h5>
-                    <p><strong>Início:</strong> ${plano.data_inicio ? new Date(plano.data_inicio).toLocaleDateString('pt-BR') : 'A definir'}</p>
-                    <p><strong>Prazo:</strong> ${plano.prazo ? new Date(plano.prazo).toLocaleDateString('pt-BR') : 'A definir'}</p>
+                    <p><strong>Início:</strong> ${formatDateSafe(plano.data_inicio_planejada)}</p>
+                    <p><strong>Prazo:</strong> ${formatDateSafe(plano.prazo_implementacao)}</p>
                     <p><strong>Duração Estimada:</strong> ${plano.duracao || '30-60 dias'}</p>
                   </div>
                   

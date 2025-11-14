@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   CheckCircle, 
   Clock, 
@@ -18,12 +19,14 @@ import {
   Send,
   FileText,
   Search,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ActionPlanManager } from './ActionPlanManager';
 
 interface ActionPlan {
   id: string;
@@ -236,6 +239,29 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Tabs para organizar o conteúdo */}
+      <Tabs defaultValue="planos" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="planos" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Gerenciar Planos
+          </TabsTrigger>
+          <TabsTrigger value="monitoramento" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Monitoramento
+          </TabsTrigger>
+          <TabsTrigger value="relatorios" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Relatórios
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="planos" className="space-y-6">
+          <ActionPlanManager project={project} onUpdate={loadFollowUpData} />
+        </TabsContent>
+
+        <TabsContent value="monitoramento" className="space-y-6">
 
       {/* Resumo do Follow-up */}
       {summary && (
@@ -475,8 +501,38 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
           </div>
         )}
       </div>
+        </TabsContent>
 
-      {/* Ações */}
+        <TabsContent value="relatorios" className="space-y-6">
+          {/* Ações de Relatórios */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Relatórios de Follow-up</CardTitle>
+              <CardDescription>
+                Gere relatórios de acompanhamento e implementação
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Relatório de Implementação
+                </Button>
+                <Button variant="outline">
+                  <Send className="h-4 w-4 mr-2" />
+                  Notificar Responsáveis
+                </Button>
+                <Button variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Relatório de Seguimento
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Status Footer */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
@@ -487,19 +543,9 @@ export function FollowUpPhase({ project }: FollowUpPhaseProps) {
               </span>
             </div>
             
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Relatório de Implementação
-              </Button>
-              <Button variant="outline">
-                <Send className="h-4 w-4 mr-2" />
-                Notificar Responsáveis
-              </Button>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Plano de Ação
-              </Button>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Última atualização</p>
+              <p className="text-sm font-medium">{new Date().toLocaleDateString('pt-BR')}</p>
             </div>
           </div>
         </CardContent>

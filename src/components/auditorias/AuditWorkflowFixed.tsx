@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { PlanningPhase } from './phases/PlanningPhase';
 import { ExecutionPhase } from './phases/ExecutionPhase';
-import { FindingsPhase } from './phases/FindingsPhase';
+import { FindingsPhaseFixed } from './phases/FindingsPhaseFixed';
 import { ReportingPhase } from './phases/ReportingPhase';
 import { FollowUpPhase } from './phases/FollowUpPhase';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -82,6 +82,15 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
   const [saving, setSaving] = useState(false);
   const lastClickTime = useRef(0);
   const DEBOUNCE_DELAY = 500; // 500ms de debounce
+  
+  // Debug: Log dos dados de completude
+  console.log('AuditWorkflowFixed - Project completeness data:', {
+    planejamento: project.completude_planejamento,
+    execucao: project.completude_execucao,
+    achados: project.completude_achados,
+    relatorio: project.completude_relatorio,
+    followup: project.completude_followup
+  });
 
   const phases = [
     {
@@ -89,7 +98,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Planejamento',
       icon: Target,
       description: 'Definição de objetivos, escopo e recursos',
-      completeness: project.completude_planejamento || 0,
+      completeness: Math.round(project.completude_planejamento || 0),
       color: 'blue',
       minCompleteness: 0 // Navegação livre // Sempre acessível
     },
@@ -98,7 +107,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Execução',
       icon: Play,
       description: 'Trabalhos de campo e coleta de evidências',
-      completeness: project.completude_execucao || 0,
+      completeness: Math.round(project.completude_execucao || 0),
       color: 'yellow',
       minCompleteness: 0 // Navegação livre // Requer 30% do planejamento
     },
@@ -107,7 +116,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Achados',
       icon: AlertTriangle,
       description: 'Análise e classificação de apontamentos',
-      completeness: project.completude_achados || 0,
+      completeness: Math.round(project.completude_achados || 0),
       color: 'orange',
       minCompleteness: 0 // Navegação livre // Requer 50% da execução
     },
@@ -116,7 +125,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Relatório',
       icon: FileText,
       description: 'Elaboração e revisão de relatórios',
-      completeness: project.completude_relatorio || 0,
+      completeness: Math.round(project.completude_relatorio || 0),
       color: 'purple',
       minCompleteness: 0 // Navegação livre // Requer 70% dos achados
     },
@@ -125,7 +134,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Follow-up',
       icon: CheckCircle,
       description: 'Acompanhamento de implementação',
-      completeness: project.completude_followup || 0,
+      completeness: Math.round(project.completude_followup || 0),
       color: 'green',
       minCompleteness: 0 // Navegação livre // Requer 80% do relatório
     }
@@ -321,7 +330,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       case 'execucao':
         return <ExecutionPhase project={project} />;
       case 'achados':
-        return <FindingsPhase project={project} />;
+        return <FindingsPhaseFixed project={project} />;
       case 'relatorio':
         return <ReportingPhase project={project} />;
       case 'followup':
@@ -337,7 +346,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
     <div className="space-y-6">
       {/* Breadcrumb de Fases MELHORADO */}
       <div className="flex items-center justify-center">
-        <div className="flex items-center space-x-2 flex-wrap">
+                <div className="flex items-center space-x-1 flex-wrap">
           {phases.map((phase, index) => {
             const IconComponent = phase.icon;
             const status = getPhaseStatus(index);
@@ -357,25 +366,25 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
                       }
                     }}
                     disabled={!status.isAccessible || isTransitioning}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all cursor-pointer ${
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md border-2 transition-all cursor-pointer text-xs ${
                       getPhaseColor(phase.color, status)
                     } ${isTransitioning ? 'opacity-50 cursor-wait' : ''}`}
                     title={status.accessibilityReason}
                     type="button"
                   >
-                    <IconComponent className="h-4 w-4" />
-                    <span className="text-sm font-medium">{phase.name}</span>
-                    <span className="text-xs">({status.completeness}%)</span>
+                    <IconComponent className="h-3 w-3" />
+                    <span className="text-xs font-medium">{phase.name}</span>
+                    <span className="text-xs">({Math.round(phase.completeness || 0)}%)</span>
                     
                     {/* Ícones de status */}
                     {isTransitioning && status.isActive ? (
                       <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full" />
                     ) : (
                       <>
-                        {status.isCompleted && <CheckCircle className="h-3 w-3 text-green-600" />}
-                        {status.isActive && <Clock className="h-3 w-3 text-primary" />}
-                        {!status.isAccessible && <Lock className="h-3 w-3" />}
-                        {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-3 w-3" />}
+                        {status.isCompleted && <CheckCircle className="h-2.5 w-2.5 text-green-600" />}
+                        {status.isActive && <Clock className="h-2.5 w-2.5 text-primary" />}
+                        {!status.isAccessible && <Lock className="h-2.5 w-2.5" />}
+                        {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-2.5 w-2.5" />}
                       </>
                     )}
                   </button>
@@ -388,7 +397,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
                 </div>
                 
                 {index < phases.length - 1 && (
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                  <ChevronRight className="h-3 w-3 text-gray-400" />
                 )}
               </React.Fragment>
             );
@@ -398,35 +407,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
 
       </div>
 
-      {/* Informações da Fase Atual MELHORADAS */}
-      <Card className={`border-l-4 border-l-primary`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {currentPhase && (
-                <currentPhase.icon className="h-6 w-6" />
-              )}
-              <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  {currentPhase?.name}
-                  <Badge variant="secondary">
-                    {Math.round(currentPhase?.completeness || 0)}% completo
-                  </Badge>
-                </CardTitle>
-                <CardDescription>{currentPhase?.description}</CardDescription>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Completude</p>
-                <p className="text-lg font-bold">{Math.round(currentPhase?.completeness || 0)}%</p>
-              </div>
-              <Progress value={currentPhase?.completeness || 0} className="w-24 h-3" />
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+
 
       {/* Alertas e Validações MELHORADOS */}
       {currentPhase && currentPhase.completeness < 50 && (
