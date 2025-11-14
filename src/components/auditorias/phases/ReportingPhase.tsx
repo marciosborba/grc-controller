@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { generateTechnicalReportHTML } from './TechnicalReportGenerator';
 import { generateExecutiveReportHTML } from './ExecutiveReportGenerator';
 import { generateComplianceReportHTML } from './ComplianceReportGenerator';
+import { generateFollowUpReportHTML } from './FollowUpReportGenerator';
 
 interface Report {
   id: string;
@@ -213,7 +214,11 @@ export function ReportingPhase({ project }: ReportingPhaseProps) {
       return generateComplianceReportHTML(projeto, projetoDetalhado);
     }
     
-    // Código original para outros tipos (executivo, compliance, seguimento)
+    if (tipo === 'seguimento') {
+      return generateFollowUpReportHTML(projeto, projetoDetalhado);
+    }
+    
+    // Código original para outros tipos (fallback)
     const timestamp = new Date().toLocaleString('pt-BR');
     const dataFormatada = new Date().toLocaleDateString('pt-BR', { 
       year: 'numeric', 
