@@ -28,6 +28,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { secureLog } from '@/utils/securityLogger';
+import { usePhaseCompleteness } from '@/contexts/ProjectCompletenessContext';
 
 interface PlanningData {
   objetivos: string[];
@@ -73,6 +74,16 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
+  
+  // Hook para completude da fase de planejamento
+  const {
+    interfaceCompleteness,
+    databaseCompleteness,
+    filledElements,
+    totalElements,
+    updateInterface,
+    saveToDatabase
+  } = usePhaseCompleteness('planejamento');
 
   const [planningData, setPlanningData] = useState<PlanningData>({
     objetivos: [],
@@ -96,16 +107,111 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const [newResource, setNewResource] = useState({ nome: '', funcao: '', horas_alocadas: 0, custo_hora: 0 });
   const [newTimelineItem, setNewTimelineItem] = useState({ atividade: '', data_inicio: '', data_fim: '', responsavel: '' });
 
-  // Auto-save a cada 30 segundos
+  // Função para calcular orçamento total
+  const calculateTotalBudget = useCallback(() => {
+    const resourcesCost = planningData.recursos_humanos.reduce((sum, r) => 
+      sum + (r.horas_alocadas * r.custo_hora), 0
+    );
+    return resourcesCost + planningData.orcamento;
+  }, [planningData.recursos_humanos, planningData.orcamento]);
+
+  // Função para calcular completude baseada no preenchimento real dos elementos
+  const calculateInterfaceCompleteness = useCallback(() => {
+    let filledCount = 0;
+    const totalCount = 6; // Total de elementos principais
+
+    // 1. Objetivos (pelo menos 1 objetivo)
+    if (planningData.objetivos.length > 0) filledCount++;
+    
+    // 2. Escopo (pelo menos 50 caracteres)
+    if (planningData.escopo.trim().length >= 50) filledCount++;
+    
+    // 3. Metodologia (pelo menos 50 caracteres)
+    if (planningData.metodologia.trim().length >= 50) filledCount++;
+    
+    // 4. Critérios de auditoria (pelo menos 1 critério)
+    if (planningData.criterios_auditoria.length > 0) filledCount++;
+    
+    // 5. Recursos humanos (pelo menos 1 recurso além do líder)
+    if (planningData.recursos_humanos.length > 0) filledCount++;
+    
+    // 6. Cronograma (pelo menos 1 atividade)
+    if (planningData.cronograma.length > 0) filledCount++;
+
+    console.log('PlanningPhaseFixed - Interface completeness calculation:', {
+      project_id: project.id,
+      filledCount,
+      totalCount,
+      percentage: Math.round((filledCount / totalCount) * 100),
+      details: {
+        objetivos: planningData.objetivos.length > 0,
+        escopo: planningData.escopo.trim().length >= 50,
+        metodologia: planningData.metodologia.trim().length >= 50,
+        criterios: planningData.criterios_auditoria.length > 0,
+        recursos: planningData.recursos_humanos.length > 0,
+        cronograma: planningData.cronograma.length > 0
+      }
+    });
+
+    return { filledCount, totalCount };
+  }, [planningData, project.id]);
+
+  // Auto-save a cada 30 segundos (apenas se houver dados)
   useEffect(() => {
+    // Não configurar auto-save durante carregamento inicial
+    if (loading) return;
+    
+    const hasData = planningData.objetivos.length > 0 || 
+                   planningData.escopo.length > 0 || 
+                   planningData.metodologia.length > 0 || 
+                   planningData.criterios_auditoria.length > 0;
+    
+    if (!hasData) return;
+    
     const interval = setInterval(() => {
-      if (planningData && !saving) {
+      if (!saving && !autoSaving) {
         autoSavePlanningData();
       }
     }, 30000); // 30 segundos
 
     return () => clearInterval(interval);
-  }, [planningData, saving]);
+  }, [
+    planningData.objetivos.length,
+    planningData.escopo.length,
+    planningData.metodologia.length,
+    planningData.criterios_auditoria.length,
+    saving,
+    autoSaving,
+    loading
+  ]);
+  
+  // Atualizar completude da interface quando dados mudam
+  useEffect(() => {
+    // Evitar atualização durante carregamento inicial
+    if (loading) return;
+    
+    const { filledCount, totalCount } = calculateInterfaceCompleteness();
+    
+    // Atualizar completude da interface no contexto
+    updateInterface(filledCount, totalCount);
+    
+    console.log('PlanningPhaseFixed - Interface completeness updated:', {
+      project_id: project.id,
+      filledCount,
+      totalCount,
+      percentage: Math.round((filledCount / totalCount) * 100)
+    });
+  }, [
+    planningData.objetivos.length,
+    planningData.escopo.length,
+    planningData.metodologia.length,
+    planningData.criterios_auditoria.length,
+    planningData.recursos_humanos.length,
+    planningData.cronograma.length,
+    loading,
+    updateInterface,
+    calculateInterfaceCompleteness
+  ]);
 
   useEffect(() => {
     loadPlanningData();
@@ -115,91 +221,86 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     try {
       setLoading(true);
       
+      console.log('PlanningPhaseFixed - Loading data for project:', project.id);
+      
       // Carregar dados de planejamento do projeto
       const { data, error } = await supabase
         .from('projetos_auditoria')
         .select(`
-          *,
-          recursos_auditoria(*),
-          cronograma_auditoria(*),
-          riscos_auditoria(*)
+          id,
+          objetivos,
+          escopo,
+          metodologia,
+          criterios_auditoria,
+          orcamento_estimado,
+          completude_planejamento,
+          data_inicio,
+          data_fim_planejada,
+          auditor_lider,
+          chefe_auditoria
         `)
         .eq('id', project.id)
         .single();
 
-      if (error) throw error;
+      console.log('PlanningPhaseFixed - Database response:', { data, error });
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       if (data) {
-        setPlanningData({
-          objetivos: data.objetivos || [],
+        const newPlanningData = {
+          objetivos: Array.isArray(data.objetivos) ? data.objetivos : [],
           escopo: data.escopo || '',
-          recursos_humanos: data.recursos_auditoria || [],
-          cronograma: data.cronograma_auditoria || [],
+          recursos_humanos: [], // Inicializar vazio por enquanto
+          cronograma: [], // Inicializar vazio por enquanto
           orcamento: data.orcamento_estimado || 0,
-          riscos_identificados: data.riscos_auditoria || [],
+          riscos_identificados: [], // Inicializar vazio por enquanto
           metodologia: data.metodologia || '',
-          criterios_auditoria: data.criterios_auditoria || []
-        });
+          criterios_auditoria: Array.isArray(data.criterios_auditoria) ? data.criterios_auditoria : []
+        };
+        
+        console.log('PlanningPhaseFixed - Setting planning data:', newPlanningData);
+        setPlanningData(newPlanningData);
+        
+        // Forçar atualização da completude após carregar dados
+        setTimeout(() => {
+          const { filledCount, totalCount } = calculateInterfaceCompleteness();
+          updateInterface(filledCount, totalCount);
+          
+          // Se houver dados salvos no banco, também atualizar
+          if (data.completude_planejamento && data.completude_planejamento > 0) {
+            saveToDatabase(project.id, effectiveTenantId || '', data.completude_planejamento);
+          }
+        }, 100);
       }
     } catch (error) {
       console.error('Erro ao carregar dados de planejamento:', error);
-      toast.error('Erro ao carregar dados de planejamento');
+      toast.error(`Erro ao carregar dados de planejamento: ${error.message || 'Erro desconhecido'}`);
+      
+      // Inicializar com dados vazios em caso de erro
+      setPlanningData({
+        objetivos: [],
+        escopo: '',
+        recursos_humanos: [],
+        cronograma: [],
+        orcamento: 0,
+        riscos_identificados: [],
+        metodologia: '',
+        criterios_auditoria: []
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Função para calcular completude de forma mais precisa
-  const calculateCompleteness = useCallback(() => {
-    let score = 0;
-    const maxScore = 100;
 
-    // Objetivos (20 pontos)
-    if (planningData.objetivos.length > 0) {
-      score += Math.min(20, planningData.objetivos.length * 5); // 5 pontos por objetivo, máximo 20
-    }
-
-    // Escopo (15 pontos)
-    if (planningData.escopo.trim()) {
-      const escopoLength = planningData.escopo.trim().length;
-      score += Math.min(15, Math.floor(escopoLength / 20)); // 1 ponto a cada 20 caracteres, máximo 15
-    }
-
-    // Metodologia (15 pontos)
-    if (planningData.metodologia.trim()) {
-      const metodologiaLength = planningData.metodologia.trim().length;
-      score += Math.min(15, Math.floor(metodologiaLength / 20)); // 1 ponto a cada 20 caracteres, máximo 15
-    }
-
-    // Critérios de auditoria (15 pontos)
-    if (planningData.criterios_auditoria.length > 0) {
-      score += Math.min(15, planningData.criterios_auditoria.length * 3); // 3 pontos por critério, máximo 15
-    }
-
-    // Recursos humanos (15 pontos)
-    if (planningData.recursos_humanos.length > 0) {
-      score += Math.min(15, planningData.recursos_humanos.length * 5); // 5 pontos por recurso, máximo 15
-    }
-
-    // Cronograma (10 pontos)
-    if (planningData.cronograma.length > 0) {
-      score += Math.min(10, planningData.cronograma.length * 2); // 2 pontos por atividade, máximo 10
-    }
-
-    // Orçamento (10 pontos)
-    if (planningData.orcamento > 0 || calculateTotalBudget() > 0) {
-      score += 10;
-    }
-
-    return Math.min(maxScore, score);
-  }, [planningData]);
 
   // Auto-save silencioso
   const autoSavePlanningData = async () => {
     try {
       setAutoSaving(true);
-      
-      const completeness = calculateCompleteness();
       
       const { error: projectError } = await supabase
         .from('projetos_auditoria')
@@ -209,17 +310,21 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
           orcamento_estimado: calculateTotalBudget(),
           metodologia: planningData.metodologia,
           criterios_auditoria: planningData.criterios_auditoria,
-          completude_planejamento: completeness,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id);
 
       if (projectError) throw projectError;
 
+      // Se a completude da interface for 100%, salvar no banco também
+      if (interfaceCompleteness === 100) {
+        await saveToDatabase(project.id, effectiveTenantId || '', 100);
+      }
+
       setLastSaved(new Date());
       secureLog('info', 'Auto-save do planejamento realizado', { 
         projectId: project.id, 
-        completeness 
+        interfaceCompleteness 
       });
     } catch (error) {
       secureLog('error', 'Erro no auto-save do planejamento', error);
@@ -233,8 +338,6 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     try {
       setSaving(true);
       
-      const completeness = calculateCompleteness();
-      
       // Salvar dados do projeto
       const { error: projectError } = await supabase
         .from('projetos_auditoria')
@@ -244,19 +347,22 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
           orcamento_estimado: calculateTotalBudget(),
           metodologia: planningData.metodologia,
           criterios_auditoria: planningData.criterios_auditoria,
-          completude_planejamento: completeness,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id);
 
       if (projectError) throw projectError;
 
+      // Sempre salvar a completude atual no banco
+      await saveToDatabase(project.id, effectiveTenantId || '', interfaceCompleteness);
+
       setLastSaved(new Date());
-      toast.success(`Dados de planejamento salvos! Completude: ${completeness}%`);
+      toast.success(`Dados salvos! Interface: ${interfaceCompleteness}% | Botão: ${databaseCompleteness}%`);
       
       secureLog('info', 'Planejamento salvo manualmente', { 
         projectId: project.id, 
-        completeness 
+        interfaceCompleteness,
+        databaseCompleteness
       });
     } catch (error) {
       console.error('Erro ao salvar dados de planejamento:', error);
@@ -355,12 +461,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     }));
   };
 
-  const calculateTotalBudget = () => {
-    const resourcesCost = planningData.recursos_humanos.reduce((sum, r) => 
-      sum + (r.horas_alocadas * r.custo_hora), 0
-    );
-    return resourcesCost + planningData.orcamento;
-  };
+
 
   if (loading) {
     return (
@@ -370,7 +471,25 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     );
   }
 
-  const completeness = calculateCompleteness();
+  // Usar completude da interface para exibição nas abas
+  const displayCompleteness = interfaceCompleteness;
+  
+  console.log('PlanningPhaseFixed - Completeness display:', {
+    project_id: project.id,
+    interfaceCompleteness, // Baseado no preenchimento da interface
+    databaseCompleteness,   // Baseado nos dados salvos no banco
+    displayCompleteness,    // O que será exibido na aba
+    filledElements,
+    totalElements,
+    planningData: {
+      objetivos: planningData.objetivos.length,
+      escopo: planningData.escopo.length,
+      metodologia: planningData.metodologia.length,
+      criterios: planningData.criterios_auditoria.length,
+      recursos: planningData.recursos_humanos.length,
+      cronograma: planningData.cronograma.length
+    }
+  });
 
   return (
     <div className="space-y-6">
@@ -396,12 +515,12 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Completude</p>
-                <p className="text-lg font-bold">{completeness}%</p>
-                <Badge variant={completeness >= 80 ? 'default' : completeness >= 50 ? 'secondary' : 'outline'}>
-                  {completeness >= 80 ? 'Excelente' : completeness >= 50 ? 'Bom' : 'Em progresso'}
+                <p className="text-lg font-bold">{displayCompleteness}%</p>
+                <Badge variant={displayCompleteness >= 80 ? 'default' : displayCompleteness >= 50 ? 'secondary' : 'outline'}>
+                  {displayCompleteness >= 80 ? 'Excelente' : displayCompleteness >= 50 ? 'Bom' : 'Em progresso'}
                 </Badge>
               </div>
-              <Progress value={completeness} className="w-24 h-3" />
+              <Progress value={displayCompleteness} className="w-24 h-3" />
             </div>
           </div>
         </CardHeader>
@@ -767,11 +886,11 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle className={`h-4 w-4 ${completeness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
+              <CheckCircle className={`h-4 w-4 ${displayCompleteness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
               <span className="text-sm text-muted-foreground">
-                {completeness >= 80 ? 'Planejamento completo - Pronto para próxima fase' : 
-                 completeness >= 50 ? `${completeness}% completo - Bom progresso` :
-                 `${completeness}% completo - Continue preenchendo`}
+                {displayCompleteness >= 80 ? 'Planejamento completo - Pronto para próxima fase' : 
+                 displayCompleteness >= 50 ? `${displayCompleteness}% completo - Bom progresso` :
+                 `${displayCompleteness}% completo - Continue preenchendo`}
               </span>
               {autoSaving && (
                 <Badge variant="outline" className="ml-2">

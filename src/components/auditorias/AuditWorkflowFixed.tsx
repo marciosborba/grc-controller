@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
   Unlock,
   Info
 } from 'lucide-react';
-import { PlanningPhase } from './phases/PlanningPhase';
+import { PlanningPhaseFixed } from './phases/PlanningPhaseFixed';
 import { ExecutionPhase } from './phases/ExecutionPhase';
 import { FindingsPhaseFixed } from './phases/FindingsPhaseFixed';
 import { ReportingPhase } from './phases/ReportingPhase';
@@ -38,6 +38,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { secureLog } from '@/utils/securityLogger';
+import { useProjectCompleteness, ProjectCompletenessProvider } from '@/contexts/ProjectCompletenessContext';
 
 interface AuditProject {
   id: string;
@@ -74,7 +75,8 @@ interface AuditWorkflowProps {
   onPhaseChange: (phase: string) => void;
 }
 
-export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
+// Componente interno que usa o hook
+function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
@@ -83,14 +85,81 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
   const lastClickTime = useRef(0);
   const DEBOUNCE_DELAY = 500; // 500ms de debounce
   
-  // Debug: Log dos dados de completude
-  console.log('AuditWorkflowFixed - Project completeness data:', {
-    planejamento: project.completude_planejamento,
-    execucao: project.completude_execucao,
-    achados: project.completude_achados,
-    relatorio: project.completude_relatorio,
-    followup: project.completude_followup
+  // Hook centralizado para gerenciar completude
+  const { 
+    completeness, 
+    refreshFromDatabase,
+    loading: completenessLoading
+  } = useProjectCompleteness();
+  
+  // Carregar dados do banco quando o componente monta
+  useEffect(() => {
+    if (project.id && effectiveTenantId) {
+      console.log('AuditWorkflowContent - Loading completeness from database:', {
+        projectId: project.id,
+        tenantId: effectiveTenantId
+      });
+      refreshFromDatabase(project.id, effectiveTenantId);
+    }
+  }, [project.id, effectiveTenantId, refreshFromDatabase]);
+  
+  // Forçar refresh se os dados do projeto mudaram
+  useEffect(() => {
+    if (project.id && effectiveTenantId && !completenessLoading) {
+      // Se temos dados de completude no projeto mas não no contexto, forçar refresh
+      const hasProjectData = project.completude_planejamento > 0 || 
+                            project.completude_execucao > 0 || 
+                            project.completude_achados > 0 || 
+                            project.completude_relatorio > 0 || 
+                            project.completude_followup > 0;
+      
+      const hasContextData = completeness.planejamento?.databaseCompleteness > 0 ||
+                            completeness.execucao?.databaseCompleteness > 0 ||
+                            completeness.achados?.databaseCompleteness > 0 ||
+                            completeness.relatorio?.databaseCompleteness > 0 ||
+                            completeness.followup?.databaseCompleteness > 0;
+      
+      if (hasProjectData && !hasContextData) {
+        console.log('AuditWorkflowContent - Project has data but context is empty, refreshing...');
+        refreshFromDatabase(project.id, effectiveTenantId);
+      }
+    }
+  }, [project, completeness, completenessLoading, refreshFromDatabase, effectiveTenantId]);
+  
+  // Usar dados centralizados de completude
+  console.log('AuditWorkflowFixed - Centralized completeness data:', {
+    project_id: project.id,
+    completeness,
+    loading: completenessLoading,
+    project_data: {
+      completude_planejamento: project.completude_planejamento,
+      completude_execucao: project.completude_execucao,
+      completude_achados: project.completude_achados,
+      completude_relatorio: project.completude_relatorio,
+      completude_followup: project.completude_followup
+    }
   });
+
+  // Função para obter completude dos botões (baseada no banco de dados)
+  const getButtonCompleteness = (phase: string) => {
+    const phaseData = completeness[phase as keyof typeof completeness];
+    const databaseValue = phaseData?.databaseCompleteness || 0;
+    
+    // Fallback para dados do projeto se o contexto não tem dados
+    const projectValue = Math.round(project[`completude_${phase}`] || 0);
+    const finalValue = databaseValue > 0 ? databaseValue : projectValue;
+    
+    console.log(`AuditWorkflowFixed - getButtonCompleteness for ${phase}:`, {
+      project_id: project.id,
+      phase,
+      databaseValue,
+      projectValue,
+      finalValue,
+      source: databaseValue > 0 ? 'context_database' : 'project_fallback'
+    });
+    
+    return finalValue;
+  };
 
   const phases = [
     {
@@ -98,45 +167,45 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       name: 'Planejamento',
       icon: Target,
       description: 'Definição de objetivos, escopo e recursos',
-      completeness: Math.round(project.completude_planejamento || 0),
+      completeness: getButtonCompleteness('planejamento'), // Baseado no banco
       color: 'blue',
-      minCompleteness: 0 // Navegação livre // Sempre acessível
+      minCompleteness: 0
     },
     {
       id: 'execucao',
       name: 'Execução',
       icon: Play,
       description: 'Trabalhos de campo e coleta de evidências',
-      completeness: Math.round(project.completude_execucao || 0),
+      completeness: getButtonCompleteness('execucao'), // Baseado no banco
       color: 'yellow',
-      minCompleteness: 0 // Navegação livre // Requer 30% do planejamento
+      minCompleteness: 0
     },
     {
       id: 'achados',
       name: 'Achados',
       icon: AlertTriangle,
       description: 'Análise e classificação de apontamentos',
-      completeness: Math.round(project.completude_achados || 0),
+      completeness: getButtonCompleteness('achados'), // Baseado no banco
       color: 'orange',
-      minCompleteness: 0 // Navegação livre // Requer 50% da execução
+      minCompleteness: 0
     },
     {
       id: 'relatorio',
       name: 'Relatório',
       icon: FileText,
       description: 'Elaboração e revisão de relatórios',
-      completeness: Math.round(project.completude_relatorio || 0),
+      completeness: getButtonCompleteness('relatorio'), // Baseado no banco
       color: 'purple',
-      minCompleteness: 0 // Navegação livre // Requer 70% dos achados
+      minCompleteness: 0
     },
     {
       id: 'followup',
       name: 'Follow-up',
       icon: CheckCircle,
       description: 'Acompanhamento de implementação',
-      completeness: Math.round(project.completude_followup || 0),
+      completeness: getButtonCompleteness('followup'), // Baseado no banco
       color: 'green',
-      minCompleteness: 0 // Navegação livre // Requer 80% do relatório
+      minCompleteness: 0
     }
   ];
 
@@ -286,10 +355,17 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
     try {
       setSaving(true);
       
+      const completenessValue = currentPhase?.completeness || 0;
+      console.log(`Saving phase progress for ${activePhase}:`, {
+        project_id: project.id,
+        phase: activePhase,
+        completeness: completenessValue
+      });
+      
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
-          [`completude_${activePhase}`]: currentPhase?.completeness || 0,
+          [`completude_${activePhase}`]: completenessValue,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id)
@@ -297,8 +373,12 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
 
       if (error) throw error;
       
-      toast.success('Progresso salvo com sucesso!');
-      secureLog('info', 'Progresso da fase salvo', { projectId: project.id, phase: activePhase });
+      toast.success(`Progresso salvo: ${completenessValue}%`);
+      secureLog('info', 'Progresso da fase salvo', { 
+        projectId: project.id, 
+        phase: activePhase,
+        completeness: completenessValue
+      });
     } catch (error) {
       secureLog('error', 'Erro ao salvar progresso', error);
       toast.error('Erro ao salvar progresso');
@@ -311,22 +391,22 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
 
   const getPhaseColor = (color: string, status: any) => {
     if (status.isActive) {
-      return 'border-primary bg-primary/10 text-primary';
+      return 'border-blue-600 bg-blue-600 text-white font-semibold shadow-md';
     } else if (status.isCompleted) {
-      return 'border-green-500 bg-green-50 text-green-700';
+      return 'border-green-600 bg-green-600 text-white font-medium';
     } else if (status.isVisited) {
-      return 'border-blue-300 bg-blue-50 text-blue-700';
+      return 'border-amber-500 bg-amber-500 text-white';
     } else if (status.isAccessible) {
-      return 'border-border bg-background text-foreground hover:border-border/80';
+      return 'border-slate-600 bg-slate-100 text-slate-800 hover:border-slate-700 hover:bg-slate-200 font-medium';
     } else {
-      return 'border-muted bg-muted text-muted-foreground cursor-not-allowed opacity-60';
+      return 'border-slate-400 bg-slate-300 text-slate-700 cursor-not-allowed opacity-80';
     }
   };
 
   const renderPhaseContent = () => {
     switch (activePhase) {
       case 'planejamento':
-        return <PlanningPhase project={project} />;
+        return <PlanningPhaseFixed project={project} />;
       case 'execucao':
         return <ExecutionPhase project={project} />;
       case 'achados':
@@ -336,7 +416,7 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
       case 'followup':
         return <FollowUpPhase project={project} />;
       default:
-        return <PlanningPhase project={project} />;
+        return <PlanningPhaseFixed project={project} />;
     }
   };
 
@@ -344,10 +424,9 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumb de Fases MELHORADO */}
-      <div className="flex items-center justify-center">
-                <div className="flex items-center space-x-1 flex-wrap">
-          {phases.map((phase, index) => {
+      {/* Breadcrumb de Navegação */}
+      <div className="flex flex-wrap items-center gap-1 p-4 bg-muted/30 rounded-lg overflow-x-auto">
+        {phases.map((phase, index) => {
             const IconComponent = phase.icon;
             const status = getPhaseStatus(index);
             
@@ -404,67 +483,75 @@ export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: Audi
           })}
         </div>
         
+        {/* Alertas e Validações MELHORADOS */}
+        {currentPhase && currentPhase.completeness < 50 && (
+          <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases. 
+                    Você pode navegar livremente entre fases já visitadas.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      </div>
+        {/* Conteúdo da Fase */}
+        <div className="min-h-[400px]">
+          {renderPhaseContent()}
+        </div>
 
-
-
-      {/* Alertas e Validações MELHORADOS */}
-      {currentPhase && currentPhase.completeness < 50 && (
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+        {/* Ações da Fase MELHORADAS */}
+        <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases. 
-                  Você pode navegar livremente entre fases já visitadas.
-                </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                <span className="text-sm text-muted-foreground">
+                  Última atualização: {new Date().toLocaleString('pt-BR')}
+                </span>
+                <Badge variant="outline" className="ml-2">
+                  Navegação Livre Ativada
+                </Badge>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-1" />
+                  Exportar
+                </Button>
+                
+                <Button variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-1" />
+                  Importar
+                </Button>
+                
+                <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
+                  <Save className="h-4 w-4 mr-1" />
+                  {saving ? 'Salvando...' : 'Salvar Progresso'}
+                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Conteúdo da Fase */}
-      <div className="min-h-[400px]">
-        {renderPhaseContent()}
-      </div>
-
-      {/* Ações da Fase MELHORADAS */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              <span className="text-sm text-muted-foreground">
-                Última atualização: {new Date().toLocaleString('pt-BR')}
-              </span>
-              <Badge variant="outline" className="ml-2">
-                Navegação Livre Ativada
-              </Badge>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
-                Exportar
-              </Button>
-              
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
-                Importar
-              </Button>
-              
-              <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
-                <Save className="h-4 w-4 mr-1" />
-                {saving ? 'Salvando...' : 'Salvar Progresso'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
+  );
+}
+
+// Componente principal que fornece o Provider
+export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
+  return (
+    <ProjectCompletenessProvider>
+      <AuditWorkflowContent 
+        project={project} 
+        activePhase={activePhase} 
+        onPhaseChange={onPhaseChange} 
+      />
+    </ProjectCompletenessProvider>
   );
 }

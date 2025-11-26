@@ -104,11 +104,13 @@ export function AuditDashboardNew() {
         .select(`
           *,
           trabalhos_auditoria(id, status),
-          apontamentos_auditoria(id, criticidade),
+          apontamentos_auditoria(id, criticidade, status),
           planos_acao(id, status)
         `)
         .eq('tenant_id', effectiveTenantId)
         .order('created_at', { ascending: false });
+        
+
 
       if (projectsError) throw projectsError;
 
@@ -117,6 +119,8 @@ export function AuditDashboardNew() {
         const trabalhos = project.trabalhos_auditoria || [];
         const apontamentos = project.apontamentos_auditoria || [];
         const planos = project.planos_acao || [];
+        
+
 
         return {
           id: project.id,
@@ -139,11 +143,12 @@ export function AuditDashboardNew() {
           apontamentos_criticos: apontamentos.filter(a => a.criticidade === 'critica').length,
           planos_acao: planos.length,
           
-          completude_planejamento: calculatePhaseCompleteness(project, 'planejamento'),
-          completude_execucao: calculatePhaseCompleteness(project, 'execucao'),
-          completude_achados: calculatePhaseCompleteness(project, 'achados'),
-          completude_relatorio: calculatePhaseCompleteness(project, 'relatorio'),
-          completude_followup: calculatePhaseCompleteness(project, 'followup'),
+          // Usar APENAS valores do banco de dados - fonte única da verdade
+          completude_planejamento: Math.round(project.completude_planejamento || 0),
+          completude_execucao: Math.round(project.completude_execucao || 0),
+          completude_achados: Math.round(project.completude_achados || 0),
+          completude_relatorio: Math.round(project.completude_relatorio || 0),
+          completude_followup: Math.round(project.completude_followup || 0),
         };
       }) || [];
 
@@ -162,25 +167,31 @@ export function AuditDashboardNew() {
   };
 
   const calculateOverallProgress = (project: any): number => {
-    const phases = ['planejamento', 'execucao', 'achados', 'relatorio', 'followup'];
-    const currentPhaseIndex = phases.indexOf(project.fase_atual || 'planejamento');
-    const baseProgress = (currentPhaseIndex / phases.length) * 100;
+    // Usar apenas os valores reais de completude do banco de dados
+    const completudes = [
+      project.completude_planejamento || 0,
+      project.completude_execucao || 0,
+      project.completude_achados || 0,
+      project.completude_relatorio || 0,
+      project.completude_followup || 0
+    ];
     
-    // Adicionar progresso da fase atual
-    const currentPhaseProgress = calculatePhaseCompleteness(project, project.fase_atual || 'planejamento');
-    const phaseWeight = 100 / phases.length;
+    // Calcular média ponderada das fases
+    const totalCompletude = completudes.reduce((sum, completude) => sum + completude, 0);
+    const progressoGeral = Math.round(totalCompletude / completudes.length);
     
-    return Math.min(100, baseProgress + (currentPhaseProgress * phaseWeight / 100));
+    console.log('calculateOverallProgress:', {
+      project_id: project.id,
+      completudes,
+      totalCompletude,
+      progressoGeral
+    });
+    
+    return progressoGeral;
   };
 
   const calculatePhaseCompleteness = (project: any, phase: string): number => {
-    // Debug: Log dos dados de completude
-    console.log(`calculatePhaseCompleteness - Phase: ${phase}`, {
-      project_id: project.id,
-      completude_field: `completude_${phase}`,
-      completude_value: project[`completude_${phase}`],
-      apontamentos: project.apontamentos_auditoria?.length || 0
-    });
+
     
     // Usar os valores reais de completude do banco de dados se disponíveis
     const completudeField = `completude_${phase}`;

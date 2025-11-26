@@ -16,20 +16,20 @@ import { CalendarIcon, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { 
-  Incident, 
+import type {
+  Incident,
   IncidentType,
   IncidentCategory,
   IncidentSeverity,
   IncidentPriority,
-  CreateIncidentRequest, 
-  UpdateIncidentRequest 
+  CreateIncidentRequest,
+  UpdateIncidentRequest
 } from '@/types/incident-management';
-import { 
-  INCIDENT_TYPES, 
-  INCIDENT_CATEGORIES, 
+import {
+  INCIDENT_TYPES,
+  INCIDENT_CATEGORIES,
   INCIDENT_SEVERITIES,
-  INCIDENT_PRIORITIES 
+  INCIDENT_PRIORITIES
 } from '@/types/incident-management';
 
 interface IncidentFormProps {
@@ -52,8 +52,8 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
     description: incident?.description || '',
     type: incident?.type || 'security_breach' as IncidentType,
     category: incident?.category || 'Segurança da Informação' as IncidentCategory,
-    severity: incident?.severity || 'medium' as IncidentSeverity,
-    priority: incident?.priority || 'medium' as IncidentPriority,
+    severity: (incident?.severity?.toLowerCase() || 'medium') as IncidentSeverity,
+    priority: (incident?.priority?.toLowerCase() || 'medium') as IncidentPriority,
     reported_by: incident?.reported_by || '',
     assigned_to: incident?.assigned_to || '',
     affected_systems: incident?.affected_systems?.join(', ') || '',
@@ -102,7 +102,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -119,7 +119,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
         resolution_date: resolutionDate,
         reported_by: formData.reported_by || undefined,
         assigned_to: formData.assigned_to || undefined,
-        affected_systems: formData.affected_systems ? 
+        affected_systems: formData.affected_systems ?
           formData.affected_systems.split(',').map(s => s.trim()).filter(s => s) : undefined,
         business_impact: formData.business_impact.trim() || undefined
       };
@@ -162,7 +162,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
         {/* Informações Básicas */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Informações Básicas</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label htmlFor="title">Título do Incidente *</Label>
@@ -272,7 +272,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
         {/* Datas */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Datas</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Data de Detecção *</Label>
@@ -333,7 +333,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
         {/* Atribuição e Impacto */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Atribuição e Impacto</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="reported_by">Reportado por</Label>
@@ -409,7 +409,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
-          
+
           {!incident && (
             <Button
               type="button"
@@ -420,7 +420,7 @@ const IncidentForm: React.FC<IncidentFormProps> = ({
               Limpar
             </Button>
           )}
-          
+
           <Button
             type="submit"
             disabled={isSubmitting}

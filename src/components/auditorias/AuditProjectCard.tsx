@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import {
   Copy
 } from 'lucide-react';
 import { AuditWorkflowFixed } from './AuditWorkflowFixed';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 
 interface AuditProject {
   id: string;
@@ -97,14 +99,14 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
   };
 
   const getPhaseCompleteness = (phase: string) => {
-    const completeness = {
-      planejamento: project.completude_planejamento,
-      execucao: project.completude_execucao,
-      achados: project.completude_achados,
-      relatorio: project.completude_relatorio,
-      followup: project.completude_followup
-    };
-    return completeness[phase] || 0;
+    // Sempre usar dados do projeto por simplicidade
+    const value = Math.round(project[`completude_${phase}`] || 0);
+    return value;
+  };
+  
+  const getOverallProgress = () => {
+    // Sempre usar progresso do projeto
+    return project.progresso_geral || 0;
   };
 
   const phases = [
@@ -162,8 +164,8 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
             
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-sm font-medium">{Math.round(project.progresso_geral)}%</p>
-                <Progress value={project.progresso_geral} className="w-20 h-2" />
+                <p className="text-sm font-medium">{Math.round(getOverallProgress())}%</p>
+                <Progress value={getOverallProgress()} className="w-20 h-2" />
               </div>
               
               <div className="text-right">
@@ -254,7 +256,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Progresso</p>
-              <p className="text-sm font-medium">{Math.round(project.progresso_geral)}%</p>
+              <p className="text-sm font-medium">{Math.round(getOverallProgress())}%</p>
             </div>
           </div>
           
@@ -276,9 +278,9 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
         <div className="mb-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">Progresso Geral</span>
-            <span className="text-sm text-muted-foreground">{Math.round(project.progresso_geral)}%</span>
+            <span className="text-sm text-muted-foreground">{Math.round(getOverallProgress())}%</span>
           </div>
-          <Progress value={project.progresso_geral} className="h-3" />
+          <Progress value={getOverallProgress()} className="h-3" />
         </div>
 
         {/* Indicadores de Fase */}
