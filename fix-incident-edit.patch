@@ -1,0 +1,44 @@
+# 🛠️ CORREÇÃO DO PROBLEMA DE EDIÇÃO DE INCIDENTES
+# 
+# PROBLEMA IDENTIFICADO:
+# A função handleUpdateIncident estava sendo chamada incorretamente,
+# causando falha na atualização dos incidentes.
+#
+# SOLUÇÃO:
+# Corrigir a assinatura da função e a chamada no onSubmit.
+
+--- src/components/incidents/IncidentManagementPage.tsx.original
++++ src/components/incidents/IncidentManagementPage.tsx
+@@ -86,17 +86,18 @@
+     }
+   };
+ 
+-  const handleUpdateIncident = async (incidentId: string, updates: any) => {
++  const handleUpdateIncident = async (data: any) => {
++    if (!editingIncident) return;
++    
+     try {
+       await updateIncident({
+-        id: incidentId,
++        id: editingIncident.id,
+         updates: {
+-          ...updates,
++          ...data,
+           updated_by: user?.id
+         }
+       });
+       setIsDialogOpen(false);
+       resetForm();
+     } catch (error) {
+       console.error('Erro ao atualizar incidente:', error);
+@@ -395,8 +396,8 @@
+           <IncidentForm
+             incident={editingIncident || undefined}
+             profiles={profiles}
+             onSubmit={editingIncident ?
+-              (data) => handleUpdateIncident(editingIncident.id, data) :
++              handleUpdateIncident :
+               handleCreateIncident
+             }
+             onCancel={() => setIsDialogOpen(false)}
+             isSubmitting={isCreatingIncident || isUpdatingIncident}

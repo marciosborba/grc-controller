@@ -28,6 +28,10 @@ export const useIncidentManagement = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  console.log('🔧 [useIncidentManagement] Inicializando hook');
+  console.log('👤 [useIncidentManagement] User:', user?.id);
+  console.log('🏢 [useIncidentManagement] Tenant ID:', tenantId);
+
   // Estados de filtro
   const [filters, setFilters] = useState<IncidentFilters>({
     search_term: '',
@@ -54,6 +58,10 @@ export const useIncidentManagement = () => {
   } = useQuery({
     queryKey: ['incidents', filters, tenantId],
     queryFn: async () => {
+      console.log('🔍 [useIncidentManagement] Buscando incidentes...');
+      console.log('🔍 [useIncidentManagement] Filtros:', filters);
+      console.log('🔍 [useIncidentManagement] Tenant ID para query:', tenantId);
+
       // Preparar filtros para o serviço
       const serviceFilters: any = {};
 
@@ -65,33 +73,40 @@ export const useIncidentManagement = () => {
         serviceFilters.priority = filters.priorities[0];
       }
 
+      // Para super admin, permitir buscar sem tenant_id ou com tenant_id específico
       if (tenantId) {
         serviceFilters.tenant_id = tenantId;
       }
 
-      const data = await incidentService.getIncidents(serviceFilters);
+      console.log('📤 [useIncidentManagement] Service filters:', serviceFilters);
 
-      // Mapear dados do Supabase para o tipo Incident
-      return data.map((item: any) => ({
+      const data = await incidentService.getIncidents(serviceFilters);
+      console.log('📥 [useIncidentManagement] Dados recebidos:', data);
+
+      // Mapear dados do Supabase para o tipo Incident (adaptado para estrutura real)
+      const mappedIncidents = data.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description,
-        type: item.type as IncidentType,
+        type: 'security_breach' as IncidentType, // Valor padrão já que não existe na tabela
         category: item.category as IncidentCategory,
-        severity: item.severity as IncidentSeverity,
+        severity: 'medium' as IncidentSeverity, // Valor padrão já que não existe na tabela
         priority: item.priority as IncidentPriority,
         status: item.status as IncidentStatus,
-        detection_date: item.detection_date ? new Date(item.detection_date) : new Date(item.created_at),
-        resolution_date: item.resolution_date ? new Date(item.resolution_date) : undefined,
+        detection_date: new Date(item.created_at), // Usar created_at como detection_date
+        resolution_date: undefined, // Não existe na tabela
         created_at: new Date(item.created_at),
-        updated_at: new Date(item.updated_at),
-        affected_systems: item.affected_systems || [],
-        business_impact: item.business_impact,
+        updated_at: item.updated_at ? new Date(item.updated_at) : new Date(item.created_at),
+        affected_systems: [], // Não existe na tabela
+        business_impact: undefined, // Não existe na tabela
         reported_by: item.reporter?.email || item.reporter_id,
         assigned_to: item.assignee?.email || item.assignee_id,
         tags: [],
         tenant_id: item.tenant_id
       })) as Incident[];
+
+      console.log('✅ [useIncidentManagement] Incidentes mapeados:', mappedIncidents);
+      return mappedIncidents;
     },
     enabled: !!user
   });
@@ -127,18 +142,26 @@ export const useIncidentManagement = () => {
   } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
+      console.log('👥 [useIncidentManagement] Buscando perfis...');
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, job_title, department') // Changed user_id to id based on schema assumption
+        .select('id, full_name, job_title, department')
         .order('full_name', { ascending: true });
 
-      if (error) throw error;
-      return data.map(p => ({
+      if (error) {
+        console.error('❌ [useIncidentManagement] Erro ao buscar perfis:', error);
+        throw error;
+      }
+      
+      const mappedProfiles = data.map(p => ({
         user_id: p.id,
         full_name: p.full_name,
         job_title: p.job_title,
         department: p.department
       }));
+      
+      console.log('✅ [useIncidentManagement] Perfis carregados:', mappedProfiles);
+      return mappedProfiles;
     }
   });
 
@@ -148,59 +171,71 @@ export const useIncidentManagement = () => {
 
   // Criar novo incidente
   const createIncidentMutation = useMutation({
-    mutationFn: async (incidentData: CreateIncidentRequest) => {
+    mutationFn: async (incidentData: any) => {
+      console.log('➕ [useIncidentManagement] Criando incidente...');
+      console.log('📤 [useIncidentManagement] Dados recebidos:', incidentData);
+      
+      // Mapear para estrutura real da tabela
       const supabaseData = {
         title: incidentData.title,
-        description: incidentData.description,
-        type: incidentData.type,
+        description: incidentData.description || null,
         category: incidentData.category,
-        severity: incidentData.severity,
         priority: incidentData.priority,
         status: 'open',
-        detection_date: incidentData.detection_date,
-        affected_systems: incidentData.affected_systems,
-        business_impact: incidentData.business_impact,
-        reporter_id: incidentData.reported_by,
-        assignee_id: incidentData.assigned_to
+        reporter_id: incidentData.reported_by || user?.id || null,
+        assignee_id: incidentData.assigned_to || null,
+        tenant_id: tenantId || null
       };
-
-      return await incidentService.createIncident(supabaseData);
+      
+      console.log('📤 [useIncidentManagement] Dados para Supabase:', supabaseData);
+      const result = await incidentService.createIncident(supabaseData);
+      console.log('✅ [useIncidentManagement] Incidente criado:', result);
+      return result;
     },
     onSuccess: () => {
+      console.log('🎉 [useIncidentManagement] Incidente criado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       toast.success('Incidente criado com sucesso');
     },
     onError: (error: any) => {
+      console.error('❌ [useIncidentManagement] Erro ao criar incidente:', error);
       toast.error(`Erro ao criar incidente: ${error.message}`);
     }
   });
 
   // Atualizar incidente
   const updateIncidentMutation = useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: UpdateIncidentRequest }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      console.log('🔄 [useIncidentManagement] Atualizando incidente...');
+      console.log('🆔 [useIncidentManagement] ID:', id);
+      console.log('📤 [useIncidentManagement] Updates recebidos:', updates);
+      
+      // Mapear para estrutura real da tabela incidents (apenas campos que existem)
       const supabaseUpdates: any = {};
 
-      if (updates.title) supabaseUpdates.title = updates.title;
+      if (updates.title !== undefined) supabaseUpdates.title = updates.title;
       if (updates.description !== undefined) supabaseUpdates.description = updates.description;
-      if (updates.type) supabaseUpdates.type = updates.type;
-      if (updates.category) supabaseUpdates.category = updates.category;
-      if (updates.severity) supabaseUpdates.severity = updates.severity;
-      if (updates.priority) supabaseUpdates.priority = updates.priority;
-      if (updates.status) supabaseUpdates.status = updates.status;
-      if (updates.detection_date) supabaseUpdates.detection_date = updates.detection_date;
-      if (updates.resolution_date !== undefined) supabaseUpdates.resolution_date = updates.resolution_date;
-      if (updates.affected_systems !== undefined) supabaseUpdates.affected_systems = updates.affected_systems;
-      if (updates.business_impact !== undefined) supabaseUpdates.business_impact = updates.business_impact;
+      if (updates.category !== undefined) supabaseUpdates.category = updates.category;
+      if (updates.priority !== undefined) supabaseUpdates.priority = updates.priority;
+      if (updates.status !== undefined) supabaseUpdates.status = updates.status;
       if (updates.assigned_to !== undefined) supabaseUpdates.assignee_id = updates.assigned_to;
       if (updates.reported_by !== undefined) supabaseUpdates.reporter_id = updates.reported_by;
-
-      return await incidentService.updateIncident(id, supabaseUpdates);
+      
+      // Sempre atualizar updated_at
+      supabaseUpdates.updated_at = new Date().toISOString();
+      
+      console.log('📤 [useIncidentManagement] Updates para Supabase:', supabaseUpdates);
+      const result = await incidentService.updateIncident(id, supabaseUpdates);
+      console.log('✅ [useIncidentManagement] Incidente atualizado:', result);
+      return result;
     },
     onSuccess: () => {
+      console.log('🎉 [useIncidentManagement] Incidente atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
       toast.success('Incidente atualizado com sucesso');
     },
     onError: (error: any) => {
+      console.error('❌ [useIncidentManagement] Erro ao atualizar incidente:', error);
       toast.error(`Erro ao atualizar incidente: ${error.message}`);
     }
   });

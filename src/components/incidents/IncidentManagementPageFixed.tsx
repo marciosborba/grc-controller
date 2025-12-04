@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-
 import {
   Select,
   SelectContent,
@@ -28,7 +27,7 @@ import {
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useIncidentManagement } from '@/hooks/useIncidentManagement';
 import IncidentDataTable from './IncidentDataTable';
-import IncidentManagementModalProfessional from './IncidentManagementModalProfessional';
+import IncidentManagementModalFinal from './IncidentManagementModalFinal';
 import type {
   Incident,
   IncidentFilters,
@@ -421,8 +420,8 @@ const IncidentManagementPage = () => {
         />
       </div>
 
-      {/* Modal Profissional de Gestão de Incidentes */}
-      <IncidentManagementModalProfessional
+      {/* Modal Final para Gestão de Incidentes */}
+      <IncidentManagementModalFinal
         incident={editingIncident}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}

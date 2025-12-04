@@ -42,7 +42,7 @@ const ActionPlanDetails = lazy(() => import("@/components/action-plans/ActionPla
 const ActionPlanForm = lazy(() => import("@/components/action-plans/ActionPlanForm").then(module => ({ default: module.ActionPlanForm })));
 const ActionPlansReports = lazy(() => import("@/components/action-plans/ActionPlansReports").then(module => ({ default: module.ActionPlansReports })));
 const ActionPlansSettings = lazy(() => import("@/components/action-plans/ActionPlansSettings").then(module => ({ default: module.ActionPlansSettings })));
-const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
+const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPageFixed"));
 // Módulo de Compliance
 const ComplianceDashboard = lazy(() => import("@/components/compliance/ComplianceDashboard"));
 const AuditoriasDashboard = lazy(() => import("@/components/auditorias/AuditoriasDashboard"));

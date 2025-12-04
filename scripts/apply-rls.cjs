@@ -8,7 +8,7 @@ async function main() {
     try {
         await db.connect();
 
-        const sqlPath = path.join(__dirname, 'update_admin_function.sql');
+        const sqlPath = path.join(__dirname, 'fix_admin_profiles.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
 
         console.log('🚀 Applying RLS policies...');
