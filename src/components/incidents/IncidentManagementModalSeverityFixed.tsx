@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { incidentService } from '@/services/incidentService';
 import type { Incident } from '@/types/incident-management';
 
 interface IncidentManagementModalProps {
@@ -74,7 +75,7 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
 }) => {
   const { user } = useAuth();
   const tenantIdFromSelector = useCurrentTenantId();
-  
+
   // Determinar tenant_id correto
   const getEffectiveTenantId = (): string => {
     if (user?.isPlatformAdmin) {
@@ -82,9 +83,9 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     }
     return user?.tenantId || '';
   };
-  
+
   const effectiveTenantId = getEffectiveTenantId();
-  
+
   // Estados do formulário
   const [formData, setFormData] = useState<FormData>({
     title: '',
@@ -119,8 +120,6 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     const loadProfiles = async () => {
       setIsLoadingProfiles(true);
       try {
-        console.log('🔄 Carregando perfis...');
-        
         let query = supabase
           .from('profiles')
           .select('id, full_name, job_title, email')
@@ -136,8 +135,7 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
           console.error('❌ Erro ao carregar perfis:', error);
           throw error;
         }
-        
-        console.log('✅ Perfis carregados:', data?.length || 0);
+
         setProfiles(data || []);
       } catch (error) {
         console.error('Erro ao carregar perfis:', error);
@@ -155,9 +153,6 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
   // Preencher formulário quando incidente for carregado
   useEffect(() => {
     if (incident) {
-      console.log('🔄 Carregando dados do incidente:', incident);
-      console.log('🔧 SEVERITY do incidente:', incident.severity);
-      
       setFormData({
         title: incident.title || '',
         description: incident.description || '',
@@ -196,31 +191,21 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
 
   // Validação simples e funcional
   const validateForm = (): boolean => {
-    console.log('🔍 VALIDAÇÃO INICIADA');
-    console.log('📋 FormData:', formData);
-    console.log('🔧 SEVERITY no FormData:', formData.severity);
-
     if (!formData.title.trim()) {
-      console.log('❌ Título vazio');
       toast.error('Título é obrigatório');
       return false;
     }
 
     if (!effectiveTenantId) {
-      console.log('❌ Tenant ID vazio');
       toast.error('Tenant ID não encontrado');
       return false;
     }
 
-    console.log('✅ Validação passou');
     return true;
   };
 
-  // Atualizar campo do formulário com log específico para severity
+  // Atualizar campo do formulário
   const updateFormData = (field: keyof FormData, value: any) => {
-    if (field === 'severity') {
-      console.log('🔧 SEVERITY sendo atualizado:', value);
-    }
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -237,10 +222,8 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     updateFormData('affected_systems', formData.affected_systems.filter(s => s !== system));
   };
 
-  // Função para criar dados seguros para o Supabase com debug específico para severity
+  // Função para criar dados seguros para o Supabase
   const createSafeUpdateData = (formData: FormData) => {
-    console.log('🔧 DEBUG SEVERITY - FormData.severity antes do mapeamento:', formData.severity);
-    
     const safeData: any = {
       title: formData.title.trim(),
       description: formData.description.trim() || null,
@@ -248,15 +231,12 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
       priority: formData.priority,
       status: formData.status,
       type: formData.type,
-      severity: formData.severity, // Campo reativado após migração
+      severity: formData.severity,
       detection_date: new Date(formData.detection_date).toISOString(),
       business_impact: formData.business_impact.trim() || null,
       affected_systems: formData.affected_systems.length > 0 ? formData.affected_systems : null,
       tenant_id: effectiveTenantId
     };
-    
-    console.log('🔧 DEBUG SEVERITY - safeData.severity após mapeamento:', safeData.severity);
-    console.log('🔧 DEBUG SEVERITY - Tipo do valor:', typeof safeData.severity);
 
     // Adicionar resolution_date apenas se preenchido
     if (formData.resolution_date) {
@@ -264,98 +244,51 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     }
 
     // Adicionar UUIDs apenas se forem válidos
-    if (formData.reported_by && 
-        formData.reported_by !== 'unspecified' && 
-        isValidUUID(formData.reported_by)) {
+    if (formData.reported_by &&
+      formData.reported_by !== 'unspecified' &&
+      isValidUUID(formData.reported_by)) {
       safeData.reporter_id = formData.reported_by;
     }
-    
-    if (formData.assigned_to && 
-        formData.assigned_to !== 'unassigned' && 
-        isValidUUID(formData.assigned_to)) {
+
+    if (formData.assigned_to &&
+      formData.assigned_to !== 'unassigned' &&
+      isValidUUID(formData.assigned_to)) {
       safeData.assignee_id = formData.assigned_to;
     }
-    
-    console.log('📤 Dados seguros finais (com severity):', safeData);
+
     return safeData;
   };
 
   // Submeter formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('🚀 SUBMIT INICIADO');
-    console.log('🔧 SEVERITY no momento do submit:', formData.severity);
 
     if (!validateForm()) {
-      console.log('❌ Validação falhou');
       return;
     }
-    
+
     setIsSubmitting(true);
 
     try {
       const incidentData = createSafeUpdateData(formData);
-      
-      console.log('📤 Dados para o Supabase (incluindo severity):', incidentData);
-      console.log('🔧 SEVERITY específico sendo enviado:', incidentData.severity);
 
-      let result;
-      
       if (incident) {
         // Atualizar incidente existente
-        console.log('🔄 Atualizando incidente:', incident.id);
-        
         incidentData.updated_at = new Date().toISOString();
-        
-        const { data, error } = await supabase
-          .from('incidents')
-          .update(incidentData)
-          .eq('id', incident.id)
-          .select()
-          .single();
-        
-        console.log('📥 Resposta UPDATE:', { data, error });
-        console.log('🔧 SEVERITY na resposta:', data?.severity);
 
-        if (error) {
-          console.error('❌ ERRO UPDATE:', error);
-          throw error;
-        }
-        
-        result = data;
+        await incidentService.updateIncident(incident.id, incidentData);
         toast.success('Incidente atualizado com sucesso!');
       } else {
         // Criar novo incidente
-        console.log('➕ Criando novo incidente');
-        
         const createData = {
           ...incidentData,
           created_at: new Date().toISOString()
         };
 
-        console.log('📤 CreateData final (incluindo severity):', createData);
-
-        const { data, error } = await supabase
-          .from('incidents')
-          .insert(createData)
-          .select()
-          .single();
-
-        console.log('📥 Resposta INSERT:', { data, error });
-        console.log('🔧 SEVERITY na resposta INSERT:', data?.severity);
-
-        if (error) {
-          console.error('❌ Erro ao criar:', error);
-          throw error;
-        }
-        
-        result = data;
+        await incidentService.createIncident(createData);
         toast.success('Incidente criado com sucesso!');
       }
 
-      console.log('✅ Operação bem-sucedida:', result);
-      console.log('🔧 SEVERITY final salvo:', result?.severity);
       onSuccess();
       onClose();
 
@@ -384,15 +317,6 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Debug Info para Severity */}
-          <div className="text-xs text-gray-500 p-3 bg-yellow-50 rounded border">
-            <strong>🔧 Debug Severity:</strong>
-            <br />
-            <strong>Valor atual:</strong> {formData.severity}
-            <br />
-            <strong>Tipo:</strong> {typeof formData.severity}
-          </div>
-
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic" className="flex items-center gap-1">
@@ -506,13 +430,10 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
                 </div>
 
                 <div>
-                  <Label htmlFor="severity">Severidade * (Debug: {formData.severity})</Label>
+                  <Label htmlFor="severity">Severidade *</Label>
                   <Select
                     value={formData.severity}
-                    onValueChange={(value) => {
-                      console.log('🔧 SEVERITY Select onChange:', value);
-                      updateFormData('severity', value);
-                    }}
+                    onValueChange={(value) => updateFormData('severity', value)}
                     disabled={isSubmitting}
                   >
                     <SelectTrigger>
@@ -674,40 +595,34 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
           </Tabs>
 
           {/* Ações do Formulário */}
-          <DialogFooter className="flex justify-between items-center pt-6 border-t">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>🔧 Severity Debug: {formData.severity}</span>
-            </div>
-            
-            <div className="flex space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={isSubmitting}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancelar
-              </Button>
+          <DialogFooter className="flex justify-end items-center pt-6 border-t space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
 
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="min-w-[140px]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    {incident ? 'Atualizar' : 'Criar'} Incidente
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="min-w-[140px]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  {incident ? 'Atualizar' : 'Criar'} Incidente
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
