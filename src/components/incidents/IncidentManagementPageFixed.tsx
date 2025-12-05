@@ -27,7 +27,7 @@ import {
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useIncidentManagement } from '@/hooks/useIncidentManagement';
 import IncidentDataTable from './IncidentDataTable';
-import IncidentManagementModalFinal from './IncidentManagementModalFinal';
+import IncidentManagementModalSeverityFixed from './IncidentManagementModalSeverityFixed';
 import type {
   Incident,
   IncidentFilters,
@@ -420,8 +420,8 @@ const IncidentManagementPage = () => {
         />
       </div>
 
-      {/* Modal Final para Gestão de Incidentes */}
-      <IncidentManagementModalFinal
+      {/* Modal com Debug de Severity */}
+      <IncidentManagementModalSeverityFixed
         incident={editingIncident}
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}

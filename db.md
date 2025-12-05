@@ -312,6 +312,315 @@ export const getTenantDisplayName = (tenant?: Tenant): string => {
 
 ---
 
+## 👑 Gerenciamento de Tenant ID para Super Admins
+
+### **Problema: Super Admins e Tenant Context**
+
+Super admins (platform admins) não possuem um `tenant_id` fixo em seu perfil, pois podem acessar dados de qualquer tenant. Isso cria desafios específicos:
+
+```javascript
+// ❌ PROBLEMA: Super admin sem tenant_id no perfil
+const user = {
+  id: 'super-admin-uuid',
+  email: 'admin@platform.com',
+  isPlatformAdmin: true,
+  tenantId: null, // ← PROBLEMA: Super admin não tem tenant fixo
+  roles: ['platform_admin']
+};
+
+// ❌ ERRO: Operações CRUD falham sem tenant_id
+const { data, error } = await supabase
+  .from('incidents')
+  .insert({
+    title: 'Novo incidente',
+    tenant_id: user.tenantId // ← null! Violação de constraint
+  });
+```
+
+### **Solução: Usar TenantSelector Context**
+
+Para super admins, sempre usar o `tenant_id` do **TenantSelector** em vez do perfil do usuário:
+
+```javascript
+// ✅ SOLUÇÃO CORRETA: Respeitar TenantSelector para super admins
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+
+const useEffectiveTenantId = () => {
+  const { user } = useAuth();
+  const tenantIdFromSelector = useCurrentTenantId();
+  
+  // 🎯 LÓGICA CORRETA: Super admin usa TenantSelector, usuário normal usa perfil
+  const getEffectiveTenantId = (): string => {
+    if (user?.isPlatformAdmin) {
+      // Super admin: SEMPRE usar TenantSelector
+      return tenantIdFromSelector || '';
+    }
+    // Usuário normal: usar tenant_id do perfil
+    return user?.tenantId || '';
+  };
+  
+  return getEffectiveTenantId();
+};
+```
+
+### **Implementação em Hooks e Serviços**
+
+#### **1. Em Hooks (useIncidentManagement, useRiskManagement, etc.)**
+```javascript
+// ✅ PADRÃO CORRETO para hooks de gerenciamento
+export const useIncidentManagement = () => {
+  const { user } = useAuth();
+  const tenantIdFromSelector = useCurrentTenantId();
+  
+  // Determinar tenant_id correto
+  const getEffectiveTenantId = (): string => {
+    if (user?.isPlatformAdmin) {
+      return tenantIdFromSelector || '';
+    }
+    return user?.tenantId || '';
+  };
+  
+  const effectiveTenantId = getEffectiveTenantId();
+  
+  // Usar effectiveTenantId em todas as operações CRUD
+  const createIncident = async (incidentData: any) => {
+    const supabaseData = {
+      ...incidentData,
+      tenant_id: effectiveTenantId // ← SEMPRE usar o tenant correto
+    };
+    
+    return await incidentService.createIncident(supabaseData);
+  };
+  
+  // Aplicar filtro de tenant em queries
+  const { data: incidents } = useQuery({
+    queryKey: ['incidents', effectiveTenantId],
+    queryFn: async () => {
+      const serviceFilters: any = {};
+      
+      // Para super admin, permitir buscar sem tenant_id ou com tenant_id específico
+      if (effectiveTenantId) {
+        serviceFilters.tenant_id = effectiveTenantId;
+      }
+      
+      return await incidentService.getIncidents(serviceFilters);
+    },
+    enabled: !!user
+  });
+};
+```
+
+#### **2. Em Componentes de Modal**
+```javascript
+// ✅ PADRÃO CORRETO para modais de criação/edição
+const IncidentManagementModal = ({ incident, isOpen, onClose, onSuccess }) => {
+  const { user } = useAuth();
+  const tenantIdFromSelector = useCurrentTenantId();
+  
+  // Determinar tenant_id correto
+  const getEffectiveTenantId = (): string => {
+    if (user?.isPlatformAdmin) {
+      return tenantIdFromSelector || '';
+    }
+    return user?.tenantId || '';
+  };
+  
+  const effectiveTenantId = getEffectiveTenantId();
+  
+  const handleSubmit = async (formData) => {
+    const incidentData = {
+      ...formData,
+      tenant_id: effectiveTenantId // ← SEMPRE usar o tenant correto
+    };
+    
+    if (incident) {
+      await updateIncident(incident.id, incidentData);
+    } else {
+      await createIncident(incidentData);
+    }
+  };
+};
+```
+
+#### **3. Em Serviços**
+```javascript
+// ✅ PADRÃO CORRETO para serviços
+export const incidentService = {
+  async getIncidents(filters?: { tenant_id?: string; status?: string }) {
+    let query = supabase
+      .from('incidents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Aplicar filtro de tenant se fornecido
+    if (filters?.tenant_id) {
+      query = query.eq('tenant_id', filters.tenant_id);
+    }
+    
+    // Outros filtros...
+    if (filters?.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
+  
+  async createIncident(incidentData: any) {
+    // Validar que tenant_id está presente
+    if (!incidentData.tenant_id) {
+      throw new Error('tenant_id é obrigatório para criar incidente');
+    }
+    
+    const { data, error } = await supabase
+      .from('incidents')
+      .insert(incidentData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+};
+```
+
+### **Validações e Fallbacks**
+
+```javascript
+// ✅ VALIDAÇÕES ROBUSTAS
+const validateTenantContext = (user: AuthUser, tenantIdFromSelector: string) => {
+  if (user?.isPlatformAdmin) {
+    if (!tenantIdFromSelector) {
+      throw new Error('Super admin deve selecionar um tenant antes de criar registros');
+    }
+    return tenantIdFromSelector;
+  }
+  
+  if (!user?.tenantId) {
+    throw new Error('Usuário não possui tenant_id configurado');
+  }
+  
+  return user.tenantId;
+};
+
+// ✅ FALLBACK PARA UI
+const getTenantContextMessage = (user: AuthUser, tenantIdFromSelector: string) => {
+  if (user?.isPlatformAdmin) {
+    if (!tenantIdFromSelector) {
+      return 'Selecione um tenant para continuar';
+    }
+    return `Operando como: ${getTenantName(tenantIdFromSelector)}`;
+  }
+  
+  return `Tenant: ${getTenantName(user?.tenantId)}`;
+};
+```
+
+### **Checklist de Implementação**
+
+#### **Para Hooks de Gerenciamento**
+- [ ] Importar `useCurrentTenantId` do TenantSelectorContext
+- [ ] Implementar lógica `getEffectiveTenantId()`
+- [ ] Usar `effectiveTenantId` em todas as operações CRUD
+- [ ] Aplicar filtro de tenant em queries
+- [ ] Validar tenant_id antes de operações
+
+#### **Para Modais e Formulários**
+- [ ] Determinar tenant correto no início do componente
+- [ ] Incluir tenant_id em todos os dados enviados
+- [ ] Mostrar contexto do tenant na UI
+- [ ] Validar tenant antes de submissão
+
+#### **Para Serviços**
+- [ ] Aceitar tenant_id como parâmetro opcional
+- [ ] Aplicar filtros de tenant quando fornecido
+- [ ] Validar tenant_id obrigatório em operações de escrita
+- [ ] Documentar comportamento para super admins
+
+### **Exemplo Completo: Hook Corrigido**
+
+```javascript
+// ✅ EXEMPLO COMPLETO: useIncidentManagement corrigido
+export const useIncidentManagement = () => {
+  const { user } = useAuth();
+  const tenantIdFromSelector = useCurrentTenantId();
+  const queryClient = useQueryClient();
+  
+  // Determinar tenant_id correto
+  const getEffectiveTenantId = (): string => {
+    if (user?.isPlatformAdmin) {
+      // Super admin: SEMPRE usar TenantSelector
+      return tenantIdFromSelector || '';
+    }
+    // Usuário normal: usar tenant_id do perfil
+    return user?.tenantId || '';
+  };
+  
+  const effectiveTenantId = getEffectiveTenantId();
+  
+  console.log('🔧 [useIncidentManagement] Tenant context:', {
+    isPlatformAdmin: user?.isPlatformAdmin,
+    userTenantId: user?.tenantId,
+    selectorTenantId: tenantIdFromSelector,
+    effectiveTenantId
+  });
+  
+  // Query para buscar incidentes
+  const { data: incidents = [], isLoading, error } = useQuery({
+    queryKey: ['incidents', effectiveTenantId],
+    queryFn: async () => {
+      const serviceFilters: any = {};
+      
+      // Aplicar filtro de tenant
+      if (effectiveTenantId) {
+        serviceFilters.tenant_id = effectiveTenantId;
+      }
+      
+      return await incidentService.getIncidents(serviceFilters);
+    },
+    enabled: !!user && !!effectiveTenantId
+  });
+  
+  // Mutation para criar incidente
+  const createIncidentMutation = useMutation({
+    mutationFn: async (incidentData: any) => {
+      // Validar tenant context
+      if (!effectiveTenantId) {
+        throw new Error('Tenant context é obrigatório');
+      }
+      
+      const supabaseData = {
+        ...incidentData,
+        tenant_id: effectiveTenantId // ← SEMPRE usar o tenant correto
+      };
+      
+      return await incidentService.createIncident(supabaseData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      toast.success('Incidente criado com sucesso');
+    }
+  });
+  
+  return {
+    incidents,
+    isLoading,
+    error,
+    createIncident: createIncidentMutation.mutateAsync,
+    effectiveTenantId, // Expor para uso em componentes
+    tenantContext: {
+      isPlatformAdmin: user?.isPlatformAdmin,
+      tenantId: effectiveTenantId,
+      tenantName: getTenantName(effectiveTenantId)
+    }
+  };
+};
+```
+
+---
+
 ## 🔒 Row Level Security (RLS)
 
 ### **Problema Comum**
@@ -459,6 +768,15 @@ WHERE tablename = 'tenants';
 - ✅ **Fallback robusto**: Implementado no AuthContext
 - ✅ **Documentação**: Criada e atualizada
 
+### **2025-12-05 - Gerenciamento de Tenant ID para Super Admins**
+- ✅ **Documentação Super Admin**: Criada seção específica sobre tenant context
+- ✅ **Padrões de Implementação**: Definidos para hooks, modais e serviços
+- ✅ **Lógica TenantSelector**: Documentada para super admins vs usuários normais
+- ✅ **Validações**: Implementadas para tenant context obrigatório
+- ✅ **Exemplos Práticos**: Fornecidos para useIncidentManagement e outros hooks
+- ✅ **Checklist**: Criado para implementação consistente
+- ✅ **Fallbacks**: Documentados para casos de erro
+
 ### **Status Atual: 100% Funcional**
 - ✅ **Banco remoto**: Totalmente acessível e operacional
 - ✅ **Comandos DDL**: Funcionando via database-manager.cjs
@@ -472,6 +790,11 @@ WHERE tablename = 'tenants';
 - [ ] Criar interface para gerenciar configurações via UI
 - [ ] Implementar backup automático de settings
 - [ ] Atualizar Supabase CLI para v2.34.3
+- [ ] Aplicar padrões de tenant context em todos os hooks existentes
+- [ ] Criar hook customizado `useEffectiveTenantId()` para reutilização
+- [ ] Implementar validação visual de tenant context em modais
+- [ ] Adicionar indicador de tenant ativo para super admins
+- [ ] Criar testes unitários para lógica de tenant context
 
 ---
 
@@ -511,6 +834,6 @@ WHERE tablename = 'tenants';
 ---
 
 *Documento criado em: Janeiro 2025*  
-*Última atualização: 14 Janeiro 2025*  
+*Última atualização: 05 Dezembro 2025*  
 *Projeto: GRC Controller*  
 *Banco: Supabase PostgreSQL Remoto (100% Configurado)*

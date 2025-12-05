@@ -83,22 +83,22 @@ export const useIncidentManagement = () => {
       const data = await incidentService.getIncidents(serviceFilters);
       console.log('📥 [useIncidentManagement] Dados recebidos:', data);
 
-      // Mapear dados do Supabase para o tipo Incident (adaptado para estrutura real)
+      // Mapear dados do Supabase para o tipo Incident (usando campos reais da tabela)
       const mappedIncidents = data.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description,
-        type: 'security_breach' as IncidentType, // Valor padrão já que não existe na tabela
+        type: item.type as IncidentType, // Campo existe na tabela
         category: item.category as IncidentCategory,
-        severity: 'medium' as IncidentSeverity, // Valor padrão já que não existe na tabela
+        severity: item.severity as IncidentSeverity, // Campo existe na tabela
         priority: item.priority as IncidentPriority,
         status: item.status as IncidentStatus,
-        detection_date: new Date(item.created_at), // Usar created_at como detection_date
-        resolution_date: undefined, // Não existe na tabela
+        detection_date: item.detection_date ? new Date(item.detection_date) : new Date(item.created_at),
+        resolution_date: item.resolution_date ? new Date(item.resolution_date) : undefined,
         created_at: new Date(item.created_at),
         updated_at: item.updated_at ? new Date(item.updated_at) : new Date(item.created_at),
-        affected_systems: [], // Não existe na tabela
-        business_impact: undefined, // Não existe na tabela
+        affected_systems: item.affected_systems || [], // Campo existe na tabela
+        business_impact: item.business_impact, // Campo existe na tabela
         reported_by: item.reporter?.email || item.reporter_id,
         assigned_to: item.assignee?.email || item.assignee_id,
         tags: [],
@@ -175,13 +175,19 @@ export const useIncidentManagement = () => {
       console.log('➕ [useIncidentManagement] Criando incidente...');
       console.log('📤 [useIncidentManagement] Dados recebidos:', incidentData);
       
-      // Mapear para estrutura real da tabela
+      // Mapear para estrutura real da tabela (incluindo todos os campos)
       const supabaseData = {
         title: incidentData.title,
         description: incidentData.description || null,
         category: incidentData.category,
         priority: incidentData.priority,
-        status: 'open',
+        status: incidentData.status || 'open',
+        type: incidentData.type || 'security_breach',
+        severity: incidentData.severity || 'medium',
+        detection_date: incidentData.detection_date || new Date().toISOString(),
+        resolution_date: incidentData.resolution_date || null,
+        business_impact: incidentData.business_impact || null,
+        affected_systems: incidentData.affected_systems || null,
         reporter_id: incidentData.reported_by || user?.id || null,
         assignee_id: incidentData.assigned_to || null,
         tenant_id: tenantId || null
@@ -210,7 +216,7 @@ export const useIncidentManagement = () => {
       console.log('🆔 [useIncidentManagement] ID:', id);
       console.log('📤 [useIncidentManagement] Updates recebidos:', updates);
       
-      // Mapear para estrutura real da tabela incidents (apenas campos que existem)
+      // Mapear para estrutura real da tabela incidents (todos os campos)
       const supabaseUpdates: any = {};
 
       if (updates.title !== undefined) supabaseUpdates.title = updates.title;
@@ -218,6 +224,12 @@ export const useIncidentManagement = () => {
       if (updates.category !== undefined) supabaseUpdates.category = updates.category;
       if (updates.priority !== undefined) supabaseUpdates.priority = updates.priority;
       if (updates.status !== undefined) supabaseUpdates.status = updates.status;
+      if (updates.type !== undefined) supabaseUpdates.type = updates.type;
+      if (updates.severity !== undefined) supabaseUpdates.severity = updates.severity;
+      if (updates.detection_date !== undefined) supabaseUpdates.detection_date = updates.detection_date;
+      if (updates.resolution_date !== undefined) supabaseUpdates.resolution_date = updates.resolution_date;
+      if (updates.business_impact !== undefined) supabaseUpdates.business_impact = updates.business_impact;
+      if (updates.affected_systems !== undefined) supabaseUpdates.affected_systems = updates.affected_systems;
       if (updates.assigned_to !== undefined) supabaseUpdates.assignee_id = updates.assigned_to;
       if (updates.reported_by !== undefined) supabaseUpdates.reporter_id = updates.reported_by;
       
