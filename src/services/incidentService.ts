@@ -16,7 +16,7 @@ export const incidentService = {
             .from('incidents')
             .select(`
         id, title, description, status, severity, priority, type, category, 
-        created_at, updated_at, detection_date, resolution_date, 
+        created_at, updated_at, detection_date, resolution_date, target_resolution_date,
         affected_systems, business_impact, tenant_id, reporter_id, assignee_id,
         reporter:profiles!incidents_reporter_id_fkey(email, id, full_name, job_title),
         assignee:profiles!incidents_assignee_id_fkey(email, id, full_name, job_title)

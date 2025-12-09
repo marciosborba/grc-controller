@@ -144,8 +144,8 @@ const IncidentDataTable: React.FC<IncidentDataTableProps> = ({
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-sm">
-                                    {incident.resolution_date ?
-                                        format(new Date(incident.resolution_date), "dd/MM/yyyy", { locale: ptBR }) :
+                                    {incident.target_resolution_date ?
+                                        format(new Date(incident.target_resolution_date), "dd/MM/yyyy", { locale: ptBR }) :
                                         '-'}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-sm">

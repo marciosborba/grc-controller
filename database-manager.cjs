@@ -26,7 +26,7 @@ class DatabaseManager {
       password: process.env.SUPABASE_DB_PASSWORD,
       ssl: { rejectUnauthorized: false }
     };
-    
+
     this.client = null;
   }
 
@@ -55,6 +55,9 @@ class DatabaseManager {
       console.log(`🔧 Executando: ${description || sql}`);
       const result = await this.client.query(sql);
       console.log(`✅ Sucesso: ${result.rowCount || 0} linhas afetadas`);
+      if (result.rows && result.rows.length > 0) {
+        console.table(result.rows);
+      }
       return result;
     } catch (error) {
       console.error('❌ Erro SQL:', error.message);
@@ -66,11 +69,11 @@ class DatabaseManager {
     try {
       const result = await this.client.query('SELECT version();');
       console.log('✅ Conexão OK - PostgreSQL:', result.rows[0].version);
-      
+
       // Testar acesso à tabela tenants
       const tenants = await this.client.query('SELECT COUNT(*) FROM tenants;');
       console.log(`✅ Acesso à tabela tenants OK - ${tenants.rows[0].count} registros`);
-      
+
       return true;
     } catch (error) {
       console.error('❌ Teste de conexão falhou:', error.message);
@@ -88,7 +91,7 @@ class DatabaseManager {
 
     const defaultClause = defaultValue ? ` DEFAULT ${defaultValue}` : '';
     const sql = `ALTER TABLE ${table} ADD COLUMN ${column} ${type}${defaultClause};`;
-    
+
     return this.executeSQL(sql, `Adicionando coluna ${column} à tabela ${table}`);
   }
 
@@ -107,7 +110,7 @@ class DatabaseManager {
     const name = indexName || `idx_${table}_${column}`;
     const typeClause = indexType === 'GIN' ? ' USING GIN' : '';
     const sql = `CREATE INDEX IF NOT EXISTS ${name} ON ${table}${typeClause} (${column});`;
-    
+
     return this.executeSQL(sql, `Criando índice ${name}`);
   }
 
@@ -122,22 +125,22 @@ class DatabaseManager {
       WHERE table_name = $1
       ORDER BY ordinal_position;
     `;
-    
+
     const result = await this.client.query(sql, [tableName]);
-    
+
     console.log(`📋 Estrutura da tabela ${tableName}:`);
     console.table(result.rows);
-    
+
     return result.rows;
   }
 
   async backupTable(tableName) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupName = `${tableName}_backup_${timestamp}`;
-    
+
     const sql = `CREATE TABLE ${backupName} AS SELECT * FROM ${tableName};`;
     await this.executeSQL(sql, `Criando backup da tabela ${tableName}`);
-    
+
     console.log(`💾 Backup criado: ${backupName}`);
     return backupName;
   }
@@ -145,22 +148,22 @@ class DatabaseManager {
   // Comandos específicos para o projeto GRC
   async setupTenantSettings() {
     console.log('🏢 Configurando campo settings para tenants...');
-    
+
     try {
       // 1. Adicionar coluna settings se não existir
       await this.addColumn('tenants', 'settings', 'JSONB', "'{}'");
-      
+
       // 2. Criar índice GIN para performance em queries JSON
       await this.createIndex('tenants', 'settings', 'idx_tenants_settings_gin', 'GIN');
-      
+
       // 3. Adicionar comentário
       await this.executeSQL(
         "COMMENT ON COLUMN tenants.settings IS 'Configurações da tenant incluindo dados da empresa';",
         'Adicionando comentário à coluna settings'
       );
-      
+
       console.log('🎉 Campo settings configurado com sucesso!');
-      
+
     } catch (error) {
       console.error('❌ Erro ao configurar settings:', error.message);
       throw error;
@@ -170,15 +173,15 @@ class DatabaseManager {
   async addCompanyDataToTenant(tenantId, companyData) {
     const settings = { company_data: companyData };
     const sql = 'UPDATE tenants SET settings = $1 WHERE id = $2;';
-    
+
     await this.executeSQL(
       sql,
       `Atualizando dados da empresa para tenant ${tenantId}`
     );
-    
+
     // Usar parâmetros para evitar SQL injection
     await this.client.query(sql, [JSON.stringify(settings), tenantId]);
-    
+
     console.log('✅ Dados da empresa atualizados');
   }
 }
@@ -187,7 +190,7 @@ class DatabaseManager {
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
-  
+
   if (!command) {
     console.log(`
 🐘 Database Manager - Comandos disponíveis:
@@ -217,7 +220,7 @@ async function main() {
   }
 
   const db = new DatabaseManager();
-  
+
   try {
     const connected = await db.connect();
     if (!connected) {
@@ -229,7 +232,7 @@ async function main() {
       case 'test-connection':
         await db.testConnection();
         break;
-        
+
       case 'add-column':
         const [table, column, type, defaultValue] = args.slice(1);
         if (!table || !column || !type) {
@@ -238,7 +241,7 @@ async function main() {
         }
         await db.addColumn(table, column, type, defaultValue);
         break;
-        
+
       case 'create-index':
         const [indexTable, indexColumn, indexName, indexType] = args.slice(1);
         if (!indexTable || !indexColumn) {
@@ -247,7 +250,7 @@ async function main() {
         }
         await db.createIndex(indexTable, indexColumn, indexName, indexType);
         break;
-        
+
       case 'execute-sql':
         const sql = args[1];
         if (!sql) {
@@ -256,7 +259,7 @@ async function main() {
         }
         await db.executeSQL(sql, 'SQL customizado');
         break;
-        
+
       case 'show-structure':
         const tableName = args[1];
         if (!tableName) {
@@ -265,11 +268,11 @@ async function main() {
         }
         await db.showTableStructure(tableName);
         break;
-        
+
       case 'setup-tenant-settings':
         await db.setupTenantSettings();
         break;
-        
+
       case 'backup-table':
         const backupTable = args[1];
         if (!backupTable) {
@@ -278,13 +281,13 @@ async function main() {
         }
         await db.backupTable(backupTable);
         break;
-        
+
       default:
         console.error(`❌ Comando desconhecido: ${command}`);
         console.log('💡 Use sem argumentos para ver a lista de comandos');
         process.exit(1);
     }
-    
+
   } catch (error) {
     console.error('❌ Erro durante execução:', error.message);
     process.exit(1);

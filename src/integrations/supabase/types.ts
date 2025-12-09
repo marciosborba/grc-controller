@@ -15226,6 +15226,7 @@ export type Database = {
           reporter_id: string | null
           status: string
           tenant_id: string | null
+          target_resolution_date: string | null
           title: string
           updated_at: string | null
         }
@@ -15239,6 +15240,7 @@ export type Database = {
           reporter_id?: string | null
           status?: string
           tenant_id?: string | null
+          target_resolution_date?: string | null
           title: string
           updated_at?: string | null
         }
@@ -15252,6 +15254,7 @@ export type Database = {
           reporter_id?: string | null
           status?: string
           tenant_id?: string | null
+          target_resolution_date?: string | null
           title?: string
           updated_at?: string | null
         }

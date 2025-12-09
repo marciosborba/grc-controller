@@ -28,7 +28,14 @@ import {
   FileText,
   Users,
   Shield,
-  Plus
+  Plus,
+  Calendar,
+  Clock,
+  Activity,
+  Target,
+  AlertCircle,
+  CheckCircle2,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +43,7 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { incidentService } from '@/services/incidentService';
 import type { Incident } from '@/types/incident-management';
+import { cn } from '@/lib/utils';
 
 interface IncidentManagementModalProps {
   incident: Incident | null;
@@ -58,6 +66,7 @@ interface FormData {
   resolution_date: string;
   affected_systems: string[];
   business_impact: string;
+  target_resolution_date: string;
 }
 
 interface Profile {
@@ -100,7 +109,8 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     detection_date: new Date().toISOString().slice(0, 16),
     resolution_date: '',
     affected_systems: [],
-    business_impact: ''
+    business_impact: '',
+    target_resolution_date: ''
   });
 
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -166,7 +176,12 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
         detection_date: incident.detection_date ? new Date(incident.detection_date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
         resolution_date: incident.resolution_date ? new Date(incident.resolution_date).toISOString().slice(0, 16) : '',
         affected_systems: incident.affected_systems || [],
-        business_impact: incident.business_impact || ''
+        business_impact: incident.business_impact || '',
+        target_resolution_date: incident.target_resolution_date
+          ? (typeof incident.target_resolution_date === 'string'
+            ? incident.target_resolution_date.split('T')[0]
+            : incident.target_resolution_date.toISOString().split('T')[0])
+          : ''
       });
     } else {
       // Reset para novo incidente
@@ -183,7 +198,8 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
         detection_date: new Date().toISOString().slice(0, 16),
         resolution_date: '',
         affected_systems: [],
-        business_impact: ''
+        business_impact: '',
+        target_resolution_date: ''
       });
       setActiveTab('basic');
     }
@@ -224,6 +240,7 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
 
   // Função para criar dados seguros para o Supabase
   const createSafeUpdateData = (formData: FormData) => {
+    console.log('🔍 [DEBUG] createSafeUpdateData - Input:', formData);
     const safeData: any = {
       title: formData.title.trim(),
       description: formData.description.trim() || null,
@@ -241,6 +258,18 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     // Adicionar resolution_date apenas se preenchido
     if (formData.resolution_date) {
       safeData.resolution_date = new Date(formData.resolution_date).toISOString();
+    }
+
+    // Adicionar target_resolution_date apenas se preenchido
+    if (formData.target_resolution_date) {
+      // Adicionar horário final do dia para o prazo (23:59:59)
+      // Adicionar T00:00:00 para garantir que o Date seja criado no fuso horário local, não UTC
+      const date = new Date(formData.target_resolution_date + 'T00:00:00');
+      date.setHours(23, 59, 59, 999);
+      safeData.target_resolution_date = date.toISOString();
+      console.log('🔍 [DEBUG] Added target_resolution_date:', safeData.target_resolution_date);
+    } else {
+      console.log('🔍 [DEBUG] No target_resolution_date in formData');
     }
 
     // Adicionar UUIDs apenas se forem válidos
@@ -271,6 +300,7 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
 
     try {
       const incidentData = createSafeUpdateData(formData);
+      console.log('🔍 [DEBUG] Submitting incident data:', incidentData);
 
       if (incident) {
         // Atualizar incidente existente
@@ -300,330 +330,425 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     }
   };
 
+  // Helper para cores de severidade
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400';
+      case 'high': return 'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400';
+      case 'medium': return 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-400';
+      case 'low': return 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-400';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            {incident ? 'Editar Incidente de Segurança' : 'Novo Incidente de Segurança'}
-          </DialogTitle>
-          <DialogDescription>
-            {incident
-              ? 'Edite as informações do incidente de segurança'
-              : 'Registre um novo incidente de segurança com informações detalhadas'
-            }
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="basic" className="flex items-center gap-1">
-                <FileText className="h-4 w-4" />
-                Básico
-              </TabsTrigger>
-              <TabsTrigger value="classification" className="flex items-center gap-1">
-                <AlertTriangle className="h-4 w-4" />
-                Classificação
-              </TabsTrigger>
-              <TabsTrigger value="assignment" className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                Atribuição
-              </TabsTrigger>
-              <TabsTrigger value="impact" className="flex items-center gap-1">
-                <Shield className="h-4 w-4" />
-                Impacto
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Aba Básico */}
-            <TabsContent value="basic" className="space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <Label htmlFor="title">Título do Incidente *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => updateFormData('title', e.target.value)}
-                    placeholder="Ex: Tentativa de acesso não autorizado detectada no sistema ERP"
-                    disabled={isSubmitting}
-                  />
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-background">
+        <div className="p-6 border-b bg-muted/10">
+          <DialogHeader>
+            <div className="flex items-center justify-between mb-2">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <div className={cn("p-2 rounded-lg", incident ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400")}>
+                  {incident ? <AlertCircle className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                 </div>
+                {incident ? 'Editar Incidente' : 'Novo Incidente'}
+              </DialogTitle>
+              {incident && (
+                <Badge variant="outline" className={cn("capitalize", getSeverityColor(incident.severity))}>
+                  {incident.severity}
+                </Badge>
+              )}
+            </div>
+            <DialogDescription className="text-base">
+              {incident
+                ? 'Atualize as informações do incidente para manter o registro preciso.'
+                : 'Preencha os detalhes abaixo para registrar um novo incidente de segurança.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-                <div>
-                  <Label htmlFor="description">Descrição Detalhada</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => updateFormData('description', e.target.value)}
-                    rows={4}
-                    placeholder="Descreva detalhadamente o incidente..."
-                    disabled={isSubmitting}
-                  />
-                </div>
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-6 bg-muted/50 p-1">
+                <TabsTrigger value="basic" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Detalhes</span>
+                </TabsTrigger>
+                <TabsTrigger value="classification" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Target className="h-4 w-4" />
+                  <span className="hidden sm:inline">Classificação</span>
+                </TabsTrigger>
+                <TabsTrigger value="assignment" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Equipe</span>
+                </TabsTrigger>
+                <TabsTrigger value="impact" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Impacto</span>
+                </TabsTrigger>
+              </TabsList>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="category">Categoria *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => updateFormData('category', value)}
+              {/* Aba Básico */}
+              <TabsContent value="basic" className="space-y-6 mt-0">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-sm font-medium flex items-center gap-2">
+                      Título do Incidente <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => updateFormData('title', e.target.value)}
+                      placeholder="Ex: Tentativa de acesso não autorizado no ERP"
                       disabled={isSubmitting}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a categoria" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Segurança da Informação">Segurança da Informação</SelectItem>
-                        <SelectItem value="Infraestrutura">Infraestrutura</SelectItem>
-                        <SelectItem value="Aplicações">Aplicações</SelectItem>
-                        <SelectItem value="Dados e Privacidade">Dados e Privacidade</SelectItem>
-                        <SelectItem value="Compliance">Compliance</SelectItem>
-                        <SelectItem value="Segurança Física">Segurança Física</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      className="h-11 text-base"
+                    />
                   </div>
 
-                  <div>
-                    <Label htmlFor="detection_date">Data de Detecção *</Label>
-                    <Input
-                      id="detection_date"
-                      type="datetime-local"
-                      value={formData.detection_date}
-                      onChange={(e) => updateFormData('detection_date', e.target.value)}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="category" className="text-sm font-medium">Categoria</Label>
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) => updateFormData('category', value)}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Segurança da Informação">Segurança da Informação</SelectItem>
+                          <SelectItem value="Infraestrutura">Infraestrutura</SelectItem>
+                          <SelectItem value="Aplicações">Aplicações</SelectItem>
+                          <SelectItem value="Dados e Privacidade">Dados e Privacidade</SelectItem>
+                          <SelectItem value="Compliance">Compliance</SelectItem>
+                          <SelectItem value="Segurança Física">Segurança Física</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="detection_date" className="text-sm font-medium flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        Data de Detecção
+                      </Label>
+                      <Input
+                        id="detection_date"
+                        type="datetime-local"
+                        value={formData.detection_date}
+                        onChange={(e) => updateFormData('detection_date', e.target.value)}
+                        disabled={isSubmitting}
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="target_resolution_date" className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        Prazo para Tratamento
+                      </Label>
+                      <Input
+                        id="target_resolution_date"
+                        type="date"
+                        value={formData.target_resolution_date}
+                        onChange={(e) => updateFormData('target_resolution_date', e.target.value)}
+                        disabled={isSubmitting}
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="text-sm font-medium">Descrição Detalhada</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => updateFormData('description', e.target.value)}
+                      rows={6}
+                      placeholder="Descreva o que aconteceu, como foi detectado e as ações iniciais tomadas..."
                       disabled={isSubmitting}
+                      className="resize-none min-h-[120px]"
                     />
                   </div>
                 </div>
-              </div>
-            </TabsContent>
+              </TabsContent>
 
-            {/* Aba Classificação */}
-            <TabsContent value="classification" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="type">Tipo de Incidente *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value) => updateFormData('type', value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="security_breach">Violação de Segurança</SelectItem>
-                      <SelectItem value="malware">Malware</SelectItem>
-                      <SelectItem value="phishing">Phishing</SelectItem>
-                      <SelectItem value="data_breach">Vazamento de Dados</SelectItem>
-                      <SelectItem value="unauthorized_access">Acesso Não Autorizado</SelectItem>
-                      <SelectItem value="ddos_attack">Ataque DDoS</SelectItem>
-                      <SelectItem value="social_engineering">Engenharia Social</SelectItem>
-                      <SelectItem value="system_failure">Falha de Sistema</SelectItem>
-                      <SelectItem value="network_incident">Incidente de Rede</SelectItem>
-                      <SelectItem value="compliance_violation">Violação de Compliance</SelectItem>
-                      <SelectItem value="physical_security">Segurança Física</SelectItem>
-                      <SelectItem value="other">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Aba Classificação */}
+              <TabsContent value="classification" className="space-y-6 mt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4 p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="h-5 w-5 text-blue-500" />
+                      <h3 className="font-semibold">Natureza do Incidente</h3>
+                    </div>
 
-                <div>
-                  <Label htmlFor="severity">Severidade *</Label>
-                  <Select
-                    value={formData.severity}
-                    onValueChange={(value) => updateFormData('severity', value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a severidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baixa</SelectItem>
-                      <SelectItem value="medium">Média</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                      <SelectItem value="critical">Crítica</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Tipo</Label>
+                      <Select
+                        value={formData.type}
+                        onValueChange={(value) => updateFormData('type', value)}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="security_breach">Violação de Segurança</SelectItem>
+                          <SelectItem value="malware">Malware</SelectItem>
+                          <SelectItem value="phishing">Phishing</SelectItem>
+                          <SelectItem value="data_breach">Vazamento de Dados</SelectItem>
+                          <SelectItem value="unauthorized_access">Acesso Não Autorizado</SelectItem>
+                          <SelectItem value="ddos_attack">Ataque DDoS</SelectItem>
+                          <SelectItem value="social_engineering">Engenharia Social</SelectItem>
+                          <SelectItem value="system_failure">Falha de Sistema</SelectItem>
+                          <SelectItem value="network_incident">Incidente de Rede</SelectItem>
+                          <SelectItem value="compliance_violation">Violação de Compliance</SelectItem>
+                          <SelectItem value="physical_security">Segurança Física</SelectItem>
+                          <SelectItem value="other">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div>
-                  <Label htmlFor="priority">Prioridade *</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(value) => updateFormData('priority', value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a prioridade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baixa</SelectItem>
-                      <SelectItem value="medium">Média</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                      <SelectItem value="critical">Crítica</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {incident && (
-                  <div>
-                    <Label htmlFor="status">Status</Label>
-                    <Select
-                      value={formData.status}
-                      onValueChange={(value) => updateFormData('status', value)}
-                      disabled={isSubmitting}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Aberto</SelectItem>
-                        <SelectItem value="investigating">Investigando</SelectItem>
-                        <SelectItem value="contained">Contido</SelectItem>
-                        <SelectItem value="resolved">Resolvido</SelectItem>
-                        <SelectItem value="closed">Fechado</SelectItem>
-                        <SelectItem value="cancelled">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            {/* Aba Atribuição */}
-            <TabsContent value="assignment" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="reported_by">Reportado por</Label>
-                  <Select
-                    value={formData.reported_by}
-                    onValueChange={(value) => updateFormData('reported_by', value)}
-                    disabled={isSubmitting || isLoadingProfiles}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar usuário" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unspecified">Não especificado</SelectItem>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.full_name} - {profile.job_title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="assigned_to">Atribuído para</Label>
-                  <Select
-                    value={formData.assigned_to}
-                    onValueChange={(value) => updateFormData('assigned_to', value)}
-                    disabled={isSubmitting || isLoadingProfiles}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Não atribuído</SelectItem>
-                      {profiles.map((profile) => (
-                        <SelectItem key={profile.id} value={profile.id}>
-                          {profile.full_name} - {profile.job_title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* Aba Impacto */}
-            <TabsContent value="impact" className="space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="business_impact">Impacto no Negócio</Label>
-                  <Textarea
-                    id="business_impact"
-                    value={formData.business_impact}
-                    onChange={(e) => updateFormData('business_impact', e.target.value)}
-                    rows={3}
-                    placeholder="Descreva o impacto no negócio..."
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div>
-                  <Label>Sistemas Afetados</Label>
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      value={newSystem}
-                      onChange={(e) => setNewSystem(e.target.value)}
-                      placeholder="Nome do sistema ou aplicação"
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAffectedSystem())}
-                      disabled={isSubmitting}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={addAffectedSystem}
-                      disabled={isSubmitting}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.affected_systems.map((system, index) => (
-                      <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                        {system}
-                        <button
-                          type="button"
-                          onClick={() => removeAffectedSystem(system)}
-                          className="ml-1 hover:text-red-500"
+                    {incident && (
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status Atual</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value) => updateFormData('status', value)}
                           disabled={isSubmitting}
                         >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                          <SelectTrigger className="h-11">
+                            <SelectValue placeholder="Selecione o status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">Aberto</SelectItem>
+                            <SelectItem value="investigating">Investigando</SelectItem>
+                            <SelectItem value="contained">Contido</SelectItem>
+                            <SelectItem value="resolved">Resolvido</SelectItem>
+                            <SelectItem value="closed">Fechado</SelectItem>
+                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4 p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-orange-500" />
+                      <h3 className="font-semibold">Criticidade</h3>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="severity">Severidade</Label>
+                      <Select
+                        value={formData.severity}
+                        onValueChange={(value) => updateFormData('severity', value)}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione a severidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Baixa</SelectItem>
+                          <SelectItem value="medium">Média</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                          <SelectItem value="critical">Crítica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="priority">Prioridade</Label>
+                      <Select
+                        value={formData.priority}
+                        onValueChange={(value) => updateFormData('priority', value)}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Selecione a prioridade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Baixa</SelectItem>
+                          <SelectItem value="medium">Média</SelectItem>
+                          <SelectItem value="high">Alta</SelectItem>
+                          <SelectItem value="critical">Crítica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* Aba Atribuição */}
+              <TabsContent value="assignment" className="space-y-6 mt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg border bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-full">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-blue-900 dark:text-blue-300">Responsável</h4>
+                          <p className="text-xs text-blue-700 dark:text-blue-400">Quem está cuidando deste incidente?</p>
+                        </div>
+                      </div>
+
+                      <Select
+                        value={formData.assigned_to}
+                        onValueChange={(value) => updateFormData('assigned_to', value)}
+                        disabled={isSubmitting || isLoadingProfiles}
+                      >
+                        <SelectTrigger className="h-11 bg-white dark:bg-background">
+                          <SelectValue placeholder="Selecionar responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unassigned">Não atribuído</SelectItem>
+                          {profiles.map((profile) => (
+                            <SelectItem key={profile.id} value={profile.id}>
+                              {profile.full_name} - {profile.job_title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg border bg-gray-50/50 dark:bg-gray-900/10 border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-full">
+                          <Info className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900 dark:text-gray-300">Reportado por</h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Quem identificou o incidente?</p>
+                        </div>
+                      </div>
+
+                      <Select
+                        value={formData.reported_by}
+                        onValueChange={(value) => updateFormData('reported_by', value)}
+                        disabled={isSubmitting || isLoadingProfiles}
+                      >
+                        <SelectTrigger className="h-11 bg-white dark:bg-background">
+                          <SelectValue placeholder="Selecionar usuário" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="unspecified">Não especificado</SelectItem>
+                          {profiles.map((profile) => (
+                            <SelectItem key={profile.id} value={profile.id}>
+                              {profile.full_name} - {profile.job_title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Aba Impacto */}
+              <TabsContent value="impact" className="space-y-6 mt-0">
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Sistemas Afetados</Label>
+                    <div className="p-4 rounded-lg border bg-card shadow-sm space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          value={newSystem}
+                          onChange={(e) => setNewSystem(e.target.value)}
+                          placeholder="Digite o nome do sistema e pressione Enter..."
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addAffectedSystem())}
+                          disabled={isSubmitting}
+                          className="h-11"
+                        />
+                        <Button
+                          type="button"
+                          onClick={addAffectedSystem}
+                          disabled={isSubmitting}
+                          className="h-11 px-4"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-muted/30 rounded-md border border-dashed">
+                        {formData.affected_systems.length === 0 && (
+                          <span className="text-sm text-muted-foreground self-center px-2">Nenhum sistema adicionado</span>
+                        )}
+                        {formData.affected_systems.map((system, index) => (
+                          <Badge key={index} variant="secondary" className="flex items-center gap-1.5 px-3 py-1.5 text-sm">
+                            {system}
+                            <button
+                              type="button"
+                              onClick={() => removeAffectedSystem(system)}
+                              className="ml-1 hover:text-destructive focus:outline-none rounded-full p-0.5 hover:bg-destructive/10 transition-colors"
+                              disabled={isSubmitting}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="business_impact" className="text-sm font-medium">Impacto no Negócio</Label>
+                    <Textarea
+                      id="business_impact"
+                      value={formData.business_impact}
+                      onChange={(e) => updateFormData('business_impact', e.target.value)}
+                      rows={4}
+                      placeholder="Descreva o impacto financeiro, operacional ou reputacional..."
+                      disabled={isSubmitting}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <div className="p-6 border-t bg-muted/10 mt-auto">
+            <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Cancelar
+              </Button>
+
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="min-w-[140px] h-11 shadow-md"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      {incident ? 'Salvar Alterações' : 'Criar Incidente'}
+                    </>
+                  )}
+                </Button>
               </div>
-            </TabsContent>
-          </Tabs>
-
-          {/* Ações do Formulário */}
-          <DialogFooter className="flex justify-end items-center pt-6 border-t space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancelar
-            </Button>
-
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="min-w-[140px]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  {incident ? 'Atualizar' : 'Criar'} Incidente
-                </>
-              )}
-            </Button>
-          </DialogFooter>
+            </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

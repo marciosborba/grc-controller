@@ -9,7 +9,7 @@ export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 
 export type IncidentPriority = 'low' | 'medium' | 'high' | 'critical';
 
-export type IncidentType = 
+export type IncidentType =
   | 'security_breach'
   | 'malware'
   | 'phishing'
@@ -23,7 +23,7 @@ export type IncidentType =
   | 'physical_security'
   | 'other';
 
-export type IncidentCategory = 
+export type IncidentCategory =
   | 'Segurança da Informação'
   | 'Infraestrutura'
   | 'Aplicações'
@@ -43,76 +43,77 @@ export type UrgencyLevel = 'low' | 'medium' | 'high' | 'critical';
 // ============================================================================
 export interface Incident {
   id: string;
-  
+
   // Informações Básicas
   title: string;
   description?: string;
   incident_number?: string;
   type: IncidentType;
   category: IncidentCategory;
-  
+
   // Classificação
   severity: IncidentSeverity;
   priority: IncidentPriority;
   impact_level?: ImpactLevel;
   urgency_level?: UrgencyLevel;
-  
+
   // Status e Datas
   status: IncidentStatus;
   detection_date: Date;
   response_start_date?: Date;
   containment_date?: Date;
-  resolution_date?: Date;
-  closure_date?: Date;
-  
+  resolution_date?: Date | string;
+  target_resolution_date?: Date | string;
+  closure_date?: Date | string;
+
   // Sistemas e Ativos Afetados
   affected_systems?: string[];
   affected_users_count?: number;
   business_impact?: string;
   financial_impact?: number;
-  
+
   // Responsabilidade
   reported_by?: string;
   assigned_to?: string;
   incident_manager?: string;
   response_team?: string[];
-  
+
   // Localização e Contexto
   location?: string;
   source_ip?: string;
   source_country?: string;
   attack_vector?: string;
-  
+
   // Comunicação
   public_communication?: boolean;
   stakeholder_notification?: boolean;
   media_attention?: boolean;
-  
+
   // Conformidade e Regulamentação
   regulatory_notification_required?: boolean;
   data_protection_authority_notified?: boolean;
   law_enforcement_notified?: boolean;
-  
+
   // Evidências e Documentação
   evidence_collected?: string[];
   forensic_analysis_required?: boolean;
-  
+
   // Recuperação e Lições Aprendidas
   recovery_actions?: string;
   lessons_learned?: string;
   preventive_measures?: string;
-  
+
   // Controle de auditoria
   created_by?: string;
   updated_by?: string;
   created_at: Date;
   updated_at: Date;
-  
+
   // Metadados adicionais
   tags?: string[];
   external_reference?: string;
   vendor_ticket_number?: string;
-  
+
   // Métricas calculadas
   time_to_detection?: number; // minutos
   time_to_response?: number; // minutos
@@ -129,23 +130,23 @@ export interface IncidentResponse {
   responder_id: string;
   response_date: Date;
   response_type: 'initial' | 'update' | 'escalation' | 'closure';
-  
+
   // Ação realizada
   action_taken: string;
   next_steps?: string;
   estimated_resolution_time?: Date;
-  
+
   // Status
   status_before: IncidentStatus;
   status_after: IncidentStatus;
-  
+
   // Tempo gasto
   time_spent_minutes?: number;
-  
+
   // Comunicação
   internal_notes?: string;
   external_communication?: string;
-  
+
   created_at: Date;
 }
 
@@ -156,16 +157,16 @@ export interface IncidentAssignment {
   assigned_by: string;
   assignment_date: Date;
   role: 'incident_manager' | 'responder' | 'investigator' | 'communicator' | 'technical_lead';
-  
+
   is_primary: boolean;
   is_active: boolean;
-  
+
   skills_required?: string[];
   availability_hours?: string;
-  
+
   accepted_date?: Date;
   completion_date?: Date;
-  
+
   created_at: Date;
   updated_at: Date;
 }
@@ -177,24 +178,24 @@ export interface IncidentCommunication {
   id: string;
   incident_id: string;
   communication_type: 'internal' | 'external' | 'regulatory' | 'public' | 'stakeholder';
-  
+
   // Destinatário
   recipient_type: 'team' | 'management' | 'customer' | 'regulator' | 'public' | 'vendor';
   recipients: string[];
-  
+
   // Conteúdo
   subject: string;
   message: string;
   channel: 'email' | 'sms' | 'phone' | 'portal' | 'social_media' | 'press_release';
-  
+
   // Status
   sent_date?: Date;
   delivery_status?: 'pending' | 'sent' | 'delivered' | 'failed';
-  
+
   // Configuração
   is_automated: boolean;
   template_used?: string;
-  
+
   sent_by: string;
   created_at: Date;
 }
@@ -205,32 +206,32 @@ export interface IncidentCommunication {
 export interface IncidentEvidence {
   id: string;
   incident_id: string;
-  
+
   // Evidência
   evidence_type: 'log_file' | 'screenshot' | 'network_capture' | 'disk_image' | 'memory_dump' | 'document' | 'witness_statement';
   evidence_name: string;
   description?: string;
-  
+
   // Arquivo
   file_path?: string;
   file_hash?: string;
   file_size?: number;
-  
+
   // Chain of Custody
   collected_by: string;
   collection_date: Date;
   custody_chain: string[];
-  
+
   // Classificação
   confidentiality_level: 'public' | 'internal' | 'confidential' | 'restricted';
   legal_hold: boolean;
-  
+
   // Análise
   analysis_status: 'pending' | 'in_progress' | 'completed' | 'inconclusive';
   analysis_results?: string;
   analyzed_by?: string;
   analysis_date?: Date;
-  
+
   created_at: Date;
   updated_at: Date;
 }
@@ -241,37 +242,37 @@ export interface IncidentEvidence {
 export interface RootCauseAnalysis {
   id: string;
   incident_id: string;
-  
+
   // Análise
   analysis_method: '5_whys' | 'fishbone' | 'fault_tree' | 'timeline' | 'other';
   root_cause: string;
   contributing_factors?: string[];
-  
+
   // Timeline
   timeline_events?: {
     timestamp: Date;
     event: string;
     source: string;
   }[];
-  
+
   // Impacto
   business_impact_analysis: string;
   technical_impact_analysis: string;
-  
+
   // Recomendações
   corrective_actions: string[];
   preventive_actions: string[];
   process_improvements?: string[];
-  
+
   // Responsabilidade
   conducted_by: string;
   reviewed_by?: string;
   approved_by?: string;
-  
+
   // Datas
   analysis_start_date: Date;
   analysis_completion_date?: Date;
-  
+
   created_at: Date;
   updated_at: Date;
 }
@@ -285,23 +286,23 @@ export interface IncidentMetrics {
   incidents_by_severity: Record<IncidentSeverity, number>;
   incidents_by_type: Record<IncidentType, number>;
   incidents_by_category: Record<IncidentCategory, number>;
-  
+
   // Métricas de Tempo
   average_detection_time: number;
   average_response_time: number;
   average_containment_time: number;
   average_resolution_time: number;
-  
+
   // Métricas de Performance
   sla_compliance_rate: number;
   escalated_incidents: number;
   reopened_incidents: number;
-  
+
   // Tendências
   incidents_trend_7_days: number;
   incidents_trend_30_days: number;
   critical_incidents_month: number;
-  
+
   // Impacto
   total_affected_users: number;
   total_financial_impact: number;
