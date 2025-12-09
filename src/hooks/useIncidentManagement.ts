@@ -95,6 +95,7 @@ export const useIncidentManagement = () => {
         status: item.status as IncidentStatus,
         detection_date: item.detection_date ? new Date(item.detection_date) : new Date(item.created_at),
         resolution_date: item.resolution_date ? new Date(item.resolution_date) : undefined,
+        target_resolution_date: item.target_resolution_date ? new Date(item.target_resolution_date) : undefined,
         created_at: new Date(item.created_at),
         updated_at: item.updated_at ? new Date(item.updated_at) : new Date(item.created_at),
         affected_systems: item.affected_systems || [], // Campo existe na tabela
@@ -152,14 +153,14 @@ export const useIncidentManagement = () => {
         console.error('❌ [useIncidentManagement] Erro ao buscar perfis:', error);
         throw error;
       }
-      
+
       const mappedProfiles = data.map(p => ({
         user_id: p.id,
         full_name: p.full_name,
         job_title: p.job_title,
         department: p.department
       }));
-      
+
       console.log('✅ [useIncidentManagement] Perfis carregados:', mappedProfiles);
       return mappedProfiles;
     }
@@ -174,7 +175,7 @@ export const useIncidentManagement = () => {
     mutationFn: async (incidentData: any) => {
       console.log('➕ [useIncidentManagement] Criando incidente...');
       console.log('📤 [useIncidentManagement] Dados recebidos:', incidentData);
-      
+
       // Mapear para estrutura real da tabela (incluindo todos os campos)
       const supabaseData = {
         title: incidentData.title,
@@ -192,7 +193,7 @@ export const useIncidentManagement = () => {
         assignee_id: incidentData.assigned_to || null,
         tenant_id: tenantId || null
       };
-      
+
       console.log('📤 [useIncidentManagement] Dados para Supabase:', supabaseData);
       const result = await incidentService.createIncident(supabaseData);
       console.log('✅ [useIncidentManagement] Incidente criado:', result);
@@ -215,7 +216,7 @@ export const useIncidentManagement = () => {
       console.log('🔄 [useIncidentManagement] Atualizando incidente...');
       console.log('🆔 [useIncidentManagement] ID:', id);
       console.log('📤 [useIncidentManagement] Updates recebidos:', updates);
-      
+
       // Mapear para estrutura real da tabela incidents (todos os campos)
       const supabaseUpdates: any = {};
 
@@ -228,14 +229,15 @@ export const useIncidentManagement = () => {
       if (updates.severity !== undefined) supabaseUpdates.severity = updates.severity;
       if (updates.detection_date !== undefined) supabaseUpdates.detection_date = updates.detection_date;
       if (updates.resolution_date !== undefined) supabaseUpdates.resolution_date = updates.resolution_date;
+      if (updates.target_resolution_date !== undefined) supabaseUpdates.target_resolution_date = updates.target_resolution_date;
       if (updates.business_impact !== undefined) supabaseUpdates.business_impact = updates.business_impact;
       if (updates.affected_systems !== undefined) supabaseUpdates.affected_systems = updates.affected_systems;
       if (updates.assigned_to !== undefined) supabaseUpdates.assignee_id = updates.assigned_to;
       if (updates.reported_by !== undefined) supabaseUpdates.reporter_id = updates.reported_by;
-      
+
       // Sempre atualizar updated_at
       supabaseUpdates.updated_at = new Date().toISOString();
-      
+
       console.log('📤 [useIncidentManagement] Updates para Supabase:', supabaseUpdates);
       const result = await incidentService.updateIncident(id, supabaseUpdates);
       console.log('✅ [useIncidentManagement] Incidente atualizado:', result);
