@@ -13,7 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
+import {
   Shield,
   FileCheck,
   Upload,
@@ -53,6 +53,8 @@ interface AssessmentData {
   assessment_name: string;
   due_date: string;
   progress_percentage: number;
+  status: string;
+  vendor_submitted_at?: string;
   responses: Record<string, any>;
   vendor_registry: {
     name: string;
@@ -167,7 +169,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     if (!assessment?.vendor_assessment_frameworks?.questions) return [];
 
     const categories: Record<string, Question[]> = {};
-    
+
     assessment.vendor_assessment_frameworks.questions.forEach(question => {
       if (!categories[question.category]) {
         categories[question.category] = [];
@@ -186,9 +188,9 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   // Calculate progress
   const calculateProgress = () => {
     if (!assessment) return 0;
-    
+
     const totalQuestions = assessment.vendor_assessment_frameworks?.questions?.length || 0;
-    const answeredQuestions = Object.keys(responses).filter(key => 
+    const answeredQuestions = Object.keys(responses).filter(key =>
       responses[key] !== undefined && responses[key] !== ''
     ).length;
 
@@ -261,7 +263,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     // Final validation of all sections
     const allQuestions = assessment.vendor_assessment_frameworks?.questions || [];
     const requiredQuestions = allQuestions.filter(q => q.required);
-    const unansweredRequired = requiredQuestions.filter(q => 
+    const unansweredRequired = requiredQuestions.filter(q =>
       !responses[q.id] || responses[q.id] === ''
     );
 
@@ -345,7 +347,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     const currentQuestions = sections[currentSection].questions;
     const requiredQuestions = currentQuestions.filter(q => q.required);
     const missingQuestions: string[] = [];
-    
+
     for (const question of requiredQuestions) {
       const response = responses[question.id];
       if (!response || response === '' || (typeof response === 'string' && response.trim() === '')) {
@@ -359,17 +361,17 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
         description: `${missingQuestions.length} campo(s) obrigatório(s) pendente(s)`,
         variant: "destructive"
       });
-      
+
       // Scroll to first missing question
-      const firstMissingId = requiredQuestions.find(q => 
+      const firstMissingId = requiredQuestions.find(q =>
         !responses[q.id] || responses[q.id] === ''
       )?.id;
-      
+
       if (firstMissingId) {
         const element = document.getElementById(`question-${firstMissingId}`);
         element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      
+
       return false;
     }
 
@@ -385,11 +387,11 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   // Get validation status for a question
   const getQuestionValidationStatus = (question: Question) => {
     const answered = isQuestionAnswered(question.id);
-    
+
     if (question.required) {
       return answered ? 'completed' : 'required';
     }
-    
+
     return answered ? 'completed' : 'optional';
   };
 
@@ -398,7 +400,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     if (!validateCurrentSection()) return;
 
     await saveResponses();
-    
+
     if (currentSection < sections.length - 1) {
       setCurrentSection(currentSection + 1);
     }
@@ -421,14 +423,17 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           <RadioGroup
             value={value}
             onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
+            className="flex flex-col sm:flex-row gap-4"
           >
-            <div className="flex items-center space-x-2">
+            <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-all duration-200 ${value === 'yes' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}>
               <RadioGroupItem value="yes" id={`${question.id}_yes`} />
-              <Label htmlFor={`${question.id}_yes`}>Sim</Label>
+              <Label htmlFor={`${question.id}_yes`} className="cursor-pointer font-medium">Sim</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-all duration-200 ${value === 'no' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}>
               <RadioGroupItem value="no" id={`${question.id}_no`} />
-              <Label htmlFor={`${question.id}_no`}>Não</Label>
+              <Label htmlFor={`${question.id}_no`} className="cursor-pointer font-medium">Não</Label>
             </div>
           </RadioGroup>
         );
@@ -436,12 +441,12 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       case 'multiple_choice':
         return (
           <Select value={value} onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}>
-            <SelectTrigger>
+            <SelectTrigger className="w-full h-12 text-base bg-white border-gray-200 focus:ring-2 focus:ring-primary/20 transition-all">
               <SelectValue placeholder="Selecione uma opção" />
             </SelectTrigger>
             <SelectContent>
               {question.options?.map(option => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
+                <SelectItem key={option} value={option} className="py-3 cursor-pointer">{option}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -452,8 +457,9 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           <Textarea
             value={value}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
-            placeholder="Digite sua resposta..."
-            rows={3}
+            placeholder="Digite sua resposta detalhada aqui..."
+            rows={4}
+            className="w-full min-h-[120px] text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-y p-4"
           />
         );
 
@@ -464,33 +470,50 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             value={value}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder="0"
+            className="h-12 text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all max-w-[200px]"
           />
         );
 
       case 'rating':
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap gap-2">
             {[1, 2, 3, 4, 5].map(rating => (
-              <Button
+              <button
                 key={rating}
-                variant={value === rating.toString() ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setResponses(prev => ({ ...prev, [question.id]: rating.toString() }))}
+                className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold transition-all duration-200 ${value === rating.toString()
+                  ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5'
+                  }`}
               >
-                <Star className={`h-4 w-4 ${value === rating.toString() ? 'text-white' : 'text-yellow-500'}`} />
                 {rating}
-              </Button>
+              </button>
             ))}
+            <div className="w-full mt-2 flex justify-between text-xs text-gray-400 px-1">
+              <span>Baixo</span>
+              <span>Alto</span>
+            </div>
           </div>
         );
 
       case 'file_upload':
         return (
-          <div className="space-y-3">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600 mb-2">Clique para fazer upload ou arraste arquivos aqui</p>
-              <p className="text-xs text-gray-500">Formatos aceitos: PDF, DOC, DOCX, JPG, PNG (máx. 10MB)</p>
+          <div className="space-y-4">
+            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 group ${value ? 'border-green-300 bg-green-50/30' : 'border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+              }`}>
+              <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Upload className={`h-6 w-6 ${value ? 'text-green-500' : 'text-gray-400 group-hover:text-primary'}`} />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-900">
+                  {value ? 'Arquivo selecionado' : 'Clique para fazer upload'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  PDF, DOC, DOCX, JPG, PNG (máx. 10MB)
+                </p>
+              </div>
+
               <Input
                 type="file"
                 onChange={(e) => {
@@ -504,21 +527,20 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                       });
                       return;
                     }
-                    
-                    // Simulate file upload and store file info
+
                     const fileInfo = {
                       name: file.name,
                       size: file.size,
                       type: file.type,
                       uploadedAt: new Date().toISOString(),
-                      url: URL.createObjectURL(file) // For preview, in real scenario would be uploaded URL
+                      url: URL.createObjectURL(file)
                     };
-                    
-                    setResponses(prev => ({ 
-                      ...prev, 
+
+                    setResponses(prev => ({
+                      ...prev,
                       [question.id]: JSON.stringify(fileInfo)
                     }));
-                    
+
                     toast({
                       title: "Arquivo anexado",
                       description: `${file.name} foi anexado com sucesso`
@@ -526,20 +548,34 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                   }
                 }}
                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-                className="mt-3"
+                className="hidden"
+                id={`file-${question.id}`}
               />
+
+              {!value && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => document.getElementById(`file-${question.id}`)?.click()}
+                >
+                  Selecionar Arquivo
+                </Button>
+              )}
             </div>
-            
+
             {/* Show uploaded file info */}
             {value && (() => {
               try {
                 const fileInfo = JSON.parse(value);
                 return (
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <FileCheck className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center justify-between p-4 bg-white border border-green-100 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <FileCheck className="h-5 w-5 text-green-600" />
+                      </div>
                       <div>
-                        <p className="text-sm font-medium">{fileInfo.name}</p>
+                        <p className="text-sm font-medium text-gray-900">{fileInfo.name}</p>
                         <p className="text-xs text-gray-500">
                           {(fileInfo.size / 1024).toFixed(1)} KB • {new Date(fileInfo.uploadedAt).toLocaleString('pt-BR')}
                         </p>
@@ -548,6 +584,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
                       onClick={() => setResponses(prev => ({ ...prev, [question.id]: '' }))}
                     >
                       Remover
@@ -567,6 +604,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             value={value}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder="Digite sua resposta..."
+            className="h-12 text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         );
     }
@@ -599,7 +637,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           </CardHeader>
           <CardContent className="text-center">
             <p className="text-red-700 mb-4">
-              {isExpired 
+              {isExpired
                 ? 'Este link de assessment expirou. Entre em contato conosco para solicitar um novo link.'
                 : 'O link pode ser inválido ou ter sido removido.'
               }
@@ -619,333 +657,312 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   // Show success page if assessment is completed
   if (assessment?.status === 'completed' && assessment?.vendor_submitted_at) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
-        <Card className="max-w-2xl w-full">
-          <CardHeader className="text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-12 w-12 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl text-green-900 mb-2">
-              🎉 Assessment Concluído com Sucesso!
-            </CardTitle>
-            <p className="text-green-700">
-              Obrigado por completar o assessment de segurança. Suas respostas foram enviadas com sucesso.
-            </p>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {assessment.vendor_assessment_frameworks?.questions?.length || 0}
-                </div>
-                <div className="text-sm text-green-700">Questões Respondidas</div>
+      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4 font-sans">
+        <div className="max-w-2xl w-full">
+          <Card className="border-0 shadow-xl overflow-hidden">
+            <div className="bg-green-600 h-2 w-full"></div>
+            <CardHeader className="text-center pb-2 pt-12">
+              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
+                <CheckCircle className="h-12 w-12 text-green-600" />
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">100%</div>
-                <div className="text-sm text-blue-700">Concluído</div>
-              </div>
-            </div>
+              <CardTitle className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
+                Assessment Enviado!
+              </CardTitle>
+              <p className="text-gray-500 text-lg">
+                Suas respostas foram registradas com sucesso.
+              </p>
+            </CardHeader>
 
-            {/* Submission Info */}
-            <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
-              <div className="flex items-start space-x-3">
-                <Calendar className="h-5 w-5 text-green-600 mt-0.5" />
+            <CardContent className="space-y-8 p-8">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center p-6 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {assessment.vendor_assessment_frameworks?.questions?.length || 0}
+                  </div>
+                  <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">Questões</div>
+                </div>
+                <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-100">
+                  <div className="text-3xl font-bold text-green-600 mb-1">100%</div>
+                  <div className="text-sm font-medium text-green-600 uppercase tracking-wide">Concluído</div>
+                </div>
+              </div>
+
+              {/* Submission Info */}
+              <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex items-start gap-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-green-900">
-                    Enviado em: {new Date(assessment.vendor_submitted_at).toLocaleString('pt-BR')}
+                  <p className="text-sm font-semibold text-gray-900">
+                    Enviado em {new Date(assessment.vendor_submitted_at).toLocaleDateString('pt-BR')} às {new Date(assessment.vendor_submitted_at).toLocaleTimeString('pt-BR')}
                   </p>
-                  <p className="text-sm text-green-700 mt-1">
-                    Nossa equipe irá revisar suas respostas e entrará em contato em breve.
+                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                    Nossa equipe de GRC irá analisar suas respostas. Você receberá uma notificação assim que a revisão for concluída.
                   </p>
                 </div>
               </div>
-            </div>
 
-            {/* Contact Info */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="flex items-start space-x-3">
-                <User className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-900">Informações de Contato</p>
-                  <p className="text-sm text-blue-700">
-                    Fornecedor: <strong>{assessment.vendor_registry?.name}</strong>
-                  </p>
-                  {assessment.vendor_registry?.primary_contact_name && (
-                    <p className="text-sm text-blue-700">
-                      Contato: <strong>{assessment.vendor_registry.primary_contact_name}</strong>
-                    </p>
-                  )}
-                </div>
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => window.print()}
+                  className="h-12 px-6 border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Salvar Comprovante
+                </Button>
+                <Button
+                  onClick={() => window.location.href = 'mailto:suporte@empresa.com?subject=Dúvida sobre Assessment'}
+                  className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/20"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Falar com Suporte
+                </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-              <Button
-                variant="outline"
-                onClick={() => window.print()}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Imprimir Comprovante
-              </Button>
-              <Button
-                onClick={() => window.location.href = 'mailto:suporte@empresa.com?subject=Dúvida sobre Assessment'}
-                className="flex items-center gap-2"
-              >
-                <User className="h-4 w-4" />
-                Entrar em Contato
-              </Button>
-            </div>
-
-            {/* Footer Info */}
-            <div className="text-center text-sm text-gray-500 border-t pt-4">
-              <p>Você receberá uma confirmação por e-mail e atualizações sobre o status da revisão.</p>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="text-center mt-8 text-sm text-gray-400">
+            &copy; {new Date().getFullYear()} GRC Controller. Todos os direitos reservados.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {assessment.assessment_name}
-                </h1>
-                <p className="text-sm text-gray-600">
-                  {assessment.vendor_registry.name}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">{progress}% Concluído</div>
-                <div className="text-xs text-gray-500">
-                  Prazo: {new Date(assessment.due_date).toLocaleDateString('pt-BR')}
+    <div className="min-h-screen bg-gray-50/50 font-sans">
+      {/* Hero Header */}
+      <div className="bg-white border-b sticky top-0 z-50 shadow-sm backdrop-blur-xl bg-white/80 supports-[backdrop-filter]:bg-white/60">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                    {assessment.assessment_name}
+                  </h1>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Building className="h-3.5 w-3.5" />
+                    <span>{assessment.vendor_registry.name}</span>
+                    <span className="text-gray-300">•</span>
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Prazo: {new Date(assessment.due_date).toLocaleDateString('pt-BR')}</span>
+                  </div>
                 </div>
               </div>
-              <Progress value={progress} className="w-24" />
+
+              <div className="hidden md:flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-gray-900">{progress}% Concluído</div>
+                  <div className="text-xs text-gray-500">
+                    {Object.keys(responses).length} de {assessment.vendor_assessment_frameworks?.questions?.length || 0} questões
+                  </div>
+                </div>
+                <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Progress Bar (visible only on small screens) */}
+        <div className="md:hidden h-1 bg-gray-100 w-full">
+          <div
+            className="h-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Seções do Assessment</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {sections.map((section, index) => {
-                  const sectionProgress = section.questions.filter(q => 
-                    responses[q.id] !== undefined && responses[q.id] !== ''
-                  ).length;
-                  const sectionTotal = section.questions.length;
-                  const isCompleted = sectionProgress === sectionTotal;
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Sidebar Navigation */}
+          <div className="lg:col-span-3">
+            <div className="sticky top-24 space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 bg-gray-50 border-b border-gray-100">
+                  <h2 className="font-semibold text-gray-900">Seções</h2>
+                </div>
+                <div className="p-2">
+                  {sections.map((section, index) => {
+                    const sectionProgress = section.questions.filter(q =>
+                      responses[q.id] !== undefined && responses[q.id] !== ''
+                    ).length;
+                    const sectionTotal = section.questions.length;
+                    const isCompleted = sectionProgress === sectionTotal;
+                    const isActive = index === currentSection;
 
-                  return (
-                    <div
-                      key={section.category}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        index === currentSection
-                          ? 'bg-blue-100 border-blue-200 border'
-                          : isCompleted
-                          ? 'bg-green-50 border-green-200 border'
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
-                      onClick={() => setCurrentSection(index)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          {isCompleted ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <Clock className="h-5 w-5 text-gray-400" />
-                          )}
-                          <span className="font-medium capitalize">
+                    return (
+                      <button
+                        key={section.category}
+                        onClick={() => setCurrentSection(index)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${isActive
+                          ? 'bg-primary/5 text-primary font-medium'
+                          : 'text-gray-600 hover:bg-gray-50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-green-500' : isActive ? 'bg-primary' : 'bg-gray-300'
+                            }`} />
+                          <span className="capitalize truncate max-w-[120px]">
                             {section.category.replace('_', ' ')}
                           </span>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {sectionProgress}/{sectionTotal}
-                        </Badge>
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+                        {isCompleted && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-            {/* ALEX VENDOR Help */}
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Brain className="h-5 w-5 text-blue-600" />
-                  ALEX VENDOR
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-3">
-                  Precisa de ajuda? Nosso assistente de IA está aqui para ajudá-lo!
+              {/* ALEX VENDOR Help */}
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-5 text-white shadow-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="h-5 w-5 text-white/90" />
+                  <h3 className="font-semibold">Alex Vendor AI</h3>
+                </div>
+                <p className="text-sm text-white/80 mb-4 leading-relaxed">
+                  Dúvidas no preenchimento? Posso ajudar a esclarecer as perguntas.
                 </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full bg-white/10 hover:bg-white/20 text-white border-0"
                   onClick={() => setShowAlexHelp(true)}
                 >
                   <HelpCircle className="h-4 w-4 mr-2" />
-                  Obter Ajuda
+                  Pedir Ajuda
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
-          {/* Main Questions */}
-          <div className="lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl capitalize">
-                    {currentSectionData?.category.replace('_', ' ')}
-                  </CardTitle>
-                  <Badge variant="outline">
-                    Seção {currentSection + 1} de {sections.length}
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-6">
-                {currentSectionData?.questions.map((question, index) => {
-                  const validationStatus = getQuestionValidationStatus(question);
-                  
-                  return (
-                    <div 
-                      key={question.id} 
-                      id={`question-${question.id}`}
-                      className={`space-y-3 p-4 rounded-lg border transition-colors ${
-                        validationStatus === 'completed' ? 'border-green-200 bg-green-50/30' :
-                        validationStatus === 'required' ? 'border-red-200 bg-red-50/30' :
-                        'border-gray-200 bg-gray-50/30'
+          {/* Main Questions Area */}
+          <div className="lg:col-span-9 space-y-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 capitalize">
+                  {currentSectionData?.category.replace('_', ' ')}
+                </h2>
+                <p className="text-gray-500 mt-1">
+                  Responda as perguntas abaixo com atenção.
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-white">
+                Seção {currentSection + 1} de {sections.length}
+              </Badge>
+            </div>
+
+            <div className="space-y-6">
+              {currentSectionData?.questions.map((question, index) => {
+                const validationStatus = getQuestionValidationStatus(question);
+                const isAnswered = validationStatus === 'completed';
+
+                return (
+                  <Card
+                    key={question.id}
+                    id={`question-${question.id}`}
+                    className={`border transition-all duration-300 ${isAnswered ? 'border-green-200 shadow-sm' : 'border-gray-200 hover:border-primary/30 hover:shadow-md'
                       }`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          {/* Status indicator */}
-                          <div className="flex-shrink-0 mt-1">
-                            {validationStatus === 'completed' ? (
-                              <CheckCircle className="h-5 w-5 text-green-600" />
-                            ) : validationStatus === 'required' ? (
-                              <AlertCircle className="h-5 w-5 text-red-500" />
-                            ) : (
-                              <Clock className="h-5 w-5 text-gray-400" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-1">
-                            <Label className="text-base font-medium text-gray-900">
-                              {index + 1}. {question.question}
-                              {question.required && <span className="text-red-500 ml-1">*</span>}
-                            </Label>
-                            {question.help_text && (
-                              <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
-                                <Info className="h-4 w-4" />
-                                {question.help_text}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2 ml-2">
-                          {question.weight && (
-                            <Badge variant="secondary" className="text-xs">
-                              Peso: {question.weight}
-                            </Badge>
-                          )}
-                          {validationStatus === 'completed' && (
-                            <Badge variant="outline" className="text-green-600 border-green-200">
-                              ✓ Respondida
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="ml-8">
-                        {renderQuestionInput(question)}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Auto-save indicator */}
-                {saving && (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      <span>Salvando automaticamente...</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Navigation */}
-                <div className="flex items-center justify-between pt-6 border-t">
-                  <Button
-                    variant="outline"
-                    onClick={previousSection}
-                    disabled={currentSection === 0}
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Anterior
-                  </Button>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${isAnswered ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                          {index + 1}
+                        </div>
 
-                  <div className="text-sm text-gray-500">
-                    {currentSection + 1} de {sections.length} seções
-                  </div>
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <div className="flex items-start justify-between gap-4">
+                              <Label className="text-base font-semibold text-gray-900 leading-relaxed block">
+                                {question.question}
+                                {question.required && <span className="text-red-500 ml-1" title="Obrigatório">*</span>}
+                              </Label>
+                              {question.weight && (
+                                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-medium text-gray-500 bg-gray-100">
+                                  Peso {question.weight}
+                                </Badge>
+                              )}
+                            </div>
 
-                  {currentSection < sections.length - 1 ? (
-                    <Button onClick={nextSection}>
-                      Próxima
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
+                            {question.help_text && (
+                              <div className="mt-2 flex items-start gap-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                <span className="leading-relaxed">{question.help_text}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-2">
+                            {renderQuestionInput(question)}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Auto-save indicator */}
+            {saving && (
+              <div className="fixed bottom-8 right-8 bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                <span className="text-sm font-medium text-gray-600">Salvando...</span>
+              </div>
+            )}
+
+            {/* Navigation Footer */}
+            <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-200">
+              <Button
+                variant="ghost"
+                onClick={previousSection}
+                disabled={currentSection === 0}
+                className="text-gray-500 hover:text-gray-900"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Anterior
+              </Button>
+
+              {currentSection < sections.length - 1 ? (
+                <Button onClick={nextSection} className="px-8 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all hover:scale-105">
+                  Próxima Seção
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={submitAssessment}
+                  disabled={submitting || progress < 100}
+                  className="px-8 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 transition-all hover:scale-105"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      Enviando...
+                    </>
                   ) : (
-                    <Button
-                      onClick={submitAssessment}
-                      disabled={submitting || progress < 100}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Enviando...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Finalizar Assessment
-                        </>
-                      )}
-                    </Button>
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Finalizar Assessment
+                    </>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

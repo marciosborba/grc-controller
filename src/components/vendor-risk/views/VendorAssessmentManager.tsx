@@ -36,8 +36,8 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
-import { 
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import {
   FileCheck,
   Plus,
   Send,
@@ -135,7 +135,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   const [showNewAssessmentDialog, setShowNewAssessmentDialog] = useState(false);
   const [showPublicLinkDialog, setShowPublicLinkDialog] = useState(false);
   const [showAssessmentDetails, setShowAssessmentDetails] = useState(false);
-  const [publicLinkData, setPublicLinkData] = useState<{link: string; expiresAt: string} | null>(null);
+  const [publicLinkData, setPublicLinkData] = useState<{ link: string; expiresAt: string } | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<VendorAssessment | null>(null);
   const [assessmentQuestions, setAssessmentQuestions] = useState<any[]>([]);
@@ -164,13 +164,92 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     details?: string;
   } | null>(null);
 
+  // New Assessment State
+  const [frameworks, setFrameworks] = useState<any[]>([]);
+  const [newAssessmentForm, setNewAssessmentForm] = useState({
+    name: '',
+    vendor_id: '',
+    framework_id: '',
+    priority: 'medium',
+    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+
+  // Fetch frameworks
+  useEffect(() => {
+    const fetchFrameworks = async () => {
+      if (!user?.tenantId && !user?.tenant_id) return;
+      const { data } = await supabase
+        .from('assessment_frameworks')
+        .select('id, nome, tipo_framework')
+        .eq('tenant_id', user.tenantId || user.tenant_id);
+      if (data) setFrameworks(data);
+    };
+    fetchFrameworks();
+  }, [user]);
+
+  const handleCreateAssessment = async () => {
+    if (!newAssessmentForm.name || !newAssessmentForm.vendor_id || !newAssessmentForm.framework_id) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('vendor_assessments')
+        .insert({
+          tenant_id: user?.tenantId || user?.tenant_id,
+          vendor_id: newAssessmentForm.vendor_id,
+          framework_id: newAssessmentForm.framework_id,
+          assessment_name: newAssessmentForm.name,
+          assessment_type: 'initial',
+          status: 'draft',
+          priority: newAssessmentForm.priority,
+          due_date: new Date(newAssessmentForm.due_date).toISOString(),
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Assessment criado com sucesso"
+      });
+      setShowNewAssessmentDialog(false);
+      loadAssessments();
+      // Reset form
+      setNewAssessmentForm({
+        name: '',
+        vendor_id: '',
+        framework_id: '',
+        priority: 'medium',
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      });
+
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao criar assessment",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load assessments from vendor registry
   const loadAssessments = async () => {
     if (!user?.tenantId && !user?.tenant_id) return;
 
     try {
       setLoading(true);
-      
+
       // Primeiro, buscar assessments da tabela vendor_assessments (incluindo os criados no onboarding)
       const { data: vendorAssessments, error: assessmentError } = await supabase
         .from('vendor_assessments')
@@ -182,9 +261,8 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             primary_contact_name
           ),
           vendor_assessment_frameworks:framework_id (
-            name,
-            framework_type,
-            questions
+            name:nome,
+            framework_type:tipo_framework
           )
         `)
         .eq('tenant_id', user?.tenantId || user?.tenant_id)
@@ -222,12 +300,12 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
       // Combinar assessments formais com assessments dos fornecedores
       const combinedAssessments = [];
-      
+
       // Adicionar assessments formais
       if (vendorAssessments) {
         combinedAssessments.push(...vendorAssessments);
       }
-      
+
       // Verificar assessments selecionados no localStorage que ainda não foram criados no banco
       const localStorageAssessments = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -236,10 +314,10 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           try {
             const templateInfo = JSON.parse(localStorage.getItem(key) || '{}');
             const vendorId = templateInfo.vendorId;
-            
+
             // Verificar se já existe um assessment formal para este fornecedor
             const existingAssessment = vendorAssessments?.find(a => a.vendor_id === vendorId);
-            
+
             if (!existingAssessment && templateInfo.templateId && templateInfo.templateName) {
               // Buscar informações do fornecedor
               const { data: vendorData } = await supabase
@@ -247,7 +325,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
                 .select('name, primary_contact_email, primary_contact_name')
                 .eq('id', vendorId)
                 .single();
-              
+
               if (vendorData) {
                 localStorageAssessments.push({
                   id: `pending-${vendorId}`,
@@ -287,10 +365,10 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           }
         }
       }
-      
+
       // Adicionar assessments pendentes do localStorage
       combinedAssessments.push(...localStorageAssessments);
-      
+
       // Adicionar assessments dos fornecedores como assessments virtuais
       if (vendorsWithAssessments) {
         const vendorBasedAssessments = vendorsWithAssessments.map(vendor => ({
@@ -308,9 +386,9 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           vendor_submitted_at: vendor.last_assessment_date,
           internal_review_status: 'approved' as const,
           overall_score: vendor.risk_score,
-          risk_level: vendor.risk_score >= 4.5 ? 'critical' as const : 
-                     vendor.risk_score >= 3.5 ? 'high' as const :
-                     vendor.risk_score >= 2.5 ? 'medium' as const : 'low' as const,
+          risk_level: vendor.risk_score >= 4.5 ? 'critical' as const :
+            vendor.risk_score >= 3.5 ? 'high' as const :
+              vendor.risk_score >= 2.5 ? 'medium' as const : 'low' as const,
           vendor_registry: {
             name: vendor.name,
             primary_contact_email: vendor.primary_contact_email,
@@ -324,12 +402,12 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           created_at: vendor.created_at,
           updated_at: vendor.updated_at
         }));
-        
+
         combinedAssessments.push(...vendorBasedAssessments);
       }
 
       // Ordenar por data de criação/atualização
-      combinedAssessments.sort((a, b) => 
+      combinedAssessments.sort((a, b) =>
         new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
       );
 
@@ -343,22 +421,22 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
   useEffect(() => {
     loadAssessments();
-    
+
     // Removed debugging functions - preview should work now
   }, [user?.tenantId, user?.tenant_id]);
-  
+
   // Verificar periodicamente por novos assessments criados durante onboarding
   useEffect(() => {
     const interval = setInterval(() => {
       // Verificar se há assessments criados recentemente (últimos 30 segundos)
       const recentTime = new Date(Date.now() - 30000).toISOString();
-      
+
       // Recarregar assessments se houver atividade recente
       if (user?.tenantId || user?.tenant_id) {
         loadAssessments();
       }
     }, 30000); // Verificar a cada 30 segundos
-    
+
     return () => clearInterval(interval);
   }, [user?.tenantId, user?.tenant_id, loadAssessments]);
 
@@ -370,11 +448,11 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
   // Filter assessments based on search and filters
   const filteredAssessments = currentAssessments.filter(assessment => {
-    const matchesSearch = !currentSearchTerm || 
+    const matchesSearch = !currentSearchTerm ||
       assessment.assessment_name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
       assessment.vendor_registry?.name.toLowerCase().includes(currentSearchTerm.toLowerCase());
 
-    const matchesFilter = currentSelectedFilter === 'all' || 
+    const matchesFilter = currentSelectedFilter === 'all' ||
       (currentSelectedFilter === 'pending' && ['draft', 'sent'].includes(assessment.status)) ||
       (currentSelectedFilter === 'awaiting_response' && assessment.status === 'sent' && assessment.public_link && !assessment.responses) ||
       (currentSelectedFilter === 'in_progress' && assessment.status === 'in_progress') ||
@@ -383,21 +461,23 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
     return matchesSearch && matchesFilter;
   });
-  
+
   // Fornecedores que receberam assessments mas ainda não responderam
-  const pendingVendorAssessments = filteredAssessments.filter(assessment => 
-    assessment.status === 'sent' && 
-    assessment.public_link && 
+  const pendingVendorAssessments = filteredAssessments.filter(assessment =>
+    assessment.status === 'sent' &&
+    assessment.public_link &&
     !assessment.responses
   );
 
   // Open public link dialog
   const openPublicLinkDialog = async (assessment: VendorAssessment) => {
+    console.log('[DEBUG_LINK] openPublicLinkDialog called for:', assessment.id);
+    console.log('[DEBUG_LINK] Assessment Data:', assessment);
     // If link already exists and is not expired, show it
     if (assessment.public_link && assessment.public_link_expires_at) {
       const now = new Date();
       const expiresAt = new Date(assessment.public_link_expires_at);
-      
+
       if (expiresAt > now) {
         const publicUrl = `${window.location.origin}/vendor-assessment/${assessment.public_link}`;
         setPublicLinkData({
@@ -410,7 +490,25 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     }
 
     // Generate new link if doesn't exist or expired
-    await generatePublicLink(assessment);
+    const generatedLink = await generatePublicLink(assessment);
+    if (generatedLink && typeof generatedLink === 'string') {
+      const publicUrl = `${window.location.origin}/vendor-assessment/${generatedLink}`;
+      // Update local state immediately
+      setPublicLinkData({
+        link: publicUrl,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // Approximate expiry
+      });
+      setShowPublicLinkDialog(true);
+
+      // Reload assessments in background
+      loadAssessments();
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível gerar o link público",
+        variant: "destructive"
+      });
+    }
   };
 
   // Copy link to clipboard
@@ -444,25 +542,25 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     // Template name: assessment.metadata?.template_name
     // Framework data: assessment.vendor_assessment_frameworks
     setLoadingPreviewQuestions(true);
-    
+
     try {
       let questions = [];
       let savedResponses = {};
-      
+
       // REPLICAR EXATAMENTE A LÓGICA DO openAssessmentEditor
-      
+
       // Para assessments virtuais/pendentes, verificar se há dados salvos no localStorage
       if (assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
         const vendorId = assessment.vendor_id;
         const dataStorageKey = `vendor_${vendorId}_assessment_data`;
         const savedData = localStorage.getItem(dataStorageKey);
-        
+
         if (savedData) {
           try {
             const parsedData = JSON.parse(savedData);
             // Dados salvos encontrados no localStorage
             savedResponses = parsedData.responses || {};
-            
+
             // Se há questões salvas, usar elas
             if (parsedData.questions && parsedData.questions.length > 0) {
               questions = parsedData.questions;
@@ -473,25 +571,25 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           }
         }
       }
-      
+
       // Se ainda não temos questões, carregar baseado no framework - MESMA LÓGICA
       if (questions.length === 0) {
         // Primeiro, tentar carregar do framework se existir
         if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
           questions = assessment.vendor_assessment_frameworks.questions;
           // Questões carregadas do framework
-        } 
+        }
         // Segundo, tentar carregar baseado no framework_id
         else if (assessment.framework_id) {
           // Carregando questões baseado no framework_id
-          
+
           // Use fallback questions for all frameworks
           questions = [];
         }
         // Terceiro, tentar carregar baseado no template_name
         else if (assessment.metadata?.template_name) {
           // Carregando questões baseado no template_name
-          
+
           // Use fallback questions for all templates
           questions = [];
         }
@@ -501,14 +599,14 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           questions = [];
         }
       }
-      
+
       // Questões finais carregadas
       // Respostas existentes (assessment)
       // Respostas salvas (localStorage)
-      
+
       // Combinar respostas existentes com respostas salvas (localStorage tem precedência) - MESMA LÓGICA
       const finalResponses = { ...(assessment.responses || {}), ...savedResponses };
-      
+
       // Se ainda não tem questões, usar questões de fallback mínimas
       if (questions.length === 0) {
         // Using fallback questions
@@ -539,7 +637,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             type: 'multiple_choice',
             options: [
               'Sistema centralizado com revisões regulares',
-              'Controle básico mas sem revisões sistemáticas', 
+              'Controle básico mas sem revisões sistemáticas',
               'Controle manual sem processo formal',
               'Sem controle específico'
             ],
@@ -999,7 +1097,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           }
         ];
       }
-      
+
       // Definir questões e respostas - EXATAMENTE como no openAssessmentEditor
       setPreviewQuestions(questions);
       setPreviewCurrentStep(0);
@@ -1007,13 +1105,13 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       // Final questions count
       // Final responses count
       // Estado final setado
-      
+
       // Primeira questão de exemplo
       // Últimas 3 questões
-      
+
       // COMPARAÇÃO PREVIEW vs EDITOR
       // As questões do PREVIEW devem ser IDÊNTICAS às do EDITOR!
-      
+
     } catch (error) {
       // Error loading preview questions
       // Fallback para questões de exemplo em caso de erro
@@ -1026,63 +1124,59 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   // Open preview of public assessment page
   const openPreviewDialog = async (assessment: VendorAssessment) => {
     // Opening preview for assessment
-    
+
     // Verificar se é assessment temporário
     const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
     // Is temporary assessment
-    
+
     if (isTemporary) {
       // Para assessments temporários, criar um link fictício para preview
       // Creating temporary preview link
       const tempPublicLink = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      
+
       // Criar uma cópia do assessment com link temporário
       const previewAssessment = {
         ...assessment,
         public_link: tempPublicLink,
         public_link_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
       };
-      
+
       // Temporary preview link created
       setPreviewAssessment(previewAssessment);
-      
+
       // Carregar questões para o preview - MESMAS do editor
       // Carregando questões para preview do assessment
       await loadPreviewQuestions(assessment);
       setShowPreviewDialog(true);
       return;
     }
-    
+
     // Para assessments reais, verificar se já tem link público
     if (!assessment.public_link) {
       toast({
         title: "Gerando link público...",
         description: "Aguarde, estamos criando o link para preview",
       });
-      
+
       try {
-        const result = await generatePublicLink(assessment);
-        if (result) {
-          // Reload assessments to get updated data with public_link
-          await loadAssessments();
-          // Find the updated assessment
-          const updatedAssessment = assessments.find(a => a.id === assessment.id);
-          if (updatedAssessment?.public_link) {
-            // Public link generated successfully
-            setPreviewAssessment(updatedAssessment);
-            setShowPreviewDialog(true);
-          } else {
-            // Failed to find updated assessment with public link
-            toast({
-              title: "Erro",
-              description: "Não foi possível gerar o link público para preview",
-              variant: "destructive"
-            });
-          }
+        const generatedLink = await generatePublicLink(assessment);
+        if (generatedLink && typeof generatedLink === 'string') {
+          // Update local state immediately with the new link
+          const updatedAssessment = {
+            ...assessment,
+            public_link: generatedLink,
+            public_link_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // Approximate expiry
+          };
+
+          setPreviewAssessment(updatedAssessment);
+          setShowPreviewDialog(true);
+
+          // Reload assessments in background to keep sync
+          loadAssessments();
         } else {
-          // generatePublicLink returned false
+          // generatePublicLink returned false/null
           toast({
-            title: "Erro ao Gerar Link", 
+            title: "Erro ao Gerar Link",
             description: "Falha na geração do link público. Verifique suas permissões e tente novamente.",
             variant: "destructive"
           });
@@ -1097,7 +1191,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       }
       return;
     }
-    
+
     // Assessment real com link público existente
     // Using existing public link for preview
     setPreviewAssessment(assessment);
@@ -1107,33 +1201,37 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   // Open email dialog for sending assessment
   const openEmailDialog = async (assessment: VendorAssessment) => {
     // Opening email dialog for assessment
-    
+
     // Ensure public link exists
     if (!assessment.public_link) {
       // No public link found, generating one
       try {
-        const result = await generatePublicLink(assessment);
-        if (result) {
-          // Reload assessments to get updated data
-          await loadAssessments();
-          // Find the updated assessment and try again
-          const updatedAssessment = assessments.find(a => a.id === assessment.id);
-          if (updatedAssessment?.public_link) {
-            // Public link generated, setting assessment for email
+        try {
+          const generatedLink = await generatePublicLink(assessment);
+          if (generatedLink && typeof generatedLink === 'string') {
+            // Update local state immediately with the new link
+            const updatedAssessment = {
+              ...assessment,
+              public_link: generatedLink,
+              public_link_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // Approximate expiry
+            };
+
             setSelectedAssessmentForEmail(updatedAssessment);
             setShowEmailDialog(true);
+
+            // Reload assessments in background
+            loadAssessments();
           } else {
-            // Failed to find updated assessment with public link
+            // generatePublicLink returned false/null
             toast({
-              title: "Erro",
-              description: "Assessment foi atualizado mas link público não foi encontrado. Tente novamente.",
+              title: "Erro ao Gerar Link",
+              description: "Falha na geração do link público. Verifique suas permissões e tente novamente.",
               variant: "destructive"
             });
           }
-        } else {
-          // generatePublicLink returned false
+        } catch (error) {
           toast({
-            title: "Erro ao Gerar Link", 
+            title: "Erro ao Gerar Link",
             description: "Falha na geração do link público. Verifique suas permissões e tente novamente.",
             variant: "destructive"
           });
@@ -1141,7 +1239,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       } catch (error) {
         // Error in generatePublicLink
         toast({
-          title: "Erro de Permissão", 
+          title: "Erro de Permissão",
           description: error.message || "Você não tem permissão para gerar links públicos para este assessment.",
           variant: "destructive"
         });
@@ -1151,7 +1249,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
     // Assessment has public link, proceeding to open modal
     setSelectedAssessmentForEmail(assessment);
-    
+
     // Pre-fill email form with default values
     const defaultSubject = `Assessment de Segurança - ${assessment.assessment_name}`;
     const publicUrl = `${window.location.origin}/vendor-assessment/${assessment.public_link}`;
@@ -1179,7 +1277,7 @@ Equipe de Compliance`;
       subject: defaultSubject,
       message: defaultMessage
     });
-    
+
     // Setting showEmailDialog to true
     setShowEmailDialog(true);
     // Email dialog should now be open
@@ -1216,7 +1314,7 @@ Equipe de Compliance`;
 
       setShowEmailDialog(false);
       setEmailForm({ email: '', subject: '', message: '' });
-      
+
       // Reload assessments to reflect any updates
       await loadAssessments();
 
@@ -1229,15 +1327,15 @@ Equipe de Compliance`;
       });
     }
   };
-  
+
   // Create formal assessment from localStorage template
   const createFormalAssessment = async (assessment: VendorAssessment) => {
     if (!assessment.metadata?.pending_creation) return;
-    
+
     try {
       // Buscar o framework real se o templateId for um UUID válido
       let frameworkId = assessment.framework_id;
-      
+
       // Se for um template hardcoded, buscar um framework padrão
       if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id === 'iso_27001_27701_default') {
         const { data: frameworks } = await supabase
@@ -1246,12 +1344,12 @@ Equipe de Compliance`;
           .eq('tenant_id', user?.tenantId || user?.tenant_id)
           .eq('is_active', true)
           .limit(1);
-        
+
         if (frameworks && frameworks.length > 0) {
           frameworkId = frameworks[0].id;
         }
       }
-      
+
       const assessmentData = {
         vendor_id: assessment.vendor_id,
         framework_id: frameworkId,
@@ -1270,7 +1368,7 @@ Equipe de Compliance`;
           selected_in_onboarding: true
         }
       };
-      
+
       const { data, error } = await supabase
         .from('vendor_assessments')
         .insert({
@@ -1280,20 +1378,20 @@ Equipe de Compliance`;
         })
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       // Remover do localStorage
       localStorage.removeItem(`vendor_${assessment.vendor_id}_selected_template`);
-      
+
       toast({
         title: "Assessment Criado",
         description: "Assessment formal criado com sucesso no banco de dados",
       });
-      
+
       // Recarregar assessments
       await loadAssessments();
-      
+
     } catch (error) {
       // Error creating formal assessment
       toast({
@@ -1306,62 +1404,71 @@ Equipe de Compliance`;
 
   // Criar assessment formal a partir de um temporário
   const createFormalAssessmentFromTemp = async (tempAssessment: VendorAssessment) => {
+    console.log('[DEBUG_LINK] createFormalAssessmentFromTemp called');
+    console.log('[DEBUG_LINK] Temp Assessment:', tempAssessment);
     // Creating formal assessment from temporary
     try {
       // Step 1: Starting conversion
       // Temporary Assessment ID
       // Vendor ID
       // Framework ID
-      
+
       // Step 2: Resolve framework ID
       // Step 2: Resolving framework ID
       let frameworkId = tempAssessment.framework_id;
       // Original Framework ID
-      
-      if (frameworkId === 'nist_csf_default' || frameworkId === 'iso_27001_27701_default') {
-        // Detected template framework, trying different approach
-        
+
+      if (!frameworkId || frameworkId === 'nist_csf_default' || frameworkId === 'iso_27001_27701_default') {
+        // Detected template framework or missing framework, trying to find a valid one
+
         // Tentar buscar qualquer framework existente
         try {
           const { data: anyFramework } = await supabase
-            .from('vendor_assessment_frameworks')
+            .from('assessment_frameworks')
             .select('id')
+            .eq('tenant_id', user?.tenantId || user?.tenant_id)
             .limit(1);
-            
+
+          console.log('[DEBUG_LINK] Framework search result:', anyFramework);
+
           if (anyFramework && anyFramework.length > 0) {
             frameworkId = anyFramework[0].id;
             // Found existing framework
           } else {
-            // No frameworks found, skipping framework_id
-            frameworkId = null;
+            // No frameworks found, cannot proceed without a framework
+            throw new Error("Nenhum framework de avaliação encontrado. Por favor, cadastre um framework antes de continuar.");
           }
-        } catch (error) {
-          // Framework search failed, skipping framework_id
-          frameworkId = null;
+        } catch (error: any) {
+          // Framework search failed
+          throw new Error(error.message || "Erro ao buscar framework padrão.");
         }
       }
-      
+
+      if (!frameworkId) {
+        throw new Error("Framework ID é obrigatório para criar um assessment.");
+      }
+
       // Final Framework ID
-      
+
       // Step 3: Verify vendor exists and prepare assessment data
       // Step 3: Verifying vendor and preparing assessment data
-      
+
       // Check if vendor exists
       const { data: vendor, error: vendorError } = await supabase
         .from('vendor_registry')
         .select('id, name')
         .eq('id', tempAssessment.vendor_id)
         .single();
-        
+
       // Vendor Check Results:
       // Vendor Error
       // Vendor Data
-      
+
       if (vendorError || !vendor) {
         // VENDOR NOT FOUND!
         throw new Error(`Fornecedor não encontrado: ${tempAssessment.vendor_id}`);
       }
-      
+
       // Prepare assessment data with all required fields
       const assessmentData: any = {
         vendor_id: tempAssessment.vendor_id,
@@ -1374,59 +1481,61 @@ Equipe de Compliance`;
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      
+
       // Add framework_id only if we have a valid one
       if (frameworkId) {
         assessmentData.framework_id = frameworkId;
         // Added framework_id to data
       }
-      
+
       // Add other optional fields if they exist
       if (tempAssessment.priority) {
         assessmentData.priority = tempAssessment.priority;
       }
-      
+
       // Using minimal essential fields only
-      
+
       // Assessment Data to Insert
-      
+
       // Step 4: Insert into database
       // Step 4: Inserting assessment into database
       // Current User Auth State
-      
+
       // Test if we can access the table first
       // Testing table access before insert
       const { count, error: countError } = await supabase
         .from('vendor_assessments')
         .select('*', { count: 'exact', head: true });
-      
+
       // Table access test:
       // Count Error
       // Count Result
-      
+
       if (countError) {
         // Cannot access vendor_assessments table
         throw new Error(`Sem acesso à tabela vendor_assessments: ${countError.message}`);
       }
-      
+
       // Try the insert
       // Attempting INSERT operation
-      
+
       // SOLUÇÃO: Usar RPC (função no banco) para bypass RLS se necessário
       // Trying RPC function for assessment creation
-      
+
       let data, error;
-      
+
       // Primeiro tentar INSERT direto
       const directResult = await supabase
         .from('vendor_assessments')
         .insert(assessmentData)
         .select('*')
         .single();
-        
+
+      console.log('[DEBUG_LINK] Direct Insert Result:', directResult);
+
       if (directResult.error && directResult.error.code === '42501') {
         // Direct INSERT failed (42501), trying RPC bypass
-        
+
         // Se falhar por permissão, usar RPC function que bypassa RLS
         try {
           const rpcResult = await supabase.rpc('create_vendor_assessment', {
@@ -1440,7 +1549,7 @@ Equipe de Compliance`;
             p_framework_id: assessmentData.framework_id,
             p_priority: assessmentData.priority
           });
-          
+
           if (rpcResult.error) {
             // RPC function also failed
             // Se RPC falhar, tentar abordagem alternativa
@@ -1453,7 +1562,7 @@ Equipe de Compliance`;
               .select('*')
               .eq('id', rpcResult.data)
               .single();
-              
+
             if (fetchError) {
               // RPC created but fetch failed
               data = { id: rpcResult.data, ...assessmentData };
@@ -1465,7 +1574,7 @@ Equipe de Compliance`;
           }
         } catch (rpcError) {
           // RPC approach failed, falling back to service role
-          
+
           // Último recurso: notificar o usuário sobre o problema de permissões
           throw new Error('Sem permissão para criar assessments. Contate o administrador do sistema para ajustar as políticas RLS da tabela vendor_assessments.');
         }
@@ -1474,11 +1583,11 @@ Equipe de Compliance`;
         data = directResult.data;
         error = directResult.error;
       }
-        
+
       // INSERT Results:
       // Error
       // Data
-      
+
       if (error) {
         // INSERT ERROR DETAILS:
         // Code
@@ -1486,16 +1595,17 @@ Equipe de Compliance`;
         // Details
         // Hint
         // Full Error Object
-        
+
+        const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
         toast({
           title: "❌ Erro ao Criar Assessment",
-          description: `Não foi possível salvar o assessment: ${error.message}`,
+          description: `Não foi possível salvar o assessment: ${errorMessage}`,
           variant: "destructive"
         });
         // CREATE FORMAL ASSESSMENT FAILED
         return null;
       }
-      
+
       if (!data) {
         // NO DATA RETURNED FROM INSERT!
         toast({
@@ -1506,29 +1616,29 @@ Equipe de Compliance`;
         // CREATE FORMAL ASSESSMENT FAILED
         return null;
       }
-      
+
       // Assessment formal criado com sucesso!
       // Created Assessment ID
       // Full Created Data
-      
+
       // Step 5: Cleanup and reload
       // Step 5: Cleaning up localStorage and reloading
-      
+
       const tempKey = `vendor_${tempAssessment.vendor_id}_selected_template`;
       // Removing localStorage key
       localStorage.removeItem(tempKey);
-      
+
       // Reloading assessments list
       await loadAssessments();
-      
+
       toast({
         title: "✅ Assessment Criado",
         description: "Assessment salvo com sucesso no banco de dados.",
       });
-      
+
       // CREATE FORMAL ASSESSMENT SUCCESS
       return data;
-      
+
     } catch (error) {
       // CREATE FORMAL ASSESSMENT EXCEPTION
       // EXCEPTION CAUGHT:
@@ -1536,10 +1646,11 @@ Equipe de Compliance`;
       // Error Message
       // Error Stack
       // Full Error Object
-      
+
+      const errorMessage = error?.message || (typeof error === 'object' ? JSON.stringify(error) : String(error));
       toast({
         title: "❌ Erro",
-        description: `Erro interno ao criar assessment: ${error?.message || error}`,
+        description: `Erro interno ao criar assessment: ${errorMessage}`,
         variant: "destructive"
       });
       return null;
@@ -1547,7 +1658,7 @@ Equipe de Compliance`;
       // CREATE FORMAL ASSESSMENT END
     }
   };
-  
+
   // Debug function removed for production
 
   // Debug function removed for production
@@ -1555,7 +1666,7 @@ Equipe de Compliance`;
   // Verificar permissões do usuário
   const checkUserPermissions = async () => {
     console.log('🔐 ======== CHECKING USER PERMISSIONS ========');
-    
+
     try {
       if (!user?.id) {
         console.error('❌ User not logged in');
@@ -1627,10 +1738,10 @@ Equipe de Compliance`;
   // Debug completo para geração de link público
   const debugPublicLinkGeneration = async (assessment?: VendorAssessment) => {
     console.log('🐛 ======== COMPLETE PUBLIC LINK DEBUG ========');
-    
+
     // Se não foi passado assessment, usar o primeiro disponível
     const testAssessment = assessment || currentAssessments[0];
-    
+
     if (!testAssessment) {
       console.error('❌ No assessment available for testing');
       toast({
@@ -1703,7 +1814,7 @@ Equipe de Compliance`;
       const testLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)}`;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
-      
+
       console.log('  Generated Link ID:', testLinkId);
       console.log('  Expires At:', expiresAt.toISOString());
 
@@ -1711,7 +1822,7 @@ Equipe de Compliance`;
       console.log('  Attempting update with:');
       console.log('    WHERE id =', testAssessment.id);
       console.log('    WHERE tenant_id =', userTenantId);
-      
+
       const updateData = {
         public_link: testLinkId,
         public_link_expires_at: expiresAt.toISOString(),
@@ -1740,7 +1851,7 @@ Equipe de Compliance`;
         console.log('    Details:', updateError.details);
         console.log('    Hint:', updateError.hint);
         console.log('    Full Error:', updateError);
-        
+
         toast({
           title: "Erro de Atualização",
           description: `${updateError.code}: ${updateError.message}`,
@@ -1755,18 +1866,18 @@ Equipe de Compliance`;
         console.log('    - RLS policy blocking the update');
         console.log('    - WHERE conditions not matching any rows');
         console.log('    - User lacks specific permissions');
-        
+
         // Teste adicional: verificar se o assessment ainda existe
         console.log('🔍 STEP 6.1: Verify Assessment Still Exists');
         const { data: verifyData, error: verifyError } = await supabase
           .from('vendor_assessments')
           .select('id, tenant_id, status')
           .eq('id', testAssessment.id);
-          
+
         console.log('  Verification Result:');
         console.log('    Data:', verifyData);
         console.log('    Error:', verifyError);
-        
+
         toast({
           title: "Erro: Nenhum Dado Retornado",
           description: "Update executou mas não retornou dados (possível RLS block)",
@@ -1777,7 +1888,7 @@ Equipe de Compliance`;
 
       console.log('✅ SUCCESS! Link generated successfully');
       console.log('  Updated Assessment:', updateData_result[0]);
-      
+
       toast({
         title: "✅ Debug Concluído",
         description: `Link gerado com sucesso: ${testLinkId.substring(0, 10)}...`,
@@ -1799,10 +1910,11 @@ Equipe de Compliance`;
   };
 
   // Gerar link público para o assessment (com debug integrado)
-  const generatePublicLink = async (assessment: VendorAssessment) => {
+  const generatePublicLink = async (assessment: VendorAssessment): Promise<string | boolean> => {
     console.log('🔗 ======== GENERATE PUBLIC LINK START ========');
+    console.log('[DEBUG_LINK] generatePublicLink called for:', assessment.id);
     console.log('🔗 Assessment ID:', assessment.id);
-    
+
     try {
       // STEP 1: Validar contexto do usuário
       console.log('🔍 STEP 1: User Authentication Check');
@@ -1825,7 +1937,7 @@ Equipe de Compliance`;
       console.log('🔍 STEP 2: Temporary Assessment Check');
       const isTemporary = assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-');
       console.log('🔄 Is Temporary:', isTemporary);
-      
+
       if (isTemporary) {
         console.log('🔄 Converting temporary assessment to formal...');
         const formalAssessment = await createFormalAssessmentFromTemp(assessment);
@@ -1889,7 +2001,7 @@ Equipe de Compliance`;
         status: assessment.status === 'draft' ? 'sent' : assessment.status,
         updated_at: new Date().toISOString()
       };
-      
+
       console.log('📝 Update Data:', updateData);
       console.log('🎯 WHERE Conditions: id =', assessment.id, ', tenant_id =', userTenantId);
 
@@ -1910,7 +2022,7 @@ Equipe de Compliance`;
           details: error.details,
           hint: error.hint
         });
-        
+
         // Specific error messages
         if (error.code === '42501') {
           throw new Error('Erro 42501: Permissão negada para modificar este assessment');
@@ -1933,18 +2045,18 @@ Equipe de Compliance`;
       console.log('✅ PUBLIC LINK GENERATED SUCCESSFULLY!');
       console.log('📄 Updated Record:', data[0]);
       console.log('🔗 ======== GENERATE PUBLIC LINK SUCCESS ========');
-      
-      return true;
+
+      return publicLinkId;
 
     } catch (error) {
       console.error('❌ GENERATE PUBLIC LINK FAILED:', error);
       console.log('🔗 ======== GENERATE PUBLIC LINK END (FAILED) ========');
-      
+
       // Re-throw with message if available
       if (error.message) {
         throw error;
       }
-      
+
       throw new Error('Falha desconhecida na geração do link público');
     }
   };
@@ -1979,16 +2091,16 @@ Equipe de Compliance`;
 
       if (!publicLink || publicLink.startsWith('temp-')) {
         console.log('🔄 Generating public link before sending email...');
-        
+
         // Gerar link público real
-        const success = await generatePublicLink(previewAssessment);
-        if (!success) {
+        const generatedLink = await generatePublicLink(previewAssessment);
+        if (!generatedLink) {
           throw new Error('Não foi possível gerar o link público para o assessment');
         }
 
         // Recarregar a lista para obter o assessment atualizado
         await loadAssessments();
-        
+
         // Encontrar o assessment atualizado
         const updatedAssessment = assessments.find(a => a.id === previewAssessment.id);
         if (!updatedAssessment?.public_link) {
@@ -2032,7 +2144,7 @@ Equipe de Compliance`;
       if (finalAssessment.status === 'draft') {
         const { error: updateError } = await supabase
           .from('vendor_assessments')
-          .update({ 
+          .update({
             status: 'sent',
             sent_at: new Date().toISOString(),
             sent_to_email: previewEmailData.recipientEmail,
@@ -2080,7 +2192,7 @@ Equipe de Compliance`;
 
     } catch (error) {
       console.error('Erro ao enviar email:', error);
-      
+
       setPreviewEmailStatus({
         type: 'error',
         message: 'Erro ao enviar email',
@@ -2108,13 +2220,13 @@ Equipe de Compliance`;
           reject(new Error('Falha na conexão com o servidor de email'));
           return;
         }
-        
+
         console.log('📧 Email simulado enviado:', {
           to: emailData.to,
           subject: emailData.subject,
           assessment: emailData.assessmentData.name
         });
-        
+
         resolve();
       }, 2000); // 2 segundos de delay
     });
@@ -2132,7 +2244,7 @@ Equipe de Compliance`;
     try {
       // Em produção, salvar em tabela de logs
       console.log('📝 Email log:', logData);
-      
+
       // Exemplo de estrutura para tabela de logs:
       // await supabase.from('email_logs').insert([{
       //   assessment_id: logData.assessmentId,
@@ -2143,12 +2255,12 @@ Equipe de Compliance`;
       //   sent_at: logData.sentAt,
       //   tenant_id: user?.tenantId || user?.tenant_id
       // }]);
-      
+
     } catch (error) {
       console.error('Erro ao registrar log de email:', error);
     }
   };
-  
+
   // Open assessment editor
   const openAssessmentEditor = async (assessment: VendorAssessment) => {
     try {
@@ -2157,20 +2269,20 @@ Equipe de Compliance`;
       console.log('Framework ID:', assessment.framework_id);
       console.log('Template name:', assessment.metadata?.template_name);
       console.log('Framework data:', assessment.vendor_assessment_frameworks);
-      
+
       setEditingAssessment(assessment);
-      
+
       // Carregar questões do framework ou template
       let questions = [];
       let savedResponses = {};
       let savedMetadata = {};
-      
+
       // Para assessments virtuais/pendentes, verificar se há dados salvos no localStorage
       if (assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
         const vendorId = assessment.vendor_id;
         const dataStorageKey = `vendor_${vendorId}_assessment_data`;
         const savedData = localStorage.getItem(dataStorageKey);
-        
+
         if (savedData) {
           try {
             const parsedData = JSON.parse(savedData);
@@ -2187,7 +2299,7 @@ Equipe de Compliance`;
               overall_score: parsedData.overall_score || assessment.overall_score,
               risk_level: parsedData.risk_level || assessment.risk_level
             };
-            
+
             // Se há questões salvas, usar elas
             if (parsedData.questions && parsedData.questions.length > 0) {
               questions = parsedData.questions;
@@ -2198,18 +2310,18 @@ Equipe de Compliance`;
           }
         }
       }
-      
+
       // Se ainda não temos questões, carregar baseado no framework
       if (questions.length === 0) {
         // Primeiro, tentar carregar do framework se existir
         if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
           questions = assessment.vendor_assessment_frameworks.questions;
           console.log('Questões carregadas do framework:', questions.length, 'questões');
-        } 
+        }
         // Segundo, tentar carregar baseado no framework_id
         else if (assessment.framework_id) {
           console.log('Carregando questões baseado no framework_id:', assessment.framework_id);
-          
+
           if (assessment.framework_id === 'nist_csf_default' || assessment.framework_id.includes('nist')) {
             questions = await loadNistCsfQuestions();
             console.log('Questões NIST CSF carregadas:', questions.length);
@@ -2224,7 +2336,7 @@ Equipe de Compliance`;
         // Terceiro, tentar carregar baseado no template_name
         else if (assessment.metadata?.template_name) {
           console.log('Carregando questões baseado no template_name:', assessment.metadata.template_name);
-          
+
           if (assessment.metadata.template_name.toLowerCase().includes('nist')) {
             questions = await loadNistCsfQuestions();
             console.log('Questões NIST CSF carregadas (por template):', questions.length);
@@ -2243,11 +2355,11 @@ Equipe de Compliance`;
           console.log('Questões padrão carregadas (fallback):', questions.length);
         }
       }
-      
+
       console.log('Questões finais carregadas:', questions);
       console.log('Respostas existentes (assessment):', assessment.responses);
       console.log('Respostas salvas (localStorage):', savedResponses);
-      
+
       // Combinar respostas existentes com respostas salvas (localStorage tem precedência)
       const finalResponses = { ...(assessment.responses || {}), ...savedResponses };
       const finalMetadata = Object.keys(savedMetadata).length > 0 ? savedMetadata : {
@@ -2261,23 +2373,23 @@ Equipe de Compliance`;
         overall_score: assessment.overall_score,
         risk_level: assessment.risk_level
       };
-      
+
       setAssessmentQuestions(questions);
       setAssessmentResponses(finalResponses);
       setAssessmentMetadata(finalMetadata);
-      
+
       console.log('📊 EDITOR: Estado final setado:', {
         questions: questions.length,
         responses: Object.keys(finalResponses).length,
         metadata: finalMetadata
       });
-      
+
       console.log('📊 EDITOR: Primeira questão de exemplo:', questions[0]?.question || 'Nenhuma questão');
       console.log('📊 EDITOR: Últimas 3 questões:', questions.slice(-3).map(q => q.question || q.id));
-      
+
       console.log('=== ABRINDO MODAL EDITOR ===');
       setShowEditDialog(true);
-      
+
     } catch (error) {
       console.error('Erro ao abrir editor de assessment:', error);
       toast({
@@ -2287,7 +2399,7 @@ Equipe de Compliance`;
       });
     }
   };
-  
+
   // Carregar questões do NIST CSF (completo - 90+ questões)
   const loadNistCsfQuestions = async () => {
     try {
@@ -2338,7 +2450,7 @@ Equipe de Compliance`;
       ];
     }
   };
-  
+
   // Carregar questões do ISO 27001/27701 (completo - 90+ questões)
   const loadIsoQuestions = async () => {
     try {
@@ -2381,7 +2493,7 @@ Equipe de Compliance`;
       ];
     }
   };
-  
+
   // Carregar questões padrão (genéricas)
   const loadDefaultQuestions = async () => {
     return [
@@ -2423,7 +2535,7 @@ Equipe de Compliance`;
       }
     ];
   };
-  
+
   // Salvar alterações no assessment
   const saveAssessmentChanges = async () => {
     console.log('=== INICIANDO SALVAMENTO ===');
@@ -2431,33 +2543,33 @@ Equipe de Compliance`;
     console.log('assessmentQuestions:', assessmentQuestions);
     console.log('assessmentResponses:', assessmentResponses);
     console.log('assessmentMetadata:', assessmentMetadata);
-    
+
     if (!editingAssessment) {
       console.log('Erro: editingAssessment é null');
       return;
     }
-    
+
     try {
       // Calcular estatísticas
       const totalQuestions = assessmentQuestions.length;
       const answeredQuestions = Object.keys(assessmentResponses).length;
       const progressPercentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
-      
+
       console.log('Estatísticas calculadas:', {
         totalQuestions,
         answeredQuestions,
         progressPercentage
       });
-      
+
       // Calcular score baseado nas respostas
       let totalScore = 0;
       let totalWeight = 0;
-      
+
       assessmentQuestions.forEach(question => {
         const response = assessmentResponses[question.id];
         if (response && response.answer) {
           let questionScore = 0;
-          
+
           if (question.type === 'yes_no') {
             questionScore = response.answer === 'yes' ? 5 : 1;
           } else if (question.type === 'scale') {
@@ -2469,26 +2581,26 @@ Equipe de Compliance`;
           } else {
             questionScore = response.answer ? 3 : 0; // Texto preenchido = score médio
           }
-          
+
           totalScore += questionScore * (question.weight || 1);
           totalWeight += (question.weight || 1);
         }
       });
-      
+
       const overallScore = totalWeight > 0 ? (totalScore / totalWeight) : 0;
-      
+
       console.log('Score calculado:', {
         totalScore,
         totalWeight,
         overallScore
       });
-      
+
       // Determinar nível de risco baseado no score
       let riskLevel = 'low';
       if (overallScore < 2) riskLevel = 'critical';
       else if (overallScore < 3) riskLevel = 'high';
       else if (overallScore < 4) riskLevel = 'medium';
-      
+
       // Determinar status baseado no progresso e prazo
       let status = assessmentMetadata.status;
       if (progressPercentage === 100) {
@@ -2498,7 +2610,7 @@ Equipe de Compliance`;
       } else if (progressPercentage > 0) {
         status = 'in_progress';
       }
-      
+
       const updatedAssessment = {
         due_date: assessmentMetadata.due_date,
         priority: assessmentMetadata.priority,
@@ -2513,32 +2625,32 @@ Equipe de Compliance`;
         custom_questions: assessmentQuestions.filter(q => q.modified),
         updated_at: new Date().toISOString()
       };
-      
+
       console.log('Dados para atualização:', updatedAssessment);
       console.log('ID do assessment:', editingAssessment.id);
       console.log('É assessment pendente?', editingAssessment.id.startsWith('pending-'));
-      
+
       // Salvar no banco se for um assessment real (não pendente)
       if (!editingAssessment.id.startsWith('pending-') && !editingAssessment.id.startsWith('vendor-')) {
         console.log('Salvando no banco de dados...');
-        
+
         const { data, error } = await supabase
           .from('vendor_assessments')
           .update(updatedAssessment)
           .eq('id', editingAssessment.id)
           .select();
-        
+
         console.log('Resultado da atualização:', { data, error });
-        
+
         if (error) {
           console.error('Erro do Supabase:', error);
           throw error;
         }
-        
+
         console.log('Assessment salvo no banco com sucesso');
       } else {
         console.log('Assessment é virtual/pendente, não salvando no banco');
-        
+
         // Para assessments virtuais, salvar no localStorage ou estado local
         if (editingAssessment.id.startsWith('pending-')) {
           // Atualizar dados no localStorage se necessário
@@ -2552,26 +2664,26 @@ Equipe de Compliance`;
           console.log('Dados salvos no localStorage');
         }
       }
-      
+
       toast({
         title: "Assessment Salvo",
         description: `Assessment atualizado com sucesso. Progresso: ${progressPercentage}%, Score: ${overallScore.toFixed(1)}`
       });
-      
+
       console.log('Fechando modal e recarregando assessments...');
       setShowEditDialog(false);
-      
+
       // Disparar atualização da tabela
       setProgressUpdateTrigger(prev => prev + 1);
       await loadAssessments();
-      
+
       console.log('=== SALVAMENTO CONCLUÍDO ===');
-      
+
     } catch (error) {
       console.error('=== ERRO NO SALVAMENTO ===');
       console.error('Erro completo:', error);
       console.error('Stack trace:', error.stack);
-      
+
       toast({
         title: "Erro",
         description: `Não foi possível salvar as alterações: ${error.message || 'Erro desconhecido'}`,
@@ -2579,7 +2691,7 @@ Equipe de Compliance`;
       });
     }
   };
-  
+
   // Debug: Estado atual do sistema
   const debugSystemState = () => {
     console.log('\n=== DEBUG SISTEMA COMPLETO ===');
@@ -2588,36 +2700,36 @@ Equipe de Compliance`;
     console.log('   - tenantId:', user?.tenantId || user?.tenant_id);
     console.log('   - email:', user?.email);
     console.log('   - id:', user?.id);
-    
+
     console.log('\n2. EDITING ASSESSMENT:');
     console.log('   - editingAssessment:', editingAssessment);
     console.log('   - assessment ID:', editingAssessment?.id);
     console.log('   - vendor_id:', editingAssessment?.vendor_id);
     console.log('   - framework_id:', editingAssessment?.framework_id);
-    
+
     console.log('\n3. QUESTIONS:');
     console.log('   - assessmentQuestions length:', assessmentQuestions.length);
     console.log('   - assessmentQuestions:', assessmentQuestions);
-    
+
     console.log('\n4. RESPONSES:');
     console.log('   - assessmentResponses:', assessmentResponses);
     console.log('   - responses count:', Object.keys(assessmentResponses).length);
-    
+
     console.log('\n5. METADATA:');
     console.log('   - assessmentMetadata:', assessmentMetadata);
-    
+
     console.log('\n6. SUPABASE CONNECTION:');
     console.log('   - supabase:', supabase);
     console.log('   - supabase.auth:', supabase.auth);
-    
+
     console.log('\n7. BROWSER INFO:');
     console.log('   - localStorage available:', typeof localStorage !== 'undefined');
     console.log('   - localStorage items:', localStorage.length);
     console.log('   - navigator online:', navigator.onLine);
-    
+
     console.log('=== FIM DEBUG SISTEMA ===\n');
   };
-  
+
   // Debug: Test minimal INSERT to isolate column issues
   const testMinimalInsert = async () => {
     console.log('\n=== TESTE INSERT MÍNIMO ===');
@@ -2626,19 +2738,19 @@ Equipe de Compliance`;
         vendor_id: '6302338c-9d89-4489-8bb1-8b6c002dda00', // Use a known vendor ID
         tenant_id: user?.tenantId || user?.tenant_id
       };
-      
+
       console.log('📄 Dados mínimos para teste:', minimalData);
-      
+
       const { data, error } = await supabase
         .from('vendor_assessments')
         .insert(minimalData)
         .select('*')
         .single();
-        
+
       console.log('📊 Resultado INSERT Mínimo:');
       console.log('  Error:', error);
       console.log('  Data:', data);
-      
+
       if (error) {
         toast({
           title: "Teste INSERT Mínimo",
@@ -2652,14 +2764,14 @@ Equipe de Compliance`;
           description: "INSERT mínimo funcionou! Problema não é com colunas básicas.",
           duration: 5000
         });
-        
+
         // Clean up - delete the test record
         await supabase
           .from('vendor_assessments')
           .delete()
           .eq('id', data.id);
       }
-      
+
     } catch (error) {
       console.error('💥 Erro no teste INSERT mínimo:', error);
     }
@@ -2679,22 +2791,22 @@ Equipe de Compliance`;
 
       if (columnsError) {
         console.error('❌ Erro ao consultar colunas:', columnsError);
-        
+
         // Alternativa: tentar consultar a tabela diretamente
         console.log('🔄 Tentando consulta alternativa...');
         const { data: testData, error: testError } = await supabase
           .from('vendor_assessments')
           .select('*')
           .limit(0);
-        
+
         console.log('📊 Teste consulta vendor_assessments:', { testData, testError });
       } else {
         console.log('📋 Colunas encontradas na tabela vendor_assessments:');
-        const columnList = columns?.map((col, index) => 
+        const columnList = columns?.map((col, index) =>
           `${index + 1}. ${col.column_name} (${col.data_type}) - ${col.is_nullable ? 'NULL' : 'NOT NULL'}`
         ).join('\n   ');
         console.log('   ' + columnList);
-        
+
         // Also show in toast for visibility
         toast({
           title: "Estrutura da Tabela Inspecionada",
@@ -2711,19 +2823,19 @@ Equipe de Compliance`;
   // Debug: Testar conectividade Supabase
   const testSupabaseConnection = async () => {
     console.log('\n=== TESTE CONECTIVIDADE SUPABASE ===');
-    
+
     try {
       // Teste 1: Verificar auth
       const { data: authData, error: authError } = await supabase.auth.getUser();
       console.log('1. AUTH TEST:', { authData, authError });
-      
+
       // Teste 2: Verificar tabela vendor_assessments
       const { data: tableData, error: tableError } = await supabase
         .from('vendor_assessments')
         .select('id')
         .limit(1);
       console.log('2. TABLE TEST:', { tableData, tableError });
-      
+
       // Teste 3: Verificar permissões de escrita
       const testRecord = {
         id: 'test-' + Date.now(),
@@ -2740,15 +2852,15 @@ Equipe de Compliance`;
         tenant_id: user?.tenantId || user?.tenant_id,
         created_by: user?.id
       };
-      
+
       console.log('3. TESTING INSERT...');
       const { data: insertData, error: insertError } = await supabase
         .from('vendor_assessments')
         .insert(testRecord)
         .select();
-      
+
       console.log('3. INSERT TEST:', { insertData, insertError });
-      
+
       // Limpar teste se inseriu com sucesso
       if (insertData && insertData.length > 0) {
         console.log('4. CLEANING TEST RECORD...');
@@ -2758,28 +2870,28 @@ Equipe de Compliance`;
           .eq('id', testRecord.id);
         console.log('4. DELETE TEST:', { deleteError });
       }
-      
+
     } catch (error) {
       console.error('ERRO NO TESTE DE CONECTIVIDADE:', error);
     }
-    
+
     console.log('=== FIM TESTE CONECTIVIDADE ===\n');
   };
-  
+
   // Debug: Simular resposta completa
   const simulateCompleteResponse = () => {
     console.log('\n=== SIMULANDO RESPOSTA COMPLETA ===');
-    
+
     if (assessmentQuestions.length === 0) {
       console.log('ERRO: Nenhuma questão carregada');
       return;
     }
-    
+
     const simulatedResponses = {};
-    
+
     assessmentQuestions.forEach((question, index) => {
       let simulatedAnswer;
-      
+
       switch (question.type) {
         case 'yes_no':
           simulatedAnswer = index % 2 === 0 ? 'yes' : 'no';
@@ -2795,7 +2907,7 @@ Equipe de Compliance`;
           simulatedAnswer = `Resposta simulada para questão ${index + 1}`;
           break;
       }
-      
+
       simulatedResponses[question.id] = {
         answer: simulatedAnswer,
         justification: `Justificativa simulada para questão ${index + 1}`,
@@ -2814,68 +2926,68 @@ Equipe de Compliance`;
         ]
       };
     });
-    
+
     console.log('Respostas simuladas:', simulatedResponses);
     setAssessmentResponses(simulatedResponses);
-    
+
     console.log('=== FIM SIMULAÇÃO ===\n');
   };
-  
+
   // Debug: Forçar salvamento com logs detalhados
   const forceSaveWithDebug = async () => {
     console.log('\n=== FORÇANDO SALVAMENTO COM DEBUG ===');
-    
+
     if (!editingAssessment) {
       console.error('ERRO: editingAssessment é null');
       return;
     }
-    
+
     try {
       console.log('1. PREPARANDO DADOS...');
-      
+
       const totalQuestions = assessmentQuestions.length;
       const answeredQuestions = Object.keys(assessmentResponses).length;
       const progressPercentage = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
-      
+
       console.log('   - Total questões:', totalQuestions);
       console.log('   - Questões respondidas:', answeredQuestions);
       console.log('   - Progresso:', progressPercentage + '%');
-      
+
       const updateData = {
         responses: assessmentResponses,
         progress_percentage: progressPercentage,
         updated_at: new Date().toISOString(),
         status: progressPercentage > 0 ? 'in_progress' : 'draft'
       };
-      
+
       console.log('2. DADOS PARA ATUALIZAÇÃO:', updateData);
-      
+
       // Verificar se é assessment real ou virtual
-      const isRealAssessment = !editingAssessment.id.startsWith('pending-') && 
-                              !editingAssessment.id.startsWith('vendor-');
-      
+      const isRealAssessment = !editingAssessment.id.startsWith('pending-') &&
+        !editingAssessment.id.startsWith('vendor-');
+
       console.log('3. TIPO DE ASSESSMENT:');
       console.log('   - ID:', editingAssessment.id);
       console.log('   - É real?', isRealAssessment);
       console.log('   - É pendente?', editingAssessment.id.startsWith('pending-'));
       console.log('   - É virtual?', editingAssessment.id.startsWith('vendor-'));
-      
+
       if (isRealAssessment) {
         console.log('4. SALVANDO NO BANCO DE DADOS...');
-        
+
         // Primeiro verificar se existe
         const { data: existingData, error: selectError } = await supabase
           .from('vendor_assessments')
           .select('*')
           .eq('id', editingAssessment.id)
           .single();
-        
+
         console.log('   - Busca existente:', { existingData, selectError });
-        
+
         if (selectError && selectError.code === 'PGRST116') {
           // Não existe, criar
           console.log('5. ASSESSMENT NÃO EXISTE, CRIANDO...');
-          
+
           const newAssessment = {
             id: editingAssessment.id,
             vendor_id: editingAssessment.vendor_id,
@@ -2893,39 +3005,39 @@ Equipe de Compliance`;
             created_at: new Date().toISOString(),
             updated_at: updateData.updated_at
           };
-          
+
           console.log('   - Dados para criação:', newAssessment);
-          
+
           const { data: createData, error: createError } = await supabase
             .from('vendor_assessments')
             .insert(newAssessment)
             .select();
-          
+
           console.log('   - Resultado criação:', { createData, createError });
-          
+
           if (createError) throw createError;
-          
+
         } else if (!selectError) {
           // Existe, atualizar
           console.log('5. ASSESSMENT EXISTE, ATUALIZANDO...');
-          
+
           const { data: updateResult, error: updateError } = await supabase
             .from('vendor_assessments')
             .update(updateData)
             .eq('id', editingAssessment.id)
             .select();
-          
+
           console.log('   - Resultado atualização:', { updateResult, updateError });
-          
+
           if (updateError) throw updateError;
-          
+
         } else {
           throw selectError;
         }
-        
+
       } else {
         console.log('4. SALVANDO NO LOCALSTORAGE (ASSESSMENT VIRTUAL)...');
-        
+
         const storageKey = `assessment_${editingAssessment.id}_data`;
         const storageData = {
           ...updateData,
@@ -2933,39 +3045,39 @@ Equipe de Compliance`;
           vendorId: editingAssessment.vendor_id,
           lastSaved: new Date().toISOString()
         };
-        
+
         localStorage.setItem(storageKey, JSON.stringify(storageData));
         console.log('   - Salvo no localStorage:', storageKey);
         console.log('   - Dados salvos:', storageData);
       }
-      
+
       console.log('6. SALVAMENTO CONCLUÍDO COM SUCESSO!');
-      
+
       toast({
         title: "Debug: Salvamento Bem-sucedido",
         description: `Dados salvos com sucesso. Progresso: ${progressPercentage}%`
       });
-      
+
     } catch (error) {
       console.error('ERRO NO SALVAMENTO:', error);
       console.error('Stack trace:', error.stack);
-      
+
       toast({
         title: "Debug: Erro no Salvamento",
         description: `Erro: ${error.message}`,
         variant: "destructive"
       });
     }
-    
+
     console.log('=== FIM FORÇAR SALVAMENTO ===\n');
   };
-  
+
   // Atualizar resposta de uma questão
   const updateQuestionResponse = (questionId: string, answer: any, justification?: string) => {
     console.log('\n=== UPDATE QUESTION RESPONSE ===');
     console.log('Input:', { questionId, answer, justification });
     console.log('Estado anterior:', assessmentResponses[questionId]);
-    
+
     setAssessmentResponses(prev => {
       const newResponses = {
         ...prev,
@@ -2977,12 +3089,12 @@ Equipe de Compliance`;
           responded_by: user?.email || 'Sistema'
         }
       };
-      
+
       // Salvar no localStorage para persistência imediata
       if (editingAssessment) {
         const vendorId = editingAssessment.vendor_id;
         const storageKey = `vendor_${vendorId}_assessment_data`;
-        
+
         // Obter dados existentes ou criar novos
         const existingDataStr = localStorage.getItem(storageKey);
         let existingData = {};
@@ -2991,7 +3103,7 @@ Equipe de Compliance`;
         } catch (e) {
           console.warn('Erro ao parsear dados existentes:', e);
         }
-        
+
         const storageData = {
           ...existingData,
           responses: newResponses,
@@ -3000,22 +3112,22 @@ Equipe de Compliance`;
           lastUpdated: new Date().toISOString(),
           assessmentId: editingAssessment.id
         };
-        
+
         localStorage.setItem(storageKey, JSON.stringify(storageData));
         console.log('   - Resposta salva no localStorage:', storageKey);
-        
+
         // Disparar atualização da tabela
         setProgressUpdateTrigger(prev => prev + 1);
       }
-      
+
       console.log('Estado novo:', newResponses[questionId]);
       console.log('Total respostas:', Object.keys(newResponses).length);
       console.log('=== FIM UPDATE RESPONSE ===\n');
-      
+
       return newResponses;
     });
   };
-  
+
   // Editar questão individual
   const startEditingQuestion = (question: any) => {
     setEditingQuestionId(question.id);
@@ -3031,11 +3143,11 @@ Equipe de Compliance`;
       scale_labels: question.scale_labels ? [...question.scale_labels] : []
     });
   };
-  
+
   // Salvar edição da questão
   const saveQuestionEdit = () => {
     if (!editingQuestionId) return;
-    
+
     setAssessmentQuestions(prev => prev.map(q => {
       if (q.id === editingQuestionId) {
         return {
@@ -3056,22 +3168,22 @@ Equipe de Compliance`;
       }
       return q;
     }));
-    
+
     setEditingQuestionId(null);
     setQuestionEditForm({});
-    
+
     toast({
       title: "Questão Atualizada",
       description: "A questão foi atualizada com sucesso"
     });
   };
-  
+
   // Cancelar edição da questão
   const cancelQuestionEdit = () => {
     setEditingQuestionId(null);
     setQuestionEditForm({});
   };
-  
+
   // Adicionar opção para questão de múltipla escolha
   const addOption = () => {
     setQuestionEditForm(prev => ({
@@ -3079,7 +3191,7 @@ Equipe de Compliance`;
       options: [...(prev.options || []), '']
     }));
   };
-  
+
   // Remover opção
   const removeOption = (index: number) => {
     setQuestionEditForm(prev => ({
@@ -3087,7 +3199,7 @@ Equipe de Compliance`;
       options: prev.options.filter((_, i) => i !== index)
     }));
   };
-  
+
   // Atualizar opção
   const updateOption = (index: number, value: string) => {
     setQuestionEditForm(prev => ({
@@ -3095,19 +3207,19 @@ Equipe de Compliance`;
       options: prev.options.map((opt, i) => i === index ? value : opt)
     }));
   };
-  
+
   // Upload de evidência
   const uploadEvidence = async (questionId: string, file: File) => {
     try {
       console.log('Fazendo upload de evidência:', { questionId, fileName: file.name });
-      
+
       // Aqui você implementaria o upload real para o storage
       // Por enquanto, vou simular o upload
       const fileName = `evidence_${questionId}_${Date.now()}_${file.name}`;
-      
+
       // Simular upload
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const newEvidence = {
         id: Date.now().toString(),
         fileName: file.name,
@@ -3117,7 +3229,7 @@ Equipe de Compliance`;
         uploadedBy: user?.email || 'Sistema',
         url: `#${fileName}` // URL simulada
       };
-      
+
       // Adicionar evidência à resposta preservando dados existentes
       setAssessmentResponses(prev => {
         const currentResponse = prev[questionId] || {};
@@ -3133,17 +3245,17 @@ Equipe de Compliance`;
           responded_at: currentResponse.responded_at || new Date().toISOString(),
           responded_by: currentResponse.responded_by || user?.email || 'Sistema'
         };
-        
+
         const newResponses = {
           ...prev,
           [questionId]: updatedResponse
         };
-        
+
         // Salvar no localStorage para persistência imediata
         if (editingAssessment) {
           const vendorId = editingAssessment.vendor_id;
           const storageKey = `vendor_${vendorId}_assessment_data`;
-          
+
           const existingDataStr = localStorage.getItem(storageKey);
           let existingData = {};
           try {
@@ -3151,7 +3263,7 @@ Equipe de Compliance`;
           } catch (e) {
             console.warn('Erro ao parsear dados existentes:', e);
           }
-          
+
           const storageData = {
             ...existingData,
             responses: newResponses,
@@ -3160,23 +3272,23 @@ Equipe de Compliance`;
             lastUpdated: new Date().toISOString(),
             assessmentId: editingAssessment.id
           };
-          
+
           localStorage.setItem(storageKey, JSON.stringify(storageData));
           console.log('Evidência salva no localStorage:', storageKey);
-          
+
           // Disparar atualização da tabela
           setProgressUpdateTrigger(prev => prev + 1);
         }
-        
+
         console.log('Evidência adicionada, novas respostas:', newResponses);
         return newResponses;
       });
-      
+
       toast({
         title: "Evidência Anexada",
         description: `Arquivo ${file.name} anexado com sucesso`
       });
-      
+
     } catch (error) {
       console.error('Erro ao fazer upload da evidência:', error);
       toast({
@@ -3186,35 +3298,35 @@ Equipe de Compliance`;
       });
     }
   };
-  
+
   // Remover evidência
   const removeEvidence = (questionId: string, evidenceId: string) => {
     console.log('Removendo evidência:', { questionId, evidenceId });
-    
+
     setAssessmentResponses(prev => {
       const currentResponse = prev[questionId];
       if (!currentResponse) return prev;
-      
+
       const updatedResponse = {
         ...currentResponse,
         evidence: currentResponse.evidence?.filter(e => e.id !== evidenceId) || []
       };
-      
+
       const newResponses = {
         ...prev,
         [questionId]: updatedResponse
       };
-      
+
       console.log('Evidência removida, novas respostas:', newResponses);
       return newResponses;
     });
-    
+
     toast({
       title: "Evidência Removida",
       description: "A evidência foi removida com sucesso"
     });
   };
-  
+
   // Calcular estatísticas do assessment
   const getAssessmentStats = () => {
     const totalQuestions = assessmentQuestions.length;
@@ -3223,7 +3335,7 @@ Equipe de Compliance`;
       const response = assessmentResponses[q.id];
       return q.required && (!response || !response.answer);
     }).length;
-    
+
     return {
       total: totalQuestions,
       answered: answeredQuestions,
@@ -3232,44 +3344,44 @@ Equipe de Compliance`;
       progress: totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0
     };
   };
-  
+
   // Calcular progresso real baseado nos dados do localStorage (memoizado)
   const getActualProgress = useMemo(() => {
     const progressCache = new Map<string, number>();
-    
+
     return (assessment: VendorAssessment) => {
       const cacheKey = `${assessment.id}-${progressUpdateTrigger}`;
-      
+
       if (progressCache.has(cacheKey)) {
         return progressCache.get(cacheKey)!;
       }
-      
+
       // Se é um assessment formal no banco, verificar se há dados mais recentes no localStorage
       const vendorId = assessment.vendor_id;
       const storageKey = `vendor_${vendorId}_assessment_data`;
       const savedData = localStorage.getItem(storageKey);
-      
+
       let progress = assessment.progress_percentage || 0;
-      
+
       if (savedData) {
         try {
           const parsedData = JSON.parse(savedData);
-          
+
           // Verificar se os dados são mais recentes que o assessment
           const savedTime = new Date(parsedData.lastUpdated || 0);
           const assessmentTime = new Date(assessment.updated_at || assessment.created_at || 0);
-          
+
           // Se há dados salvos e são mais recentes, usar eles
           if (savedTime > assessmentTime || assessment.id.startsWith('pending-') || assessment.id.startsWith('vendor-')) {
             const responses = parsedData.responses || {};
             const questions = parsedData.questions || [];
-            
+
             if (questions.length > 0) {
               const answeredQuestions = Object.keys(responses).filter(questionId => {
                 const response = responses[questionId];
                 return response && response.answer && response.answer.toString().trim() !== '';
               }).length;
-              
+
               progress = Math.round((answeredQuestions / questions.length) * 100);
               console.log(`Progresso atualizado para ${assessment.assessment_name}: ${progress}% (${answeredQuestions}/${questions.length})`);
             }
@@ -3278,7 +3390,7 @@ Equipe de Compliance`;
           console.warn('Erro ao calcular progresso do localStorage:', e);
         }
       }
-      
+
       progressCache.set(cacheKey, progress);
       return progress;
     };
@@ -3288,11 +3400,11 @@ Equipe de Compliance`;
   const getStatusBadge = (status: string, dueDate: string, assessment: VendorAssessment) => {
     const isOverdue = new Date(dueDate) < new Date() && !['completed', 'approved'].includes(status);
     const isPendingResponse = status === 'sent' && assessment.public_link_id && !assessment.responses;
-    
+
     if (isOverdue) {
       return <Badge variant="destructive">Atrasado</Badge>;
     }
-    
+
     if (isPendingResponse) {
       return (
         <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
@@ -3328,79 +3440,8 @@ Equipe de Compliance`;
 
   return (
     <div className="space-y-6">
-      {/* Debug Section (development only) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <div className="text-xs font-semibold text-yellow-800 dark:text-yellow-200 mb-2 w-full">
-            🐛 Debug Tools (Development Mode)
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={checkUserPermissions}
-            className="text-xs"
-          >
-            🔐 Verificar Permissões
-          </Button>
 
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => debugPublicLinkGeneration()}
-            className="text-xs bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
-          >
-            🐛 Debug Link Generation
-          </Button>
-          {currentAssessments.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => debugPublicLinkGeneration(currentAssessments[0])}
-              className="text-xs bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700"
-            >
-              🎯 Test First Assessment
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={async () => {
-              // Test direct formal assessment creation
-              const testAssessment = {
-                vendor_id: '6302338c-9d89-4489-8bb1-8b6c002dda00',
-                tenant_id: user?.tenantId || user?.tenant_id,
-                assessment_name: 'Test Direct Assessment',
-                assessment_type: 'security',
-                status: 'draft',
-                due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                created_by: user?.id
-              };
-              
-              console.log('🧪 Testing direct INSERT to vendor_assessments...');
-              console.log('Data:', testAssessment);
-              
-              const { data, error } = await supabase
-                .from('vendor_assessments')
-                .insert(testAssessment)
-                .select('*')
-                .single();
-                
-              console.log('Result:', { data, error });
-              
-              if (data) {
-                toast({ title: "✅ Sucesso", description: `Assessment criado: ${data.id}` });
-                await loadAssessments();
-              } else {
-                toast({ title: "❌ Erro", description: error?.message || 'Falha no teste', variant: "destructive" });
-              }
-            }}
-            className="text-xs bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700"
-          >
-            🧪 Test Direct Insert
-          </Button>
-        </div>
-      )}
-      
+
       {/* Header with Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -3493,7 +3534,7 @@ Equipe de Compliance`;
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           {/* Filtros */}
           <div className="flex items-center justify-between mb-6 p-4 bg-muted/30 rounded-lg">
@@ -3514,7 +3555,7 @@ Equipe de Compliance`;
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Label htmlFor="search">Buscar:</Label>
                 <Input
@@ -3526,14 +3567,14 @@ Equipe de Compliance`;
                 />
               </div>
             </div>
-            
+
             {pendingVendorAssessments.length > 0 && (
               <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
                 {pendingVendorAssessments.length} aguardando resposta do fornecedor
               </Badge>
             )}
           </div>
-          
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -3546,7 +3587,7 @@ Equipe de Compliance`;
                   <TableHead className="w-[15%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
-              
+
               <TableBody>
                 {currentLoading ? (
                   <TableRow>
@@ -3568,12 +3609,12 @@ Equipe de Compliance`;
                   </TableRow>
                 ) : (
                   filteredAssessments.map((assessment) => (
-                    <TableRow 
-                      key={assessment.id} 
+                    <TableRow
+                      key={assessment.id}
                       className={`
                         hover:bg-muted/50 transition-colors
-                        ${assessment.status === 'sent' && assessment.public_link && !assessment.responses 
-                          ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500' 
+                        ${assessment.status === 'sent' && assessment.public_link && !assessment.responses
+                          ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500'
                           : ''
                         }
                       `}
@@ -3610,7 +3651,7 @@ Equipe de Compliance`;
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         <div>
                           <div className="font-medium">{assessment.vendor_registry?.name}</div>
@@ -3619,11 +3660,11 @@ Equipe de Compliance`;
                           </div>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         {getStatusBadge(assessment.status, assessment.due_date, assessment)}
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Progress value={getActualProgress(assessment)} className="w-12 h-2" />
@@ -3632,13 +3673,13 @@ Equipe de Compliance`;
                           </span>
                         </div>
                       </TableCell>
-                      
+
                       <TableCell>
                         <div className="text-sm">
                           {new Date(assessment.due_date).toLocaleDateString('pt-BR')}
                         </div>
                       </TableCell>
-                      
+
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -3650,8 +3691,8 @@ Equipe de Compliance`;
                           <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>Ações</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            
-                            <DropdownMenuItem 
+
+                            <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -3662,8 +3703,8 @@ Equipe de Compliance`;
                               <Edit className="h-4 w-4 mr-2" />
                               Editar Assessment
                             </DropdownMenuItem>
-                            
-                            <DropdownMenuItem 
+
+                            <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -3675,7 +3716,7 @@ Equipe de Compliance`;
                               Assessment Preview
                             </DropdownMenuItem>
 
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -3689,9 +3730,9 @@ Equipe de Compliance`;
                             </DropdownMenuItem>
 
                             <DropdownMenuSeparator />
-                            
+
                             {/* Ações de link público e email - sempre disponíveis para assessments reais */}
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -3702,8 +3743,8 @@ Equipe de Compliance`;
                               <Link className="h-4 w-4 mr-2" />
                               Gerar/Ver Link Público
                             </DropdownMenuItem>
-                            
-                            <DropdownMenuItem 
+
+                            <DropdownMenuItem
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -3738,7 +3779,7 @@ Equipe de Compliance`;
               Compartilhe este link com o fornecedor para que ele possa responder ao assessment.
             </DialogDescription>
           </DialogHeader>
-          
+
           {publicLinkData && (
             <div className="space-y-4">
               <div>
@@ -3758,20 +3799,20 @@ Equipe de Compliance`;
                   </Button>
                 </div>
               </div>
-              
+
               <div className="text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Expira em: {new Date(publicLinkData.expiresAt).toLocaleDateString('pt-BR')}
                 </div>
               </div>
-              
+
               <div className="bg-primary/10 p-3 rounded-lg">
                 <h4 className="text-sm font-medium text-primary mb-1">
                   🎯 ALEX VENDOR - Dica Inteligente
                 </h4>
                 <p className="text-sm text-primary/80">
-                  O link expira automaticamente em 30 dias por segurança. O fornecedor receberá 
+                  O link expira automaticamente em 30 dias por segurança. O fornecedor receberá
                   lembretes automáticos conforme o prazo se aproxima.
                 </p>
               </div>
@@ -3784,7 +3825,7 @@ Equipe de Compliance`;
               <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <span className="text-lg font-semibold text-foreground">Enviar Assessment por Email</span>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Formulário de Envio */}
               <div className="space-y-4">
@@ -3801,7 +3842,7 @@ Equipe de Compliance`;
                     onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientEmail: e.target.value }))}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="preview-recipient-name" className="text-sm font-medium text-foreground">
                     Nome do Contato
@@ -3814,7 +3855,7 @@ Equipe de Compliance`;
                     onChange={(e) => setPreviewEmailData(prev => ({ ...prev, recipientName: e.target.value }))}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="preview-email-subject" className="text-sm font-medium text-foreground">
                     Assunto do Email
@@ -3826,7 +3867,7 @@ Equipe de Compliance`;
                     onChange={(e) => setPreviewEmailData(prev => ({ ...prev, subject: e.target.value }))}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="preview-email-message" className="text-sm font-medium text-foreground">
                     Mensagem Personalizada (Opcional)
@@ -3839,7 +3880,7 @@ Equipe de Compliance`;
                     onChange={(e) => setPreviewEmailData(prev => ({ ...prev, customMessage: e.target.value }))}
                   />
                 </div>
-                
+
                 <div className="flex flex-col space-y-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -3851,7 +3892,7 @@ Equipe de Compliance`;
                       Enviar cópia para mim
                     </Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="preview-auto-reminder"
@@ -3863,7 +3904,7 @@ Equipe de Compliance`;
                     </Label>
                   </div>
                 </div>
-                
+
                 <Button
                   onClick={() => sendAssessmentEmailFromPreview()}
                   disabled={!previewEmailData.recipientEmail || previewEmailSending}
@@ -3883,13 +3924,13 @@ Equipe de Compliance`;
                   )}
                 </Button>
               </div>
-              
+
               {/* Prévia do Email */}
               <div className="bg-background border rounded-lg p-4 max-h-96 overflow-y-auto">
                 <div className="text-sm font-medium text-foreground mb-3 border-b pb-2">
                   📧 Prévia do Email
                 </div>
-                
+
                 <div className="space-y-3 text-sm">
                   <div>
                     <span className="font-medium text-foreground">Para:</span>
@@ -3897,20 +3938,20 @@ Equipe de Compliance`;
                       {previewEmailData.recipientEmail || 'fornecedor@empresa.com'}
                     </span>
                   </div>
-                  
+
                   <div>
                     <span className="font-medium text-foreground">Assunto:</span>
                     <span className="ml-2 text-muted-foreground">
                       {previewEmailData.subject || `Assessment de Segurança - ${previewAssessment?.vendor_registry?.name || 'Fornecedor'}`}
                     </span>
                   </div>
-                  
+
                   <div className="border-t pt-3">
                     <div className="prose prose-sm max-w-none text-foreground">
                       <p>
                         Olá{previewEmailData.recipientName ? ` ${previewEmailData.recipientName}` : ''},
                       </p>
-                      
+
                       {previewEmailData.customMessage && (
                         <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded border-l-4 border-l-blue-500 my-3">
                           <div className="whitespace-pre-wrap text-sm text-foreground">
@@ -3918,13 +3959,13 @@ Equipe de Compliance`;
                           </div>
                         </div>
                       )}
-                      
+
                       <p>
-                        Você foi convidado a responder nosso questionário de avaliação de segurança. 
-                        Este assessment é importante para garantirmos que nossos fornecedores atendam 
+                        Você foi convidado a responder nosso questionário de avaliação de segurança.
+                        Este assessment é importante para garantirmos que nossos fornecedores atendam
                         aos padrões de segurança necessários.
                       </p>
-                      
+
                       <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg border my-4">
                         <div className="font-medium text-foreground mb-2">📋 Detalhes do Assessment:</div>
                         <ul className="text-sm space-y-1 text-muted-foreground">
@@ -3934,7 +3975,7 @@ Equipe de Compliance`;
                           <li><strong>Tempo estimado:</strong> 30-45 minutos</li>
                         </ul>
                       </div>
-                      
+
                       <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800 my-4">
                         <div className="font-medium text-green-800 dark:text-green-200 mb-2">
                           🔗 Link para Responder:
@@ -3946,7 +3987,7 @@ Equipe de Compliance`;
                           }
                         </div>
                       </div>
-                      
+
                       <p className="text-sm text-muted-foreground">
                         <strong>Instruções:</strong>
                       </p>
@@ -3956,12 +3997,12 @@ Equipe de Compliance`;
                         <li>• É possível anexar evidências a cada resposta</li>
                         <li>• Em caso de dúvidas, entre em contato conosco</li>
                       </ul>
-                      
+
                       <p className="mt-4">
-                        Atenciosamente,<br/>
+                        Atenciosamente,<br />
                         <strong>{user?.email || 'Equipe GRC'}</strong>
                       </p>
-                      
+
                       <div className="text-xs text-muted-foreground mt-6 pt-3 border-t">
                         Este link expira em 30 dias. Se você não conseguir acessar, entre em contato conosco.
                       </div>
@@ -3970,14 +4011,13 @@ Equipe de Compliance`;
                 </div>
               </div>
             </div>
-            
+
             {/* Status de Envio */}
             {previewEmailStatus && (
-              <div className={`mt-4 p-3 rounded-lg border ${
-                previewEmailStatus.type === 'success' 
-                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
-                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
-              }`}>
+              <div className={`mt-4 p-3 rounded-lg border ${previewEmailStatus.type === 'success'
+                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200'
+                : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200'
+                }`}>
                 <div className="flex items-center gap-2">
                   {previewEmailStatus.type === 'success' ? (
                     <CheckCircle className="h-5 w-5" />
@@ -4014,7 +4054,7 @@ Equipe de Compliance`;
               Visualização completa de como o fornecedor verá a página de assessment
             </DialogDescription>
           </DialogHeader>
-          
+
           {previewAssessment && (
             <div className="flex-1 overflow-hidden">
               {previewAssessment.public_link?.startsWith('temp-') ? (
@@ -4042,7 +4082,7 @@ Equipe de Compliance`;
                         <p className="text-base text-muted-foreground mb-3">
                           Framework: {previewAssessment.vendor_assessment_frameworks?.name || previewAssessment.metadata?.template_name || 'Template Padrão'}
                         </p>
-                        
+
                         {/* Link Público */}
                         <div className="bg-secondary/30 border border-primary/20 rounded-lg p-4 mb-4 max-w-2xl mx-auto">
                           <div className="flex items-center gap-2 mb-2">
@@ -4051,7 +4091,7 @@ Equipe de Compliance`;
                           </div>
                           <div className="flex items-center gap-2 bg-background border rounded-lg p-2">
                             <code className="flex-1 text-xs text-muted-foreground break-all">
-                              {previewAssessment.public_link?.startsWith('temp-') 
+                              {previewAssessment.public_link?.startsWith('temp-')
                                 ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
                                 : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`
                               }
@@ -4060,7 +4100,7 @@ Equipe de Compliance`;
                               variant="ghost"
                               size="sm"
                               onClick={() => {
-                                const linkText = previewAssessment.public_link?.startsWith('temp-') 
+                                const linkText = previewAssessment.public_link?.startsWith('temp-')
                                   ? `${window.location.origin}/vendor-assessment/[SERÁ_GERADO_AO_ENVIAR]`
                                   : `${window.location.origin}/vendor-assessment/${previewAssessment.public_link}`;
                                 navigator.clipboard.writeText(linkText);
@@ -4081,7 +4121,7 @@ Equipe de Compliance`;
                             </p>
                           )}
                         </div>
-                        
+
                         <Badge variant="outline" className="text-sm px-3 py-1">
                           🔍 Modo Preview Interativo
                         </Badge>
@@ -4099,9 +4139,9 @@ Equipe de Compliance`;
                               {previewQuestions.length > 0 ? `${previewCurrentStep + 1} de ${previewQuestions.length}` : '0 questões'}
                             </div>
                           </div>
-                          <Progress 
-                            value={previewQuestions.length > 0 ? ((previewCurrentStep + 1) / previewQuestions.length) * 100 : 0} 
-                            className="h-4 mb-4" 
+                          <Progress
+                            value={previewQuestions.length > 0 ? ((previewCurrentStep + 1) / previewQuestions.length) * 100 : 0}
+                            className="h-4 mb-4"
                           />
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                             <div className="p-3 rounded-lg bg-secondary/50">
@@ -4188,13 +4228,12 @@ Equipe de Compliance`;
                             {previewQuestions[previewCurrentStep]?.type === 'multiple_choice' && previewQuestions[previewCurrentStep]?.options ? (
                               <div className="space-y-4">
                                 {previewQuestions[previewCurrentStep].options.map((option: string, index: number) => (
-                                  <div 
-                                    key={index} 
-                                    className={`flex items-start space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                      previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option 
-                                        ? 'border-primary bg-primary/5' 
-                                        : 'border-border'
-                                    }`}
+                                  <div
+                                    key={index}
+                                    className={`flex items-start space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option
+                                      ? 'border-primary bg-primary/5'
+                                      : 'border-border'
+                                      }`}
                                     onClick={() => setPreviewResponses(prev => ({
                                       ...prev,
                                       [previewQuestions[previewCurrentStep].id]: {
@@ -4204,11 +4243,11 @@ Equipe de Compliance`;
                                       }
                                     }))}
                                   >
-                                    <input 
-                                      type="radio" 
+                                    <input
+                                      type="radio"
                                       name={`question-${previewCurrentStep}`}
                                       className="mt-1 h-5 w-5 text-primary"
-                                      onChange={() => {}}
+                                      onChange={() => { }}
                                       checked={previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option}
                                     />
                                     <label className="text-sm text-foreground cursor-pointer flex-1 leading-relaxed">
@@ -4219,7 +4258,7 @@ Equipe de Compliance`;
                               </div>
                             ) : previewQuestions[previewCurrentStep]?.type === 'text' ? (
                               <div className="space-y-4">
-                                <Textarea 
+                                <Textarea
                                   placeholder="Digite sua resposta aqui..."
                                   className="min-h-32 resize-none text-foreground bg-background border-border"
                                   value={previewResponses[previewQuestions[previewCurrentStep].id]?.answer || ''}
@@ -4246,13 +4285,12 @@ Equipe de Compliance`;
                                     {previewQuestions[previewCurrentStep].scale_labels.map((label: string, index: number) => {
                                       const value = index + 1;
                                       return (
-                                        <div 
+                                        <div
                                           key={value}
-                                          className={`flex items-center space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                            previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value 
-                                              ? 'border-primary bg-primary/5' 
-                                              : 'border-border'
-                                          }`}
+                                          className={`flex items-center space-x-4 p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-border'
+                                            }`}
                                           onClick={() => setPreviewResponses(prev => ({
                                             ...prev,
                                             [previewQuestions[previewCurrentStep].id]: {
@@ -4262,11 +4300,10 @@ Equipe de Compliance`;
                                             }
                                           }))}
                                         >
-                                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm ${
-                                            previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value
-                                              ? 'border-primary bg-primary text-primary-foreground'
-                                              : 'border-border bg-background text-foreground'
-                                          }`}>
+                                          <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-sm ${previewResponses[previewQuestions[previewCurrentStep].id]?.answer == value
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-border bg-background text-foreground'
+                                            }`}>
                                             {value}
                                           </div>
                                           <label className="text-sm text-foreground cursor-pointer flex-1 leading-relaxed">
@@ -4319,11 +4356,10 @@ Equipe de Compliance`;
                                   {['yes', 'no'].map((option) => (
                                     <div
                                       key={option}
-                                      className={`flex items-center justify-center space-x-3 p-6 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                        previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option
-                                          ? 'border-primary bg-primary/5'
-                                          : 'border-border'
-                                      }`}
+                                      className={`flex items-center justify-center space-x-3 p-6 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option
+                                        ? 'border-primary bg-primary/5'
+                                        : 'border-border'
+                                        }`}
                                       onClick={() => setPreviewResponses(prev => ({
                                         ...prev,
                                         [previewQuestions[previewCurrentStep].id]: {
@@ -4337,7 +4373,7 @@ Equipe de Compliance`;
                                         type="radio"
                                         name={`question-${previewCurrentStep}`}
                                         className="h-5 w-5 text-primary"
-                                        onChange={() => {}}
+                                        onChange={() => { }}
                                         checked={previewResponses[previewQuestions[previewCurrentStep].id]?.answer === option}
                                       />
                                       <span className="text-lg font-medium text-foreground">
@@ -4369,7 +4405,7 @@ Equipe de Compliance`;
                                 </Select>
                               </div>
                             )}
-                            
+
                             {/* Seção de Evidências/Anexos */}
                             <div className="mt-8 p-4 bg-secondary/20 rounded-lg border">
                               <div className="flex items-center gap-2 mb-4">
@@ -4381,7 +4417,7 @@ Equipe de Compliance`;
                               <p className="text-xs text-muted-foreground mb-4">
                                 Anexe documentos, capturas de tela ou outros arquivos que comprovem sua resposta
                               </p>
-                              
+
                               {/* Área de upload */}
                               <div className="border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-6 text-center transition-colors">
                                 <input
@@ -4423,46 +4459,46 @@ Equipe de Compliance`;
                                   </p>
                                 </label>
                               </div>
-                              
+
                               {/* Lista de arquivos anexados */}
-                              {previewResponses[previewQuestions[previewCurrentStep]?.id]?.evidence && 
-                               previewResponses[previewQuestions[previewCurrentStep].id].evidence.length > 0 && (
-                                <div className="mt-4 space-y-2">
-                                  <Label className="text-sm font-medium text-foreground">
-                                    Arquivos Anexados:
-                                  </Label>
-                                  {previewResponses[previewQuestions[previewCurrentStep].id].evidence.map((evidence: any, index: number) => (
-                                    <div key={evidence.id || index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
-                                      <div className="flex items-center space-x-3">
-                                        <FileText className="h-4 w-4 text-primary" />
-                                        <div>
-                                          <p className="text-sm font-medium text-foreground">{evidence.fileName}</p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {evidence.fileSize ? `${(evidence.fileSize / 1024).toFixed(1)} KB` : 'Tamanho desconhecido'}
-                                          </p>
+                              {previewResponses[previewQuestions[previewCurrentStep]?.id]?.evidence &&
+                                previewResponses[previewQuestions[previewCurrentStep].id].evidence.length > 0 && (
+                                  <div className="mt-4 space-y-2">
+                                    <Label className="text-sm font-medium text-foreground">
+                                      Arquivos Anexados:
+                                    </Label>
+                                    {previewResponses[previewQuestions[previewCurrentStep].id].evidence.map((evidence: any, index: number) => (
+                                      <div key={evidence.id || index} className="flex items-center justify-between p-3 bg-background rounded-lg border">
+                                        <div className="flex items-center space-x-3">
+                                          <FileText className="h-4 w-4 text-primary" />
+                                          <div>
+                                            <p className="text-sm font-medium text-foreground">{evidence.fileName}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {evidence.fileSize ? `${(evidence.fileSize / 1024).toFixed(1)} KB` : 'Tamanho desconhecido'}
+                                            </p>
+                                          </div>
                                         </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setPreviewResponses(prev => ({
+                                              ...prev,
+                                              [previewQuestions[previewCurrentStep].id]: {
+                                                ...prev[previewQuestions[previewCurrentStep].id],
+                                                evidence: prev[previewQuestions[previewCurrentStep].id]?.evidence?.filter((_, i) => i !== index) || []
+                                              }
+                                            }));
+                                          }}
+                                          className="text-destructive hover:text-destructive/80"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
                                       </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                          setPreviewResponses(prev => ({
-                                            ...prev,
-                                            [previewQuestions[previewCurrentStep].id]: {
-                                              ...prev[previewQuestions[previewCurrentStep].id],
-                                              evidence: prev[previewQuestions[previewCurrentStep].id]?.evidence?.filter((_, i) => i !== index) || []
-                                            }
-                                          }));
-                                        }}
-                                        className="text-destructive hover:text-destructive/80"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              
+                                    ))}
+                                  </div>
+                                )}
+
                               {/* Campo de justificativa */}
                               <div className="mt-4">
                                 <Label className="text-sm font-medium text-foreground">
@@ -4497,7 +4533,7 @@ Equipe de Compliance`;
                                   <ChevronLeft className="h-5 w-5" />
                                   Anterior
                                 </Button>
-                                
+
                                 <div className="text-center">
                                   <div className="text-lg font-semibold text-foreground">
                                     Questão {previewCurrentStep + 1} de {previewQuestions.length}
@@ -4525,13 +4561,12 @@ Equipe de Compliance`;
                                   <button
                                     key={index}
                                     onClick={() => setPreviewCurrentStep(index)}
-                                    className={`relative w-8 h-8 rounded-lg transition-all hover:scale-110 flex items-center justify-center text-xs font-medium ${
-                                      index === previewCurrentStep 
-                                        ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-md' 
-                                        : previewResponses[previewQuestions[index]?.id]?.answer 
-                                          ? 'bg-green-500 text-white hover:bg-green-600 shadow-sm' 
-                                          : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border'
-                                    }`}
+                                    className={`relative w-8 h-8 rounded-lg transition-all hover:scale-110 flex items-center justify-center text-xs font-medium ${index === previewCurrentStep
+                                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-md'
+                                      : previewResponses[previewQuestions[index]?.id]?.answer
+                                        ? 'bg-green-500 text-white hover:bg-green-600 shadow-sm'
+                                        : 'bg-muted hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground border'
+                                      }`}
                                     title={`Questão ${index + 1}: ${question.question?.substring(0, 50)}...${previewResponses[question?.id]?.answer ? ' ✅ Respondida' : ''}`}
                                   >
                                     {index + 1}
@@ -4554,16 +4589,15 @@ Equipe de Compliance`;
                                     const firstQuestionIndex = previewQuestions.findIndex(q => q.category === category);
                                     const answeredInCategory = categoryQuestions.filter(q => previewResponses[q.id]?.answer).length;
                                     const isCurrentCategory = previewQuestions[previewCurrentStep]?.category === category;
-                                    
+
                                     return (
                                       <Button
                                         key={index}
                                         variant={isCurrentCategory ? "default" : "outline"}
                                         size="sm"
                                         onClick={() => setPreviewCurrentStep(firstQuestionIndex)}
-                                        className={`text-xs h-auto p-2 flex flex-col items-start gap-1 ${
-                                          isCurrentCategory ? 'ring-2 ring-primary/30' : ''
-                                        }`}
+                                        className={`text-xs h-auto p-2 flex flex-col items-start gap-1 ${isCurrentCategory ? 'ring-2 ring-primary/30' : ''
+                                          }`}
                                       >
                                         <span className="font-medium truncate w-full text-left">{category}</span>
                                         <span className="text-xs opacity-75">
@@ -4586,13 +4620,13 @@ Equipe de Compliance`;
                                   <ArrowLeft className="h-4 w-4" />
                                   Primeira
                                 </Button>
-                                
+
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => {
                                     // Ir para próxima questão não respondida
-                                    const nextUnanswered = previewQuestions.findIndex((q, idx) => 
+                                    const nextUnanswered = previewQuestions.findIndex((q, idx) =>
                                       idx > previewCurrentStep && !previewResponses[q.id]
                                     );
                                     if (nextUnanswered !== -1) {
@@ -4636,7 +4670,7 @@ Equipe de Compliance`;
                                 const categoryQuestions = previewQuestions.filter(q => q.category === category);
                                 const answeredInCategory = categoryQuestions.filter(q => previewResponses[q.id]?.answer).length;
                                 const progressInCategory = (answeredInCategory / categoryQuestions.length) * 100;
-                                
+
                                 return (
                                   <div key={index} className="p-4 border-2 border-border rounded-lg hover:border-primary/30 hover:bg-secondary/20 transition-all">
                                     <div className="flex items-center justify-between mb-3">
@@ -4677,7 +4711,7 @@ Equipe de Compliance`;
                           </div>
                         </div>
                         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                          Este preview permite navegar por todas as questões reais do template selecionado, 
+                          Este preview permite navegar por todas as questões reais do template selecionado,
                           simulando a experiência completa do fornecedor.
                         </p>
                       </div>
@@ -4694,7 +4728,7 @@ Equipe de Compliance`;
               )}
             </div>
           )}
-          
+
           <div className="flex justify-between items-center pt-6 px-6 pb-6 border-t border-border bg-secondary/20">
             {previewAssessment?.public_link?.startsWith('temp-') ? (
               <div className="text-sm text-muted-foreground flex items-center gap-2 bg-primary/5 px-4 py-2 rounded-full">
@@ -4716,8 +4750,8 @@ Equipe de Compliance`;
                 Abrir em Nova Aba
               </Button>
             )}
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               onClick={() => setShowPreviewDialog(false)}
               className="px-8"
             >
@@ -4739,7 +4773,7 @@ Equipe de Compliance`;
               Informações detalhadas do assessment selecionado
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedAssessment && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -4759,12 +4793,11 @@ Equipe de Compliance`;
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Prioridade</Label>
-                  <Badge variant="outline" className={`text-xs ${
-                    selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
+                  <Badge variant="outline" className={`text-xs ${selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
                     selectedAssessment.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                    selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                    'bg-green-50 text-green-700 border-green-200'
-                  }`}>
+                      selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                        'bg-green-50 text-green-700 border-green-200'
+                    }`}>
                     {selectedAssessment.priority}
                   </Badge>
                 </div>
@@ -4790,14 +4823,14 @@ Equipe de Compliance`;
                   </div>
                 </div>
               </div>
-              
+
               {selectedAssessment.overall_score && (
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Score Geral</Label>
                   <p className="text-lg font-semibold text-primary">{selectedAssessment.overall_score.toFixed(1)}</p>
                 </div>
               )}
-              
+
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Framework</Label>
                 <p className="text-sm">{selectedAssessment.vendor_assessment_frameworks?.name || selectedAssessment.metadata?.template_name}</p>
@@ -4819,7 +4852,7 @@ Equipe de Compliance`;
               Envie o link do assessment diretamente para o fornecedor
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email do Destinatário *</Label>
@@ -4832,7 +4865,7 @@ Equipe de Compliance`;
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="subject">Assunto</Label>
               <Input
@@ -4841,7 +4874,7 @@ Equipe de Compliance`;
                 onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="message">Mensagem</Label>
               <Textarea
@@ -4852,7 +4885,7 @@ Equipe de Compliance`;
                 className="resize-none"
               />
             </div>
-            
+
             {selectedAssessmentForEmail && (
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="text-sm">
@@ -4869,10 +4902,10 @@ Equipe de Compliance`;
               </div>
             )}
           </div>
-          
+
           <div className="flex justify-end space-x-2 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowEmailDialog(false);
                 setEmailForm({ email: '', subject: '', message: '' });
@@ -4887,7 +4920,7 @@ Equipe de Compliance`;
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Assessment Editor Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -4900,7 +4933,7 @@ Equipe de Compliance`;
               Edite as informações do assessment, responda questões e acompanhe o progresso.
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingAssessment && (
             <div className="space-y-6">
               {/* Informações Gerais */}
@@ -4917,10 +4950,10 @@ Equipe de Compliance`;
                         <span className="font-medium">Nome:</span> {editingAssessment?.vendor_assessment_frameworks?.name || editingAssessment?.metadata?.template_name || 'Não definido'}
                       </div>
                       <div>
-                        <span className="font-medium">Tipo:</span> {editingAssessment?.vendor_assessment_frameworks?.framework_type || 
-                          (editingAssessment?.framework_id === 'nist_csf_default' ? 'NIST CSF' : 
-                           editingAssessment?.framework_id === 'iso_27001_27701_default' ? 'ISO 27001/27701' : 
-                           'Padrão')}
+                        <span className="font-medium">Tipo:</span> {editingAssessment?.vendor_assessment_frameworks?.framework_type ||
+                          (editingAssessment?.framework_id === 'nist_csf_default' ? 'NIST CSF' :
+                            editingAssessment?.framework_id === 'iso_27001_27701_default' ? 'ISO 27001/27701' :
+                              'Padrão')}
                       </div>
                       <div>
                         <span className="font-medium">Framework ID:</span> {editingAssessment?.framework_id || 'Não definido'}
@@ -4930,7 +4963,7 @@ Equipe de Compliance`;
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="due_date">Prazo</Label>
@@ -4941,7 +4974,7 @@ Equipe de Compliance`;
                         onChange={(e) => setAssessmentMetadata(prev => ({ ...prev, due_date: e.target.value }))}
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="priority">Prioridade</Label>
                       <Select value={assessmentMetadata.priority} onValueChange={(value) => setAssessmentMetadata(prev => ({ ...prev, priority: value }))}>
@@ -4956,7 +4989,7 @@ Equipe de Compliance`;
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="status">Status</Label>
                       <Select value={assessmentMetadata.status} onValueChange={(value) => setAssessmentMetadata(prev => ({ ...prev, status: value }))}>
@@ -4974,7 +5007,7 @@ Equipe de Compliance`;
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="reviewer_notes">Notas do Revisor</Label>
                     <Textarea
@@ -4987,7 +5020,7 @@ Equipe de Compliance`;
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Estatísticas */}
               <Card>
                 <CardHeader>
@@ -5023,7 +5056,7 @@ Equipe de Compliance`;
                       );
                     })()}
                   </div>
-                  
+
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Progresso Geral</span>
@@ -5033,7 +5066,7 @@ Equipe de Compliance`;
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Questões */}
               <Card>
                 <CardHeader>
@@ -5071,7 +5104,7 @@ Equipe de Compliance`;
                               Não foi possível carregar as questões para este assessment.
                             </p>
                           </div>
-                          
+
                           <div className="bg-muted/30 p-4 rounded-lg mb-6 text-left">
                             <h4 className="font-medium mb-2">Informações de Debug:</h4>
                             <div className="text-sm space-y-1">
@@ -5082,15 +5115,15 @@ Equipe de Compliance`;
                               <div><strong>Framework Type:</strong> {editingAssessment?.vendor_assessment_frameworks?.framework_type || 'Não definido'}</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex gap-2 justify-center">
-                            <Button 
+                            <Button
                               onClick={() => loadDefaultQuestions().then(setAssessmentQuestions)}
                               variant="default"
                             >
                               Carregar Questões Padrão
                             </Button>
-                            <Button 
+                            <Button
                               onClick={() => openAssessmentEditor(editingAssessment!)}
                               variant="outline"
                             >
@@ -5100,423 +5133,420 @@ Equipe de Compliance`;
                         </div>
                       ) : (
                         assessmentQuestions.map((question, index) => {
-                        console.log('Renderizando questão:', question);
-                        const response = assessmentResponses[question.id];
-                        const isRequired = question.required;
-                        const isAnswered = response && response.answer;
-                        console.log('Resposta atual:', response);
-                        
-                        return (
-                          <div key={question.id} className={`p-4 border rounded-lg ${
-                            isRequired && !isAnswered ? 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20' : 
-                            isAnswered ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' : 
-                            'border-gray-200 dark:border-gray-700 dark:bg-gray-800/30'
-                          }`}>
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {question.category}
-                                  </Badge>
-                                  {isRequired && (
-                                    <Badge variant="destructive" className="text-xs">
-                                      Obrigatória
+                          console.log('Renderizando questão:', question);
+                          const response = assessmentResponses[question.id];
+                          const isRequired = question.required;
+                          const isAnswered = response && response.answer;
+                          console.log('Resposta atual:', response);
+
+                          return (
+                            <div key={question.id} className={`p-4 border rounded-lg ${isRequired && !isAnswered ? 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20' :
+                              isAnswered ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' :
+                                'border-gray-200 dark:border-gray-700 dark:bg-gray-800/30'
+                              }`}>
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {question.category}
                                     </Badge>
-                                  )}
-                                  <Badge variant="secondary" className="text-xs">
-                                    Peso: {question.weight || 1}
-                                  </Badge>
-                                  {question.modified && (
-                                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                                      Modificada
+                                    {isRequired && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Obrigatória
+                                      </Badge>
+                                    )}
+                                    <Badge variant="secondary" className="text-xs">
+                                      Peso: {question.weight || 1}
                                     </Badge>
-                                  )}
-                                </div>
-                                
-                                {editingQuestionId === question.id ? (
-                                  // Modo de edição da questão
-                                  <div className="space-y-3">
-                                    <div>
-                                      <Label className="text-sm font-medium">Questão:</Label>
-                                      <Textarea
-                                        value={questionEditForm.question}
-                                        onChange={(e) => setQuestionEditForm(prev => ({ ...prev, question: e.target.value }))}
-                                        rows={2}
-                                        className="mt-1"
-                                      />
-                                    </div>
-                                    
-                                    <div>
-                                      <Label className="text-sm font-medium">Descrição (opcional):</Label>
-                                      <Textarea
-                                        value={questionEditForm.description}
-                                        onChange={(e) => setQuestionEditForm(prev => ({ ...prev, description: e.target.value }))}
-                                        rows={2}
-                                        className="mt-1"
-                                        placeholder="Descrição adicional da questão..."
-                                      />
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-3 gap-2">
+                                    {question.modified && (
+                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                                        Modificada
+                                      </Badge>
+                                    )}
+                                  </div>
+
+                                  {editingQuestionId === question.id ? (
+                                    // Modo de edição da questão
+                                    <div className="space-y-3">
                                       <div>
-                                        <Label className="text-sm font-medium">Tipo:</Label>
-                                        <Select value={questionEditForm.type} onValueChange={(value) => setQuestionEditForm(prev => ({ ...prev, type: value }))}>
-                                          <SelectTrigger className="mt-1">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
-                                            <SelectItem value="scale">Escala</SelectItem>
-                                            <SelectItem value="yes_no">Sim/Não</SelectItem>
-                                            <SelectItem value="text">Texto</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      
-                                      <div>
-                                        <Label className="text-sm font-medium">Peso:</Label>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          max="10"
-                                          value={questionEditForm.weight}
-                                          onChange={(e) => setQuestionEditForm(prev => ({ ...prev, weight: parseInt(e.target.value) }))}
+                                        <Label className="text-sm font-medium">Questão:</Label>
+                                        <Textarea
+                                          value={questionEditForm.question}
+                                          onChange={(e) => setQuestionEditForm(prev => ({ ...prev, question: e.target.value }))}
+                                          rows={2}
                                           className="mt-1"
                                         />
                                       </div>
-                                      
-                                      <div className="flex items-center space-x-2 mt-6">
-                                        <Checkbox
-                                          checked={questionEditForm.required}
-                                          onCheckedChange={(checked) => setQuestionEditForm(prev => ({ ...prev, required: checked }))}
-                                        />
-                                        <Label className="text-sm">Obrigatória</Label>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Opções para múltipla escolha */}
-                                    {questionEditForm.type === 'multiple_choice' && (
+
                                       <div>
-                                        <Label className="text-sm font-medium">Opções:</Label>
-                                        <div className="space-y-2 mt-1">
-                                          {questionEditForm.options?.map((option, optIndex) => (
-                                            <div key={optIndex} className="flex items-center gap-2">
-                                              <Input
-                                                value={option}
-                                                onChange={(e) => updateOption(optIndex, e.target.value)}
-                                                placeholder={`Opção ${optIndex + 1}`}
-                                              />
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => removeOption(optIndex)}
-                                              >
-                                                <X className="h-4 w-4" />
-                                              </Button>
-                                            </div>
-                                          ))}
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={addOption}
-                                          >
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Adicionar Opção
-                                          </Button>
-                                        </div>
+                                        <Label className="text-sm font-medium">Descrição (opcional):</Label>
+                                        <Textarea
+                                          value={questionEditForm.description}
+                                          onChange={(e) => setQuestionEditForm(prev => ({ ...prev, description: e.target.value }))}
+                                          rows={2}
+                                          className="mt-1"
+                                          placeholder="Descrição adicional da questão..."
+                                        />
                                       </div>
-                                    )}
-                                    
-                                    {/* Configurações para escala */}
-                                    {questionEditForm.type === 'scale' && (
-                                      <div className="grid grid-cols-2 gap-2">
+
+                                      <div className="grid grid-cols-3 gap-2">
                                         <div>
-                                          <Label className="text-sm font-medium">Mínimo:</Label>
+                                          <Label className="text-sm font-medium">Tipo:</Label>
+                                          <Select value={questionEditForm.type} onValueChange={(value) => setQuestionEditForm(prev => ({ ...prev, type: value }))}>
+                                            <SelectTrigger className="mt-1">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
+                                              <SelectItem value="scale">Escala</SelectItem>
+                                              <SelectItem value="yes_no">Sim/Não</SelectItem>
+                                              <SelectItem value="text">Texto</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+
+                                        <div>
+                                          <Label className="text-sm font-medium">Peso:</Label>
                                           <Input
                                             type="number"
-                                            value={questionEditForm.scale_min}
-                                            onChange={(e) => setQuestionEditForm(prev => ({ ...prev, scale_min: parseInt(e.target.value) }))}
+                                            min="1"
+                                            max="10"
+                                            value={questionEditForm.weight}
+                                            onChange={(e) => setQuestionEditForm(prev => ({ ...prev, weight: parseInt(e.target.value) }))}
                                             className="mt-1"
                                           />
                                         </div>
-                                        <div>
-                                          <Label className="text-sm font-medium">Máximo:</Label>
-                                          <Input
-                                            type="number"
-                                            value={questionEditForm.scale_max}
-                                            onChange={(e) => setQuestionEditForm(prev => ({ ...prev, scale_max: parseInt(e.target.value) }))}
-                                            className="mt-1"
+
+                                        <div className="flex items-center space-x-2 mt-6">
+                                          <Checkbox
+                                            checked={questionEditForm.required}
+                                            onCheckedChange={(checked) => setQuestionEditForm(prev => ({ ...prev, required: checked }))}
                                           />
+                                          <Label className="text-sm">Obrigatória</Label>
                                         </div>
                                       </div>
-                                    )}
-                                    
-                                    <div className="flex gap-2">
-                                      <Button size="sm" onClick={saveQuestionEdit}>
-                                        <Save className="h-4 w-4 mr-1" />
-                                        Salvar
-                                      </Button>
-                                      <Button size="sm" variant="outline" onClick={cancelQuestionEdit}>
-                                        <X className="h-4 w-4 mr-1" />
-                                        Cancelar
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  // Modo de visualização da questão
-                                  <div>
-                                    <h4 className="font-medium text-sm mb-2 text-foreground">
-                                      {index + 1}. {question.question}
-                                    </h4>
-                                    {question.description && (
-                                      <p className="text-xs text-muted-foreground mb-2">
-                                        {question.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              
-                              <div className="ml-4 flex items-center gap-2">
-                                {editingQuestionId !== question.id && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => startEditingQuestion(question)}
-                                    title="Editar Questão"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                
-                                {isAnswered ? (
-                                  <CheckCircle className="h-5 w-5 text-green-600" />
-                                ) : isRequired ? (
-                                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                                ) : (
-                                  <Clock className="h-5 w-5 text-gray-400" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Campo de resposta baseado no tipo */}
-                            <div className="space-y-3">
-                              {question.type === 'multiple_choice' && (
-                                <div>
-                                  <Label className="text-sm font-medium text-foreground">Resposta:</Label>
-                                  <Select 
-                                    value={response?.answer || ''} 
-                                    onValueChange={(value) => updateQuestionResponse(question.id, value)}
-                                  >
-                                    <SelectTrigger className="mt-1">
-                                      <SelectValue placeholder="Selecione uma opção" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {question.options?.map((option) => (
-                                        <SelectItem key={option} value={option}>
-                                          {option}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                              
-                              {question.type === 'scale' && (
-                                <div>
-                                  <Label className="text-sm font-medium text-foreground">Avaliação:</Label>
-                                  <div className="mt-2">
-                                    {question.scale_labels && question.scale_labels.length > 0 ? (
-                                      // Se há labels específicos para cada opção da escala, renderizar como lista vertical
-                                      <div className="space-y-2">
-                                        {question.scale_labels.map((label: string, index: number) => {
-                                          const value = index + 1;
-                                          return (
-                                            <div 
-                                              key={value}
-                                              className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${
-                                                response?.answer == value 
-                                                  ? 'border-primary bg-primary/5' 
-                                                  : 'border-border'
-                                              }`}
-                                              onClick={() => updateQuestionResponse(question.id, value)}
+
+                                      {/* Opções para múltipla escolha */}
+                                      {questionEditForm.type === 'multiple_choice' && (
+                                        <div>
+                                          <Label className="text-sm font-medium">Opções:</Label>
+                                          <div className="space-y-2 mt-1">
+                                            {questionEditForm.options?.map((option, optIndex) => (
+                                              <div key={optIndex} className="flex items-center gap-2">
+                                                <Input
+                                                  value={option}
+                                                  onChange={(e) => updateOption(optIndex, e.target.value)}
+                                                  placeholder={`Opção ${optIndex + 1}`}
+                                                />
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => removeOption(optIndex)}
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            ))}
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={addOption}
                                             >
-                                              <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-xs ${
-                                                response?.answer == value
+                                              <Plus className="h-4 w-4 mr-1" />
+                                              Adicionar Opção
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      {/* Configurações para escala */}
+                                      {questionEditForm.type === 'scale' && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div>
+                                            <Label className="text-sm font-medium">Mínimo:</Label>
+                                            <Input
+                                              type="number"
+                                              value={questionEditForm.scale_min}
+                                              onChange={(e) => setQuestionEditForm(prev => ({ ...prev, scale_min: parseInt(e.target.value) }))}
+                                              className="mt-1"
+                                            />
+                                          </div>
+                                          <div>
+                                            <Label className="text-sm font-medium">Máximo:</Label>
+                                            <Input
+                                              type="number"
+                                              value={questionEditForm.scale_max}
+                                              onChange={(e) => setQuestionEditForm(prev => ({ ...prev, scale_max: parseInt(e.target.value) }))}
+                                              className="mt-1"
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="flex gap-2">
+                                        <Button size="sm" onClick={saveQuestionEdit}>
+                                          <Save className="h-4 w-4 mr-1" />
+                                          Salvar
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={cancelQuestionEdit}>
+                                          <X className="h-4 w-4 mr-1" />
+                                          Cancelar
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    // Modo de visualização da questão
+                                    <div>
+                                      <h4 className="font-medium text-sm mb-2 text-foreground">
+                                        {index + 1}. {question.question}
+                                      </h4>
+                                      {question.description && (
+                                        <p className="text-xs text-muted-foreground mb-2">
+                                          {question.description}
+                                        </p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="ml-4 flex items-center gap-2">
+                                  {editingQuestionId !== question.id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => startEditingQuestion(question)}
+                                      title="Editar Questão"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
+
+                                  {isAnswered ? (
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                  ) : isRequired ? (
+                                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                                  ) : (
+                                    <Clock className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Campo de resposta baseado no tipo */}
+                              <div className="space-y-3">
+                                {question.type === 'multiple_choice' && (
+                                  <div>
+                                    <Label className="text-sm font-medium text-foreground">Resposta:</Label>
+                                    <Select
+                                      value={response?.answer || ''}
+                                      onValueChange={(value) => updateQuestionResponse(question.id, value)}
+                                    >
+                                      <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Selecione uma opção" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {question.options?.map((option) => (
+                                          <SelectItem key={option} value={option}>
+                                            {option}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+
+                                {question.type === 'scale' && (
+                                  <div>
+                                    <Label className="text-sm font-medium text-foreground">Avaliação:</Label>
+                                    <div className="mt-2">
+                                      {question.scale_labels && question.scale_labels.length > 0 ? (
+                                        // Se há labels específicos para cada opção da escala, renderizar como lista vertical
+                                        <div className="space-y-2">
+                                          {question.scale_labels.map((label: string, index: number) => {
+                                            const value = index + 1;
+                                            return (
+                                              <div
+                                                key={value}
+                                                className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-all hover:border-primary/50 hover:bg-secondary/50 ${response?.answer == value
+                                                  ? 'border-primary bg-primary/5'
+                                                  : 'border-border'
+                                                  }`}
+                                                onClick={() => updateQuestionResponse(question.id, value)}
+                                              >
+                                                <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-bold text-xs ${response?.answer == value
                                                   ? 'border-primary bg-primary text-primary-foreground'
                                                   : 'border-border bg-background text-foreground'
-                                              }`}>
-                                                {value}
+                                                  }`}>
+                                                  {value}
+                                                </div>
+                                                <label className="text-sm text-foreground cursor-pointer flex-1">
+                                                  {label}
+                                                </label>
                                               </div>
-                                              <label className="text-sm text-foreground cursor-pointer flex-1">
-                                                {label}
-                                              </label>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      // Se não há labels específicos, usar renderização numérica horizontal
-                                      <div className="space-y-2">
-                                        <div className="flex items-center space-x-2">
-                                          {Array.from({ length: question.scale_max || 5 }, (_, i) => i + 1).map((value) => (
-                                            <Button
-                                              key={value}
-                                              variant={response?.answer == value ? "default" : "outline"}
-                                              size="sm"
-                                              onClick={() => updateQuestionResponse(question.id, value)}
-                                              className="w-10 h-10"
-                                            >
-                                              {value}
-                                            </Button>
-                                          ))}
+                                            );
+                                          })}
                                         </div>
-                                        {question.scale_min && question.scale_max && (
-                                          <div className="flex justify-between text-xs text-muted-foreground">
-                                            <span>{question.scale_min} - Menor</span>
-                                            <span>{question.scale_max} - Maior</span>
+                                      ) : (
+                                        // Se não há labels específicos, usar renderização numérica horizontal
+                                        <div className="space-y-2">
+                                          <div className="flex items-center space-x-2">
+                                            {Array.from({ length: question.scale_max || 5 }, (_, i) => i + 1).map((value) => (
+                                              <Button
+                                                key={value}
+                                                variant={response?.answer == value ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => updateQuestionResponse(question.id, value)}
+                                                className="w-10 h-10"
+                                              >
+                                                {value}
+                                              </Button>
+                                            ))}
                                           </div>
-                                        )}
-                                      </div>
-                                    )}
+                                          {question.scale_min && question.scale_max && (
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                              <span>{question.scale_min} - Menor</span>
+                                              <span>{question.scale_max} - Maior</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              
-                              {question.type === 'yes_no' && (
-                                <div>
-                                  <Label className="text-sm font-medium text-foreground">Resposta:</Label>
-                                  <div className="mt-2 flex space-x-2">
-                                    <Button
-                                      variant={response?.answer === 'yes' ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => updateQuestionResponse(question.id, 'yes')}
-                                    >
-                                      Sim
-                                    </Button>
-                                    <Button
-                                      variant={response?.answer === 'no' ? "default" : "outline"}
-                                      size="sm"
-                                      onClick={() => updateQuestionResponse(question.id, 'no')}
-                                    >
-                                      Não
-                                    </Button>
+                                )}
+
+                                {question.type === 'yes_no' && (
+                                  <div>
+                                    <Label className="text-sm font-medium text-foreground">Resposta:</Label>
+                                    <div className="mt-2 flex space-x-2">
+                                      <Button
+                                        variant={response?.answer === 'yes' ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => updateQuestionResponse(question.id, 'yes')}
+                                      >
+                                        Sim
+                                      </Button>
+                                      <Button
+                                        variant={response?.answer === 'no' ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => updateQuestionResponse(question.id, 'no')}
+                                      >
+                                        Não
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              
-                              {question.type === 'text' && (
+                                )}
+
+                                {question.type === 'text' && (
+                                  <div>
+                                    <Label className="text-sm font-medium text-foreground">Resposta:</Label>
+                                    <Textarea
+                                      placeholder="Digite sua resposta..."
+                                      value={response?.answer || ''}
+                                      onChange={(e) => updateQuestionResponse(question.id, e.target.value)}
+                                      rows={3}
+                                      className="mt-1"
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Campo de justificativa */}
                                 <div>
-                                  <Label className="text-sm font-medium text-foreground">Resposta:</Label>
+                                  <Label className="text-sm font-medium text-foreground">Justificativa/Observações (opcional):</Label>
                                   <Textarea
-                                    placeholder="Digite sua resposta..."
-                                    value={response?.answer || ''}
-                                    onChange={(e) => updateQuestionResponse(question.id, e.target.value)}
-                                    rows={3}
+                                    placeholder="Adicione justificativas ou observações sobre esta resposta..."
+                                    value={response?.justification || ''}
+                                    onChange={(e) => updateQuestionResponse(question.id, response?.answer || '', e.target.value)}
+                                    rows={2}
                                     className="mt-1"
                                   />
                                 </div>
-                              )}
-                              
-                              {/* Campo de justificativa */}
-                              <div>
-                                <Label className="text-sm font-medium text-foreground">Justificativa/Observações (opcional):</Label>
-                                <Textarea
-                                  placeholder="Adicione justificativas ou observações sobre esta resposta..."
-                                  value={response?.justification || ''}
-                                  onChange={(e) => updateQuestionResponse(question.id, response?.answer || '', e.target.value)}
-                                  rows={2}
-                                  className="mt-1"
-                                />
-                              </div>
-                              
-                              {/* Seção de Evidências */}
-                              <div>
-                                <Label className="text-sm font-medium text-foreground">Evidências:</Label>
-                                <div className="mt-2 space-y-2">
-                                  {/* Lista de evidências existentes */}
-                                  {response?.evidence && response.evidence.length > 0 && (
-                                    <div className="space-y-2">
-                                      {response.evidence.map((evidence) => (
-                                        <div key={evidence.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
-                                          <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-blue-600" />
-                                            <div>
-                                              <div className="text-sm font-medium">{evidence.fileName}</div>
-                                              <div className="text-xs text-muted-foreground">
-                                                {(evidence.fileSize / 1024).toFixed(1)} KB • {evidence.uploadedBy} • {new Date(evidence.uploadedAt).toLocaleDateString('pt-BR')}
+
+                                {/* Seção de Evidências */}
+                                <div>
+                                  <Label className="text-sm font-medium text-foreground">Evidências:</Label>
+                                  <div className="mt-2 space-y-2">
+                                    {/* Lista de evidências existentes */}
+                                    {response?.evidence && response.evidence.length > 0 && (
+                                      <div className="space-y-2">
+                                        {response.evidence.map((evidence) => (
+                                          <div key={evidence.id} className="flex items-center justify-between p-2 bg-muted/30 rounded border">
+                                            <div className="flex items-center gap-2">
+                                              <FileText className="h-4 w-4 text-blue-600" />
+                                              <div>
+                                                <div className="text-sm font-medium">{evidence.fileName}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {(evidence.fileSize / 1024).toFixed(1)} KB • {evidence.uploadedBy} • {new Date(evidence.uploadedAt).toLocaleDateString('pt-BR')}
+                                                </div>
                                               </div>
                                             </div>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => window.open(evidence.url, '_blank')}
+                                                title="Visualizar"
+                                              >
+                                                <Eye className="h-4 w-4" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => removeEvidence(question.id, evidence.id)}
+                                                title="Remover"
+                                              >
+                                                <Trash2 className="h-4 w-4 text-red-600" />
+                                              </Button>
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => window.open(evidence.url, '_blank')}
-                                              title="Visualizar"
-                                            >
-                                              <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => removeEvidence(question.id, evidence.id)}
-                                              title="Remover"
-                                            >
-                                              <Trash2 className="h-4 w-4 text-red-600" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Botão para adicionar evidência */}
+                                    <div>
+                                      <input
+                                        type="file"
+                                        id={`evidence-${question.id}`}
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            uploadEvidence(question.id, file);
+                                            e.target.value = ''; // Reset input
+                                          }
+                                        }}
+                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.xls"
+                                      />
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => document.getElementById(`evidence-${question.id}`)?.click()}
+                                      >
+                                        <Upload className="h-4 w-4 mr-1" />
+                                        Anexar Evidência
+                                      </Button>
                                     </div>
-                                  )}
-                                  
-                                  {/* Botão para adicionar evidência */}
-                                  <div>
-                                    <input
-                                      type="file"
-                                      id={`evidence-${question.id}`}
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          uploadEvidence(question.id, file);
-                                          e.target.value = ''; // Reset input
-                                        }
-                                      }}
-                                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xlsx,.xls"
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => document.getElementById(`evidence-${question.id}`)?.click()}
-                                    >
-                                      <Upload className="h-4 w-4 mr-1" />
-                                      Anexar Evidência
-                                    </Button>
                                   </div>
                                 </div>
+
+                                {/* Informações da resposta */}
+                                {response && (
+                                  <div className="text-xs text-muted-foreground border-t border-border pt-2">
+                                    Respondido por: {response.responded_by} em {new Date(response.responded_at).toLocaleString('pt-BR')}
+                                    {response.evidence && response.evidence.length > 0 && (
+                                      <span className="ml-2">• {response.evidence.length} evidência(s) anexada(s)</span>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                              
-                              {/* Informações da resposta */}
-                              {response && (
-                                <div className="text-xs text-muted-foreground border-t border-border pt-2">
-                                  Respondido por: {response.responded_by} em {new Date(response.responded_at).toLocaleString('pt-BR')}
-                                  {response.evidence && response.evidence.length > 0 && (
-                                    <span className="ml-2">• {response.evidence.length} evidência(s) anexada(s)</span>
-                                  )}
-                                </div>
-                              )}
                             </div>
-                          </div>
-                        );
+                          );
                         })
                       )}
                     </div>
                   </ScrollArea>
                 </CardContent>
               </Card>
-              
+
               {/* Botões de Ação */}
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="text-sm text-muted-foreground">
@@ -5536,6 +5566,101 @@ Equipe de Compliance`;
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New Assessment Dialog */}
+      <Dialog open={showNewAssessmentDialog} onOpenChange={setShowNewAssessmentDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Assessment</DialogTitle>
+            <DialogDescription>
+              Crie um novo assessment para um fornecedor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome do Assessment</Label>
+              <Input
+                id="name"
+                value={newAssessmentForm.name}
+                onChange={(e) => setNewAssessmentForm({ ...newAssessmentForm, name: e.target.value })}
+                placeholder="Ex: Avaliação de Segurança 2024"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="vendor">Fornecedor</Label>
+              <Select
+                value={newAssessmentForm.vendor_id}
+                onValueChange={(value) => setNewAssessmentForm({ ...newAssessmentForm, vendor_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {propVendors.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="framework">Framework</Label>
+              <Select
+                value={newAssessmentForm.framework_id}
+                onValueChange={(value) => setNewAssessmentForm({ ...newAssessmentForm, framework_id: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  {frameworks.map((fw) => (
+                    <SelectItem key={fw.id} value={fw.id}>
+                      {fw.nome} ({fw.tipo_framework})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="priority">Prioridade</Label>
+                <Select
+                  value={newAssessmentForm.priority}
+                  onValueChange={(value) => setNewAssessmentForm({ ...newAssessmentForm, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="urgent">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="due_date">Prazo</Label>
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={newAssessmentForm.due_date}
+                  onChange={(e) => setNewAssessmentForm({ ...newAssessmentForm, due_date: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowNewAssessmentDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateAssessment}>
+              Criar Assessment
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
