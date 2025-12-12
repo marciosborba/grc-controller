@@ -34,18 +34,29 @@ import {
   Info,
   Calendar,
   User,
-  Building
+  Building,
+  Lock,
+  Server,
+  FileText,
+  AlertTriangle,
+  Eye,
+  CheckSquare,
+  Paperclip,
+  X
 } from 'lucide-react';
 
 interface Question {
   id: string;
   category: string;
   question: string;
-  type: 'yes_no' | 'multiple_choice' | 'text' | 'number' | 'file_upload' | 'rating';
+  type: 'yes_no' | 'multiple_choice' | 'text' | 'number' | 'file_upload' | 'rating' | 'scale';
   options?: string[];
   required: boolean;
   weight: number;
   help_text?: string;
+  scale_min?: number;
+  scale_max?: number;
+  scale_labels?: string[];
 }
 
 interface AssessmentData {
@@ -65,6 +76,8 @@ interface AssessmentData {
     framework_type: string;
     questions: Question[];
   };
+  public_link_expires_at?: string;
+  vendor_id: string;
 }
 
 interface PublicVendorAssessmentProps {
@@ -82,7 +95,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
-  const [showAlexHelp, setShowAlexHelp] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   // Load assessment data
   useEffect(() => {
@@ -102,9 +115,8 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             primary_contact_name
           ),
           vendor_assessment_frameworks:framework_id (
-            name,
-            framework_type,
-            questions
+            name:nome,
+            framework_type:tipo_framework
           )
         `)
         .eq('public_link', publicLinkId)
@@ -152,6 +164,11 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       setAssessment(data);
       setResponses(data.responses || {});
 
+      // If already has responses, skip welcome screen
+      if (data.responses && Object.keys(data.responses).length > 0) {
+        setShowWelcome(false);
+      }
+
     } catch (error) {
       console.error('Erro ao carregar assessment:', error);
       toast({
@@ -164,13 +181,169 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   };
 
+  // Expanded Default Questions
+  const DEFAULT_QUESTIONS: Question[] = [
+    // 1. Governança e Políticas
+    {
+      id: 'gov_1',
+      category: 'Governança e Políticas',
+      question: 'A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?',
+      type: 'yes_no',
+      required: true,
+      weight: 10,
+      help_text: 'A política deve ser revisada anualmente e comunicada a todos os colaboradores.'
+    },
+    {
+      id: 'gov_2',
+      category: 'Governança e Políticas',
+      question: 'Existe um responsável designado pela Segurança da Informação (CISO ou equivalente)?',
+      type: 'yes_no',
+      required: true,
+      weight: 8
+    },
+    {
+      id: 'gov_3',
+      category: 'Governança e Políticas',
+      question: 'Os colaboradores passam por treinamentos periódicos de conscientização em segurança?',
+      type: 'multiple_choice',
+      options: ['Sim, anualmente', 'Sim, na admissão apenas', 'Não há treinamento formal', 'Sim, trimestralmente'],
+      required: true,
+      weight: 8
+    },
+
+    // 2. Controle de Acesso
+    {
+      id: 'access_1',
+      category: 'Controle de Acesso',
+      question: 'A organização utiliza Múltiplo Fator de Autenticação (MFA) para acesso a sistemas críticos?',
+      type: 'yes_no',
+      required: true,
+      weight: 10
+    },
+    {
+      id: 'access_2',
+      category: 'Controle de Acesso',
+      question: 'Como é realizado o processo de revogação de acessos de colaboradores desligados?',
+      type: 'multiple_choice',
+      options: ['Imediato (automático)', 'Em até 24 horas', 'Em até 1 semana', 'Manual/Sob demanda'],
+      required: true,
+      weight: 9
+    },
+    {
+      id: 'access_3',
+      category: 'Controle de Acesso',
+      question: 'Existe revisão periódica de direitos de acesso?',
+      type: 'yes_no',
+      required: true,
+      weight: 7
+    },
+
+    // 3. Proteção de Dados e Privacidade (LGPD/GDPR)
+    {
+      id: 'privacy_1',
+      category: 'Privacidade e Dados',
+      question: 'A organização mapeou os dados pessoais que processa (Data Mapping)?',
+      type: 'yes_no',
+      required: true,
+      weight: 9
+    },
+    {
+      id: 'privacy_2',
+      category: 'Privacidade e Dados',
+      question: 'Qual o nível de conformidade com a LGPD?',
+      type: 'scale',
+      scale_min: 1,
+      scale_max: 5,
+      scale_labels: ['Não Iniciado', 'Inicial', 'Em Andamento', 'Avançado', 'Totalmente Conforme'],
+      required: true,
+      weight: 10
+    },
+    {
+      id: 'privacy_3',
+      category: 'Privacidade e Dados',
+      question: 'Existe um processo definido para resposta a incidentes de violação de dados?',
+      type: 'yes_no',
+      required: true,
+      weight: 10
+    },
+
+    // 4. Segurança Física e do Ambiente
+    {
+      id: 'phys_1',
+      category: 'Segurança Física',
+      question: 'O acesso físico aos servidores/datacenter é restrito e monitorado?',
+      type: 'yes_no',
+      required: true,
+      weight: 6
+    },
+    {
+      id: 'phys_2',
+      category: 'Segurança Física',
+      question: 'Existem controles ambientais (energia, refrigeração, combate a incêndio) adequados?',
+      type: 'yes_no',
+      required: false,
+      weight: 5
+    },
+
+    // 5. Gestão de Incidentes e Continuidade
+    {
+      id: 'inc_1',
+      category: 'Continuidade de Negócios',
+      question: 'A organização possui um Plano de Continuidade de Negócios (PCN) testado?',
+      type: 'yes_no',
+      required: true,
+      weight: 8
+    },
+    {
+      id: 'inc_2',
+      category: 'Continuidade de Negócios',
+      question: 'Com que frequência são realizados testes de restore de backup?',
+      type: 'multiple_choice',
+      options: ['Mensalmente', 'Trimestralmente', 'Anualmente', 'Nunca testado', 'Somente quando necessário'],
+      required: true,
+      weight: 9
+    },
+
+    // 6. Gestão de Terceiros
+    {
+      id: 'tp_1',
+      category: 'Gestão de Terceiros',
+      question: 'Os fornecedores críticos são avaliados quanto a riscos de segurança?',
+      type: 'yes_no',
+      required: true,
+      weight: 7
+    },
+
+    // 7. Certificações
+    {
+      id: 'evid_1',
+      category: 'Certificações',
+      question: 'Anexe o certificado ISO 27001 ou SOC 2 (se houver):',
+      type: 'file_upload',
+      required: false,
+      weight: 0
+    },
+    {
+      id: 'obs_1',
+      category: 'Observações Finais',
+      question: 'Descreva quaisquer outras medidas de segurança relevantes ou compensatórias:',
+      type: 'text',
+      required: false,
+      weight: 0
+    }
+  ];
+
   // Group questions by category
   const getQuestionsByCategory = () => {
-    if (!assessment?.vendor_assessment_frameworks?.questions) return [];
+    // Use framework questions if available (mapped from 'questoes' if it existed, but it doesn't)
+    // Or use default questions if no framework questions found
+    const questions = assessment?.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
+
+    if (!questions || questions.length === 0) return [];
 
     const categories: Record<string, Question[]> = {};
 
-    assessment.vendor_assessment_frameworks.questions.forEach(question => {
+    questions.forEach((question: Question) => {
       if (!categories[question.category]) {
         categories[question.category] = [];
       }
@@ -189,9 +362,9 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const calculateProgress = () => {
     if (!assessment) return 0;
 
-    const totalQuestions = assessment.vendor_assessment_frameworks?.questions?.length || 0;
+    const totalQuestions = assessment.vendor_assessment_frameworks?.questions?.length || DEFAULT_QUESTIONS.length;
     const answeredQuestions = Object.keys(responses).filter(key =>
-      responses[key] !== undefined && responses[key] !== ''
+      responses[key] !== undefined && responses[key] !== '' && !key.endsWith('_evidence')
     ).length;
 
     return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
@@ -228,18 +401,8 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
         updated_at: now
       } : null);
 
-      toast({
-        title: "✅ Respostas Salvas",
-        description: `Progresso: ${progress}% • Salvo automaticamente`
-      });
-
     } catch (error) {
       console.error('Erro ao salvar respostas:', error);
-      toast({
-        title: "❌ Erro ao Salvar",
-        description: "Não foi possível salvar as respostas. Tente novamente.",
-        variant: "destructive"
-      });
     } finally {
       setSaving(false);
     }
@@ -261,7 +424,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     if (!assessment) return;
 
     // Final validation of all sections
-    const allQuestions = assessment.vendor_assessment_frameworks?.questions || [];
+    const allQuestions = assessment.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
     const requiredQuestions = allQuestions.filter(q => q.required);
     const unansweredRequired = requiredQuestions.filter(q =>
       !responses[q.id] || responses[q.id] === ''
@@ -280,7 +443,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     const confirmed = window.confirm(
       `Tem certeza que deseja finalizar e enviar o assessment?\n\n` +
       `✅ ${allQuestions.length} questões no total\n` +
-      `✅ ${Object.keys(responses).length} respostas preenchidas\n` +
+      `✅ ${Object.keys(responses).filter(k => !k.endsWith('_evidence')).length} respostas preenchidas\n` +
       `✅ 100% concluído\n\n` +
       `Após o envio, você não poderá mais editar as respostas.`
     );
@@ -294,7 +457,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       const submissionSummary = {
         submitted_at: new Date().toISOString(),
         total_questions: allQuestions.length,
-        answered_questions: Object.keys(responses).length,
+        answered_questions: Object.keys(responses).filter(k => !k.endsWith('_evidence')).length,
         completion_percentage: 100,
         vendor_contact: assessment.vendor_registry?.primary_contact_name,
         vendor_name: assessment.vendor_registry?.name
@@ -378,23 +541,6 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     return true;
   };
 
-  // Check if a question is answered
-  const isQuestionAnswered = (questionId: string) => {
-    const response = responses[questionId];
-    return response !== undefined && response !== '' && response !== null;
-  };
-
-  // Get validation status for a question
-  const getQuestionValidationStatus = (question: Question) => {
-    const answered = isQuestionAnswered(question.id);
-
-    if (question.required) {
-      return answered ? 'completed' : 'required';
-    }
-
-    return answered ? 'completed' : 'optional';
-  };
-
   // Next section
   const nextSection = async () => {
     if (!validateCurrentSection()) return;
@@ -403,6 +549,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
     if (currentSection < sections.length - 1) {
       setCurrentSection(currentSection + 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -410,7 +557,100 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const previousSection = () => {
     if (currentSection > 0) {
       setCurrentSection(currentSection - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  // Render evidence upload for any question
+  const renderEvidenceUpload = (questionId: string) => {
+    const evidenceKey = `${questionId}_evidence`;
+    const value = responses[evidenceKey];
+
+    if (value) {
+      try {
+        const fileInfo = JSON.parse(value);
+        return (
+          <div className="mt-4 flex items-center justify-between p-3 bg-muted/30 border border-border rounded-lg animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary/10 rounded-md flex items-center justify-center">
+                <Paperclip className="h-4 w-4 text-primary" />
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-foreground truncate max-w-[200px]">{fileInfo.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(fileInfo.size / 1024).toFixed(1)} KB
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setResponses(prev => {
+                const newResponses = { ...prev };
+                delete newResponses[evidenceKey];
+                return newResponses;
+              })}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      } catch {
+        return null;
+      }
+    }
+
+    return (
+      <div className="mt-3">
+        <Input
+          type="file"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              if (file.size > 10 * 1024 * 1024) {
+                toast({
+                  title: "Arquivo muito grande",
+                  description: "O arquivo deve ter no máximo 10MB",
+                  variant: "destructive"
+                });
+                return;
+              }
+
+              const fileInfo = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                uploadedAt: new Date().toISOString(),
+                url: URL.createObjectURL(file)
+              };
+
+              setResponses(prev => ({
+                ...prev,
+                [evidenceKey]: JSON.stringify(fileInfo)
+              }));
+
+              toast({
+                title: "Evidência anexada",
+                description: `${file.name} foi anexado com sucesso`
+              });
+            }
+          }}
+          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+          className="hidden"
+          id={`evidence-${questionId}`}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs h-8 border-dashed text-muted-foreground hover:text-primary hover:border-primary/50"
+          onClick={() => document.getElementById(`evidence-${questionId}`)?.click()}
+        >
+          <Paperclip className="h-3 w-3 mr-2" />
+          Anexar Evidência (Opcional)
+        </Button>
+      </div>
+    );
   };
 
   // Render question input
@@ -425,15 +665,15 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
             className="flex flex-col sm:flex-row gap-4"
           >
-            <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-all duration-200 ${value === 'yes' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            <div className={`flex-1 flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all duration-200 ${value === 'yes' ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm' : 'border-border hover:border-primary/50 hover:bg-accent/50'
               }`}>
               <RadioGroupItem value="yes" id={`${question.id}_yes`} />
-              <Label htmlFor={`${question.id}_yes`} className="cursor-pointer font-medium">Sim</Label>
+              <Label htmlFor={`${question.id}_yes`} className="cursor-pointer font-medium flex-1 text-foreground">Sim</Label>
             </div>
-            <div className={`flex items-center space-x-3 border rounded-lg p-4 cursor-pointer transition-all duration-200 ${value === 'no' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            <div className={`flex-1 flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all duration-200 ${value === 'no' ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm' : 'border-border hover:border-primary/50 hover:bg-accent/50'
               }`}>
               <RadioGroupItem value="no" id={`${question.id}_no`} />
-              <Label htmlFor={`${question.id}_no`} className="cursor-pointer font-medium">Não</Label>
+              <Label htmlFor={`${question.id}_no`} className="cursor-pointer font-medium flex-1 text-foreground">Não</Label>
             </div>
           </RadioGroup>
         );
@@ -441,7 +681,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       case 'multiple_choice':
         return (
           <Select value={value} onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}>
-            <SelectTrigger className="w-full h-12 text-base bg-white border-gray-200 focus:ring-2 focus:ring-primary/20 transition-all">
+            <SelectTrigger className="w-full h-12 text-base bg-background border-input focus:ring-2 focus:ring-primary/20 transition-all rounded-xl">
               <SelectValue placeholder="Selecione uma opção" />
             </SelectTrigger>
             <SelectContent>
@@ -459,21 +699,11 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder="Digite sua resposta detalhada aqui..."
             rows={4}
-            className="w-full min-h-[120px] text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-y p-4"
+            className="w-full min-h-[120px] text-base bg-background border-input focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-y p-4 rounded-xl"
           />
         );
 
-      case 'number':
-        return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
-            placeholder="0"
-            className="h-12 text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all max-w-[200px]"
-          />
-        );
-
+      case 'scale':
       case 'rating':
         return (
           <div className="flex flex-wrap gap-2">
@@ -481,17 +711,17 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               <button
                 key={rating}
                 onClick={() => setResponses(prev => ({ ...prev, [question.id]: rating.toString() }))}
-                className={`w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold transition-all duration-200 ${value === rating.toString()
-                  ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:border-primary hover:text-primary hover:bg-primary/5'
+                className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold transition-all duration-200 ${value === rating.toString()
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30 scale-110'
+                  : 'bg-card border border-border text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/5'
                   }`}
               >
                 {rating}
               </button>
             ))}
-            <div className="w-full mt-2 flex justify-between text-xs text-gray-400 px-1">
-              <span>Baixo</span>
-              <span>Alto</span>
+            <div className="w-full mt-2 flex justify-between text-xs text-muted-foreground px-1">
+              <span>Baixo / Ruim</span>
+              <span>Alto / Excelente</span>
             </div>
           </div>
         );
@@ -499,17 +729,17 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       case 'file_upload':
         return (
           <div className="space-y-4">
-            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 group ${value ? 'border-green-300 bg-green-50/30' : 'border-gray-200 hover:border-primary/50 hover:bg-gray-50'
+            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 group ${value ? 'border-green-500/50 bg-green-500/10' : 'border-border hover:border-primary/50 hover:bg-accent/50'
               }`}>
-              <div className="w-12 h-12 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Upload className={`h-6 w-6 ${value ? 'text-green-500' : 'text-gray-400 group-hover:text-primary'}`} />
+              <div className="w-12 h-12 bg-card rounded-full shadow-sm border border-border flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Upload className={`h-6 w-6 ${value ? 'text-green-500' : 'text-muted-foreground group-hover:text-primary'}`} />
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {value ? 'Arquivo selecionado' : 'Clique para fazer upload'}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   PDF, DOC, DOCX, JPG, PNG (máx. 10MB)
                 </p>
               </div>
@@ -569,14 +799,14 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               try {
                 const fileInfo = JSON.parse(value);
                 return (
-                  <div className="flex items-center justify-between p-4 bg-white border border-green-100 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between p-4 bg-card border border-green-500/30 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2">
                     <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <FileCheck className="h-5 w-5 text-green-600" />
+                      <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                        <FileCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{fileInfo.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm font-medium text-foreground">{fileInfo.name}</p>
+                        <p className="text-xs text-muted-foreground">
                           {(fileInfo.size / 1024).toFixed(1)} KB • {new Date(fileInfo.uploadedAt).toLocaleString('pt-BR')}
                         </p>
                       </div>
@@ -584,7 +814,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
                       onClick={() => setResponses(prev => ({ ...prev, [question.id]: '' }))}
                     >
                       Remover
@@ -604,7 +834,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             value={value}
             onChange={(e) => setResponses(prev => ({ ...prev, [question.id]: e.target.value }))}
             placeholder="Digite sua resposta..."
-            className="h-12 text-base bg-white border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-12 text-base bg-background border-input focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded-xl"
           />
         );
     }
@@ -612,38 +842,89 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <Card className="p-8">
-          <div className="flex items-center space-x-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span>Carregando assessment...</span>
-          </div>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground font-medium">Carregando assessment seguro...</p>
+        </div>
       </div>
     );
   }
 
   if (isExpired || !assessment) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600" />
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full border-border shadow-xl">
+          <CardHeader className="text-center pb-2">
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="h-10 w-10 text-red-600 dark:text-red-400" />
             </div>
-            <CardTitle className="text-red-900">
+            <CardTitle className="text-2xl font-bold text-foreground">
               {isExpired ? 'Link Expirado' : 'Assessment Não Encontrado'}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-red-700 mb-4">
+          <CardContent className="text-center space-y-6">
+            <p className="text-muted-foreground text-lg">
               {isExpired
-                ? 'Este link de assessment expirou. Entre em contato conosco para solicitar um novo link.'
-                : 'O link pode ser inválido ou ter sido removido.'
+                ? 'Este link de avaliação expirou por motivos de segurança.'
+                : 'O link acessado não é válido ou foi removido.'
               }
             </p>
-            <Button variant="outline" onClick={() => window.location.href = '/'}>
-              Voltar ao Início
+            <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-xl text-sm text-red-700 dark:text-red-400">
+              Por favor, entre em contato com a equipe de GRC para solicitar um novo link de acesso.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Welcome Screen
+  if (showWelcome) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full border-border shadow-2xl overflow-hidden">
+          <div className="h-2 bg-gradient-to-r from-primary to-blue-600"></div>
+          <CardContent className="p-8 sm:p-12 text-center space-y-8">
+            <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto rotate-3 transform transition-transform hover:rotate-0 duration-500">
+              <Shield className="h-12 w-12 text-primary" />
+            </div>
+
+            <div className="space-y-4">
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                Assessment de Segurança
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                Olá, <span className="font-semibold text-foreground">{assessment.vendor_registry.primary_contact_name}</span>.
+                Você foi convidado para preencher a avaliação de segurança da <span className="font-semibold text-foreground">{assessment.vendor_registry.name}</span>.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+              <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                <Clock className="h-6 w-6 text-primary mb-3" />
+                <h3 className="font-semibold text-foreground">15-20 min</h3>
+                <p className="text-sm text-muted-foreground">Tempo estimado</p>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                <Save className="h-6 w-6 text-primary mb-3" />
+                <h3 className="font-semibold text-foreground">Auto-save</h3>
+                <p className="text-sm text-muted-foreground">Progresso salvo</p>
+              </div>
+              <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                <Lock className="h-6 w-6 text-primary mb-3" />
+                <h3 className="font-semibold text-foreground">Seguro</h3>
+                <p className="text-sm text-muted-foreground">Criptografado</p>
+              </div>
+            </div>
+
+            <Button
+              size="lg"
+              className="w-full sm:w-auto px-12 h-14 text-lg font-semibold shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1"
+              onClick={() => setShowWelcome(false)}
+            >
+              Iniciar Avaliação
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
@@ -654,77 +935,66 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const progress = calculateProgress();
   const currentSectionData = sections[currentSection];
 
-  // Show success page if assessment is completed
+  // Success Screen
   if (assessment?.status === 'completed' && assessment?.vendor_submitted_at) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex items-center justify-center p-4 font-sans">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 font-sans">
         <div className="max-w-2xl w-full">
-          <Card className="border-0 shadow-xl overflow-hidden">
+          <Card className="border-border shadow-xl overflow-hidden">
             <div className="bg-green-600 h-2 w-full"></div>
             <CardHeader className="text-center pb-2 pt-12">
-              <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
-                <CheckCircle className="h-12 w-12 text-green-600" />
+              <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
+                <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
               </div>
-              <CardTitle className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
+              <CardTitle className="text-3xl font-bold text-foreground mb-2 tracking-tight">
                 Assessment Enviado!
               </CardTitle>
-              <p className="text-gray-500 text-lg">
+              <p className="text-muted-foreground text-lg">
                 Suas respostas foram registradas com sucesso.
               </p>
             </CardHeader>
 
             <CardContent className="space-y-8 p-8">
-              {/* Summary Stats */}
               <div className="grid grid-cols-2 gap-6">
-                <div className="text-center p-6 bg-gray-50 rounded-2xl border border-gray-100">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">
-                    {assessment.vendor_assessment_frameworks?.questions?.length || 0}
+                <div className="text-center p-6 bg-muted/50 rounded-2xl border border-border">
+                  <div className="text-3xl font-bold text-foreground mb-1">
+                    {assessment.vendor_assessment_frameworks?.questions?.length || DEFAULT_QUESTIONS.length}
                   </div>
-                  <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">Questões</div>
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Questões</div>
                 </div>
-                <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-100">
-                  <div className="text-3xl font-bold text-green-600 mb-1">100%</div>
-                  <div className="text-sm font-medium text-green-600 uppercase tracking-wide">Concluído</div>
+                <div className="text-center p-6 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30">
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">100%</div>
+                  <div className="text-sm font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Concluído</div>
                 </div>
               </div>
 
-              {/* Submission Info */}
-              <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 flex items-start gap-4">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-foreground">
                     Enviado em {new Date(assessment.vendor_submitted_at).toLocaleDateString('pt-BR')} às {new Date(assessment.vendor_submitted_at).toLocaleTimeString('pt-BR')}
                   </p>
-                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
                     Nossa equipe de GRC irá analisar suas respostas. Você receberá uma notificação assim que a revisão for concluída.
                   </p>
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 <Button
                   variant="outline"
                   onClick={() => window.print()}
-                  className="h-12 px-6 border-gray-200 hover:bg-gray-50 hover:text-gray-900"
+                  className="h-12 px-6 border-border hover:bg-accent hover:text-accent-foreground"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Salvar Comprovante
                 </Button>
-                <Button
-                  onClick={() => window.location.href = 'mailto:suporte@empresa.com?subject=Dúvida sobre Assessment'}
-                  className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-gray-900/20"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Falar com Suporte
-                </Button>
               </div>
             </CardContent>
           </Card>
-
-          <div className="text-center mt-8 text-sm text-gray-400">
+          <div className="text-center mt-8 text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} GRC Controller. Todos os direitos reservados.
           </div>
         </div>
@@ -733,231 +1003,165 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 font-sans">
+    <div className="min-h-screen bg-background font-sans pb-20">
       {/* Hero Header */}
-      <div className="bg-white border-b sticky top-0 z-50 shadow-sm backdrop-blur-xl bg-white/80 supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="bg-card/80 border-b border-border sticky top-0 z-40 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shadow-sm">
                   <Shield className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                  <h1 className="text-xl font-bold text-foreground tracking-tight">
                     {assessment.assessment_name}
                   </h1>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Building className="h-3.5 w-3.5" />
                     <span>{assessment.vendor_registry.name}</span>
-                    <span className="text-gray-300">•</span>
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>Prazo: {new Date(assessment.due_date).toLocaleDateString('pt-BR')}</span>
+                    <span className="text-border">•</span>
+                    <span className={saving ? "text-primary animate-pulse" : "text-green-600 dark:text-green-400"}>
+                      {saving ? "Salvando..." : "Salvo"}
+                    </span>
                   </div>
                 </div>
               </div>
-
-              <div className="hidden md:flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-gray-900">{progress}% Concluído</div>
-                  <div className="text-xs text-gray-500">
-                    {Object.keys(responses).length} de {assessment.vendor_assessment_frameworks?.questions?.length || 0} questões
-                  </div>
-                </div>
-                <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-500 ease-out rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+              <div className="text-right hidden sm:block">
+                <div className="text-2xl font-bold text-primary">{progress}%</div>
+                <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Concluído</div>
               </div>
             </div>
+            <Progress value={progress} className="h-1.5 bg-muted" />
           </div>
-        </div>
-
-        {/* Mobile Progress Bar (visible only on small screens) */}
-        <div className="md:hidden h-1 bg-gray-100 w-full">
-          <div
-            className="h-full bg-primary transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Sidebar Navigation */}
-          <div className="lg:col-span-3">
-            <div className="sticky top-24 space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 bg-gray-50 border-b border-gray-100">
-                  <h2 className="font-semibold text-gray-900">Seções</h2>
-                </div>
-                <div className="p-2">
-                  {sections.map((section, index) => {
-                    const sectionProgress = section.questions.filter(q =>
-                      responses[q.id] !== undefined && responses[q.id] !== ''
-                    ).length;
-                    const sectionTotal = section.questions.length;
-                    const isCompleted = sectionProgress === sectionTotal;
-                    const isActive = index === currentSection;
-
-                    return (
-                      <button
-                        key={section.category}
-                        onClick={() => setCurrentSection(index)}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${isActive
-                          ? 'bg-primary/5 text-primary font-medium'
-                          : 'text-gray-600 hover:bg-gray-50'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-1.5 h-1.5 rounded-full ${isCompleted ? 'bg-green-500' : isActive ? 'bg-primary' : 'bg-gray-300'
-                            }`} />
-                          <span className="capitalize truncate max-w-[120px]">
-                            {section.category.replace('_', ' ')}
-                          </span>
-                        </div>
-                        {isCompleted && (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ALEX VENDOR Help */}
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-5 text-white shadow-lg">
-                <div className="flex items-center gap-2 mb-3">
-                  <Brain className="h-5 w-5 text-white/90" />
-                  <h3 className="font-semibold">Alex Vendor AI</h3>
-                </div>
-                <p className="text-sm text-white/80 mb-4 leading-relaxed">
-                  Dúvidas no preenchimento? Posso ajudar a esclarecer as perguntas.
-                </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full bg-white/10 hover:bg-white/20 text-white border-0"
-                  onClick={() => setShowAlexHelp(true)}
-                >
-                  <HelpCircle className="h-4 w-4 mr-2" />
-                  Pedir Ajuda
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Main Questions Area */}
-          <div className="lg:col-span-9 space-y-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 capitalize">
-                  {currentSectionData?.category.replace('_', ' ')}
-                </h2>
-                <p className="text-gray-500 mt-1">
-                  Responda as perguntas abaixo com atenção.
-                </p>
-              </div>
-              <Badge variant="outline" className="bg-white">
-                Seção {currentSection + 1} de {sections.length}
-              </Badge>
-            </div>
-
-            <div className="space-y-6">
-              {currentSectionData?.questions.map((question, index) => {
-                const validationStatus = getQuestionValidationStatus(question);
-                const isAnswered = validationStatus === 'completed';
+          <div className="lg:col-span-3 hidden lg:block">
+            <div className="sticky top-32 space-y-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 px-3">
+                Seções
+              </h3>
+              {sections.map((section, idx) => {
+                const isCompleted = section.questions.every(q =>
+                  responses[q.id] !== undefined && responses[q.id] !== ''
+                );
+                const isActive = idx === currentSection;
 
                 return (
-                  <Card
-                    key={question.id}
-                    id={`question-${question.id}`}
-                    className={`border transition-all duration-300 ${isAnswered ? 'border-green-200 shadow-sm' : 'border-gray-200 hover:border-primary/30 hover:shadow-md'
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setCurrentSection(idx);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-between group ${isActive
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                   >
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${isAnswered ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                          {index + 1}
-                        </div>
-
-                        <div className="flex-1 space-y-4">
-                          <div>
-                            <div className="flex items-start justify-between gap-4">
-                              <Label className="text-base font-semibold text-gray-900 leading-relaxed block">
-                                {question.question}
-                                {question.required && <span className="text-red-500 ml-1" title="Obrigatório">*</span>}
-                              </Label>
-                              {question.weight && (
-                                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-medium text-gray-500 bg-gray-100">
-                                  Peso {question.weight}
-                                </Badge>
-                              )}
-                            </div>
-
-                            {question.help_text && (
-                              <div className="mt-2 flex items-start gap-2 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                <span className="leading-relaxed">{question.help_text}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="pt-2">
-                            {renderQuestionInput(question)}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <span className="truncate mr-2">{section.category}</span>
+                    {isCompleted && (
+                      <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-green-500 dark:text-green-400'}`} />
+                    )}
+                  </button>
                 );
               })}
             </div>
+          </div>
 
-            {/* Auto-save indicator */}
-            {saving && (
-              <div className="fixed bottom-8 right-8 bg-white px-4 py-2 rounded-full shadow-lg border border-gray-100 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-                <span className="text-sm font-medium text-gray-600">Salvando...</span>
-              </div>
-            )}
+          {/* Main Content */}
+          <div className="lg:col-span-9 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-foreground">
+                {currentSectionData.category}
+              </h2>
+              <span className="text-sm text-muted-foreground bg-card px-3 py-1 rounded-full border border-border shadow-sm">
+                Seção {currentSection + 1} de {sections.length}
+              </span>
+            </div>
 
-            {/* Navigation Footer */}
-            <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-200">
+            <div className="space-y-6">
+              {currentSectionData.questions.map((question) => (
+                <Card
+                  key={question.id}
+                  id={`question-${question.id}`}
+                  className={`border-border shadow-sm ring-1 ring-border transition-all duration-300 hover:shadow-md ${!responses[question.id] && question.required ? 'border-l-4 border-l-orange-400 dark:border-l-orange-500' : ''
+                    }`}
+                >
+                  <CardContent className="p-6 sm:p-8 space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-4">
+                        <Label className="text-lg font-semibold text-foreground leading-relaxed">
+                          {question.question}
+                          {question.required && <span className="text-red-500 ml-1">*</span>}
+                        </Label>
+                        {question.help_text && (
+                          <div className="group relative">
+                            <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+                            <div className="absolute right-0 w-64 p-3 bg-popover text-popover-foreground text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 mt-2 border border-border">
+                              {question.help_text}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {question.required && !responses[question.id] && (
+                        <p className="text-xs text-orange-500 dark:text-orange-400 font-medium flex items-center">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Obrigatório
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2">
+                      {renderQuestionInput(question)}
+
+                      {/* Universal Evidence Upload for ALL questions */}
+                      {question.type !== 'file_upload' && renderEvidenceUpload(question.id)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between pt-8 border-t border-border mt-12">
               <Button
                 variant="ghost"
                 onClick={previousSection}
                 disabled={currentSection === 0}
-                className="text-gray-500 hover:text-gray-900"
+                className="text-muted-foreground hover:text-foreground"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Anterior
               </Button>
 
               {currentSection < sections.length - 1 ? (
-                <Button onClick={nextSection} className="px-8 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 transition-all hover:scale-105">
+                <Button
+                  onClick={nextSection}
+                  className="px-8 h-12 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1"
+                >
                   Próxima Seção
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
                 <Button
                   onClick={submitAssessment}
-                  disabled={submitting || progress < 100}
-                  className="px-8 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 transition-all hover:scale-105"
+                  disabled={submitting}
+                  className="px-8 h-12 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 hover:shadow-green-600/30 transition-all hover:-translate-y-1"
                 >
                   {submitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Enviando...
                     </>
                   ) : (
                     <>
-                      <Send className="h-4 w-4 mr-2" />
-                      Finalizar Assessment
+                      Finalizar e Enviar
+                      <Send className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
@@ -965,7 +1169,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

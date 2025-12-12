@@ -1,0 +1,1 @@
+ALTER TABLE vendor_assessments ENABLE ROW LEVEL SECURITY;
