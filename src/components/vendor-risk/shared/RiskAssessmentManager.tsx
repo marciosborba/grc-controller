@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
+import {
   Plus,
   Edit,
   Trash2,
@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -51,7 +51,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Tipos para o sistema de assessment
 export type AssessmentType = 'nist_csf' | 'iso_27001_27701' | 'proprietary';
-export type QuestionType = 'multiple_choice' | 'yes_no' | 'scale' | 'text';
+export type QuestionType = 'multiple_choice' | 'yes_no' | 'scale' | 'text' | 'file_upload';
 export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export interface AssessmentQuestion {
@@ -902,7 +902,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
     },
 
     // Continuando com mais questões NIST CSF 2.0...
-    
+
     // Mais questões IDENTIFY
     {
       id: 'id_be_1',
@@ -978,7 +978,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 57
     },
-    
+
     // Mais questões PROTECT
     {
       id: 'pr_ds_1',
@@ -1100,7 +1100,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'medium',
       order: 65
     },
-    
+
     // Mais questões DETECT
     {
       id: 'de_cm_1',
@@ -1222,7 +1222,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 73
     },
-    
+
     // Mais questões RESPOND
     {
       id: 'rs_an_1',
@@ -1298,7 +1298,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 78
     },
-    
+
     // Mais questões RECOVER
     {
       id: 'rc_co_4',
@@ -1330,7 +1330,7 @@ export const NIST_CSF_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'low',
       order: 80
     },
-    
+
     // Questões adicionais para completar 90+
     {
       id: 'pr_ip_1',
@@ -1893,7 +1893,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
     },
 
     // Continuando com mais controles ISO 27001:2022...
-    
+
     // A.9 - Controle de Acesso (continuação)
     {
       id: 'iso_a9_1',
@@ -1955,7 +1955,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'critical',
       order: 28
     },
-    
+
     // A.10 - Criptografia
     {
       id: 'iso_a10_1',
@@ -1987,7 +1987,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'critical',
       order: 30
     },
-    
+
     // A.11 - Segurança Física e do Ambiente
     {
       id: 'iso_a11_1',
@@ -2063,7 +2063,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'low',
       order: 35
     },
-    
+
     // A.12 - Segurança das Operações
     {
       id: 'iso_a12_1',
@@ -2125,7 +2125,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 39
     },
-    
+
     // A.13 - Segurança das Comunicações
     {
       id: 'iso_a13_1',
@@ -2157,7 +2157,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'critical',
       order: 41
     },
-    
+
     // A.14 - Aquisição, Desenvolvimento e Manutenção de Sistemas
     {
       id: 'iso_a14_1',
@@ -2205,7 +2205,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 44
     },
-    
+
     // A.15 - Relacionamentos com Fornecedores
     {
       id: 'iso_a15_1',
@@ -2251,7 +2251,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 47
     },
-    
+
     // A.16 - Gestão de Incidentes de Segurança da Informação
     {
       id: 'iso_a16_1',
@@ -2329,7 +2329,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 52
     },
-    
+
     // A.17 - Aspectos de Segurança da Informação da Gestão da Continuidade do Negócio
     {
       id: 'iso_a17_1',
@@ -2375,7 +2375,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 55
     },
-    
+
     // A.18 - Conformidade
     {
       id: 'iso_a18_1',
@@ -2453,7 +2453,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 60
     },
-    
+
     // Controles adicionais ISO 27001:2022
     {
       id: 'iso_a5_4',
@@ -2515,7 +2515,7 @@ export const ISO_27001_27701_TEMPLATE: Omit<AssessmentTemplate, 'id'> = {
       risk_impact: 'high',
       order: 64
     },
-    
+
     // Continuando até completar 90+ questões...
 
     // ISO 27701 - Controles de Privacidade
@@ -2702,16 +2702,16 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   console.log('RiskAssessmentManager renderizado:', { vendorId, user });
-  
+
   const [selectedTemplate, setSelectedTemplate] = useState<AssessmentTemplate | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [availableTemplates, setAvailableTemplates] = useState<AssessmentTemplate[]>([]);
   const [responses, setResponses] = useState<Record<string, AssessmentResponse>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  
+
   // Verificar se há um template selecionado salvo no localStorage
   useEffect(() => {
     if (vendorId && availableTemplates.length > 0) {
@@ -2721,7 +2721,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
           const templateInfo = JSON.parse(savedTemplate);
           console.log('Template selecionado recuperado do localStorage:', templateInfo);
           setSelectedTemplateId(templateInfo.templateId);
-          
+
           // Encontrar o template correspondente
           const template = availableTemplates.find(t => t.id === templateInfo.templateId);
           if (template) {
@@ -2762,7 +2762,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
     if (selectedTemplate && Object.keys(responses).length > 0) {
       const { isComplete, score } = calculateAssessmentScore();
       onAssessmentComplete(isComplete, score);
-      
+
       if (onResponsesChange) {
         onResponsesChange(responses);
       }
@@ -2771,16 +2771,16 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const calculateAssessmentScore = () => {
     if (!selectedTemplate) return { isComplete: false, score: 0 };
-    
+
     const requiredQuestions = selectedTemplate.questions.filter(q => q.required);
     const answeredRequired = requiredQuestions.filter(q => responses[q.id]?.answer !== undefined);
-    
+
     const isComplete = answeredRequired.length === requiredQuestions.length;
-    
+
     // Calcular score
     let totalScore = 0;
     let maxScore = 0;
-    
+
     selectedTemplate.questions.forEach(question => {
       const response = responses[question.id];
       if (response?.answer !== undefined) {
@@ -2789,9 +2789,9 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
       }
       maxScore += question.weight;
     });
-    
+
     const score = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    
+
     return { isComplete, score };
   };
 
@@ -2817,13 +2817,13 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
     setSelectedTemplate(template);
     setSelectedTemplateId(template.id);
     setResponses({});
-    
+
     // Salvar no banco de dados se vendorId estiver presente
     if (vendorId) {
       try {
         // Aqui você pode adicionar a lógica para salvar no banco
         console.log('Salvando template selecionado para vendor:', vendorId, template.id);
-        
+
         toast({
           title: 'Template Selecionado',
           description: `Framework ${template.name} foi selecionado com sucesso.`,
@@ -2837,16 +2837,16 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
         });
       }
     }
-    
+
     // Notificar o componente pai sobre a seleção do template
     if (onTemplateSelected) {
       onTemplateSelected(template.id, template.name);
     }
-    
+
     // Indicar que o template foi configurado (não precisa de respostas ainda)
     onAssessmentComplete(true, 0);
   };
-  
+
   // Função para abrir modal de assessment
   const openAssessmentModal = (template: AssessmentTemplate) => {
     if (!selectedTemplateId || selectedTemplateId !== template.id) {
@@ -2857,11 +2857,11 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
       });
       return;
     }
-    
+
     setSelectedTemplate(template);
     setIsModalOpen(true);
   };
-  
+
   // Função para abrir modal de edição
   const openEditModal = (template: AssessmentTemplate) => {
     setSelectedTemplate(template);
@@ -2883,7 +2883,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const addQuestion = () => {
     if (!selectedTemplate || !newQuestion.question) return;
-    
+
     const maxOrder = Math.max(...selectedTemplate.questions.map(q => q.order), 0);
     const question: AssessmentQuestion = {
       id: `custom_${Date.now()}`,
@@ -2901,12 +2901,12 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
       risk_impact: newQuestion.risk_impact || 'medium',
       order: maxOrder + 1
     };
-    
+
     setSelectedTemplate(prev => prev ? {
       ...prev,
       questions: [...prev.questions, question].sort((a, b) => a.order - b.order)
     } : null);
-    
+
     setNewQuestion({
       category: '',
       question: '',
@@ -2916,7 +2916,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
       order: 1
     });
     setIsAddingQuestion(false);
-    
+
     toast({
       title: "Questão Adicionada",
       description: "Nova questão foi adicionada ao assessment"
@@ -2925,14 +2925,14 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const updateQuestion = (question: AssessmentQuestion) => {
     if (!selectedTemplate) return;
-    
+
     setSelectedTemplate(prev => prev ? {
       ...prev,
       questions: prev.questions.map(q => q.id === question.id ? question : q)
     } : null);
-    
+
     setEditingQuestion(null);
-    
+
     toast({
       title: "Questão Atualizada",
       description: "Questão foi atualizada com sucesso"
@@ -2941,18 +2941,18 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const removeQuestion = (questionId: string) => {
     if (!selectedTemplate) return;
-    
+
     setSelectedTemplate(prev => prev ? {
       ...prev,
       questions: prev.questions.filter(q => q.id !== questionId)
     } : null);
-    
+
     setResponses(prev => {
       const newResponses = { ...prev };
       delete newResponses[questionId];
       return newResponses;
     });
-    
+
     toast({
       title: "Questão Removida",
       description: "Questão foi removida do assessment"
@@ -2961,7 +2961,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const renderQuestionInput = (question: AssessmentQuestion) => {
     const response = responses[question.id];
-    
+
     switch (question.type) {
       case 'yes_no':
         return (
@@ -2978,7 +2978,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             </SelectContent>
           </Select>
         );
-        
+
       case 'multiple_choice':
         return (
           <Select
@@ -2995,7 +2995,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             </SelectContent>
           </Select>
         );
-        
+
       case 'scale':
         return (
           <div className="space-y-2">
@@ -3023,7 +3023,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             )}
           </div>
         );
-        
+
       case 'text':
         return (
           <Textarea
@@ -3033,7 +3033,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             rows={3}
           />
         );
-        
+
       default:
         return (
           <Input
@@ -3047,7 +3047,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
   const filteredQuestions = selectedTemplate?.questions.filter(question => {
     const matchesSearch = question.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         question.category.toLowerCase().includes(searchTerm.toLowerCase());
+      question.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || question.category === filterCategory;
     return matchesSearch && matchesCategory;
   }) || [];
@@ -3055,7 +3055,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
   const categories = Array.from(new Set(selectedTemplate?.questions.map(q => q.category) || []));
 
   console.log('Estado atual:', { selectedTemplate: selectedTemplate?.name, templates: availableTemplates.length });
-  
+
   if (!selectedTemplate) {
     console.log('Renderizando seleção de templates');
     return (
@@ -3074,13 +3074,12 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {availableTemplates.map((template) => (
-            <Card 
-              key={template.id} 
-              className={`hover:shadow-lg transition-all duration-200 border-2 bg-white dark:bg-gray-900 flex flex-col ${
-                selectedTemplateId === template.id 
-                  ? 'border-green-500 dark:border-green-400 shadow-lg' 
-                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
-              }`}
+            <Card
+              key={template.id}
+              className={`hover:shadow-lg transition-all duration-200 border-2 bg-white dark:bg-gray-900 flex flex-col ${selectedTemplateId === template.id
+                ? 'border-green-500 dark:border-green-400 shadow-lg'
+                : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600'
+                }`}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 mb-2">
@@ -3093,14 +3092,14 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                   {template.framework_reference}
                 </Badge>
               </CardHeader>
-              
+
               <CardContent className="flex flex-col flex-1">
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground mb-4">
                     {template.description}
                   </p>
                 </div>
-                
+
                 <div className="space-y-2 text-xs mb-4">
                   <div className="flex justify-between">
                     <span>Questões:</span>
@@ -3111,15 +3110,14 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                     <span className="font-medium">{template.pass_threshold}%</span>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-2 mt-auto">
-                  <Button 
+                  <Button
                     variant={selectedTemplateId === template.id ? 'default' : 'outline'}
-                    className={`flex-1 ${
-                      selectedTemplateId === template.id 
-                        ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
-                        : ''
-                    }`}
+                    className={`flex-1 ${selectedTemplateId === template.id
+                      ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
+                      : ''
+                      }`}
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -3128,7 +3126,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                   >
                     {selectedTemplateId === template.id ? '✓ Selecionado' : 'Selecionar Assessment'}
                   </Button>
-                  
+
                   {selectedTemplateId === template.id && (
                     <Button
                       variant="outline"
@@ -3144,7 +3142,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                       Iniciar
                     </Button>
                   )}
-                  
+
                   <Button
                     variant="outline"
                     size="sm"
@@ -3162,7 +3160,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             </Card>
           ))}
         </div>
-        
+
         {/* Botão Próximo - aparece quando um template é selecionado */}
         {selectedTemplateId && (
           <Card className="border-green-200 dark:border-green-800 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-950/50">
@@ -3199,7 +3197,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                       // Notificar que o template foi selecionado e pode prosseguir
                       // O assessment será respondido pelo fornecedor posteriormente
                       onAssessmentComplete(true, 0); // Forçar como completo para permitir prosseguir
-                      
+
                       toast({
                         title: 'Template Configurado',
                         description: 'O assessment foi configurado. O fornecedor receberá o link para responder as questões.',
@@ -3239,7 +3237,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                 {selectedTemplate.description}
               </p>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -3261,36 +3259,34 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full ${
-                isComplete ? 'bg-green-500' : 'bg-yellow-500'
-              }`}></div>
+              <div className={`w-4 h-4 rounded-full ${isComplete ? 'bg-green-500' : 'bg-yellow-500'
+                }`}></div>
               <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
                 {answeredRequired.length}/{requiredQuestions.length} questões obrigatórias
               </span>
             </div>
-            
+
             <div className="flex-1">
               <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    isComplete ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${isComplete ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
                   style={{ width: `${requiredQuestions.length > 0 ? (answeredRequired.length / requiredQuestions.length) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Badge variant={isComplete ? "default" : "secondary"} className={
                 isComplete ? "bg-green-600 hover:bg-green-700 text-white" : "bg-yellow-600 text-white"
               }>
                 {isComplete ? "Completo" : "Pendente"}
               </Badge>
-              
+
               <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800">
                 Score: {score}%
               </Badge>
@@ -3326,7 +3322,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                   />
                 </div>
               </div>
-              
+
               <Select value={filterCategory} onValueChange={setFilterCategory}>
                 <SelectTrigger className="w-48">
                   <Filter className="h-4 w-4 mr-2" />
@@ -3367,7 +3363,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                               placeholder="Ex: Controles Técnicos"
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <Label>Tipo de Questão</Label>
                             <Select
@@ -3386,7 +3382,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             </Select>
                           </div>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label>Questão *</Label>
                           <Textarea
@@ -3396,7 +3392,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             rows={2}
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label>Descrição/Orientação</Label>
                           <Textarea
@@ -3406,7 +3402,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             rows={2}
                           />
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="flex items-center space-x-2">
                             <Checkbox
@@ -3415,7 +3411,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             />
                             <Label>Questão obrigatória</Label>
                           </div>
-                          
+
                           <div className="space-y-2">
                             <Label>Peso (1-10)</Label>
                             <Input
@@ -3426,7 +3422,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                               onChange={(e) => setNewQuestion(prev => ({ ...prev, weight: parseInt(e.target.value) || 5 }))}
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <Label>Impacto de Risco</Label>
                             <Select
@@ -3445,22 +3441,22 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             </Select>
                           </div>
                         </div>
-                        
+
                         {newQuestion.type === 'multiple_choice' && (
                           <div className="space-y-2">
                             <Label>Opções (uma por linha)</Label>
                             <Textarea
                               value={newQuestion.options?.join('\n') || ''}
-                              onChange={(e) => setNewQuestion(prev => ({ 
-                                ...prev, 
-                                options: e.target.value.split('\n').filter(opt => opt.trim()) 
+                              onChange={(e) => setNewQuestion(prev => ({
+                                ...prev,
+                                options: e.target.value.split('\n').filter(opt => opt.trim())
                               }))}
                               placeholder="Opção 1\nOpção 2\nOpção 3"
                               rows={4}
                             />
                           </div>
                         )}
-                        
+
                         {newQuestion.type === 'scale' && (
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -3481,14 +3477,14 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                             </div>
                           </div>
                         )}
-                        
+
                         <div className="flex gap-2">
                           <Button onClick={addQuestion} disabled={!newQuestion.question}>
                             <Save className="h-4 w-4 mr-2" />
                             Salvar Questão
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             onClick={() => {
                               setIsAddingQuestion(false);
                               setNewQuestion({
@@ -3530,7 +3526,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
               <div className="text-sm text-muted-foreground">
                 {answeredRequired.length}/{requiredQuestions.length} questões obrigatórias respondidas
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                   Score: {score}%
@@ -3558,10 +3554,10 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
             {isComplete && (
               <p>✅ Todas as questões obrigatórias foram respondidas!</p>
             )}
-            
+
             <p>📊 Score atual: {score}% (Limite: {selectedTemplate.pass_threshold}%)</p>
             <p>📋 Assessment: {selectedTemplate.questions.length} questões ({requiredQuestions.length} obrigatórias)</p>
-            
+
             {score >= (selectedTemplate.pass_threshold || 70) ? (
               <p className="text-green-700 dark:text-green-300">✅ Fornecedor APROVADO no assessment</p>
             ) : (
@@ -3570,444 +3566,444 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
           </div>
         </CardContent>
       </Card>
-    
-      {/* Modal de Edição de Framework */}
-    <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Editar Framework - {selectedTemplate?.name}</DialogTitle>
-          <DialogDescription>
-            Personalize as questões do framework de acordo com suas necessidades.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {selectedTemplate && (
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-            {/* Informações do Template */}
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Informações do Framework</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium">Nome:</span> {selectedTemplate.name}
-                </div>
-                <div>
-                  <span className="font-medium">Versão:</span> {selectedTemplate.version}
-                </div>
-                <div>
-                  <span className="font-medium">Tipo:</span> {selectedTemplate.type}
-                </div>
-                <div>
-                  <span className="font-medium">Questões:</span> {selectedTemplate.questions.length}
-                </div>
-              </div>
-            </div>
 
-            {/* Lista de Questões */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Questões do Framework</h3>
-                <Button
-                  onClick={() => {
-                    setIsAddingQuestion(true);
-                    setShowAddModal(true);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar Questão
-                </Button>
-              </div>
-              
-              <ScrollArea className="h-80 w-full rounded-md border p-4">
-                <div className="space-y-3">
-                {selectedTemplate.questions.map((question, index) => (
-                  <div key={question.id} className="border rounded-lg p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">#{index + 1}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {question.category}
-                          </Badge>
-                          {question.required && (
-                            <Badge variant="destructive" className="text-xs">Obrigatória</Badge>
-                          )}
-                          <Badge variant="outline" className="text-xs">
-                            Peso: {question.weight}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium mb-1">{question.question}</p>
-                        {question.description && (
-                          <p className="text-xs text-muted-foreground">{question.description}</p>
-                        )}
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingQuestion(question);
-                            setIsAddingQuestion(false);
-                            setShowAddModal(true);
-                          }}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        {question.id.startsWith('custom_') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              // Remove questão customizada
-                              const updatedQuestions = selectedTemplate.questions.filter(q => q.id !== question.id);
-                              setSelectedTemplate({
-                                ...selectedTemplate,
-                                questions: updatedQuestions
-                              });
-                            }}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
+      {/* Modal de Edição de Framework */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Editar Framework - {selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>
+              Personalize as questões do framework de acordo com suas necessidades.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTemplate && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+                {/* Informações do Template */}
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2">Informações do Framework</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">Nome:</span> {selectedTemplate.name}
+                    </div>
+                    <div>
+                      <span className="font-medium">Versão:</span> {selectedTemplate.version}
+                    </div>
+                    <div>
+                      <span className="font-medium">Tipo:</span> {selectedTemplate.type}
+                    </div>
+                    <div>
+                      <span className="font-medium">Questões:</span> {selectedTemplate.questions.length}
                     </div>
                   </div>
-                ))}
                 </div>
-              </ScrollArea>
-            </div>
-            </div>
 
-            {/* Botões de Ação - Fixos na parte inferior */}
-            <div className="flex justify-end gap-2 pt-4 border-t bg-background">
-              <Button
-                variant="outline"
-                onClick={() => setShowEditModal(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => {
-                  // Salvar alterações
-                  setShowEditModal(false);
-                  toast({
-                    title: 'Framework Atualizado',
-                    description: 'As alterações foram salvas com sucesso.',
-                  });
-                }}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Alterações
-              </Button>
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-
-    {/* Modal de Adicionar/Editar Questão */}
-    <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {isAddingQuestion ? 'Adicionar Nova Questão' : 'Editar Questão'}
-          </DialogTitle>
-          <DialogDescription>
-            {isAddingQuestion 
-              ? 'Crie uma nova questão personalizada para o framework.'
-              : 'Edite os detalhes da questão selecionada.'
-            }
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Categoria</Label>
-              <Input
-                id="category"
-                value={editingQuestion?.category || newQuestion.category}
-                onChange={(e) => {
-                  if (editingQuestion) {
-                    setEditingQuestion({ ...editingQuestion, category: e.target.value });
-                  } else {
-                    setNewQuestion({ ...newQuestion, category: e.target.value });
-                  }
-                }}
-                placeholder="Ex: Segurança Física"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subcategory">Subcategoria (opcional)</Label>
-              <Input
-                id="subcategory"
-                value={editingQuestion?.subcategory || newQuestion.subcategory || ''}
-                onChange={(e) => {
-                  if (editingQuestion) {
-                    setEditingQuestion({ ...editingQuestion, subcategory: e.target.value });
-                  } else {
-                    setNewQuestion({ ...newQuestion, subcategory: e.target.value });
-                  }
-                }}
-                placeholder="Ex: Controle de Acesso"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="question">Questão</Label>
-            <Textarea
-              id="question"
-              value={editingQuestion?.question || newQuestion.question}
-              onChange={(e) => {
-                if (editingQuestion) {
-                  setEditingQuestion({ ...editingQuestion, question: e.target.value });
-                } else {
-                  setNewQuestion({ ...newQuestion, question: e.target.value });
-                }
-              }}
-              placeholder="Digite a questão..."
-              rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
-            <Textarea
-              id="description"
-              value={editingQuestion?.description || newQuestion.description || ''}
-              onChange={(e) => {
-                if (editingQuestion) {
-                  setEditingQuestion({ ...editingQuestion, description: e.target.value });
-                } else {
-                  setNewQuestion({ ...newQuestion, description: e.target.value });
-                }
-              }}
-              placeholder="Descrição adicional da questão..."
-              rows={2}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo de Resposta</Label>
-              <Select
-                value={editingQuestion?.type || newQuestion.type}
-                onValueChange={(value: QuestionType) => {
-                  if (editingQuestion) {
-                    setEditingQuestion({ ...editingQuestion, type: value });
-                  } else {
-                    setNewQuestion({ ...newQuestion, type: value });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
-                  <SelectItem value="yes_no">Sim/Não</SelectItem>
-                  <SelectItem value="scale">Escala</SelectItem>
-                  <SelectItem value="text">Texto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weight">Peso</Label>
-              <Input
-                id="weight"
-                type="number"
-                min="1"
-                max="10"
-                value={editingQuestion?.weight || newQuestion.weight}
-                onChange={(e) => {
-                  const weight = parseInt(e.target.value) || 1;
-                  if (editingQuestion) {
-                    setEditingQuestion({ ...editingQuestion, weight });
-                  } else {
-                    setNewQuestion({ ...newQuestion, weight });
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Checkbox
-                  checked={editingQuestion?.required ?? newQuestion.required}
-                  onCheckedChange={(checked) => {
-                    if (editingQuestion) {
-                      setEditingQuestion({ ...editingQuestion, required: !!checked });
-                    } else {
-                      setNewQuestion({ ...newQuestion, required: !!checked });
-                    }
-                  }}
-                />
-                Obrigatória
-              </Label>
-            </div>
-          </div>
-
-          {/* Opções para múltipla escolha */}
-          {(editingQuestion?.type === 'multiple_choice' || newQuestion.type === 'multiple_choice') && (
-            <div className="space-y-2">
-              <Label>Opções de Resposta</Label>
-              <div className="space-y-2">
-                {(editingQuestion?.options || newQuestion.options || []).map((option, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={option}
-                      onChange={(e) => {
-                        const newOptions = [...(editingQuestion?.options || newQuestion.options || [])];
-                        newOptions[index] = e.target.value;
-                        if (editingQuestion) {
-                          setEditingQuestion({ ...editingQuestion, options: newOptions });
-                        } else {
-                          setNewQuestion({ ...newQuestion, options: newOptions });
-                        }
-                      }}
-                      placeholder={`Opção ${index + 1}`}
-                    />
+                {/* Lista de Questões */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold">Questões do Framework</h3>
                     <Button
-                      variant="outline"
-                      size="sm"
                       onClick={() => {
-                        const newOptions = (editingQuestion?.options || newQuestion.options || []).filter((_, i) => i !== index);
-                        if (editingQuestion) {
-                          setEditingQuestion({ ...editingQuestion, options: newOptions });
-                        } else {
-                          setNewQuestion({ ...newQuestion, options: newOptions });
-                        }
+                        setIsAddingQuestion(true);
+                        setShowAddModal(true);
                       }}
+                      className="flex items-center gap-2"
                     >
-                      <X className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
+                      Adicionar Questão
                     </Button>
                   </div>
-                ))}
+
+                  <ScrollArea className="h-80 w-full rounded-md border p-4">
+                    <div className="space-y-3">
+                      {selectedTemplate.questions.map((question, index) => (
+                        <div key={question.id} className="border rounded-lg p-4 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-medium">#{index + 1}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {question.category}
+                                </Badge>
+                                {question.required && (
+                                  <Badge variant="destructive" className="text-xs">Obrigatória</Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  Peso: {question.weight}
+                                </Badge>
+                              </div>
+                              <p className="text-sm font-medium mb-1">{question.question}</p>
+                              {question.description && (
+                                <p className="text-xs text-muted-foreground">{question.description}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1 ml-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingQuestion(question);
+                                  setIsAddingQuestion(false);
+                                  setShowAddModal(true);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              {question.id.startsWith('custom_') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Remove questão customizada
+                                    const updatedQuestions = selectedTemplate.questions.filter(q => q.id !== question.id);
+                                    setSelectedTemplate({
+                                      ...selectedTemplate,
+                                      questions: updatedQuestions
+                                    });
+                                  }}
+                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+
+              {/* Botões de Ação - Fixos na parte inferior */}
+              <div className="flex justify-end gap-2 pt-4 border-t bg-background">
                 <Button
                   variant="outline"
-                  size="sm"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
                   onClick={() => {
-                    const currentOptions = editingQuestion?.options || newQuestion.options || [];
-                    const newOptions = [...currentOptions, ''];
-                    if (editingQuestion) {
-                      setEditingQuestion({ ...editingQuestion, options: newOptions });
-                    } else {
-                      setNewQuestion({ ...newQuestion, options: newOptions });
-                    }
+                    // Salvar alterações
+                    setShowEditModal(false);
+                    toast({
+                      title: 'Framework Atualizado',
+                      description: 'As alterações foram salvas com sucesso.',
+                    });
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Opção
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
                 </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
 
-          {/* Configurações de escala */}
-          {(editingQuestion?.type === 'scale' || newQuestion.type === 'scale') && (
+      {/* Modal de Adicionar/Editar Questão */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isAddingQuestion ? 'Adicionar Nova Questão' : 'Editar Questão'}
+            </DialogTitle>
+            <DialogDescription>
+              {isAddingQuestion
+                ? 'Crie uma nova questão personalizada para o framework.'
+                : 'Edite os detalhes da questão selecionada.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="scale_min">Valor Mínimo</Label>
+                <Label htmlFor="category">Categoria</Label>
                 <Input
-                  id="scale_min"
-                  type="number"
-                  value={editingQuestion?.scale_min || newQuestion.scale_min || 1}
+                  id="category"
+                  value={editingQuestion?.category || newQuestion.category}
                   onChange={(e) => {
-                    const scale_min = parseInt(e.target.value) || 1;
                     if (editingQuestion) {
-                      setEditingQuestion({ ...editingQuestion, scale_min });
+                      setEditingQuestion({ ...editingQuestion, category: e.target.value });
                     } else {
-                      setNewQuestion({ ...newQuestion, scale_min });
+                      setNewQuestion({ ...newQuestion, category: e.target.value });
                     }
                   }}
+                  placeholder="Ex: Segurança Física"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="scale_max">Valor Máximo</Label>
+                <Label htmlFor="subcategory">Subcategoria (opcional)</Label>
                 <Input
-                  id="scale_max"
-                  type="number"
-                  value={editingQuestion?.scale_max || newQuestion.scale_max || 5}
+                  id="subcategory"
+                  value={editingQuestion?.subcategory || newQuestion.subcategory || ''}
                   onChange={(e) => {
-                    const scale_max = parseInt(e.target.value) || 5;
                     if (editingQuestion) {
-                      setEditingQuestion({ ...editingQuestion, scale_max });
+                      setEditingQuestion({ ...editingQuestion, subcategory: e.target.value });
                     } else {
-                      setNewQuestion({ ...newQuestion, scale_max });
+                      setNewQuestion({ ...newQuestion, subcategory: e.target.value });
                     }
                   }}
+                  placeholder="Ex: Controle de Acesso"
                 />
               </div>
             </div>
-          )}
-        </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={() => {
-              setShowAddModal(false);
-              setEditingQuestion(null);
-              setIsAddingQuestion(false);
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => {
-              if (selectedTemplate) {
-                const updatedQuestions = [...selectedTemplate.questions];
-                
-                if (isAddingQuestion) {
-                  // Adicionar nova questão
-                  const newQuestionWithId = {
-                    ...newQuestion,
-                    id: `custom_${Date.now()}`,
-                    order: selectedTemplate.questions.length + 1
-                  };
-                  updatedQuestions.push(newQuestionWithId);
-                } else if (editingQuestion) {
-                  // Editar questão existente
-                  const index = updatedQuestions.findIndex(q => q.id === editingQuestion.id);
-                  if (index !== -1) {
-                    updatedQuestions[index] = editingQuestion;
+            <div className="space-y-2">
+              <Label htmlFor="question">Questão</Label>
+              <Textarea
+                id="question"
+                value={editingQuestion?.question || newQuestion.question}
+                onChange={(e) => {
+                  if (editingQuestion) {
+                    setEditingQuestion({ ...editingQuestion, question: e.target.value });
+                  } else {
+                    setNewQuestion({ ...newQuestion, question: e.target.value });
                   }
+                }}
+                placeholder="Digite a questão..."
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição (opcional)</Label>
+              <Textarea
+                id="description"
+                value={editingQuestion?.description || newQuestion.description || ''}
+                onChange={(e) => {
+                  if (editingQuestion) {
+                    setEditingQuestion({ ...editingQuestion, description: e.target.value });
+                  } else {
+                    setNewQuestion({ ...newQuestion, description: e.target.value });
+                  }
+                }}
+                placeholder="Descrição adicional da questão..."
+                rows={2}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Tipo de Resposta</Label>
+                <Select
+                  value={editingQuestion?.type || newQuestion.type}
+                  onValueChange={(value: QuestionType) => {
+                    if (editingQuestion) {
+                      setEditingQuestion({ ...editingQuestion, type: value });
+                    } else {
+                      setNewQuestion({ ...newQuestion, type: value });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
+                    <SelectItem value="yes_no">Sim/Não</SelectItem>
+                    <SelectItem value="scale">Escala</SelectItem>
+                    <SelectItem value="text">Texto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="weight">Peso</Label>
+                <Input
+                  id="weight"
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={editingQuestion?.weight || newQuestion.weight}
+                  onChange={(e) => {
+                    const weight = parseInt(e.target.value) || 1;
+                    if (editingQuestion) {
+                      setEditingQuestion({ ...editingQuestion, weight });
+                    } else {
+                      setNewQuestion({ ...newQuestion, weight });
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={editingQuestion?.required ?? newQuestion.required}
+                    onCheckedChange={(checked) => {
+                      if (editingQuestion) {
+                        setEditingQuestion({ ...editingQuestion, required: !!checked });
+                      } else {
+                        setNewQuestion({ ...newQuestion, required: !!checked });
+                      }
+                    }}
+                  />
+                  Obrigatória
+                </Label>
+              </div>
+            </div>
+
+            {/* Opções para múltipla escolha */}
+            {(editingQuestion?.type === 'multiple_choice' || newQuestion.type === 'multiple_choice') && (
+              <div className="space-y-2">
+                <Label>Opções de Resposta</Label>
+                <div className="space-y-2">
+                  {(editingQuestion?.options || newQuestion.options || []).map((option, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={option}
+                        onChange={(e) => {
+                          const newOptions = [...(editingQuestion?.options || newQuestion.options || [])];
+                          newOptions[index] = e.target.value;
+                          if (editingQuestion) {
+                            setEditingQuestion({ ...editingQuestion, options: newOptions });
+                          } else {
+                            setNewQuestion({ ...newQuestion, options: newOptions });
+                          }
+                        }}
+                        placeholder={`Opção ${index + 1}`}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newOptions = (editingQuestion?.options || newQuestion.options || []).filter((_, i) => i !== index);
+                          if (editingQuestion) {
+                            setEditingQuestion({ ...editingQuestion, options: newOptions });
+                          } else {
+                            setNewQuestion({ ...newQuestion, options: newOptions });
+                          }
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentOptions = editingQuestion?.options || newQuestion.options || [];
+                      const newOptions = [...currentOptions, ''];
+                      if (editingQuestion) {
+                        setEditingQuestion({ ...editingQuestion, options: newOptions });
+                      } else {
+                        setNewQuestion({ ...newQuestion, options: newOptions });
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Opção
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Configurações de escala */}
+            {(editingQuestion?.type === 'scale' || newQuestion.type === 'scale') && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="scale_min">Valor Mínimo</Label>
+                  <Input
+                    id="scale_min"
+                    type="number"
+                    value={editingQuestion?.scale_min || newQuestion.scale_min || 1}
+                    onChange={(e) => {
+                      const scale_min = parseInt(e.target.value) || 1;
+                      if (editingQuestion) {
+                        setEditingQuestion({ ...editingQuestion, scale_min });
+                      } else {
+                        setNewQuestion({ ...newQuestion, scale_min });
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="scale_max">Valor Máximo</Label>
+                  <Input
+                    id="scale_max"
+                    type="number"
+                    value={editingQuestion?.scale_max || newQuestion.scale_max || 5}
+                    onChange={(e) => {
+                      const scale_max = parseInt(e.target.value) || 5;
+                      if (editingQuestion) {
+                        setEditingQuestion({ ...editingQuestion, scale_max });
+                      } else {
+                        setNewQuestion({ ...newQuestion, scale_max });
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingQuestion(null);
+                setIsAddingQuestion(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedTemplate) {
+                  const updatedQuestions = [...selectedTemplate.questions];
+
+                  if (isAddingQuestion) {
+                    // Adicionar nova questão
+                    const newQuestionWithId = {
+                      ...newQuestion,
+                      id: `custom_${Date.now()}`,
+                      order: selectedTemplate.questions.length + 1
+                    };
+                    updatedQuestions.push(newQuestionWithId);
+                  } else if (editingQuestion) {
+                    // Editar questão existente
+                    const index = updatedQuestions.findIndex(q => q.id === editingQuestion.id);
+                    if (index !== -1) {
+                      updatedQuestions[index] = editingQuestion;
+                    }
+                  }
+
+                  setSelectedTemplate({
+                    ...selectedTemplate,
+                    questions: updatedQuestions
+                  });
                 }
-                
-                setSelectedTemplate({
-                  ...selectedTemplate,
-                  questions: updatedQuestions
+
+                setShowAddModal(false);
+                setEditingQuestion(null);
+                setIsAddingQuestion(false);
+
+                // Reset new question
+                setNewQuestion({
+                  category: '',
+                  question: '',
+                  type: 'multiple_choice',
+                  required: true,
+                  weight: 5,
+                  order: 0
                 });
-              }
-              
-              setShowAddModal(false);
-              setEditingQuestion(null);
-              setIsAddingQuestion(false);
-              
-              // Reset new question
-              setNewQuestion({
-                category: '',
-                question: '',
-                type: 'multiple_choice',
-                required: true,
-                weight: 5,
-                order: 0
-              });
-              
-              toast({
-                title: isAddingQuestion ? 'Questão Adicionada' : 'Questão Atualizada',
-                description: 'A questão foi salva com sucesso.',
-              });
-            }}
-          >
-            {isAddingQuestion ? 'Adicionar' : 'Salvar'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+
+                toast({
+                  title: isAddingQuestion ? 'Questão Adicionada' : 'Questão Atualizada',
+                  description: 'A questão foi salva com sucesso.',
+                });
+              }}
+            >
+              {isAddingQuestion ? 'Adicionar' : 'Salvar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -4041,13 +4037,12 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
   };
 
   return (
-    <Card className={`transition-all duration-200 ${
-      response?.answer !== undefined
-        ? 'border-green-300 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20'
-        : question.required
+    <Card className={`transition-all duration-200 ${response?.answer !== undefined
+      ? 'border-green-300 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20'
+      : question.required
         ? 'border-orange-300 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20'
         : 'border-gray-300 dark:border-gray-700'
-    }`}>
+      }`}>
       <CardContent className="p-4">
         <div className="space-y-4">
           <div className="flex items-start justify-between">
@@ -4066,18 +4061,18 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
                   Peso: {question.weight}
                 </Badge>
               </div>
-              
+
               {question.subcategory && (
                 <p className="text-xs text-muted-foreground mb-1">
                   {question.subcategory} • {question.compliance_mapping}
                 </p>
               )}
-              
+
               {question.description && (
                 <p className="text-sm text-muted-foreground">{question.description}</p>
               )}
             </div>
-            
+
             <div className="flex gap-1 ml-2">
               <Button
                 variant="ghost"
@@ -4099,13 +4094,13 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
               )}
             </div>
           </div>
-          
+
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Resposta:</Label>
               {renderInput(question)}
             </div>
-            
+
             <div className="space-y-2">
               <Label className="text-sm font-medium">
                 Justificativa/Evidência (opcional)
@@ -4123,4 +4118,215 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       </CardContent>
     </Card>
   );
+};
+
+// Questões padrão para assessments sem framework específico
+export const DEFAULT_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
+  // 1. Governança e Políticas
+  {
+    id: 'gov_1',
+    category: 'Governança e Políticas',
+    question: 'A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?',
+    type: 'yes_no',
+    required: true,
+    weight: 10,
+    description: 'A política deve ser revisada anualmente e comunicada a todos os colaboradores.',
+    order: 1
+  },
+  {
+    id: 'gov_2',
+    category: 'Governança e Políticas',
+    question: 'Existe um responsável designado pela Segurança da Informação (CISO ou equivalente)?',
+    type: 'yes_no',
+    required: true,
+    weight: 8,
+    order: 2
+  },
+  {
+    id: 'gov_3',
+    category: 'Governança e Políticas',
+    question: 'Os colaboradores passam por treinamentos periódicos de conscientização em segurança?',
+    type: 'multiple_choice',
+    options: ['Sim, anualmente', 'Sim, na admissão apenas', 'Não há treinamento formal', 'Sim, trimestralmente'],
+    required: true,
+    weight: 8,
+    order: 3
+  },
+
+  // 2. Controle de Acesso
+  {
+    id: 'access_1',
+    category: 'Controle de Acesso',
+    question: 'A organização utiliza Múltiplo Fator de Autenticação (MFA) para acesso a sistemas críticos?',
+    type: 'yes_no',
+    required: true,
+    weight: 10,
+    order: 4
+  },
+  {
+    id: 'access_2',
+    category: 'Controle de Acesso',
+    question: 'Como é realizado o processo de revogação de acessos de colaboradores desligados?',
+    type: 'multiple_choice',
+    options: ['Imediato (automático)', 'Em até 24 horas', 'Em até 1 semana', 'Manual/Sob demanda'],
+    required: true,
+    weight: 9,
+    order: 5
+  },
+  {
+    id: 'access_3',
+    category: 'Controle de Acesso',
+    question: 'Existe revisão periódica de direitos de acesso?',
+    type: 'yes_no',
+    required: true,
+    weight: 7,
+    order: 6
+  },
+
+  // 3. Proteção de Dados e Privacidade (LGPD/GDPR)
+  {
+    id: 'privacy_1',
+    category: 'Privacidade e Dados',
+    question: 'A organização mapeou os dados pessoais que processa (Data Mapping)?',
+    type: 'yes_no',
+    required: true,
+    weight: 9,
+    order: 7
+  },
+  {
+    id: 'privacy_2',
+    category: 'Privacidade e Dados',
+    question: 'Qual o nível de conformidade com a LGPD?',
+    type: 'scale',
+    scale_min: 1,
+    scale_max: 5,
+    scale_labels: ['Não Iniciado', 'Inicial', 'Em Andamento', 'Avançado', 'Totalmente Conforme'],
+    required: true,
+    weight: 10,
+    order: 8
+  },
+  {
+    id: 'privacy_3',
+    category: 'Privacidade e Dados',
+    question: 'Existe um processo definido para resposta a incidentes de violação de dados?',
+    type: 'yes_no',
+    required: true,
+    weight: 10,
+    order: 9
+  },
+
+  // 4. Segurança Física e do Ambiente
+  {
+    id: 'phys_1',
+    category: 'Segurança Física',
+    question: 'O acesso físico aos servidores/datacenter é restrito e monitorado?',
+    type: 'yes_no',
+    required: true,
+    weight: 6,
+    order: 10
+  },
+  {
+    id: 'phys_2',
+    category: 'Segurança Física',
+    question: 'Existem controles ambientais (energia, refrigeração, combate a incêndio) adequados?',
+    type: 'yes_no',
+    required: false,
+    weight: 5,
+    order: 11
+  },
+
+  // 5. Gestão de Incidentes e Continuidade
+  {
+    id: 'inc_1',
+    category: 'Continuidade de Negócios',
+    question: 'A organização possui um Plano de Continuidade de Negócios (PCN) testado?',
+    type: 'yes_no',
+    required: true,
+    weight: 8,
+    order: 12
+  },
+  {
+    id: 'inc_2',
+    category: 'Continuidade de Negócios',
+    question: 'Com que frequência são realizados testes de restore de backup?',
+    type: 'multiple_choice',
+    options: ['Mensalmente', 'Trimestralmente', 'Anualmente', 'Nunca testado', 'Somente quando necessário'],
+    required: true,
+    weight: 9,
+    order: 13
+  },
+
+  // 6. Gestão de Terceiros
+  {
+    id: 'tp_1',
+    category: 'Gestão de Terceiros',
+    question: 'Os fornecedores críticos são avaliados quanto a riscos de segurança?',
+    type: 'yes_no',
+    required: true,
+    weight: 7,
+    order: 14
+  },
+
+  // 7. Certificações
+  {
+    id: 'evid_1',
+    category: 'Certificações',
+    question: 'Anexe o certificado ISO 27001 ou SOC 2 (se houver):',
+    type: 'file_upload',
+    required: false,
+    weight: 0,
+    order: 15
+  },
+  {
+    id: 'obs_1',
+    category: 'Observações Finais',
+    question: 'Descreva quaisquer outras medidas de segurança relevantes ou compensatórias:',
+    type: 'text',
+    required: false,
+    weight: 0,
+    order: 16
+  }
+];
+
+// Função compartilhada para calcular estatísticas do assessment
+export const calculateAssessmentStats = (
+  questions: AssessmentQuestion[],
+  responses: Record<string, any>
+) => {
+  const totalQuestions = questions.length;
+
+  // Filtrar respostas válidas iterando sobre as questões
+  // Isso garante que apenas questões válidas sejam contadas e ignora chaves lixo no objeto de respostas
+  const answeredQuestionsCount = questions.filter(q => {
+    const value = responses[q.id];
+
+    // Se for objeto (formato novo/padrão), verificar .answer
+    if (typeof value === 'object' && value !== null && 'answer' in value) {
+      return value.answer !== undefined && value.answer !== null && value.answer !== '';
+    }
+
+    // Se for valor direto (formato antigo ou simplificado)
+    return value !== undefined && value !== null && value !== '';
+  }).length;
+
+  const incompleteQuestions = questions.filter(q => {
+    const response = responses[q.id];
+    let hasAnswer = false;
+
+    if (typeof response === 'object' && response !== null && 'answer' in response) {
+      hasAnswer = response.answer !== undefined && response.answer !== null && response.answer !== '';
+    } else {
+      hasAnswer = response !== undefined && response !== null && response !== '';
+    }
+
+    return q.required && !hasAnswer;
+  }).length;
+
+  return {
+    total: totalQuestions,
+    answered: answeredQuestionsCount,
+    remaining: totalQuestions - answeredQuestionsCount,
+    incomplete: incompleteQuestions,
+    progress: totalQuestions > 0 ? Math.round((answeredQuestionsCount / totalQuestions) * 100) : 0
+  };
 };

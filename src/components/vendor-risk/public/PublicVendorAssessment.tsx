@@ -44,6 +44,7 @@ import {
   Paperclip,
   X
 } from 'lucide-react';
+import { DEFAULT_ASSESSMENT_QUESTIONS, calculateAssessmentStats } from '../shared/RiskAssessmentManager';
 
 interface Question {
   id: string;
@@ -181,157 +182,20 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   };
 
-  // Expanded Default Questions
-  const DEFAULT_QUESTIONS: Question[] = [
-    // 1. Governança e Políticas
-    {
-      id: 'gov_1',
-      category: 'Governança e Políticas',
-      question: 'A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?',
-      type: 'yes_no',
-      required: true,
-      weight: 10,
-      help_text: 'A política deve ser revisada anualmente e comunicada a todos os colaboradores.'
-    },
-    {
-      id: 'gov_2',
-      category: 'Governança e Políticas',
-      question: 'Existe um responsável designado pela Segurança da Informação (CISO ou equivalente)?',
-      type: 'yes_no',
-      required: true,
-      weight: 8
-    },
-    {
-      id: 'gov_3',
-      category: 'Governança e Políticas',
-      question: 'Os colaboradores passam por treinamentos periódicos de conscientização em segurança?',
-      type: 'multiple_choice',
-      options: ['Sim, anualmente', 'Sim, na admissão apenas', 'Não há treinamento formal', 'Sim, trimestralmente'],
-      required: true,
-      weight: 8
-    },
-
-    // 2. Controle de Acesso
-    {
-      id: 'access_1',
-      category: 'Controle de Acesso',
-      question: 'A organização utiliza Múltiplo Fator de Autenticação (MFA) para acesso a sistemas críticos?',
-      type: 'yes_no',
-      required: true,
-      weight: 10
-    },
-    {
-      id: 'access_2',
-      category: 'Controle de Acesso',
-      question: 'Como é realizado o processo de revogação de acessos de colaboradores desligados?',
-      type: 'multiple_choice',
-      options: ['Imediato (automático)', 'Em até 24 horas', 'Em até 1 semana', 'Manual/Sob demanda'],
-      required: true,
-      weight: 9
-    },
-    {
-      id: 'access_3',
-      category: 'Controle de Acesso',
-      question: 'Existe revisão periódica de direitos de acesso?',
-      type: 'yes_no',
-      required: true,
-      weight: 7
-    },
-
-    // 3. Proteção de Dados e Privacidade (LGPD/GDPR)
-    {
-      id: 'privacy_1',
-      category: 'Privacidade e Dados',
-      question: 'A organização mapeou os dados pessoais que processa (Data Mapping)?',
-      type: 'yes_no',
-      required: true,
-      weight: 9
-    },
-    {
-      id: 'privacy_2',
-      category: 'Privacidade e Dados',
-      question: 'Qual o nível de conformidade com a LGPD?',
-      type: 'scale',
-      scale_min: 1,
-      scale_max: 5,
-      scale_labels: ['Não Iniciado', 'Inicial', 'Em Andamento', 'Avançado', 'Totalmente Conforme'],
-      required: true,
-      weight: 10
-    },
-    {
-      id: 'privacy_3',
-      category: 'Privacidade e Dados',
-      question: 'Existe um processo definido para resposta a incidentes de violação de dados?',
-      type: 'yes_no',
-      required: true,
-      weight: 10
-    },
-
-    // 4. Segurança Física e do Ambiente
-    {
-      id: 'phys_1',
-      category: 'Segurança Física',
-      question: 'O acesso físico aos servidores/datacenter é restrito e monitorado?',
-      type: 'yes_no',
-      required: true,
-      weight: 6
-    },
-    {
-      id: 'phys_2',
-      category: 'Segurança Física',
-      question: 'Existem controles ambientais (energia, refrigeração, combate a incêndio) adequados?',
-      type: 'yes_no',
-      required: false,
-      weight: 5
-    },
-
-    // 5. Gestão de Incidentes e Continuidade
-    {
-      id: 'inc_1',
-      category: 'Continuidade de Negócios',
-      question: 'A organização possui um Plano de Continuidade de Negócios (PCN) testado?',
-      type: 'yes_no',
-      required: true,
-      weight: 8
-    },
-    {
-      id: 'inc_2',
-      category: 'Continuidade de Negócios',
-      question: 'Com que frequência são realizados testes de restore de backup?',
-      type: 'multiple_choice',
-      options: ['Mensalmente', 'Trimestralmente', 'Anualmente', 'Nunca testado', 'Somente quando necessário'],
-      required: true,
-      weight: 9
-    },
-
-    // 6. Gestão de Terceiros
-    {
-      id: 'tp_1',
-      category: 'Gestão de Terceiros',
-      question: 'Os fornecedores críticos são avaliados quanto a riscos de segurança?',
-      type: 'yes_no',
-      required: true,
-      weight: 7
-    },
-
-    // 7. Certificações
-    {
-      id: 'evid_1',
-      category: 'Certificações',
-      question: 'Anexe o certificado ISO 27001 ou SOC 2 (se houver):',
-      type: 'file_upload',
-      required: false,
-      weight: 0
-    },
-    {
-      id: 'obs_1',
-      category: 'Observações Finais',
-      question: 'Descreva quaisquer outras medidas de segurança relevantes ou compensatórias:',
-      type: 'text',
-      required: false,
-      weight: 0
-    }
-  ];
+  // Expanded Default Questions (imported from shared source)
+  const DEFAULT_QUESTIONS: Question[] = DEFAULT_ASSESSMENT_QUESTIONS.map(q => ({
+    id: q.id,
+    category: q.category,
+    question: q.question,
+    type: q.type as any, // Cast type as they are compatible
+    options: q.options,
+    required: q.required,
+    weight: q.weight,
+    help_text: q.description,
+    scale_min: q.scale_min,
+    scale_max: q.scale_max,
+    scale_labels: q.scale_labels
+  }));
 
   // Group questions by category
   const getQuestionsByCategory = () => {
@@ -362,12 +226,22 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const calculateProgress = () => {
     if (!assessment) return 0;
 
-    const totalQuestions = assessment.vendor_assessment_frameworks?.questions?.length || DEFAULT_QUESTIONS.length;
-    const answeredQuestions = Object.keys(responses).filter(key =>
-      responses[key] !== undefined && responses[key] !== '' && !key.endsWith('_evidence')
-    ).length;
+    const questionsToUse = assessment.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
 
-    return totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+    // Use shared calculation logic
+    // We need to cast questionsToUse to any because of slight interface mismatch (help_text vs description)
+    // but the shared function only uses id and required, which match.
+    const stats = calculateAssessmentStats(questionsToUse as any[], responses);
+
+    console.log('📊 PUBLIC PROGRESS DEBUG:', {
+      total: stats.total,
+      answered: stats.answered,
+      progress: stats.progress,
+      responsesKeys: Object.keys(responses),
+      questionsIds: questionsToUse.map(q => q.id)
+    });
+
+    return stats.progress;
   };
 
   // Save responses automatically
