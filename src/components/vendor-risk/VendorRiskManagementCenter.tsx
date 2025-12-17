@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   LayoutDashboard,
   Kanban,
   GitBranch,
@@ -21,7 +21,7 @@ import {
   MessageSquare,
   BarChart3
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 
@@ -141,23 +141,23 @@ export const VendorRiskManagementCenter: React.FC = () => {
         action: () => setShowOnboardingWorkflow(true)
       },
       {
-        id: 'critical-vendors',
-        title: 'Fornecedores Críticos',
-        description: 'Revisar fornecedores de alto risco',
-        icon: AlertTriangle,
+        id: 'all-vendors',
+        title: 'Fornecedores',
+        description: 'Gerenciar base de fornecedores',
+        icon: Building,
         action: () => {
-          setSelectedFilter('critical');
+          setSelectedFilter('all');
           setViewMode('vendors');
         },
-        badge: highRiskVendors > 0 ? highRiskVendors : undefined
+        badge: undefined
       },
       {
         id: 'pending-assessments',
         title: 'Assessments',
-        description: 'Revisar avaliações em andamento',
+        description: 'Gerenciar todas as avaliações',
         icon: FileCheck,
         action: () => {
-          setSelectedFilter('pending');
+          setSelectedFilter('all'); // Changed from 'pending' to 'all' to show all items
           setViewMode('assessments');
         },
         badge: pendingAssessments > 0 ? pendingAssessments : undefined
@@ -175,7 +175,10 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Gestão Visual',
         description: 'Acompanhar progresso no Kanban',
         icon: BarChart3,
-        action: () => setViewMode('kanban')
+        action: () => {
+          setSelectedFilter('all'); // Ensure filter is reset
+          setViewMode('kanban');
+        }
       }
     ];
   };
@@ -235,69 +238,69 @@ export const VendorRiskManagementCenter: React.FC = () => {
     <div className="space-y-6 vendor-risk-management">
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 quick-actions-grid">
-          {getQuickActions().map((action) => (
-            <Card
-              key={action.id}
-              className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
-              style={{
-                backgroundColor: isDarkMode 
-                  ? 'hsl(215, 8%, 12%)' // Cor do card no dark mode
-                  : '#ffffff', // Cor branca no light mode
-                borderColor: isDarkMode
-                  ? 'hsl(215, 10%, 22%)' // Cor da borda no dark mode
-                  : 'hsl(214, 32%, 91%)', // Cor da borda no light mode
-                color: isDarkMode
-                  ? 'hsl(0, 0%, 100%)' // Texto branco no dark mode
-                  : 'hsl(225, 71%, 12%)' // Texto escuro no light mode
-              }}
-              onClick={action.action}
-            >
-              <CardContent className="p-4 md:p-6">
-                <div className="flex flex-col items-center text-center space-y-3">
-                  {/* Ícone com background */}
-                  <div className={`
+        {getQuickActions().map((action) => (
+          <Card
+            key={action.id}
+            className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
+            style={{
+              backgroundColor: isDarkMode
+                ? 'hsl(215, 8%, 12%)' // Cor do card no dark mode
+                : '#ffffff', // Cor branca no light mode
+              borderColor: isDarkMode
+                ? 'hsl(215, 10%, 22%)' // Cor da borda no dark mode
+                : 'hsl(214, 32%, 91%)', // Cor da borda no light mode
+              color: isDarkMode
+                ? 'hsl(0, 0%, 100%)' // Texto branco no dark mode
+                : 'hsl(225, 71%, 12%)' // Texto escuro no light mode
+            }}
+            onClick={action.action}
+          >
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col items-center text-center space-y-3">
+                {/* Ícone com background */}
+                <div className={`
                     p-3 rounded-full transition-all duration-300
                     ${action.id === 'new-vendor' ? 'bg-primary/10 text-primary group-hover:bg-primary/20' :
-                      action.id === 'critical-vendors' ? 'bg-red-500/10 text-red-600 group-hover:bg-red-500/20' :
+                    action.id === 'all-vendors' ? 'bg-blue-500/10 text-blue-600 group-hover:bg-blue-500/20' :
                       action.id === 'pending-assessments' ? 'bg-orange-500/10 text-orange-600 group-hover:bg-orange-500/20' :
-                      action.id === 'communication-center' ? 'bg-blue-500/10 text-blue-600 group-hover:bg-blue-500/20' :
-                      'bg-green-500/10 text-green-600 group-hover:bg-green-500/20'
-                    }
+                        action.id === 'communication-center' ? 'bg-purple-500/10 text-purple-600 group-hover:bg-purple-500/20' :
+                          'bg-green-500/10 text-green-600 group-hover:bg-green-500/20'
+                  }
                   `}>
-                    <action.icon className="h-6 w-6" />
-                  </div>
-                  
-                  {/* Título e descrição */}
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
-                      {action.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground leading-tight">
-                      {action.description}
-                    </p>
-                  </div>
-                  
-                  {/* Badge se existir */}
-                  {action.badge && (
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs px-2 py-1 bg-primary/10 text-primary border-primary/20"
-                    >
-                      {action.badge}
-                    </Badge>
-                  )}
+                  <action.icon className="h-6 w-6" />
                 </div>
-                
-                {/* Efeito de hover - CSS dinâmico */}
-                <div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: getHoverGradient().hover
-                  }}
-                />
-              </CardContent>
-            </Card>
-          ))}
+
+                {/* Título e descrição */}
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                    {action.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground leading-tight">
+                    {action.description}
+                  </p>
+                </div>
+
+                {/* Badge se existir */}
+                {action.badge && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-2 py-1 bg-primary/10 text-primary border-primary/20"
+                  >
+                    {action.badge}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Efeito de hover - CSS dinâmico */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{
+                  background: getHoverGradient().hover
+                }}
+              />
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Error Display */}
@@ -322,7 +325,13 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="w-full">
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as VendorViewMode)}>
+        <Tabs
+          value={viewMode}
+          onValueChange={(value) => {
+            setViewMode(value as VendorViewMode);
+            setSelectedFilter('all'); // Reset filter when switching tabs
+          }}
+        >
           <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between p-4 md:p-6">
               <TabsList className="grid w-fit grid-cols-5">
@@ -347,7 +356,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   Processos
                 </TabsTrigger>
               </TabsList>
-              
+
               <div className="flex items-center gap-2">
                 {(viewMode === 'vendors' || viewMode === 'assessments') && (
                   <>
