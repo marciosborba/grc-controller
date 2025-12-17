@@ -107,23 +107,17 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     try {
       setLoading(true);
 
+      // Use RPC to bypass RLS and get joined data safely
+      console.log('🔍 Fetching assessment data for link:', publicLinkId);
+
       const { data, error } = await supabase
-        .from('vendor_assessments')
-        .select(`
-          *,
-          vendor_registry:vendor_id (
-            name,
-            primary_contact_name
-          ),
-          vendor_assessment_frameworks:framework_id (
-            name:nome,
-            framework_type:tipo_framework
-          )
-        `)
-        .eq('public_link', publicLinkId)
+        .rpc('get_public_assessment_data', { p_link: publicLinkId })
         .single();
 
+      console.log('📡 RPC Response:', { data, error });
+
       if (error || !data) {
+        console.error('❌ Error loading assessment:', error);
         toast({
           title: "Assessment Não Encontrado",
           description: "O link pode ter expirado ou ser inválido",
@@ -143,11 +137,24 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
         return;
       }
 
+      console.log('🔍 DEBUG: Checking status:', data.status);
+      console.log('🔍 DEBUG: Allowed statuses:', ['draft', 'sent', 'in_progress', 'completed']);
+
+      console.log('🔍 DEBUG: Full Data:', JSON.stringify(data, null, 2));
+
+      // Handle potential nesting from RPC returning SETOF jsonb
+      // If the RPC returns a single column named after the function, unwrap it
+      // Also handle pgrst_scalar which Supabase/PostgREST sometimes uses for scalar returns
+      const assessmentData = data.get_public_assessment_data || data.pgrst_scalar || data;
+      console.log('🔍 DEBUG: Assessment Data (Unwrapped):', assessmentData);
+
       // Security check - verify status is appropriate for public access
-      if (!['sent', 'in_progress'].includes(data.status)) {
+      // We allow 'draft' so admins can test the link before sending, and 'completed' to show success screen
+      if (!['draft', 'sent', 'in_progress', 'completed'].includes(assessmentData.status)) {
+        console.error('❌ DEBUG: Status check failed!', data.status);
         toast({
-          title: "Assessment Não Disponível",
-          description: "Este assessment não está disponível para resposta pública.",
+          title: "Assessment Não Disponível (Debug)",
+          description: `Status atual: ${data.status}`,
           variant: "destructive"
         });
         return;
@@ -155,18 +162,25 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
       // Additional security - log access attempt for audit
       console.log('Public assessment accessed:', {
-        assessmentId: data.id,
-        vendorId: data.vendor_id,
+        assessmentId: assessmentData.id,
+        vendorId: assessmentData.vendor_id,
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
         ip: 'client-side' // Server would have real IP
       });
 
-      setAssessment(data);
-      setResponses(data.responses || {});
+      // Normalize nested data (handle array vs object from Supabase)
+      const normalizedData = {
+        ...assessmentData,
+        vendor_registry: Array.isArray(assessmentData.vendor_registry) ? assessmentData.vendor_registry[0] : assessmentData.vendor_registry,
+        vendor_assessment_frameworks: Array.isArray(assessmentData.vendor_assessment_frameworks) ? assessmentData.vendor_assessment_frameworks[0] : assessmentData.vendor_assessment_frameworks
+      };
+
+      setAssessment(normalizedData);
+      setResponses(assessmentData.responses || {});
 
       // If already has responses, skip welcome screen
-      if (data.responses && Object.keys(data.responses).length > 0) {
+      if (assessmentData.responses && Object.keys(assessmentData.responses).length > 0) {
         setShowWelcome(false);
       }
 

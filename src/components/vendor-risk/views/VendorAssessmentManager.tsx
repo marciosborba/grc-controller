@@ -75,6 +75,8 @@ import {
   Info,
   HelpCircle,
   AlertCircle as AlertCircleIcon,
+  RotateCcw,
+  User,
 } from 'lucide-react';
 
 interface VendorAssessment {
@@ -1773,7 +1775,7 @@ Equipe de Compliance`;
 
                       <TableCell>
                         <div className="text-sm">
-                          {new Date(assessment.due_date).toLocaleDateString('pt-BR')}
+                          {new Date(assessment.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                         </div>
                       </TableCell>
 
@@ -1934,76 +1936,168 @@ Equipe de Compliance`;
       {/* Assessment Details Dialog */}
       <Dialog open={showAssessmentDetails} onOpenChange={setShowAssessmentDetails}>
         <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Detalhes do Assessment
-            </DialogTitle>
-            <DialogDescription>
-              Informações detalhadas do assessment selecionado
-            </DialogDescription>
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Detalhes do Assessment</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Visão geral e métricas do assessment selecionado.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedAssessment && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Nome</Label>
-                  <p className="text-sm">{selectedAssessment.assessment_name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Tipo</Label>
-                  <Badge variant="outline" className="text-xs capitalize">
-                    {selectedAssessment.assessment_type.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <p className="text-sm">{getStatusBadge(selectedAssessment.status, selectedAssessment.due_date, selectedAssessment)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Prioridade</Label>
-                  <Badge variant="outline" className={`text-xs ${selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
-                    selectedAssessment.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                      selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                        'bg-green-50 text-green-700 border-green-200'
-                    }`}>
-                    {selectedAssessment.priority}
-                  </Badge>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Fornecedor</Label>
-                  <p className="text-sm">{selectedAssessment.vendor_registry?.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Email Contato</Label>
-                  <p className="text-sm">{selectedAssessment.vendor_registry?.primary_contact_email || 'N/A'}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Data de Vencimento</Label>
-                  <p className="text-sm">{new Date(selectedAssessment.due_date).toLocaleDateString('pt-BR')}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Progresso</Label>
-                  <div className="flex items-center space-x-2">
-                    <Progress value={selectedAssessment.progress_percentage || 0} className="w-20 h-2" />
-                    <span className="text-xs text-muted-foreground">
-                      {selectedAssessment.progress_percentage || 0}%
-                    </span>
+            <div className="py-6 space-y-6">
+              {/* Status Banner */}
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-background rounded-md border shadow-sm">
+                    <Activity className="h-5 w-5 text-muted-foreground" />
                   </div>
+                  <div>
+                    <h4 className="font-medium text-sm">Status Atual</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Última atualização: {new Date(selectedAssessment.updated_at || selectedAssessment.created_at || Date.now()).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  {getStatusBadge(selectedAssessment.status, selectedAssessment.due_date, selectedAssessment)}
                 </div>
               </div>
 
-              {selectedAssessment.overall_score && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Score Geral</Label>
-                  <p className="text-lg font-semibold text-primary">{selectedAssessment.overall_score.toFixed(1)}</p>
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: General Info */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Informações Gerais</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Brain className="h-4 w-4 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Nome do Assessment</p>
+                          <p className="text-sm text-muted-foreground">{selectedAssessment.assessment_name}</p>
+                        </div>
+                      </div>
 
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Framework</Label>
-                <p className="text-sm">{selectedAssessment.vendor_assessment_frameworks?.name || selectedAssessment.metadata?.template_name}</p>
+                      <div className="flex items-start gap-3">
+                        <Target className="h-4 w-4 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Tipo</p>
+                          <Badge variant="outline" className="text-xs capitalize mt-1">
+                            {selectedAssessment.assessment_type.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-4 w-4 text-primary mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Framework</p>
+                          <p className="text-sm text-muted-foreground">
+                            {selectedAssessment.vendor_assessment_frameworks?.name || selectedAssessment.metadata?.template_name || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Métricas</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-muted/30 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-1">Score Geral</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-bold text-primary">
+                            {selectedAssessment.overall_score ? selectedAssessment.overall_score.toFixed(1) : '-'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">/ 100</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 rounded-lg border">
+                        <p className="text-xs text-muted-foreground mb-1">Risco</p>
+                        <div className="mt-1">
+                          {getRiskLevelBadge(selectedAssessment.risk_level) || <span className="text-sm text-muted-foreground">-</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Vendor & Timing */}
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Fornecedor</h4>
+                    <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                      <div className="flex items-start gap-3">
+                        <Building className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">{selectedAssessment.vendor_registry?.name}</p>
+                          <p className="text-xs text-muted-foreground">ID: {selectedAssessment.vendor_id.substring(0, 8)}...</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium">Contato Principal</p>
+                          <p className="text-sm text-muted-foreground break-all">
+                            {selectedAssessment.vendor_registry?.primary_contact_email || 'Email não cadastrado'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">Cronograma</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Data de Vencimento</span>
+                        </div>
+                        <Badge variant="outline">
+                          {new Date(selectedAssessment.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Progresso</span>
+                          <span className="font-medium">{selectedAssessment.progress_percentage || 0}%</span>
+                        </div>
+                        <Progress value={selectedAssessment.progress_percentage || 0} className="h-2" />
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircleIcon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">Prioridade</span>
+                        </div>
+                        <Badge variant="outline" className={`
+                          ${selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
+                            selectedAssessment.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                              selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                'bg-green-50 text-green-700 border-green-200'}
+                        `}>
+                          {selectedAssessment.priority === 'low' ? 'Baixa' :
+                            selectedAssessment.priority === 'medium' ? 'Média' :
+                              selectedAssessment.priority === 'high' ? 'Alta' : 'Urgente'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -2013,67 +2107,136 @@ Equipe de Compliance`;
       {/* Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
         <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              Enviar Assessment por Email
-            </DialogTitle>
-            <DialogDescription>
-              Envie o link do assessment diretamente para o fornecedor
-            </DialogDescription>
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Mail className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl">Enviar Assessment</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Envie o convite para o fornecedor responder ao questionário de segurança.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email do Destinatário *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="fornecedor@empresa.com"
-                value={emailForm.email}
-                onChange={(e) => setEmailForm(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="subject">Assunto</Label>
-              <Input
-                id="subject"
-                value={emailForm.subject}
-                onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">Mensagem</Label>
-              <Textarea
-                id="message"
-                rows={10}
-                value={emailForm.message}
-                onChange={(e) => setEmailForm(prev => ({ ...prev, message: e.target.value }))}
-                className="resize-none"
-              />
-            </div>
-
+          <div className="space-y-6 py-4">
+            {/* Assessment Context Card */}
             {selectedAssessmentForEmail && (
-              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-sm">
-                  <div className="font-medium text-blue-900">
-                    Assessment: {selectedAssessmentForEmail.assessment_name}
+              <div className="bg-muted/30 rounded-lg border p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex gap-3">
+                    <div className="p-2 bg-background rounded-md border shadow-sm">
+                      <Building className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-sm">{selectedAssessmentForEmail.vendor_registry?.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {selectedAssessmentForEmail.assessment_name}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-blue-700">
-                    Fornecedor: {selectedAssessmentForEmail.vendor_registry?.name}
-                  </div>
-                  <div className="text-blue-700">
-                    Prazo: {new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR')}
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground mb-1">Prazo de Entrega</div>
+                    <Badge variant="outline" className="bg-background">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {/* Fix timezone issue: treat date as UTC or append time to ensure it falls on correct day */}
+                      {new Date(selectedAssessmentForEmail.due_date).getUTCDay ?
+                        new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) :
+                        new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR')
+                      }
+                    </Badge>
                   </div>
                 </div>
               </div>
             )}
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  Destinatário
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome@empresa.com"
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="h-10"
+                />
+                <p className="text-xs text-muted-foreground">
+                  O link de acesso será enviado para este endereço.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subject">Assunto</Label>
+                <Input
+                  id="subject"
+                  value={emailForm.subject}
+                  onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
+                  className="h-10 font-medium"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="message">Mensagem</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground hover:text-primary"
+                    onClick={() => {
+                      if (selectedAssessmentForEmail && selectedAssessmentForEmail.public_link) {
+                        const defaultSubject = `Assessment de Segurança - ${selectedAssessmentForEmail.assessment_name}`;
+                        const publicUrl = `${window.location.origin}/vendor-assessment/${selectedAssessmentForEmail.public_link}`;
+                        const defaultMessage = `Olá,
+
+Você foi convidado(a) para responder um assessment de segurança.
+
+**Detalhes do Assessment:**
+• Nome: ${selectedAssessmentForEmail.assessment_name}
+• Fornecedor: ${selectedAssessmentForEmail.vendor_registry?.name}
+• Prazo: ${new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+
+**Link para responder:**
+${publicUrl}
+
+Este link expira em 30 dias. Por favor, complete o assessment até a data limite.
+
+Caso tenha dúvidas, entre em contato conosco.
+
+Atenciosamente,
+Equipe de Compliance`;
+                        setEmailForm(prev => ({
+                          ...prev,
+                          subject: defaultSubject,
+                          message: defaultMessage
+                        }));
+                        toast({
+                          description: "Mensagem restaurada para o padrão."
+                        });
+                      }
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Restaurar Padrão
+                  </Button>
+                </div>
+                <Textarea
+                  id="message"
+                  rows={12}
+                  value={emailForm.message}
+                  onChange={(e) => setEmailForm(prev => ({ ...prev, message: e.target.value }))}
+                  className="resize-none font-mono text-sm leading-relaxed"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-end gap-3 pt-4 border-t mt-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -2083,7 +2246,11 @@ Equipe de Compliance`;
             >
               Cancelar
             </Button>
-            <Button onClick={sendAssessmentEmail} disabled={!emailForm.email.trim()}>
+            <Button
+              onClick={sendAssessmentEmail}
+              disabled={!emailForm.email.trim()}
+              className="min-w-[120px]"
+            >
               <Send className="h-4 w-4 mr-2" />
               Enviar Email
             </Button>
