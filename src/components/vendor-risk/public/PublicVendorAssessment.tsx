@@ -11,6 +11,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -42,7 +44,8 @@ import {
   Eye,
   CheckSquare,
   Paperclip,
-  X
+  X,
+  MessageSquare,
 } from 'lucide-react';
 import { DEFAULT_ASSESSMENT_QUESTIONS, calculateAssessmentStats } from '../shared/RiskAssessmentManager';
 
@@ -81,6 +84,13 @@ interface AssessmentData {
   vendor_id: string;
 }
 
+interface Message {
+  id: string;
+  sender_type: 'vendor' | 'internal';
+  content: string;
+  created_at: string;
+}
+
 interface PublicVendorAssessmentProps {
   publicLinkId: string;
 }
@@ -97,6 +107,71 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+
+  // Messaging State
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+
+  // Load messages
+  const loadMessages = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_public_assessment_messages', {
+        p_link: publicLinkId
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setChatHistory(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error);
+    }
+  };
+
+  // Poll messages when chat is open
+  useEffect(() => {
+    if (showChat) {
+      loadMessages();
+      const interval = setInterval(loadMessages, 5000); // Poll every 5s
+      return () => clearInterval(interval);
+    }
+  }, [showChat, publicLinkId]);
+
+  const handleSendMessage = async () => {
+    if (!chatMessage.trim()) return;
+
+    try {
+      setSendingMessage(true);
+
+      const { data, error } = await supabase.rpc('send_public_assessment_message', {
+        p_link: publicLinkId,
+        p_content: chatMessage
+      });
+
+      if (error) throw error;
+
+      if (data && data.success) {
+        setChatMessage('');
+        await loadMessages(); // Refresh immediately
+      } else {
+        throw new Error(data?.error || 'Erro ao enviar mensagem');
+      }
+
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   // Load assessment data
   useEffect(() => {
@@ -723,6 +798,89 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   };
 
+  // Render Chat Interface (Common across all screens)
+  const renderChatInterface = () => (
+    <>
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          size="lg"
+          className="h-14 w-14 rounded-full shadow-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-110"
+          onClick={() => setShowChat(true)}
+        >
+          <MessageSquare className="h-6 w-6" />
+        </Button>
+      </div>
+
+      <Dialog open={showChat} onOpenChange={setShowChat}>
+        <DialogContent className="sm:max-w-[400px] h-[600px] flex flex-col p-0 gap-0">
+          <DialogHeader className="p-4 border-b bg-primary/5">
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Suporte ao Fornecedor
+            </DialogTitle>
+            <DialogDescription>
+              Tire suas dúvidas com nossa equipe.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10">
+            {chatHistory.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+                <MessageSquare className="h-10 w-10 mb-2 opacity-20" />
+                <p className="text-sm">Nenhuma mensagem ainda.</p>
+                <p className="text-xs mt-1">Envie uma mensagem para falar com nossa equipe.</p>
+              </div>
+            ) : (
+              chatHistory.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.sender_type === 'vendor' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.sender_type === 'vendor'
+                      ? 'bg-primary text-primary-foreground rounded-br-none'
+                      : 'bg-card border border-border shadow-sm rounded-bl-none'
+                      }`}
+                  >
+                    <p>{msg.content}</p>
+                    <span className={`text-[10px] block mt-1 opacity-70 ${msg.sender_type === 'vendor' ? 'text-primary-foreground' : 'text-muted-foreground'
+                      }`}>
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="p-4 border-t bg-background">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                placeholder="Digite sua dúvida..."
+                className="flex-1"
+              />
+              <Button type="submit" size="icon" disabled={!chatMessage.trim() || sendingMessage}>
+                {sendingMessage ? (
+                  <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -811,6 +969,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
             </Button>
           </CardContent>
         </Card>
+        {renderChatInterface()}
       </div>
     );
   }
@@ -880,6 +1039,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           <div className="text-center mt-8 text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} GRC Controller. Todos os direitos reservados.
           </div>
+          {renderChatInterface()}
         </div>
       </div>
     );
@@ -1053,6 +1213,8 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           </div>
         </div>
       </main>
+
+      {renderChatInterface()}
     </div>
   );
 };

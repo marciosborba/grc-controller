@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { VendorRegistry, VendorAssessment } from '@/hooks/useVendorRiskManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface VendorNotificationSystemProps {
   open: boolean;
@@ -60,7 +61,8 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
     to: '',
     subject: '',
     message: '',
-    assessmentId: ''
+    assessmentId: '',
+    vendorId: ''
   });
 
   // Template Editor State
@@ -90,45 +92,58 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
 
   const completedAssessments = assessments.filter(a => ['completed', 'approved'].includes(a.status));
 
-  // Mock Messages (Inbox)
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      vendor: 'TechSolutions Inc.',
-      subject: 'Re: Assessment de Segurança',
-      date: '2024-05-15T10:30:00Z',
-      status: 'received',
-      preview: 'Olá, acabamos de enviar as evidências solicitadas...',
-      content: 'Olá,\n\nAcabamos de enviar as evidências solicitadas no painel. Poderiam confirmar o recebimento?\n\nFicamos no aguardo de um feedback sobre a conformidade dos documentos apresentados.\n\nAtenciosamente,\nJoão Silva\nTechSolutions Inc.'
-    },
-    {
-      id: 2,
-      vendor: 'Global Services Ltd.',
-      subject: 'Dúvida sobre questão 4.2',
-      date: '2024-05-14T14:20:00Z',
-      status: 'received',
-      preview: 'Poderiam esclarecer o que é esperado na seção de criptografia?',
-      content: 'Prezados,\n\nEstamos com uma dúvida no preenchimento da questão 4.2 sobre criptografia em repouso. O requisito se aplica apenas ao banco de dados principal ou também aos backups?\n\nAguardo retorno.\n\nMaria Oliveira\nGlobal Services Ltd.'
-    },
-    {
-      id: 3,
-      vendor: 'TechSolutions Inc.',
-      subject: 'Lembrete: Assessment Pendente',
-      date: '2024-05-10T09:00:00Z',
-      status: 'sent',
-      preview: 'Olá, este é um lembrete amigável sobre o prazo...',
-      content: 'Olá,\n\nEste é um lembrete amigável de que o assessment de segurança ainda está pendente e o prazo se encerra em breve.\n\nPor favor, completem o questionário o quanto antes.\n\nAtenciosamente,\nEquipe de Compliance'
-    },
-    {
-      id: 4,
-      vendor: 'DataCorp',
-      subject: 'Assessment Concluído',
-      date: '2024-05-12T16:45:00Z',
-      status: 'sent',
-      preview: 'Obrigado por completar o questionário. Vamos analisar...',
-      content: 'Olá,\n\nObrigado por completar o questionário de avaliação de segurança. Nossa equipe irá analisar as respostas e entrará em contato caso sejam necessários esclarecimentos adicionais.\n\nAtenciosamente,\nEquipe de Compliance'
-    },
-  ]);
+  // Messages State with DB integration
+  const [messages, setMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      fetchMessages();
+    }
+  }, [open]);
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vendor_risk_messages')
+        .select(`
+          id,
+          content,
+          created_at,
+          sender_type,
+          vendor_registry:vendor_id (name),
+          vendor_id,
+          assessment_id
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data) {
+        const formatted = data.map((msg: any) => ({
+          id: msg.id,
+          vendor: msg.vendor_registry?.name || 'Fornecedor',
+          subject: 'Nova Mensagem',
+          date: msg.created_at,
+          status: msg.sender_type === 'vendor' ? 'received' : 'sent',
+          preview: msg.content.substring(0, 50) + '...',
+          content: msg.content,
+          vendorId: msg.vendor_id,
+          assessmentId: msg.assessment_id
+        }));
+        setMessages(formatted);
+        console.log("📨 Messages loaded:", formatted);
+      } else {
+        console.log("📨 No messages found or data is null");
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar mensagens.",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Filter Messages
   const filteredMessages = messages.filter(msg => {
@@ -170,11 +185,12 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
     },
   ]);
 
-  const handleOpenComposer = (type: 'reminder' | 'overdue' | 'custom', assessment?: VendorAssessment) => {
+  const handleOpenComposer = (type: 'reminder' | 'overdue' | 'custom' | 'reply', assessment?: VendorAssessment, replyContext?: any) => {
     let subject = '';
     let message = '';
     let to = '';
     let assessmentId = '';
+    let vendorId = '';
 
     if (assessment) {
       const vendorName = assessment.vendor_registry?.name || 'Fornecedor';
@@ -184,6 +200,7 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
 
       to = assessment.vendor_registry?.primary_contact_email || '';
       assessmentId = assessment.id;
+      vendorId = assessment.vendor_id;
 
       if (type === 'reminder') {
         subject = `Lembrete: Assessment de Segurança - ${assessmentName}`;
@@ -195,8 +212,15 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
         subject = `Contato sobre Assessment - ${assessmentName}`;
         message = `Olá,\n\nGostaríamos de falar sobre o assessment "${assessmentName}".\n\n...\n\nAtenciosamente,\nEquipe de Compliance`;
       }
+    } else if (type === 'reply' && replyContext) {
+      // Reply mode using context from selected message
+      subject = `Re: ${replyContext.subject}`;
+      message = '\n\nAtenciosamente,\nEquipe de Compliance';
+      assessmentId = replyContext.assessmentId;
+      vendorId = replyContext.vendorId;
+      to = replyContext.vendor; // Just for display
     } else {
-      // Generic / Reply mode
+      // Generic
       subject = 'Re: Assessment de Segurança';
       message = '\n\nAtenciosamente,\nEquipe de Compliance';
     }
@@ -205,32 +229,50 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
       to,
       subject,
       message,
-      assessmentId
+      assessmentId,
+      vendorId
     });
     setShowEmailComposer(true);
   };
 
-  const handleSendEmail = () => {
-    setTimeout(() => {
-      setShowEmailComposer(false);
+  const handleSendEmail = async () => {
+    if (!emailData.vendorId) {
       toast({
-        title: "Email Enviado",
-        description: `Mensagem enviada para ${emailData.to} com sucesso.`,
+        title: "Erro de Destinatário",
+        description: "Fornecedor não identificado para envio.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('vendor_risk_messages').insert({
+        vendor_id: emailData.vendorId,
+        assessment_id: emailData.assessmentId || null,
+        sender_type: 'internal',
+        content: emailData.message
       });
 
-      // Add to mock messages
-      const newMsg = {
-        id: Date.now(),
-        vendor: 'Fornecedor', // In real app, get from context
-        subject: emailData.subject,
-        date: new Date().toISOString(),
-        status: 'sent',
-        preview: emailData.message.substring(0, 50) + '...'
-      };
-      setMessages(prev => [newMsg, ...prev]);
+      if (error) throw error;
 
-      setEmailData({ to: '', subject: '', message: '', assessmentId: '' });
-    }, 800);
+      setShowEmailComposer(false);
+
+      toast({
+        title: "Mensagem Enviada",
+        description: `Mensagem enviada com sucesso.`,
+      });
+
+      await fetchMessages(); // Refresh list
+      setEmailData({ to: '', subject: '', message: '', assessmentId: '', vendorId: '' });
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Erro ao Enviar",
+        description: "Não foi possível enviar a mensagem.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSendAll = (type: string) => {
@@ -468,7 +510,11 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
                       Histórico de interações com fornecedores.
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    <Button variant="outline" size="sm" onClick={fetchMessages} title="Atualizar">
+                      <Clock className="h-4 w-4 mr-1" />
+                      Atualizar
+                    </Button>
                     <Select value={messageFilter} onValueChange={setMessageFilter}>
                       <SelectTrigger className="w-[140px]">
                         <SelectValue placeholder="Filtrar" />
@@ -899,9 +945,9 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
                   Fechar
                 </Button>
                 <Button onClick={() => {
+                  const replyContext = selectedMessage;
                   setSelectedMessage(null);
-                  handleOpenComposer('custom');
-                  // In a real app, we would pre-fill the composer with reply data
+                  handleOpenComposer('reply', undefined, replyContext);
                 }}>
                   <Send className="h-4 w-4 mr-2" />
                   Responder
