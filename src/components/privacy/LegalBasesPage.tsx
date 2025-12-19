@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   Shield,
   Filter,
   Download,
@@ -71,11 +71,11 @@ export function LegalBasesPage() {
 
   // Filter bases based on search and filters
   const filteredBases = legalBases.filter(basis => {
-    const matchesSearch = 
+    const matchesSearch =
       basis.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       basis.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       basis.justification.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -149,7 +149,7 @@ export function LegalBasesPage() {
       validated_by: 'current-user-id', // This should come from auth context
       validation_date: new Date().toISOString()
     });
-    
+
     if (result.success) {
       toast.success(isValid ? 'Base legal validada' : 'Base legal invalidada');
     } else {
@@ -167,11 +167,11 @@ export function LegalBasesPage() {
   // Get status color for badges
   const getStatusColor = (status: LegalBasisStatus) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'suspended': return 'bg-yellow-100 text-yellow-800';
-      case 'expired': return 'bg-red-100 text-red-800';
-      case 'revoked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'suspended': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'expired': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'revoked': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -189,19 +189,19 @@ export function LegalBasesPage() {
   // Get type color for badges
   const getTypeColor = (type: LegalBasisType) => {
     const colors = {
-      consentimento: 'bg-blue-100 text-blue-800',
-      contrato: 'bg-green-100 text-green-800',
-      obrigacao_legal: 'bg-purple-100 text-purple-800',
-      protecao_vida: 'bg-red-100 text-red-800',
-      interesse_publico: 'bg-orange-100 text-orange-800',
-      interesse_legitimo: 'bg-yellow-100 text-yellow-800',
-      exercicio_direitos: 'bg-indigo-100 text-indigo-800'
+      consentimento: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      contrato: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      obrigacao_legal: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      protecao_vida: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+      interesse_publico: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+      interesse_legitimo: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+      exercicio_direitos: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
     };
-    return colors[type] || 'bg-gray-100 text-gray-800';
+    return colors[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -222,7 +222,7 @@ export function LegalBasesPage() {
             </p>
           </div>
         </div>
-        
+
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -238,9 +238,9 @@ export function LegalBasesPage() {
 
       {/* Expiring Bases Alert */}
       {expiringBases.length > 0 && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <Clock className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800/50">
+          <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-300">
             <strong>Atenção:</strong> {expiringBases.length} base(s) legal(is) expirando em até 30 dias.
           </AlertDescription>
         </Alert>
@@ -248,9 +248,9 @@ export function LegalBasesPage() {
 
       {/* Expired Bases Alert */}
       {expiredBases.length > 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-300">
             <strong>Urgente:</strong> {expiredBases.length} base(s) legal(is) expiraram e foram automaticamente desativadas.
           </AlertDescription>
         </Alert>
@@ -356,8 +356,8 @@ export function LegalBasesPage() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterChange('expiring_soon', true)}
                 className="text-orange-600 hover:text-orange-700"
@@ -429,7 +429,7 @@ export function LegalBasesPage() {
                   onValidate={(isValid, notes) => handleValidateBasis(basis.id, isValid, notes)}
                   onGenerateReport={() => handleGenerateUsageReport(basis.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -446,7 +446,7 @@ export function LegalBasesPage() {
                   onValidate={(isValid, notes) => handleValidateBasis(basis.id, isValid, notes)}
                   onGenerateReport={() => handleGenerateUsageReport(basis.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -463,7 +463,7 @@ export function LegalBasesPage() {
                   onValidate={(isValid, notes) => handleValidateBasis(basis.id, isValid, notes)}
                   onGenerateReport={() => handleGenerateUsageReport(basis.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 

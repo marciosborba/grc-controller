@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { 
-  User, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  Mail,
+  Phone,
   FileText,
   CreditCard,
   Info,
@@ -88,7 +88,7 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
     const newCategories = checked
       ? [...selectedCategories, category]
       : selectedCategories.filter(c => c !== category);
-    
+
     setSelectedCategories(newCategories);
     form.setValue('data_categories', newCategories);
   };
@@ -97,18 +97,18 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
   const handleSubmit = async (data: CreateRequestFormData) => {
     try {
       setLoading(true);
-      
+
       const requestData: Partial<DataSubjectRequest> = {
         ...data,
         data_categories: selectedCategories.length > 0 ? selectedCategories : undefined
       };
 
       await onCreateRequest(requestData);
-      
+
       // Reset form
       form.reset();
       setSelectedCategories([]);
-      
+
     } catch (error) {
       console.error('Error creating request:', error);
     } finally {
@@ -137,10 +137,10 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
   const getRequestComplexity = (type: DataSubjectRequestType) => {
     const high = ['eliminacao', 'portabilidade', 'revisao_decisoes_automatizadas'];
     const medium = ['acesso', 'correcao', 'informacao_uso_compartilhamento'];
-    
-    if (high.includes(type)) return { level: 'Alta', color: 'bg-red-100 text-red-800', days: '15 dias' };
-    if (medium.includes(type)) return { level: 'Média', color: 'bg-yellow-100 text-yellow-800', days: '15 dias' };
-    return { level: 'Baixa', color: 'bg-green-100 text-green-800', days: '15 dias' };
+
+    if (high.includes(type)) return { level: 'Alta', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', days: '15 dias' };
+    if (medium.includes(type)) return { level: 'Média', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', days: '15 dias' };
+    return { level: 'Baixa', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', days: '15 dias' };
   };
 
   return (
@@ -174,9 +174,9 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
                     <FormItem>
                       <FormLabel>Nome Completo *</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder="João Silva Santos"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -191,10 +191,10 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
                     <FormItem>
                       <FormLabel>Email *</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder="joao.silva@email.com"
                           type="email"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -211,9 +211,9 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
                     <FormItem>
                       <FormLabel>Documento (CPF/CNPJ)</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder="000.000.000-00"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -231,9 +231,9 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input 
+                        <Input
                           placeholder="(11) 99999-9999"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -407,7 +407,7 @@ export function CreateRequestDialog({ onCreateRequest }: CreateRequestDialogProp
 
           {/* Form Actions */}
           <Separator />
-          
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline">
               Cancelar

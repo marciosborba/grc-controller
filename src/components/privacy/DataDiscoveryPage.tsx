@@ -90,11 +90,11 @@ export function DataDiscoveryPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400" />;
       case 'scanning':
-        return <Scan className="w-4 h-4 text-blue-500 animate-pulse" />;
+        return <Scan className="w-4 h-4 text-blue-500 dark:text-blue-400 animate-pulse" />;
       case 'error':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />;
       case 'inactive':
         return <AlertTriangle className="w-4 h-4 text-gray-400" />;
       default:
@@ -113,9 +113,9 @@ export function DataDiscoveryPage() {
     return (
       <Badge variant={variants[status] || 'outline'}>
         {status === 'active' ? 'Ativo' :
-         status === 'scanning' ? 'Digitalizando' :
-         status === 'error' ? 'Erro' :
-         status === 'inactive' ? 'Inativo' : status}
+          status === 'scanning' ? 'Digitalizando' :
+            status === 'error' ? 'Erro' :
+              status === 'inactive' ? 'Inativo' : status}
       </Badge>
     );
   };
@@ -146,7 +146,7 @@ export function DataDiscoveryPage() {
   );
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">

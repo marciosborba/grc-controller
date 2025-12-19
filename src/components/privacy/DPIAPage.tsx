@@ -17,18 +17,18 @@ import { CreateDPIADialog } from './CreateDPIADialog';
 
 export function DPIAPage() {
   const navigate = useNavigate();
-  const { 
-    dpias, 
-    loading, 
-    stats, 
-    fetchDPIAs, 
-    createDPIA, 
-    updateDPIA, 
+  const {
+    dpias,
+    loading,
+    stats,
+    fetchDPIAs,
+    createDPIA,
+    updateDPIA,
     deleteDPIA,
     approveDPIA,
     rejectDPIA,
     exportDPIA,
-    duplicateDPIA 
+    duplicateDPIA
   } = useDPIA();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,8 +39,8 @@ export function DPIAPage() {
   // Filter DPIAs based on search and filters
   const filteredDPIAs = dpias.filter(dpia => {
     const matchesSearch = dpia.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dpia.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      dpia.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
     return matchesSearch;
   });
 
@@ -85,7 +85,7 @@ export function DPIAPage() {
     try {
       const deletePromises = selectedDPIAs.map(id => deleteDPIA(id));
       await Promise.all(deletePromises);
-      
+
       toast.success(`${selectedDPIAs.length} DPIA(s) excluída(s) com sucesso`);
       setSelectedDPIAs([]);
     } catch (error) {
@@ -122,6 +122,7 @@ export function DPIAPage() {
     } else {
       toast.error(result.error || 'Erro ao aprovar DPIA');
     }
+    return result;
   };
 
   const handleRejectDPIA = async (id: string, reason: string) => {
@@ -131,6 +132,7 @@ export function DPIAPage() {
     } else {
       toast.error(result.error || 'Erro ao rejeitar DPIA');
     }
+    return result;
   };
 
   const handleDuplicateDPIA = async (id: string) => {
@@ -140,6 +142,7 @@ export function DPIAPage() {
     } else {
       toast.error(result.error || 'Erro ao duplicar DPIA');
     }
+    return result;
   };
 
   const handleExportDPIA = async (id: string) => {
@@ -150,10 +153,11 @@ export function DPIAPage() {
     } else {
       toast.error(result.error || 'Erro ao exportar DPIA');
     }
+    return result;
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -174,7 +178,7 @@ export function DPIAPage() {
             </p>
           </div>
         </div>
-        
+
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -219,10 +223,10 @@ export function DPIAPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Consulta ANPD</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.requiresConsultation}</div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.requiresConsultation}</div>
             <p className="text-xs text-muted-foreground">
               Necessitam consulta prévia
             </p>
@@ -232,10 +236,10 @@ export function DPIAPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.approved}</div>
             <p className="text-xs text-muted-foreground">
               {stats.overdue > 0 && `${stats.overdue} em atraso`}
             </p>
@@ -260,8 +264,8 @@ export function DPIAPage() {
             </div>
 
             <div className="flex gap-2">
-              <Select 
-                value={filters.status || ''} 
+              <Select
+                value={filters.status || ''}
                 onValueChange={(value) => handleFilterChange('status', value || undefined)}
               >
                 <SelectTrigger className="w-40">
@@ -277,8 +281,8 @@ export function DPIAPage() {
                 </SelectContent>
               </Select>
 
-              <Select 
-                value={filters.riskLevel || ''} 
+              <Select
+                value={filters.riskLevel || ''}
                 onValueChange={(value) => handleFilterChange('riskLevel', value || undefined)}
               >
                 <SelectTrigger className="w-40">
@@ -301,18 +305,18 @@ export function DPIAPage() {
               <span className="text-sm text-muted-foreground">
                 {selectedDPIAs.length} selecionada(s)
               </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleBulkExport}
                 className="flex items-center gap-1"
               >
                 <Download className="w-3 h-3" />
                 Exportar
               </Button>
-              <Button 
-                variant="destructive" 
-                size="sm" 
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={handleBulkDelete}
               >
                 Excluir
@@ -334,8 +338,8 @@ export function DPIAPage() {
             <CardContent className="text-center py-12">
               <Shield className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                {searchTerm || Object.keys(filters).length > 0 
-                  ? 'Nenhuma DPIA encontrada' 
+                {searchTerm || Object.keys(filters).length > 0
+                  ? 'Nenhuma DPIA encontrada'
                   : 'Nenhuma DPIA criada ainda'
                 }
               </h3>

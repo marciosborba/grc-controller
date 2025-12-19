@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  AlertTriangle, 
-  Clock, 
-  User, 
+import {
+  AlertTriangle,
+  Clock,
+  User,
   Calendar,
   MoreHorizontal,
   Edit,
@@ -21,12 +21,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -47,10 +47,10 @@ interface PrivacyIncidentCardProps {
   onGenerateNotification: () => void;
 }
 
-export function PrivacyIncidentCard({ 
-  incident, 
-  selected, 
-  onSelect, 
+export function PrivacyIncidentCard({
+  incident,
+  selected,
+  onSelect,
   onUpdate,
   onDelete,
   onContain,
@@ -66,22 +66,22 @@ export function PrivacyIncidentCard({
 
   // Get status badge properties
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { 
-      variant: "default" | "secondary" | "destructive" | "outline", 
-      label: string, 
+    const statusConfig: Record<string, {
+      variant: "default" | "secondary" | "destructive" | "outline",
+      label: string,
       color: string,
       icon?: React.ComponentType<any>
     }> = {
-      open: { variant: 'destructive', label: 'Aberto', color: 'text-red-600', icon: AlertTriangle },
-      investigating: { variant: 'secondary', label: 'Investigando', color: 'text-blue-600', icon: Eye },
-      escalated: { variant: 'secondary', label: 'Escalado', color: 'text-orange-600', icon: AlertTriangle },
-      resolved: { variant: 'outline', label: 'Resolvido', color: 'text-green-600', icon: CheckCircle },
-      closed: { variant: 'default', label: 'Encerrado', color: 'text-gray-600', icon: XCircle }
+      open: { variant: 'destructive', label: 'Aberto', color: 'text-red-600 dark:text-red-400', icon: AlertTriangle },
+      investigating: { variant: 'secondary', label: 'Investigando', color: 'text-blue-600 dark:text-blue-400', icon: Eye },
+      escalated: { variant: 'secondary', label: 'Escalado', color: 'text-orange-600 dark:text-orange-400', icon: AlertTriangle },
+      resolved: { variant: 'outline', label: 'Resolvido', color: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+      closed: { variant: 'default', label: 'Encerrado', color: 'text-gray-600 dark:text-gray-400', icon: XCircle }
     };
 
     const config = statusConfig[status] || statusConfig.open;
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} flex items-center gap-1`}>
         {Icon && <Icon className="w-3 h-3" />}
@@ -92,15 +92,15 @@ export function PrivacyIncidentCard({
 
   // Get severity badge
   const getSeverityBadge = (severity: string) => {
-    const severityConfig: Record<string, { 
-      variant: "default" | "secondary" | "destructive" | "outline", 
+    const severityConfig: Record<string, {
+      variant: "default" | "secondary" | "destructive" | "outline",
       label: string,
       color: string
     }> = {
-      low: { variant: 'outline', label: 'Baixa', color: 'text-green-600' },
-      medium: { variant: 'secondary', label: 'Média', color: 'text-yellow-600' },
-      high: { variant: 'default', label: 'Alta', color: 'text-orange-600' },
-      critical: { variant: 'destructive', label: 'Crítica', color: 'text-red-600' }
+      low: { variant: 'outline', label: 'Baixa', color: 'text-green-600 dark:text-green-400' },
+      medium: { variant: 'secondary', label: 'Média', color: 'text-yellow-600 dark:text-yellow-400' },
+      high: { variant: 'default', label: 'Alta', color: 'text-orange-600 dark:text-orange-400' },
+      critical: { variant: 'destructive', label: 'Crítica', color: 'text-red-600 dark:text-red-400' }
     };
 
     const config = severityConfig[severity] || severityConfig.low;
@@ -114,10 +114,10 @@ export function PrivacyIncidentCard({
   // Check if notification to ANPD is overdue (72 hours)
   const isANPDNotificationOverdue = () => {
     if (!incident.anpd_notification_required || incident.anpd_notified) return false;
-    
+
     const discoveryDate = new Date(incident.discovered_at);
     const seventyTwoHoursLater = new Date(discoveryDate.getTime() + (72 * 60 * 60 * 1000));
-    
+
     return new Date() > seventyTwoHoursLater;
   };
 
@@ -251,7 +251,7 @@ export function PrivacyIncidentCard({
                   </p>
                 </div>
               </div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" disabled={loading}>
@@ -272,28 +272,28 @@ export function PrivacyIncidentCard({
                     Gerar Documento ANPD
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  
+
                   {!incident.contained_at && incident.status === 'open' && (
                     <DropdownMenuItem onClick={() => setShowContainDialog(true)}>
                       <Shield className="w-4 h-4 mr-2" />
                       Conter Incidente
                     </DropdownMenuItem>
                   )}
-                  
+
                   {incident.anpd_notification_required && !incident.anpd_notified && (
                     <DropdownMenuItem onClick={onNotifyANPD} className="text-orange-600">
                       <Send className="w-4 h-4 mr-2" />
                       Notificar ANPD
                     </DropdownMenuItem>
                   )}
-                  
+
                   {incident.status !== 'closed' && incident.status !== 'resolved' && (
                     <DropdownMenuItem onClick={() => setShowCloseDialog(true)}>
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Encerrar Incidente
                     </DropdownMenuItem>
                   )}
-                  
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                     <Trash2 className="w-4 h-4 mr-2" />
@@ -307,10 +307,10 @@ export function PrivacyIncidentCard({
             <div className="flex flex-wrap items-center gap-2">
               {getStatusBadge(incident.status)}
               {getSeverityBadge(incident.severity_level)}
-              
+
               {incident.anpd_notification_required && (
-                <Badge variant={incident.anpd_notified ? "default" : "outline"} 
-                       className={incident.anpd_notified ? "text-green-600" : "text-orange-600"}>
+                <Badge variant={incident.anpd_notified ? "default" : "outline"}
+                  className={incident.anpd_notified ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}>
                   <Bell className="w-3 h-3 mr-1" />
                   {incident.anpd_notified ? 'ANPD Notificada' : 'Requer ANPD'}
                 </Badge>
@@ -345,21 +345,21 @@ export function PrivacyIncidentCard({
                 </div>
                 <div className="text-xs text-muted-foreground">Indivíduos Afetados</div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-lg font-bold">
                   {incident.affected_data_categories?.length || 0}
                 </div>
                 <div className="text-xs text-muted-foreground">Categorias de Dados</div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-lg font-bold text-red-600">
                   R$ {incident.financial_impact?.toLocaleString('pt-BR') || '0'}
                 </div>
                 <div className="text-xs text-muted-foreground">Impacto Financeiro</div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-lg font-bold">
                   {incident.corrective_actions?.length || 0}
@@ -392,7 +392,7 @@ export function PrivacyIncidentCard({
                     {formatDate(incident.discovered_at)}
                   </span>
                 </div>
-                
+
                 {incident.occurred_at && (
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
@@ -420,12 +420,12 @@ export function PrivacyIncidentCard({
                     <User className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">
                       <span className="font-medium">Gestor: </span>
-                      {(incident as any).incident_manager_user?.raw_user_meta_data?.name || 
-                       (incident as any).incident_manager_user?.email}
+                      {(incident as any).incident_manager_user?.raw_user_meta_data?.name ||
+                        (incident as any).incident_manager_user?.email}
                     </span>
                   </div>
                 )}
-                
+
                 {incident.incident_source && (
                   <div className="flex items-center space-x-2">
                     <FileText className="w-4 h-4 text-muted-foreground" />
@@ -472,13 +472,13 @@ Notificação da equipe de segurança`}
               rows={6}
             />
             <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowContainDialog(false)}
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleContain}
                 disabled={loading || !containmentMeasures.trim()}
               >
@@ -506,13 +506,13 @@ Notificação da equipe de segurança`}
               rows={8}
             />
             <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCloseDialog(false)}
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleClose}
                 disabled={loading || !finalReport.trim()}
               >

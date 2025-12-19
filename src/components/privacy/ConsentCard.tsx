@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Shield, 
-  Calendar, 
+import {
+  Shield,
+  Calendar,
   User,
   MoreHorizontal,
   Edit,
@@ -22,12 +22,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,8 +45,8 @@ interface ConsentCardProps {
   onRenew: (newExpiryDate: string) => void;
 }
 
-export function ConsentCard({ 
-  consent, 
+export function ConsentCard({
+  consent,
   selected,
   onSelect,
   onRevoke,
@@ -60,39 +60,39 @@ export function ConsentCard({
 
   // Get status badge properties
   const getStatusBadge = (status: ConsentStatus) => {
-    const statusConfig: Record<ConsentStatus, { 
-      variant: "default" | "secondary" | "destructive" | "outline", 
-      label: string, 
+    const statusConfig: Record<ConsentStatus, {
+      variant: "default" | "secondary" | "destructive" | "outline",
+      label: string,
       color: string,
       icon?: React.ComponentType<any>
     }> = {
-      granted: { variant: 'default', label: 'Concedido', color: 'text-green-600', icon: CheckCircle },
-      revoked: { variant: 'destructive', label: 'Revogado', color: 'text-red-600', icon: XCircle },
-      expired: { variant: 'destructive', label: 'Expirado', color: 'text-red-600', icon: AlertTriangle },
-      pending: { variant: 'secondary', label: 'Pendente', color: 'text-yellow-600', icon: Clock }
+      granted: { variant: 'default', label: 'Concedido', color: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+      revoked: { variant: 'destructive', label: 'Revogado', color: 'text-red-600 dark:text-red-400', icon: XCircle },
+      expired: { variant: 'destructive', label: 'Expirado', color: 'text-red-600 dark:text-red-400', icon: AlertTriangle },
+      pending: { variant: 'secondary', label: 'Pendente', color: 'text-yellow-600 dark:text-yellow-400', icon: Clock }
     };
 
-    return statusConfig[status] || { variant: 'outline' as const, label: status, color: 'text-gray-600' };
+    return statusConfig[status] || { variant: 'outline' as const, label: status, color: 'text-gray-600 dark:text-gray-400' };
   };
 
   // Get collection method icon and label
   const getCollectionMethodInfo = (method: CollectionMethod) => {
-    const methodConfig: Record<CollectionMethod, { 
-      icon: React.ComponentType<any>, 
+    const methodConfig: Record<CollectionMethod, {
+      icon: React.ComponentType<any>,
       label: string,
       color: string
     }> = {
-      website_form: { icon: Globe, label: 'Formulário Web', color: 'text-blue-600' },
-      mobile_app: { icon: Smartphone, label: 'App Mobile', color: 'text-purple-600' },
-      phone_call: { icon: Phone, label: 'Ligação', color: 'text-green-600' },
-      email: { icon: Mail, label: 'Email', color: 'text-orange-600' },
-      physical_form: { icon: FileText, label: 'Formulário Físico', color: 'text-gray-600' },
-      api: { icon: RefreshCw, label: 'API', color: 'text-indigo-600' },
-      import: { icon: Download, label: 'Importação', color: 'text-teal-600' },
-      other: { icon: FileText, label: 'Outro', color: 'text-gray-600' }
+      website_form: { icon: Globe, label: 'Formulário Web', color: 'text-blue-600 dark:text-blue-400' },
+      mobile_app: { icon: Smartphone, label: 'App Mobile', color: 'text-purple-600 dark:text-purple-400' },
+      phone_call: { icon: Phone, label: 'Ligação', color: 'text-green-600 dark:text-green-400' },
+      email: { icon: Mail, label: 'Email', color: 'text-orange-600 dark:text-orange-400' },
+      physical_form: { icon: FileText, label: 'Formulário Físico', color: 'text-gray-600 dark:text-gray-400' },
+      api: { icon: RefreshCw, label: 'API', color: 'text-indigo-600 dark:text-indigo-400' },
+      import: { icon: Download, label: 'Importação', color: 'text-teal-600 dark:text-teal-400' },
+      other: { icon: FileText, label: 'Outro', color: 'text-gray-600 dark:text-gray-400' }
     };
 
-    return methodConfig[method] || { icon: FileText, label: method, color: 'text-gray-600' };
+    return methodConfig[method] || { icon: FileText, label: method, color: 'text-gray-600 dark:text-gray-400' };
   };
 
   // Check if consent is expiring soon (within 30 days)
@@ -140,10 +140,9 @@ export function ConsentCard({
   const daysUntilExpiry = getDaysUntilExpiry();
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      isExpired() ? 'border-red-200 bg-red-50' : 
-      isExpiringSoon() ? 'border-orange-200 bg-orange-50' : ''
-    }`}>
+    <Card className={`transition-all duration-200 hover:shadow-md ${isExpired() ? 'border-red-200 bg-red-50 dark:bg-card dark:border-red-800' :
+      isExpiringSoon() ? 'border-orange-200 bg-orange-50 dark:bg-card dark:border-orange-800' : ''
+      }`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3 flex-1">
@@ -162,31 +161,31 @@ export function ConsentCard({
                     <h3 className="text-lg font-semibold text-foreground">
                       {consent.data_subject_name || consent.data_subject_email}
                     </h3>
-                    {consent.is_validated && (
-                      <Shield className="w-4 h-4 text-green-600" title="Consentimento Validado" />
+                    {(consent as any).is_validated && (
+                      <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">{consent.data_subject_email}</p>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Badge 
+                  <Badge
                     variant={statusBadge.variant}
                     className="flex items-center gap-1"
                   >
                     {StatusIcon && <StatusIcon className="w-3 h-3" />}
                     {statusBadge.label}
                   </Badge>
-                  
+
                   {isExpired() && (
                     <Badge variant="destructive" className="flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Expirado
                     </Badge>
                   )}
-                  
+
                   {isExpiringSoon() && !isExpired() && (
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800">
+                    <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
                       <Clock className="w-3 h-3" />
                       Expira em breve
                     </Badge>
@@ -219,13 +218,11 @@ export function ConsentCard({
 
                 {consent.expired_at && (
                   <div className="flex items-center space-x-2">
-                    <Calendar className={`w-4 h-4 ${
-                      isExpired() ? 'text-red-600' : isExpiringSoon() ? 'text-orange-600' : 'text-muted-foreground'
-                    }`} />
+                    <Calendar className={`w-4 h-4 ${isExpired() ? 'text-red-600 dark:text-red-400' : isExpiringSoon() ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
+                      }`} />
                     <span className="text-muted-foreground">Expira:</span>
-                    <span className={`font-medium ${
-                      isExpired() ? 'text-red-600' : isExpiringSoon() ? 'text-orange-600' : ''
-                    }`}>
+                    <span className={`font-medium ${isExpired() ? 'text-red-600 dark:text-red-400' : isExpiringSoon() ? 'text-orange-600 dark:text-orange-400' : ''
+                      }`}>
                       {new Date(consent.expired_at).toLocaleDateString('pt-BR')}
                       {daysUntilExpiry !== null && daysUntilExpiry > 0 && (
                         <span className="text-xs text-muted-foreground ml-1">
@@ -244,11 +241,11 @@ export function ConsentCard({
                   </div>
                 )}
 
-                {consent.legal_basis && (
+                {(consent as any).legal_basis && (
                   <div className="flex items-center space-x-2">
                     <Shield className="w-4 h-4 text-muted-foreground" />
                     <span className="text-muted-foreground">Base Legal:</span>
-                    <span className="font-medium">{consent.legal_basis.name}</span>
+                    <span className="font-medium">{(consent as any).legal_basis.name}</span>
                   </div>
                 )}
 
@@ -264,22 +261,22 @@ export function ConsentCard({
               {/* LGPD Requirements */}
               <div className="flex flex-wrap gap-2">
                 {consent.is_informed && (
-                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
                     ✓ Informado
                   </Badge>
                 )}
                 {consent.is_specific && (
-                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
                     ✓ Específico
                   </Badge>
                 )}
                 {consent.is_free && (
-                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
                     ✓ Livre
                   </Badge>
                 )}
                 {consent.is_unambiguous && (
-                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-200 dark:text-green-400 dark:border-green-800">
                     ✓ Inequívoco
                   </Badge>
                 )}
@@ -287,15 +284,15 @@ export function ConsentCard({
 
               {/* Revocation info */}
               {consent.status === 'revoked' && consent.revoked_at && (
-                <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-                  <div className="flex items-center space-x-2 text-red-800">
+                <div className="bg-red-50 border border-red-200 dark:bg-red-900/10 dark:border-red-800/50 p-3 rounded-lg">
+                  <div className="flex items-center space-x-2 text-red-800 dark:text-red-300">
                     <XCircle className="w-4 h-4" />
                     <span className="font-medium">Consentimento Revogado</span>
                   </div>
-                  <p className="text-sm text-red-700 mt-1">
+                  <p className="text-sm text-red-700 dark:text-red-400 mt-1">
                     Revogado em {new Date(consent.revoked_at).toLocaleDateString('pt-BR')}
-                    {consent.revocation_reason && (
-                      <span className="block mt-1">Motivo: {consent.revocation_reason}</span>
+                    {(consent as any).revocation_reason && (
+                      <span className="block mt-1">Motivo: {(consent as any).revocation_reason}</span>
                     )}
                   </p>
                 </div>
@@ -315,16 +312,16 @@ export function ConsentCard({
                 <Eye className="w-4 h-4 mr-2" />
                 Ver Detalhes Completos
               </DropdownMenuItem>
-              
+
               <DropdownMenuSeparator />
-              
+
               {consent.status === 'granted' && (
                 <>
                   <DropdownMenuItem onClick={() => setRevokeDialogOpen(true)}>
                     <XCircle className="w-4 h-4 mr-2" />
                     Revogar Consentimento
                   </DropdownMenuItem>
-                  
+
                   {consent.expired_at && (
                     <DropdownMenuItem onClick={() => setRenewDialogOpen(true)}>
                       <RefreshCw className="w-4 h-4 mr-2" />
@@ -333,9 +330,9 @@ export function ConsentCard({
                   )}
                 </>
               )}
-              
+
               <DropdownMenuSeparator />
-              
+
               <DropdownMenuItem>
                 <Download className="w-4 h-4 mr-2" />
                 Gerar Comprovante
@@ -398,8 +395,8 @@ export function ConsentCard({
               <Button variant="outline" onClick={() => setRenewDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleRenew} 
+              <Button
+                onClick={handleRenew}
                 disabled={!newExpiryDate}
               >
                 Renovar Consentimento
@@ -497,7 +494,7 @@ export function ConsentCard({
                 {consent.evidence_url && (
                   <div className="md:col-span-2">
                     <Label className="font-medium">URL de Evidência</Label>
-                    <p className="text-sm text-blue-600">{consent.evidence_url}</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">{consent.evidence_url}</p>
                   </div>
                 )}
               </div>
@@ -505,14 +502,14 @@ export function ConsentCard({
 
             {/* Revocation Details */}
             {consent.status === 'revoked' && (
-              <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-                <Label className="font-medium text-red-800">Detalhes da Revogação</Label>
+              <div className="bg-red-50 border border-red-200 dark:bg-red-900/10 dark:border-red-800/50 p-4 rounded-lg">
+                <Label className="font-medium text-red-800 dark:text-red-300">Detalhes da Revogação</Label>
                 <div className="mt-2 space-y-1">
-                  <p className="text-sm text-red-700">
+                  <p className="text-sm text-red-700 dark:text-red-400">
                     <strong>Data:</strong> {consent.revoked_at ? new Date(consent.revoked_at).toLocaleDateString('pt-BR') : 'N/A'}
                   </p>
                   {consent.revocation_reason && (
-                    <p className="text-sm text-red-700">
+                    <p className="text-sm text-red-700 dark:text-red-400">
                       <strong>Motivo:</strong> {consent.revocation_reason}
                     </p>
                   )}

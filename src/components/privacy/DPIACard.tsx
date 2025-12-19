@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  User, 
+import {
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  User,
   Calendar,
   MoreHorizontal,
   Edit,
@@ -20,12 +20,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -45,10 +45,10 @@ interface DPIACardProps {
   onDelete: () => Promise<{ success: boolean; error?: string }>;
 }
 
-export function DPIACard({ 
-  dpia, 
-  selected, 
-  onSelect, 
+export function DPIACard({
+  dpia,
+  selected,
+  onSelect,
   onApprove,
   onReject,
   onDuplicate,
@@ -203,7 +203,7 @@ export function DPIACard({
                 )}
               </div>
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" disabled={loading}>
@@ -230,13 +230,13 @@ export function DPIACard({
                 <DropdownMenuSeparator />
                 {dpia.status === 'pending_approval' && (
                   <>
-                    <DropdownMenuItem onClick={handleApprove} className="text-green-600">
+                    <DropdownMenuItem onClick={handleApprove} className="text-green-600 dark:text-green-400">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Aprovar
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => setShowRejectDialog(true)} 
-                      className="text-red-600"
+                    <DropdownMenuItem
+                      onClick={() => setShowRejectDialog(true)}
+                      className="text-red-600 dark:text-red-400"
                     >
                       <AlertCircle className="w-4 h-4 mr-2" />
                       Rejeitar
@@ -244,7 +244,7 @@ export function DPIACard({
                     <DropdownMenuSeparator />
                   </>
                 )}
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive dark:text-red-400">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir
                 </DropdownMenuItem>
@@ -259,7 +259,7 @@ export function DPIACard({
             {getStatusBadge(dpia.status)}
             {dpia.risk_level && getRiskBadge(dpia.risk_level)}
             {dpia.anpd_consultation_required && (
-              <Badge variant="outline" className="text-orange-600">
+              <Badge variant="outline" className="text-orange-600 dark:text-orange-400">
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 Consulta ANPD
               </Badge>
@@ -358,19 +358,19 @@ export function DPIACard({
                   <User className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="font-medium">Conduzida por: </span>
-                    {(dpia as any).conducted_by_user?.raw_user_meta_data?.name || 
-                     (dpia as any).conducted_by_user?.email}
+                    {(dpia as any).conducted_by_user?.raw_user_meta_data?.name ||
+                      (dpia as any).conducted_by_user?.email}
                   </span>
                 </div>
               )}
-              
+
               {(dpia as any).reviewed_by_user && (
                 <div className="flex items-center space-x-2">
                   <Eye className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm">
                     <span className="font-medium">Revisada por: </span>
-                    {(dpia as any).reviewed_by_user?.raw_user_meta_data?.name || 
-                     (dpia as any).reviewed_by_user?.email}
+                    {(dpia as any).reviewed_by_user?.raw_user_meta_data?.name ||
+                      (dpia as any).reviewed_by_user?.email}
                   </span>
                 </div>
               )}
@@ -384,7 +384,7 @@ export function DPIACard({
                   {formatDate(dpia.started_at)}
                 </span>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm">
@@ -414,14 +414,14 @@ export function DPIACard({
               rows={4}
             />
             <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowRejectDialog(false)}
               >
                 Cancelar
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleReject}
                 disabled={loading || !rejectReason.trim()}
               >

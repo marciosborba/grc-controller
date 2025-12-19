@@ -3962,8 +3962,13 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                     const newQuestionWithId = {
                       ...newQuestion,
                       id: `custom_${Date.now()}`,
+                      category: newQuestion.category || 'Geral',
+                      question: newQuestion.question || 'Nova Questão',
+                      type: newQuestion.type || 'multiple_choice',
+                      required: newQuestion.required ?? false,
+                      weight: newQuestion.weight || 5,
                       order: selectedTemplate.questions.length + 1
-                    };
+                    } as AssessmentQuestion;
                     updatedQuestions.push(newQuestionWithId);
                   } else if (editingQuestion) {
                     // Editar questão existente

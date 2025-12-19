@@ -39,12 +39,47 @@ export function DataInventoryPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  const [stats, setStats] = useState<{
+    totalItems: number;
+    activeItems: number;
+    criticalItems: number;
+    highSensitivityItems: number;
+    needsReview: number;
+    overdueReview: number;
+    totalVolume: number;
+    byCategory: Record<string, number>;
+    bySensitivity: Record<string, number>;
+  }>({
+    totalItems: 0,
+    activeItems: 0,
+    criticalItems: 0,
+    highSensitivityItems: 0,
+    needsReview: 0,
+    overdueReview: 0,
+    totalVolume: 0,
+    byCategory: {},
+    bySensitivity: {}
+  });
+
+  const [itemsNeedingReview, setItemsNeedingReview] = useState<any[]>([]);
+
   useEffect(() => {
     fetchInventoryItems();
   }, [fetchInventoryItems]);
 
-  const stats = getInventoryStats();
-  const itemsNeedingReview = getItemsNeedingReview();
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const s = await getInventoryStats();
+        setStats(s);
+        const i = await getItemsNeedingReview();
+        setItemsNeedingReview(i);
+      } catch (error) {
+        console.error("Failed to load inventory stats", error);
+      }
+    };
+    loadStats();
+  }, [inventoryItems, getInventoryStats, getItemsNeedingReview]);
 
   const handleBulkAction = async (action: string) => {
     if (selectedItems.length === 0) {
@@ -118,9 +153,9 @@ export function DataInventoryPage() {
 
   const filteredItems = inventoryItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.system_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.system_name.toLowerCase().includes(searchTerm.toLowerCase());
+
     switch (activeTab) {
       case 'critical':
         return matchesSearch && item.sensitivity_level === 'critica';
@@ -134,7 +169,7 @@ export function DataInventoryPage() {
   });
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -373,7 +408,7 @@ export function DataInventoryPage() {
               </div>
             </div>
           </div>
-          
+
           {filteredItems.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8">

@@ -17,11 +17,11 @@ interface DataDiscoveryResultCardProps {
   onUpdateStatus: (resultId: string, status: 'validated' | 'classified' | 'ignored') => Promise<{ success: boolean; error?: string }>;
 }
 
-export function DataDiscoveryResultCard({ 
-  result, 
-  selected, 
-  onSelect, 
-  onUpdateStatus 
+export function DataDiscoveryResultCard({
+  result,
+  selected,
+  onSelect,
+  onUpdateStatus
 }: DataDiscoveryResultCardProps) {
   const [loading, setLoading] = useState(false);
   const [showSampleData, setShowSampleData] = useState(false);
@@ -31,7 +31,7 @@ export function DataDiscoveryResultCard({
 
     try {
       const response = await onUpdateStatus(result.id, status);
-      
+
       if (response.success) {
         const statusLabels = {
           validated: 'validado',
@@ -52,11 +52,11 @@ export function DataDiscoveryResultCard({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'discovered':
-        return <Eye className="w-4 h-4 text-blue-500" />;
+        return <Eye className="w-4 h-4 text-blue-500 dark:text-blue-400" />;
       case 'validated':
-        return <Check className="w-4 h-4 text-green-500" />;
+        return <Check className="w-4 h-4 text-green-500 dark:text-green-400" />;
       case 'classified':
-        return <Shield className="w-4 h-4 text-purple-500" />;
+        return <Shield className="w-4 h-4 text-purple-500 dark:text-purple-400" />;
       case 'ignored':
         return <X className="w-4 h-4 text-gray-400" />;
       default:
@@ -102,9 +102,9 @@ export function DataDiscoveryResultCard({
   };
 
   const getConfidenceColor = (score: number) => {
-    if (score >= 0.8) return 'text-green-600';
-    if (score >= 0.6) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 0.8) return 'text-green-600 dark:text-green-400';
+    if (score >= 0.6) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   const formatLocation = () => {
@@ -153,7 +153,7 @@ export function DataDiscoveryResultCard({
                 </p>
               </div>
             </div>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" disabled={loading}>
@@ -185,7 +185,7 @@ export function DataDiscoveryResultCard({
             </div>
             <div className="flex items-center space-x-4 text-sm">
               <div className="text-muted-foreground">
-                Confiança: 
+                Confiança:
                 <span className={`ml-1 font-medium ${getConfidenceColor(result.confidence_score)}`}>
                   {Math.round(result.confidence_score * 100)}%
                 </span>
@@ -219,7 +219,7 @@ export function DataDiscoveryResultCard({
                   )}
                 </Button>
               </div>
-              
+
               {showSampleData && (
                 <div className="bg-muted p-3 rounded-md">
                   <code className="text-sm font-mono">{result.sample_data}</code>
@@ -242,7 +242,7 @@ export function DataDiscoveryResultCard({
                 })}
               </div>
             </div>
-            
+
             {result.reviewed_at && result.reviewed_by && (
               <div>
                 <span className="text-muted-foreground">Revisado em:</span>

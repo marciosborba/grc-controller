@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { PrivacyIncident } from '@/types/privacy-management';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export interface IncidentFilters {
   status?: string;
@@ -81,7 +81,7 @@ export function usePrivacyIncidents() {
       if (filters.overdue) {
         const seventyTwoHoursAgo = new Date();
         seventyTwoHoursAgo.setHours(seventyTwoHoursAgo.getHours() - 72);
-        
+
         query = query
           .eq('anpd_notification_required', true)
           .eq('anpd_notified', false)
@@ -131,13 +131,13 @@ export function usePrivacyIncidents() {
       // Use RPC data for accurate counts, distribute for realistic stats
       const calculatedStats: IncidentStats = {
         total,
-        open: incidentsData.open_incidents || Math.floor(total * 0.4), // ~40% open
-        resolved: incidentsData.resolved_incidents || Math.floor(total * 0.6), // ~60% resolved  
-        critical: incidentsData.critical_incidents || Math.floor(total * 0.25), // ~25% critical
-        requiresANPDNotification: incidentsData.anpd_notifications_required || Math.floor(total * 0.5), // ~50% require ANPD
-        anpdNotified: incidentsData.anpd_notified || Math.floor(total * 0.3), // ~30% notified
-        overdue: incidentsData.overdue_incidents || Math.floor(total * 0.15), // ~15% overdue
-        thisMonth: incidentsData.this_month || Math.floor(total * 0.4) // ~40% this month
+        open: incidentsData.open_incidents ?? 0,
+        resolved: incidentsData.resolved_incidents ?? 0,
+        critical: incidentsData.critical_incidents ?? 0,
+        requiresANPDNotification: incidentsData.anpd_notifications_required ?? 0,
+        anpdNotified: incidentsData.anpd_notified ?? 0,
+        overdue: incidentsData.overdue_incidents ?? 0,
+        thisMonth: incidentsData.this_month ?? 0
       };
 
       setStats(calculatedStats);
@@ -164,7 +164,7 @@ export function usePrivacyIncidents() {
       setLoading(true);
 
       // Auto-determine ANPD notification requirement based on severity and data categories
-      const requiresNotification = 
+      const requiresNotification =
         incidentData.severity_level === 'critical' ||
         incidentData.severity_level === 'high' ||
         (incidentData.estimated_affected_individuals && incidentData.estimated_affected_individuals > 100);
@@ -205,7 +205,7 @@ export function usePrivacyIncidents() {
           ...updates,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
-      })
+        })
         .eq('id', id);
 
       if (error) throw error;
@@ -246,7 +246,7 @@ export function usePrivacyIncidents() {
 
   // Notify ANPD about incident
   const notifyANPD = async (
-    incidentId: string, 
+    incidentId: string,
     notificationData: ANPDNotificationData
   ): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -274,7 +274,7 @@ export function usePrivacyIncidents() {
           anpd_notification_date: notificationData.notification_date,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
-      })
+        })
         .eq('id', incidentId);
 
       if (updateError) throw updateError;
@@ -331,10 +331,10 @@ export function usePrivacyIncidents() {
   };
 
   // Check for overdue ANPD notifications
-  const checkOverdueNotifications = async (): Promise<{ 
-    success: boolean; 
-    error?: string; 
-    overdueIncidents?: PrivacyIncident[] 
+  const checkOverdueNotifications = async (): Promise<{
+    success: boolean;
+    error?: string;
+    overdueIncidents?: PrivacyIncident[]
   }> => {
     try {
       const seventyTwoHoursAgo = new Date();
@@ -349,8 +349,8 @@ export function usePrivacyIncidents() {
 
       if (error) throw error;
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         overdueIncidents: data || []
       };
 
@@ -381,7 +381,7 @@ export function usePrivacyIncidents() {
 
   // Mark incident as contained
   const containIncident = async (
-    incidentId: string, 
+    incidentId: string,
     containmentMeasures: string[]
   ): Promise<{ success: boolean; error?: string }> => {
     return updateIncident(incidentId, {
@@ -393,7 +393,7 @@ export function usePrivacyIncidents() {
 
   // Close incident
   const closeIncident = async (
-    incidentId: string, 
+    incidentId: string,
     finalReport: string
   ): Promise<{ success: boolean; error?: string }> => {
     return updateIncident(incidentId, {

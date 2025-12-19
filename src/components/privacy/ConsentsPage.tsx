@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   XCircle,
   Filter,
   Download,
@@ -68,11 +68,11 @@ export function ConsentsPage() {
 
   // Filter consents based on search and filters
   const filteredConsents = consents.filter(consent => {
-    const matchesSearch = 
+    const matchesSearch =
       consent.data_subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       consent.data_subject_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       consent.purpose.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -125,7 +125,7 @@ export function ConsentsPage() {
       revoked_by: 'current-user-id', // This should come from auth context
       notification_method: 'email'
     });
-    
+
     if (result.success) {
       toast.success('Consentimento revogado');
     } else {
@@ -141,7 +141,7 @@ export function ConsentsPage() {
       renewal_method: 'email' as CollectionMethod,
       renewed_by: 'current-user-id'
     });
-    
+
     if (result.success) {
       toast.success('Consentimento renovado');
     } else {
@@ -158,7 +158,7 @@ export function ConsentsPage() {
 
     // In a real implementation, this would show a confirmation dialog
     const reason = 'Revogação em lote solicitada pelo usuário';
-    
+
     // For bulk operations, we would need to implement this differently
     // For now, we'll revoke each consent individually
     let successCount = 0;
@@ -170,7 +170,7 @@ export function ConsentsPage() {
       });
       if (result.success) successCount++;
     }
-    
+
     toast.success(`${successCount} consentimento(s) revogado(s)`);
     setSelectedConsents([]);
   };
@@ -185,11 +185,11 @@ export function ConsentsPage() {
   // Get status color for badges
   const getStatusColor = (status: ConsentStatus) => {
     switch (status) {
-      case 'granted': return 'bg-green-100 text-green-800';
-      case 'revoked': return 'bg-red-100 text-red-800';
-      case 'expired': return 'bg-gray-100 text-gray-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'granted': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'revoked': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'expired': return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
     }
   };
 
@@ -220,7 +220,7 @@ export function ConsentsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -241,13 +241,13 @@ export function ConsentsPage() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleGenerateReport}>
             <Download className="w-4 h-4 mr-2" />
             Relatório
           </Button>
-          
+
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
@@ -264,9 +264,9 @@ export function ConsentsPage() {
 
       {/* Expiring Consents Alert */}
       {expiringConsents.length > 0 && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <Clock className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800/50">
+          <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-300">
             <strong>Atenção:</strong> {expiringConsents.length} consentimento(s) expirando em até 30 dias.
           </AlertDescription>
         </Alert>
@@ -274,9 +274,9 @@ export function ConsentsPage() {
 
       {/* Expired Consents Alert */}
       {expiredConsents.length > 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-300">
             <strong>Urgente:</strong> {expiredConsents.length} consentimento(s) expiraram automaticamente.
           </AlertDescription>
         </Alert>
@@ -303,7 +303,7 @@ export function ConsentsPage() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.granted}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.granted}</div>
             <p className="text-xs text-muted-foreground">
               Consentimentos válidos
             </p>
@@ -316,7 +316,7 @@ export function ConsentsPage() {
             <XCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.revoked}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.revoked}</div>
             <p className="text-xs text-muted-foreground">
               Revogados pelos titulares
             </p>
@@ -329,7 +329,7 @@ export function ConsentsPage() {
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.expiring_soon}</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.expiring_soon}</div>
             <p className="text-xs text-muted-foreground">
               Próximos de expirar
             </p>
@@ -384,8 +384,8 @@ export function ConsentsPage() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterChange('expiring_soon', true)}
                 className="text-orange-600 hover:text-orange-700"
@@ -474,7 +474,7 @@ export function ConsentsPage() {
                   onRevoke={(reason) => handleRevokeConsent(consent.id, reason)}
                   onRenew={(newExpiryDate) => handleRenewConsent(consent.id, newExpiryDate)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -491,7 +491,7 @@ export function ConsentsPage() {
                   onRevoke={(reason) => handleRevokeConsent(consent.id, reason)}
                   onRenew={(newExpiryDate) => handleRenewConsent(consent.id, newExpiryDate)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -508,7 +508,7 @@ export function ConsentsPage() {
                   onRevoke={(reason) => handleRevokeConsent(consent.id, reason)}
                   onRenew={(newExpiryDate) => handleRenewConsent(consent.id, newExpiryDate)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 

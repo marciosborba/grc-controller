@@ -152,7 +152,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         change: '', // Removed incoherent hardcoded change
         icon: FileCheck,
         description: 'Fornecedores avaliados nos últimos 12 meses',
-        trend: 'neutral' as const
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
       },
       {
         title: 'Planos de Ação',
@@ -160,7 +160,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         change: '',
         icon: Target,
         description: 'Planos de ação em aberto',
-        trend: 'neutral' as const
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
       },
       {
         title: 'Taxa de Conformidade',
@@ -168,16 +168,23 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         change: '',
         icon: Shield,
         description: 'Fornecedores em conformidade com requisitos',
-        trend: 'neutral' as const
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
       },
-      // REMOVED: Tempo Médio de Avaliação (often incoherent/0)
+      {
+        title: 'Assessments Ativos',
+        value: (dashboardMetrics?.pending_assessments || assessments.filter(a => ['sent', 'in_progress'].includes(a.status)).length).toString(),
+        change: '',
+        icon: Clock,
+        description: 'Avaliações em andamento',
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
+      },
       {
         title: 'Score Médio de Risco',
         value: avgRiskScore.toFixed(1),
         change: '',
         icon: Activity,
-        description: 'Média ponderada de risco da base',
-        trend: 'neutral' as const
+        description: 'Média ponderada de risco',
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
       },
       {
         title: 'Fornecedores Críticos',
@@ -185,10 +192,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         change: '',
         icon: AlertTriangle,
         description: 'Fornecedores com classificação de risco alto/crítico',
-        trend: 'neutral' as const
+        trend: 'neutral' as 'up' | 'down' | 'neutral'
       }
     ];
-  }, [dashboardMetrics, vendors, plans]);
+  }, [dashboardMetrics, vendors, plans, assessments]);
 
   // --- DADOS PARA GRÁFICOS ---
 
@@ -308,7 +315,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {kpis.map((kpi, index) => (
           <Card key={index} className="overflow-hidden border-none shadow-md bg-card/50 backdrop-blur-sm">
             <CardContent className="p-0">

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  Shield, 
-  Clock, 
-  CheckCircle, 
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  Shield,
+  Clock,
+  CheckCircle,
   Bell,
   Filter,
   Download,
@@ -69,11 +69,11 @@ export function PrivacyIncidentsPage() {
 
   // Filter incidents based on search and filters
   const filteredIncidents = incidents.filter(incident => {
-    const matchesSearch = 
+    const matchesSearch =
       incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.incident_source?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -113,7 +113,7 @@ export function PrivacyIncidentsPage() {
     if (result.success) {
       toast.success('Incidente criado com sucesso');
       setCreateDialogOpen(false);
-      
+
       // Check if ANPD notification is required
       if (incidentData.severity_level === 'critical' || incidentData.severity_level === 'high') {
         toast.warning('Este incidente pode requerer notificação à ANPD');
@@ -145,6 +145,7 @@ export function PrivacyIncidentsPage() {
     } else {
       toast.error(result.error || 'Erro ao conter incidente');
     }
+    return result;
   };
 
   // Handle incident closure
@@ -155,6 +156,7 @@ export function PrivacyIncidentsPage() {
     } else {
       toast.error(result.error || 'Erro ao encerrar incidente');
     }
+    return result;
   };
 
   // Generate ANPD notification document
@@ -169,7 +171,7 @@ export function PrivacyIncidentsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -190,7 +192,7 @@ export function PrivacyIncidentsPage() {
             </p>
           </div>
         </div>
-        
+
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -206,13 +208,13 @@ export function PrivacyIncidentsPage() {
 
       {/* Overdue Notifications Alert */}
       {overdueIncidents.length > 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50">
+          <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-300">
             <strong>Atenção:</strong> {overdueIncidents.length} incidente(s) com notificação à ANPD em atraso (prazo de 72h ultrapassado).
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               className="ml-2"
               onClick={() => handleFilterChange('overdue', true)}
             >
@@ -240,10 +242,10 @@ export function PrivacyIncidentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Incidentes Abertos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.open || 0}</div>
+            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.open || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats.critical || 0} críticos
             </p>
@@ -253,10 +255,10 @@ export function PrivacyIncidentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Requer Notificação ANPD</CardTitle>
-            <Bell className="h-4 w-4 text-red-600" />
+            <Bell className="h-4 w-4 text-red-600 dark:text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.requiresANPDNotification || 0}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.requiresANPDNotification || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats.overdue || 0} em atraso
             </p>
@@ -266,10 +268,10 @@ export function PrivacyIncidentsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ANPD Notificada</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.anpdNotified || 0}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.anpdNotified || 0}</div>
             <p className="text-xs text-muted-foreground">
               {stats.resolved || 0} resolvidos
             </p>
@@ -294,8 +296,8 @@ export function PrivacyIncidentsPage() {
             </div>
 
             <div className="flex gap-2">
-              <Select 
-                value={filters.status || ''} 
+              <Select
+                value={filters.status || ''}
                 onValueChange={(value) => handleFilterChange('status', value || undefined)}
               >
                 <SelectTrigger className="w-40">
@@ -311,8 +313,8 @@ export function PrivacyIncidentsPage() {
                 </SelectContent>
               </Select>
 
-              <Select 
-                value={filters.severity || ''} 
+              <Select
+                value={filters.severity || ''}
                 onValueChange={(value) => handleFilterChange('severity', value || undefined)}
               >
                 <SelectTrigger className="w-40">
@@ -344,25 +346,25 @@ export function PrivacyIncidentsPage() {
               <span className="text-sm text-muted-foreground">
                 {selectedIncidents.length} selecionado(s)
               </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {}}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { }}
                 className="flex items-center gap-1"
               >
                 <Download className="w-3 h-3" />
                 Exportar Relatório
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   // Find first incident that requires ANPD notification
                   const incidentRequiringNotification = selectedIncidents.find(id => {
                     const incident = incidents.find(i => i.id === id);
                     return incident?.anpd_notification_required && !incident?.anpd_notified;
                   });
-                  
+
                   if (incidentRequiringNotification) {
                     setSelectedIncidentForNotification(incidentRequiringNotification);
                     setNotificationDialogOpen(true);
@@ -409,9 +411,9 @@ export function PrivacyIncidentsPage() {
       {/* ANPD Notification Dialog */}
       <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <ANPDNotificationDialog 
+          <ANPDNotificationDialog
             incidentId={selectedIncidentForNotification}
-            incident={selectedIncidentForNotification ? 
+            incident={selectedIncidentForNotification ?
               incidents.find(i => i.id === selectedIncidentForNotification) : undefined
             }
             onNotify={handleNotifyANPD}
@@ -442,8 +444,8 @@ export function PrivacyIncidentsPage() {
           <CardContent className="text-center py-12">
             <Shield className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">
-              {searchTerm || Object.keys(filters).length > 0 
-                ? 'Nenhum incidente encontrado' 
+              {searchTerm || Object.keys(filters).length > 0
+                ? 'Nenhum incidente encontrado'
                 : 'Nenhum incidente registrado'
               }
             </h3>

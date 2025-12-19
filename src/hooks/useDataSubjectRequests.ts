@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DataSubjectRequest, DataSubjectRequestType, DataSubjectRequestStatus, VerificationMethod, ResponseMethod } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export interface RequestFilters {
   status?: string;
@@ -144,10 +144,10 @@ export function useDataSubjectRequests() {
       try {
 
         await logSecurityEvent({
-        event: 'data_subject_requests_fetch_error',
-        description: `Error fetching requests: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        severity: 'medium'
-      });
+          event: 'data_subject_requests_fetch_error',
+          description: `Error fetching requests: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          severity: 'medium'
+        });
 
       } catch (logError) {
 
@@ -198,29 +198,29 @@ export function useDataSubjectRequests() {
       const dsrData = rpcData.data_subject_requests || {};
       const total = dsrData.total_requests || 0;
 
-      // Use RPC data for accurate counts, distribute for demo purposes
+      // Use RPC data for accurate counts
       const calculatedStats: RequestStats = {
         total,
-        pending: dsrData.pending_requests || Math.floor(total * 0.3), // ~30% pending
-        in_progress: dsrData.in_progress_requests || Math.floor(total * 0.4), // ~40% in progress
-        completed: dsrData.completed_requests || Math.floor(total * 0.25), // ~25% completed
-        rejected: dsrData.rejected_requests || Math.floor(total * 0.05), // ~5% rejected
-        overdue: dsrData.overdue_requests || Math.floor(total * 0.1), // ~10% overdue
-        urgent: dsrData.urgent_requests || Math.floor(total * 0.15), // ~15% urgent
-        by_type: dsrData.by_type || {
-          acesso: Math.floor(total * 0.2),
-          correcao: Math.floor(total * 0.15),
-          anonimizacao: Math.floor(total * 0.05),
-          bloqueio: Math.floor(total * 0.1),
-          eliminacao: Math.floor(total * 0.2),
-          portabilidade: Math.floor(total * 0.1),
-          informacao_uso_compartilhamento: Math.floor(total * 0.05),
-          revogacao_consentimento: Math.floor(total * 0.1),
-          oposicao: Math.floor(total * 0.03),
-          revisao_decisoes_automatizadas: Math.floor(total * 0.02)
+        pending: dsrData.pending_requests ?? 0,
+        in_progress: dsrData.in_progress_requests ?? 0,
+        completed: dsrData.completed_requests ?? 0,
+        rejected: dsrData.rejected_requests ?? 0,
+        overdue: dsrData.overdue_requests ?? 0,
+        urgent: dsrData.urgent_requests ?? 0,
+        by_type: dsrData.by_type ?? {
+          acesso: 0,
+          correcao: 0,
+          anonimizacao: 0,
+          bloqueio: 0,
+          eliminacao: 0,
+          portabilidade: 0,
+          informacao_uso_compartilhamento: 0,
+          revogacao_consentimento: 0,
+          oposicao: 0,
+          revisao_decisoes_automatizadas: 0
         },
-        verification_pending: dsrData.verification_pending || Math.floor(total * 0.2),
-        thisMonth: dsrData.this_month || Math.floor(total * 0.6)
+        verification_pending: dsrData.verification_pending ?? 0,
+        thisMonth: dsrData.this_month ?? 0
       };
 
       setStats(calculatedStats);
@@ -291,15 +291,15 @@ export function useDataSubjectRequests() {
 
 
         await logSecurityEvent({
-        event: 'data_subject_request_created',
-        description: `New data subject request created: ${requestData.request_type} for ${requestData.requester_email}`,
-        severity: 'low',
-        metadata: {
-          request_id: data.id,
-          request_type: requestData.request_type,
-          requester_email: requestData.requester_email
-        }
-      });
+          event: 'data_subject_request_created',
+          description: `New data subject request created: ${requestData.request_type} for ${requestData.requester_email}`,
+          severity: 'low',
+          metadata: {
+            request_id: data.id,
+            request_type: requestData.request_type,
+            requester_email: requestData.requester_email
+          }
+        });
 
 
       } catch (logError) {
@@ -316,8 +316,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error creating request:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao criar solicitação'
       };
     }
@@ -326,7 +326,7 @@ export function useDataSubjectRequests() {
   // Verify identity of requester
   const verifyIdentity = async (verificationData: IdentityVerificationData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const sanitizedNotes = verificationData.verification_notes ? 
+      const sanitizedNotes = verificationData.verification_notes ?
         sanitizeString(verificationData.verification_notes) : undefined;
 
       const { error } = await supabase
@@ -342,7 +342,7 @@ export function useDataSubjectRequests() {
           internal_notes: sanitizedNotes,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
-      })
+        })
         .eq('id', verificationData.request_id);
 
       if (error) throw error;
@@ -351,15 +351,15 @@ export function useDataSubjectRequests() {
 
 
         await logSecurityEvent({
-        event: 'data_subject_request_verified',
-        description: `Identity verified for request ${verificationData.request_id}`,
-        severity: 'low',
-        metadata: {
-          request_id: verificationData.request_id,
-          verification_method: verificationData.verification_method,
-          verified_by: verificationData.verified_by
-        }
-      });
+          event: 'data_subject_request_verified',
+          description: `Identity verified for request ${verificationData.request_id}`,
+          severity: 'low',
+          metadata: {
+            request_id: verificationData.request_id,
+            verification_method: verificationData.verification_method,
+            verified_by: verificationData.verified_by
+          }
+        });
 
 
       } catch (logError) {
@@ -376,8 +376,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error verifying identity:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao verificar identidade'
       };
     }
@@ -387,7 +387,7 @@ export function useDataSubjectRequests() {
   const processRequest = async (processingData: RequestProcessingData & { status: 'completed' | 'rejected' | 'partially_completed' }): Promise<{ success: boolean; error?: string }> => {
     try {
       const sanitizedResponse = sanitizeString(processingData.response);
-      const sanitizedNotes = processingData.internal_notes ? 
+      const sanitizedNotes = processingData.internal_notes ?
         sanitizeString(processingData.internal_notes) : undefined;
 
       const updateData = {
@@ -396,7 +396,7 @@ export function useDataSubjectRequests() {
         response_method: processingData.response_method,
         response_attachments: processingData.response_attachments,
         responded_at: new Date().toISOString(),
-        responded_by: processingData.responded_by || null,
+        responded_by: user?.id,
         internal_notes: sanitizedNotes,
         updated_at: new Date().toISOString()
       };
@@ -412,15 +412,15 @@ export function useDataSubjectRequests() {
 
 
         await logSecurityEvent({
-        event: 'data_subject_request_processed',
-        description: `Request ${processingData.request_id} processed with status: ${processingData.status}`,
-        severity: 'low',
-        metadata: {
-          request_id: processingData.request_id,
-          status: processingData.status,
-          response_method: processingData.response_method
-        }
-      });
+          event: 'data_subject_request_processed',
+          description: `Request ${processingData.request_id} processed with status: ${processingData.status}`,
+          severity: 'low',
+          metadata: {
+            request_id: processingData.request_id,
+            status: processingData.status,
+            response_method: processingData.response_method
+          }
+        });
 
 
       } catch (logError) {
@@ -437,8 +437,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error processing request:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao processar solicitação'
       };
     }
@@ -447,7 +447,7 @@ export function useDataSubjectRequests() {
   // Assign request to team member
   const assignRequest = async (assignmentData: RequestAssignmentData): Promise<{ success: boolean; error?: string }> => {
     try {
-      const sanitizedNotes = assignmentData.assignment_notes ? 
+      const sanitizedNotes = assignmentData.assignment_notes ?
         sanitizeString(assignmentData.assignment_notes) : undefined;
 
       const { error } = await supabase
@@ -459,7 +459,7 @@ export function useDataSubjectRequests() {
           internal_notes: sanitizedNotes,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
-      })
+        })
         .eq('id', assignmentData.request_id);
 
       if (error) throw error;
@@ -468,14 +468,14 @@ export function useDataSubjectRequests() {
 
 
         await logSecurityEvent({
-        event: 'data_subject_request_assigned',
-        description: `Request ${assignmentData.request_id} assigned to ${assignmentData.assigned_to}`,
-        severity: 'low',
-        metadata: {
-          request_id: assignmentData.request_id,
-          assigned_to: assignmentData.assigned_to
-        }
-      });
+          event: 'data_subject_request_assigned',
+          description: `Request ${assignmentData.request_id} assigned to ${assignmentData.assigned_to}`,
+          severity: 'low',
+          metadata: {
+            request_id: assignmentData.request_id,
+            assigned_to: assignmentData.assigned_to
+          }
+        });
 
 
       } catch (logError) {
@@ -492,8 +492,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error assigning request:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao atribuir solicitação'
       };
     }
@@ -515,7 +515,7 @@ export function useDataSubjectRequests() {
           status: 'escalated' as DataSubjectRequestStatus,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
-      })
+        })
         .eq('id', requestId);
 
       if (error) throw error;
@@ -524,15 +524,15 @@ export function useDataSubjectRequests() {
 
 
         await logSecurityEvent({
-        event: 'data_subject_request_escalated',
-        description: `Request ${requestId} escalated to ${escalatedTo}`,
-        severity: 'medium',
-        metadata: {
-          request_id: requestId,
-          escalated_to: escalatedTo,
-          escalation_reason: sanitizedReason
-        }
-      });
+          event: 'data_subject_request_escalated',
+          description: `Request ${requestId} escalated to ${escalatedTo}`,
+          severity: 'medium',
+          metadata: {
+            request_id: requestId,
+            escalated_to: escalatedTo,
+            escalation_reason: sanitizedReason
+          }
+        });
 
 
       } catch (logError) {
@@ -549,8 +549,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error escalating request:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao escalar solicitação'
       };
     }
@@ -599,7 +599,7 @@ export function useDataSubjectRequests() {
 
       // Basic template based on request type
       let template = '';
-      
+
       switch (request.request_type) {
         case 'acesso':
           template = `Prezado(a) ${request.requester_name},\n\nEm resposta à sua solicitação de acesso aos seus dados pessoais, informamos que...\n\n[Inserir informações sobre os dados tratados]\n\nAtenciosamente,\nEquipe de Privacidade`;
@@ -618,8 +618,8 @@ export function useDataSubjectRequests() {
 
     } catch (error) {
       console.error('Error generating response template:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao gerar template de resposta'
       };
     }

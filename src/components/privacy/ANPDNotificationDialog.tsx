@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  Send, 
-  FileText, 
-  Calendar, 
-  AlertTriangle, 
-  Info, 
+import {
+  Send,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  Info,
   CheckCircle,
   Globe,
   Mail,
@@ -33,15 +33,15 @@ interface ANPDNotificationDialogProps {
   onCancel: () => void;
 }
 
-export function ANPDNotificationDialog({ 
-  incidentId, 
-  incident, 
-  onNotify, 
-  onCancel 
+export function ANPDNotificationDialog({
+  incidentId,
+  incident,
+  onNotify,
+  onCancel
 }: ANPDNotificationDialogProps) {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  
+
   // Form state
   const [formData, setFormData] = useState<Omit<ANPDNotificationData, 'incident_id' | 'notified_by'>>({
     notification_date: new Date().toISOString().slice(0, 16), // For datetime-local input
@@ -84,26 +84,26 @@ export function ANPDNotificationDialog({
   };
 
   const notificationMethods = [
-    { 
-      value: 'online_portal', 
+    {
+      value: 'online_portal',
       label: 'Portal Online da ANPD',
       icon: Globe,
       description: 'Notificação através do sistema oficial online'
     },
-    { 
-      value: 'email', 
+    {
+      value: 'email',
       label: 'E-mail Oficial',
       icon: Mail,
       description: 'Comunicação por e-mail para o endereço oficial'
     },
-    { 
-      value: 'phone', 
+    {
+      value: 'phone',
       label: 'Telefone',
       icon: Phone,
       description: 'Contato telefônico seguido de confirmação escrita'
     },
-    { 
-      value: 'mail', 
+    {
+      value: 'mail',
       label: 'Correios',
       icon: Building,
       description: 'Correspondência física registrada'
@@ -210,15 +210,25 @@ Esta notificação está sendo enviada em conformidade com o Art. 48 da LGPD, de
         <p className="text-muted-foreground">
           Comunicação oficial do incidente à Autoridade Nacional de Proteção de Dados
         </p>
-        
+
         {/* Timeline Alert */}
-        <Alert className={`mt-4 ${isNotificationOverdue ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'}`}>
-          <AlertTriangle className={`h-4 w-4 ${isNotificationOverdue ? 'text-red-600' : 'text-yellow-600'}`} />
-          <AlertDescription className={isNotificationOverdue ? 'text-red-800' : 'text-yellow-800'}>
+        <Alert className={`mt-4 ${isNotificationOverdue
+            ? 'border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50'
+            : 'border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10 dark:border-yellow-800/50'
+          }`}>
+          <AlertTriangle className={`h-4 w-4 ${isNotificationOverdue
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-yellow-600 dark:text-yellow-400'
+            }`} />
+          <AlertDescription className={
+            isNotificationOverdue
+              ? 'text-red-800 dark:text-red-300'
+              : 'text-yellow-800 dark:text-yellow-300'
+          }>
             <strong>{isNotificationOverdue ? 'NOTIFICAÇÃO EM ATRASO:' : 'ATENÇÃO:'}</strong>{' '}
-            {hoursSinceDiscovery}h desde a descoberta do incidente. 
-            {isNotificationOverdue 
-              ? ' O prazo legal de 72h foi ultrapassado.' 
+            {hoursSinceDiscovery}h desde a descoberta do incidente.
+            {isNotificationOverdue
+              ? ' O prazo legal de 72h foi ultrapassado.'
               : ` Restam ${72 - hoursSinceDiscovery}h para cumprir o prazo legal.`
             }
           </AlertDescription>
@@ -333,10 +343,10 @@ Esta notificação está sendo enviada em conformidade com o Art. 48 da LGPD, de
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label htmlFor="notification_content">Conteúdo da Notificação *</Label>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={generateNotificationContent}
                 >
                   Gerar Automático
@@ -476,8 +486,8 @@ Plano de ação corretiva`}
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Aviso Legal:</strong> Esta notificação será enviada em conformidade com o 
-            Art. 48 da LGPD. Certifique-se de que todas as informações estão corretas e completas 
+            <strong>Aviso Legal:</strong> Esta notificação será enviada em conformidade com o
+            Art. 48 da LGPD. Certifique-se de que todas as informações estão corretas e completas
             antes de prosseguir. A comunicação inadequada ou tardia pode resultar em sanções administrativas.
           </AlertDescription>
         </Alert>
@@ -487,9 +497,9 @@ Plano de ação corretiva`}
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          
-          <Button 
-            onClick={handleSubmit} 
+
+          <Button
+            onClick={handleSubmit}
             disabled={loading}
             className="bg-blue-600 hover:bg-blue-700"
           >

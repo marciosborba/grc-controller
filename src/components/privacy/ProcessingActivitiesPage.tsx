@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   Shield,
   Filter,
   Download,
@@ -60,11 +60,11 @@ export function ProcessingActivitiesPage() {
 
   // Filter activities based on search and filters
   const filteredActivities = activities.filter(activity => {
-    const matchesSearch = 
+    const matchesSearch =
       activity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       activity.department?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesSearch;
   });
 
@@ -121,11 +121,11 @@ export function ProcessingActivitiesPage() {
   // Generate DPIA recommendation
   const handleGenerateDPIA = async (id: string) => {
     const recommendation = await generateDPIARecommendation(id);
-    
-    const message = recommendation.requires_dpia 
+
+    const message = recommendation.requires_dpia
       ? `DPIA requerida (Risco: ${recommendation.risk_level})`
       : `DPIA não requerida (Risco: ${recommendation.risk_level})`;
-    
+
     toast.success(message);
     // In a real implementation, this would show a detailed dialog with the recommendation
   };
@@ -180,7 +180,7 @@ export function ProcessingActivitiesPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -201,13 +201,13 @@ export function ProcessingActivitiesPage() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleGenerateRATReport}>
             <Download className="w-4 h-4 mr-2" />
             Relatório RAT
           </Button>
-          
+
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
@@ -333,8 +333,8 @@ export function ProcessingActivitiesPage() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterChange('high_risk', true)}
                 className="text-red-600 hover:text-red-700"
@@ -343,8 +343,8 @@ export function ProcessingActivitiesPage() {
                 Alto Risco
               </Button>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterChange('international_transfer', true)}
                 className="text-orange-600 hover:text-orange-700"
@@ -457,7 +457,7 @@ export function ProcessingActivitiesPage() {
               <strong>Atenção:</strong> Atividades de alto risco requerem Relatório de Impacto à Proteção de Dados (DPIA/RIPD).
             </AlertDescription>
           </Alert>
-          
+
           <div className="grid gap-4">
             {filteredActivities
               .filter(activity => activity.is_high_risk)
@@ -532,19 +532,19 @@ interface ProcessingActivityCardProps {
   onGenerateDPIA: () => void;
 }
 
-function ProcessingActivityCard({ 
-  activity, 
-  onSuspend, 
-  onReactivate, 
-  onGenerateDPIA 
+function ProcessingActivityCard({
+  activity,
+  onSuspend,
+  onReactivate,
+  onGenerateDPIA
 }: ProcessingActivityCardProps) {
   // Get status color for badges
   const getStatusColor = (status: ProcessingActivityStatus) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      case 'under_review': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'suspended': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'under_review': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
     }
   };
 
@@ -559,9 +559,8 @@ function ProcessingActivityCard({
   };
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      activity.is_high_risk ? 'border-red-200 bg-red-50' : ''
-    }`}>
+    <Card className={`transition-all duration-200 hover:shadow-md ${(activity as any).is_high_risk ? 'border-red-200 bg-red-50 dark:bg-card dark:border-red-800' : ''
+      }`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-3">
@@ -570,16 +569,16 @@ function ProcessingActivityCard({
               <div>
                 <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   {activity.name}
-                  {activity.is_high_risk && (
-                    <AlertTriangle className="w-4 h-4 text-red-600" title="Alto Risco" />
+                  {(activity as any).is_high_risk && (
+                    <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
                   )}
-                  {activity.has_international_transfer && (
-                    <Globe className="w-4 h-4 text-orange-600" title="Transferência Internacional" />
+                  {(activity as any).has_international_transfer && (
+                    <Globe className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                   )}
                 </h3>
                 <p className="text-sm text-muted-foreground">{activity.description}</p>
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Badge className={getStatusColor(activity.status)}>
                   {getStatusLabel(activity.status)}
@@ -589,19 +588,19 @@ function ProcessingActivityCard({
 
             {/* Details grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-              {activity.department && (
+              {(activity as any).department && (
                 <div className="flex items-center space-x-2">
                   <Building className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Departamento:</span>
-                  <span className="font-medium">{activity.department}</span>
+                  <span className="font-medium">{(activity as any).department}</span>
                 </div>
               )}
 
-              {activity.data_controller && (
+              {(activity as any).data_controller && (
                 <div className="flex items-center space-x-2">
                   <User className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Controlador:</span>
-                  <span className="font-medium">{activity.data_controller}</span>
+                  <span className="font-medium">{(activity as any).data_controller}</span>
                 </div>
               )}
 

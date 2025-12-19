@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Consent, ConsentStatus, CollectionMethod } from '@/types/privacy-management';
 import { sanitizeString } from '@/utils/validation';
 import { logSecurityEvent } from '@/utils/securityLogger';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export interface ConsentFilters {
   status?: ConsentStatus;
@@ -96,7 +96,7 @@ export function useConsents() {
       if (filters.expiring_soon) {
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-        
+
         query = query
           .eq('status', 'granted')
           .not('expired_at', 'is', null)
@@ -133,10 +133,10 @@ export function useConsents() {
       try {
 
         await logSecurityEvent({
-        event: 'consents_fetch_error',
-        description: `Error fetching consents: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        severity: 'medium'
-      });
+          event: 'consents_fetch_error',
+          description: `Error fetching consents: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          severity: 'medium'
+        });
 
       } catch (logError) {
 
@@ -188,29 +188,23 @@ export function useConsents() {
       // Use RPC data for accurate counts, distribute for realistic stats
       const calculatedStats: ConsentStats = {
         total,
-        granted: consentsData.total_active || total, // Active consents are granted
-        revoked: consentsData.total_revoked || Math.floor(total * 0.2), // ~20% revoked
-        expired: consentsData.expired || Math.floor(total * 0.1), // ~10% expired
-        pending: consentsData.pending || Math.floor(total * 0.05), // ~5% pending
-        expiring_soon: consentsData.expiring_soon || Math.floor(total * 0.15), // ~15% expiring soon
-        by_collection_method: consentsData.by_collection_method || {
-          website_form: Math.floor(total * 0.4), // ~40% website
-          mobile_app: Math.floor(total * 0.3), // ~30% mobile app
-          phone_call: Math.floor(total * 0.1), // ~10% phone
-          email: Math.floor(total * 0.05), // ~5% email
-          physical_form: Math.floor(total * 0.1), // ~10% physical
-          api: Math.floor(total * 0.03), // ~3% API
-          import: Math.floor(total * 0.02), // ~2% import
+        granted: consentsData.total_active ?? total,
+        revoked: consentsData.total_revoked ?? 0,
+        expired: consentsData.expired ?? 0,
+        pending: consentsData.pending ?? 0,
+        expiring_soon: consentsData.expiring_soon ?? 0,
+        by_collection_method: consentsData.by_collection_method ?? {
+          website_form: 0,
+          mobile_app: 0,
+          phone_call: 0,
+          email: 0,
+          physical_form: 0,
+          api: 0,
+          import: 0,
           other: 0
         },
-        by_purpose: consentsData.by_purpose || {
-          'marketing': Math.floor(total * 0.3),
-          'analytics': Math.floor(total * 0.25),
-          'personalization': Math.floor(total * 0.2),
-          'communication': Math.floor(total * 0.15),
-          'other': Math.floor(total * 0.1)
-        },
-        thisMonth: consentsData.this_month || Math.floor(total * 0.3) // ~30% this month
+        by_purpose: consentsData.by_purpose ?? {},
+        thisMonth: consentsData.this_month ?? 0
       };
 
       setStats(calculatedStats);
@@ -278,16 +272,16 @@ export function useConsents() {
 
 
         await logSecurityEvent({
-        event: 'consent_created',
-        description: `New consent created for ${consentData.data_subject_email}`,
-        severity: 'low',
-        metadata: {
-          consent_id: data.id,
-          data_subject_email: consentData.data_subject_email,
-          purpose: consentData.purpose,
-          collection_method: consentData.collection_method
-        }
-      });
+          event: 'consent_created',
+          description: `New consent created for ${consentData.data_subject_email}`,
+          severity: 'low',
+          metadata: {
+            consent_id: data.id,
+            data_subject_email: consentData.data_subject_email,
+            purpose: consentData.purpose,
+            collection_method: consentData.collection_method
+          }
+        });
 
 
       } catch (logError) {
@@ -304,8 +298,8 @@ export function useConsents() {
 
     } catch (error) {
       console.error('Error creating consent:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao criar consentimento'
       };
     }
@@ -314,7 +308,7 @@ export function useConsents() {
   // Revoke consent
   const revokeConsent = async (revocationData: ConsentRevocation): Promise<{ success: boolean; error?: string }> => {
     try {
-      const sanitizedReason = revocationData.revocation_reason ? 
+      const sanitizedReason = revocationData.revocation_reason ?
         sanitizeString(revocationData.revocation_reason) : undefined;
 
       const { error } = await supabase
@@ -333,16 +327,16 @@ export function useConsents() {
 
 
         await logSecurityEvent({
-        event: 'consent_revoked',
-        description: `Consent revoked: ${revocationData.consent_id}`,
-        severity: 'medium',
-        metadata: {
-          consent_id: revocationData.consent_id,
-          revocation_reason: sanitizedReason,
-          revoked_by: revocationData.revoked_by,
-          notification_method: revocationData.notification_method
-        }
-      });
+          event: 'consent_revoked',
+          description: `Consent revoked: ${revocationData.consent_id}`,
+          severity: 'medium',
+          metadata: {
+            consent_id: revocationData.consent_id,
+            revocation_reason: sanitizedReason,
+            revoked_by: revocationData.revoked_by,
+            notification_method: revocationData.notification_method
+          }
+        });
 
 
       } catch (logError) {
@@ -359,8 +353,8 @@ export function useConsents() {
 
     } catch (error) {
       console.error('Error revoking consent:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao revogar consentimento'
       };
     }
@@ -387,16 +381,16 @@ export function useConsents() {
 
 
         await logSecurityEvent({
-        event: 'consent_renewed',
-        description: `Consent renewed: ${renewalData.consent_id}`,
-        severity: 'low',
-        metadata: {
-          consent_id: renewalData.consent_id,
-          new_expiry_date: renewalData.new_expiry_date,
-          renewal_method: renewalData.renewal_method,
-          renewed_by: renewalData.renewed_by
-        }
-      });
+          event: 'consent_renewed',
+          description: `Consent renewed: ${renewalData.consent_id}`,
+          severity: 'low',
+          metadata: {
+            consent_id: renewalData.consent_id,
+            new_expiry_date: renewalData.new_expiry_date,
+            renewal_method: renewalData.renewal_method,
+            renewed_by: renewalData.renewed_by
+          }
+        });
 
 
       } catch (logError) {
@@ -413,8 +407,8 @@ export function useConsents() {
 
     } catch (error) {
       console.error('Error renewing consent:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao renovar consentimento'
       };
     }
@@ -463,13 +457,13 @@ export function useConsents() {
 
 
           await logSecurityEvent({
-          event: 'consents_auto_expired',
-          description: `${expiredData.length} consents automatically expired`,
-          severity: 'medium',
-          metadata: {
-            expired_consent_ids: expiredIds
-          }
-        });
+            event: 'consents_auto_expired',
+            description: `${expiredData.length} consents automatically expired`,
+            severity: 'medium',
+            metadata: {
+              expired_consent_ids: expiredIds
+            }
+          });
 
 
         } catch (logError) {
@@ -563,15 +557,15 @@ export function useConsents() {
 
 
         await logSecurityEvent({
-        event: 'consents_bulk_revoked',
-        description: `${ids.length} consents bulk revoked`,
-        severity: 'high',
-        metadata: {
-          criteria,
-          revoked_consent_ids: ids,
-          revocation_reason: sanitizedReason
-        }
-      });
+          event: 'consents_bulk_revoked',
+          description: `${ids.length} consents bulk revoked`,
+          severity: 'high',
+          metadata: {
+            criteria,
+            revoked_consent_ids: ids,
+            revocation_reason: sanitizedReason
+          }
+        });
 
 
       } catch (logError) {
@@ -588,8 +582,8 @@ export function useConsents() {
 
     } catch (error) {
       console.error('Error bulk revoking consents:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error instanceof Error ? error.message : 'Erro ao revogar consentimentos em massa',
         revokedCount: 0
       };
@@ -619,7 +613,7 @@ export function useConsents() {
 
       if (filters.search) {
         const searchTerm = filters.search.toLowerCase();
-        filteredData = filteredData.filter(c => 
+        filteredData = filteredData.filter(c =>
           c.data_subject_name?.toLowerCase().includes(searchTerm) ||
           c.data_subject_email.toLowerCase().includes(searchTerm) ||
           c.purpose.toLowerCase().includes(searchTerm)

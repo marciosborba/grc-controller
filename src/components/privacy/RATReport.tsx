@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Download, 
-  FileText, 
-  Calendar, 
-  Building, 
-  Shield, 
-  Globe, 
-  AlertTriangle, 
+import {
+  Download,
+  FileText,
+  Calendar,
+  Building,
+  Shield,
+  Globe,
+  AlertTriangle,
   CheckCircle,
   Filter,
   Printer,
@@ -45,7 +45,7 @@ interface RATReportData {
 export function RATReport() {
   const navigate = useNavigate();
   const { generateRATReport } = useProcessingActivities();
-  
+
   const [reportData, setReportData] = useState<RATReportData | null>(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<ProcessingActivityFilters>({});
@@ -99,10 +99,10 @@ export function RATReport() {
   // Get status color for badges
   const getStatusColor = (status: ProcessingActivityStatus) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      case 'under_review': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'suspended': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'under_review': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -140,7 +140,7 @@ export function RATReport() {
 
   if (!reportData) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="space-y-6">
         <div className="text-center py-8">
           {loading ? 'Gerando relatório RAT...' : 'Carregando relatório...'}
         </div>
@@ -170,7 +170,7 @@ export function RATReport() {
             </p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
@@ -256,14 +256,14 @@ export function RATReport() {
             <p className="text-lg text-muted-foreground">
               Conforme Art. 37 da Lei Geral de Proteção de Dados (LGPD)
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
               <div>
                 <p className="text-sm text-muted-foreground">Data de Geração</p>
                 <p className="font-medium">
                   {new Date(reportData.summary.generated_at).toLocaleDateString('pt-BR', {
                     day: '2-digit',
-                    month: '2-digit', 
+                    month: '2-digit',
                     year: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
@@ -294,28 +294,28 @@ export function RATReport() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{reportData.summary.active}</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{reportData.summary.active}</div>
               <div className="text-sm text-muted-foreground">Ativas</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-red-600">{reportData.summary.high_risk}</div>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{reportData.summary.high_risk}</div>
               <div className="text-sm text-muted-foreground">Alto Risco</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{reportData.summary.with_international_transfer}</div>
+              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{reportData.summary.with_international_transfer}</div>
               <div className="text-sm text-muted-foreground">Transf. Internacional</div>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{reportData.summary.suspended}</div>
+              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{reportData.summary.suspended}</div>
               <div className="text-sm text-muted-foreground">Suspensas</div>
             </div>
           </div>
 
           {reportData.summary.high_risk > 0 && (
-            <Alert className="mt-4 border-red-200 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                <strong>Atenção:</strong> {reportData.summary.high_risk} atividade(s) de alto risco identificada(s). 
+            <Alert className="mt-4 border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50">
+              <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertDescription className="text-red-800 dark:text-red-300">
+                <strong>Atenção:</strong> {reportData.summary.high_risk} atividade(s) de alto risco identificada(s).
                 Recomenda-se a elaboração de Relatório de Impacto à Proteção de Dados (DPIA/RIPD).
               </AlertDescription>
             </Alert>
@@ -373,7 +373,7 @@ export function RATReport() {
                         <Badge variant="destructive">Alto Risco</Badge>
                       )}
                       {activity.has_international_transfer && (
-                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                        <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
                           Transf. Internacional
                         </Badge>
                       )}
@@ -419,7 +419,7 @@ export function RATReport() {
                   {activity.legal_basis && (
                     <div className="mt-3 p-3 bg-muted rounded-lg">
                       <p className="text-sm">
-                        <strong>Base Legal:</strong> {activity.legal_basis.name} 
+                        <strong>Base Legal:</strong> {activity.legal_basis.name}
                         <Badge variant="outline" className="ml-2">
                           {activity.legal_basis.legal_basis_type}
                         </Badge>
@@ -448,28 +448,28 @@ export function RATReport() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
+              <table className="w-full border-collapse border border-gray-300 dark:border-gray-700">
                 <thead>
                   <tr className="bg-muted">
-                    <th className="border border-gray-300 p-2 text-left">Nome</th>
-                    <th className="border border-gray-300 p-2 text-left">Departamento</th>
-                    <th className="border border-gray-300 p-2 text-left">Finalidade</th>
-                    <th className="border border-gray-300 p-2 text-left">Status</th>
-                    <th className="border border-gray-300 p-2 text-left">Risco</th>
+                    <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Nome</th>
+                    <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Departamento</th>
+                    <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Finalidade</th>
+                    <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Status</th>
+                    <th className="border border-gray-300 dark:border-gray-700 p-2 text-left">Risco</th>
                   </tr>
                 </thead>
                 <tbody>
                   {reportData.activities.map((activity) => (
                     <tr key={activity.id}>
-                      <td className="border border-gray-300 p-2">{activity.name}</td>
-                      <td className="border border-gray-300 p-2">{activity.department || '-'}</td>
-                      <td className="border border-gray-300 p-2">{getPurposeLabel(activity.purpose)}</td>
-                      <td className="border border-gray-300 p-2">
+                      <td className="border border-gray-300 dark:border-gray-700 p-2">{activity.name}</td>
+                      <td className="border border-gray-300 dark:border-gray-700 p-2">{activity.department || '-'}</td>
+                      <td className="border border-gray-300 dark:border-gray-700 p-2">{getPurposeLabel(activity.purpose)}</td>
+                      <td className="border border-gray-300 dark:border-gray-700 p-2">
                         <Badge className={getStatusColor(activity.status)}>
                           {getStatusLabel(activity.status)}
                         </Badge>
                       </td>
-                      <td className="border border-gray-300 p-2">
+                      <td className="border border-gray-300 dark:border-gray-700 p-2">
                         {activity.is_high_risk ? (
                           <Badge variant="destructive">Alto</Badge>
                         ) : (
@@ -495,7 +495,7 @@ export function RATReport() {
             <p className="text-sm text-muted-foreground">
               Data de geração: {new Date(reportData.summary.generated_at).toLocaleDateString('pt-BR', {
                 day: '2-digit',
-                month: '2-digit', 
+                month: '2-digit',
                 year: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit'

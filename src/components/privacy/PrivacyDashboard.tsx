@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Database, 
-  Search, 
-  Shield, 
-  AlertTriangle, 
-  FileText, 
-  Users, 
+import {
+  Database,
+  Search,
+  Shield,
+  AlertTriangle,
+  FileText,
+  Users,
   Calendar,
   Eye,
   ChevronRight,
@@ -31,10 +31,10 @@ import { DevAuthHelper } from './DevAuthHelper';
 // Calculate LGPD compliance score based on real system metrics
 function calculateComplianceScore(metrics: any): number {
   if (!metrics) return 0;
-  
+
   let score = 0;
   let totalChecks = 0;
-  
+
   // Data Inventory Completeness (25% weight)
   totalChecks += 25;
   const inventoryItems = metrics.data_inventory?.total_inventories || 0;
@@ -43,7 +43,7 @@ function calculateComplianceScore(metrics: any): number {
     const inventoryCompleteness = Math.max(0, 100 - ((needsReview / inventoryItems) * 100));
     score += (inventoryCompleteness * 0.25);
   }
-  
+
   // Data Subject Requests Handling (20% weight) 
   totalChecks += 20;
   const totalRequests = metrics.data_subject_requests?.total_requests || 0;
@@ -54,7 +54,7 @@ function calculateComplianceScore(metrics: any): number {
   } else {
     score += 20; // No requests is compliant
   }
-  
+
   // Privacy Incidents Management (20% weight)
   totalChecks += 20;
   const totalIncidents = metrics.privacy_incidents?.total_incidents || 0;
@@ -66,7 +66,7 @@ function calculateComplianceScore(metrics: any): number {
     const incidentsCompliance = Math.max(0, 100 - ((openIncidents + anpdRequired) / totalIncidents) * 50);
     score += (incidentsCompliance * 0.20);
   }
-  
+
   // Legal Framework Implementation (15% weight)
   totalChecks += 15;
   const totalBases = metrics.legal_bases?.total_bases || 0;
@@ -76,7 +76,7 @@ function calculateComplianceScore(metrics: any): number {
     const basesCompliance = Math.max(0, ((activeBases - expiringBases) / totalBases) * 100);
     score += (basesCompliance * 0.15);
   }
-  
+
   // Consents Management (10% weight)
   totalChecks += 10;
   const activeConsents = metrics.consents?.total_active || 0;
@@ -87,7 +87,7 @@ function calculateComplianceScore(metrics: any): number {
   } else {
     score += 10; // No consents needed is compliant
   }
-  
+
   // DPIA/Processing Activities (10% weight)
   totalChecks += 10;
   const totalActivities = metrics.processing_activities?.total_activities || 0;
@@ -99,7 +99,7 @@ function calculateComplianceScore(metrics: any): number {
   } else {
     score += 10;
   }
-  
+
   return Math.round(score);
 }
 
@@ -115,62 +115,22 @@ export function PrivacyDashboard() {
   const fetchPrivacyMetrics = async () => {
     try {
       setLoading(true);
-      
+
       // Using the stored function we created in the migration
       const { data, error } = await supabase.rpc('calculate_privacy_metrics');
-      
+
       if (error) throw error;
-      
+
       setMetrics(data);
     } catch (error) {
       console.error('Error fetching privacy metrics:', error);
       // Fallback to mock data for demo
-      setMetrics({
-        data_inventory: {
-          total_inventories: 0,
-          by_sensitivity: {},
-          needs_review: 0
-        },
-        consents: {
-          total_active: 0,
-          total_revoked: 0,
-          expiring_soon: 0
-        },
-        data_subject_requests: {
-          total_requests: 0,
-          pending_requests: 0,
-          overdue_requests: 0,
-          by_type: {}
-        },
-        privacy_incidents: {
-          total_incidents: 0,
-          open_incidents: 0,
-          anpd_notifications_required: 0,
-          by_severity: {}
-        },
-        dpia_assessments: {
-          total_dpias: 0,
-          pending_dpias: 0,
-          high_risk_dpias: 0
-        },
-        compliance_overview: {
-          processing_activities: 0,
-          legal_bases: 0,
-          training_completion_rate: 0
-        },
-        legal_bases: {
-          total_bases: 0,
-          active_bases: 0,
-          expiring_soon: 0,
-          needs_validation: 0
-        },
-        processing_activities: {
-          total_activities: 0,
-          active_activities: 0,
-          high_risk_activities: 0,
-          requires_dpia: 0
-        }
-      });
+      console.error('Error fetching privacy metrics:', error);
+      // Fallback to null to show empty state or error, NOT mock data
+      setMetrics(null);
+
+      // Optionally show a toast error
+      // toast({ title: "Erro", description: "Falha ao carregar métricas", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -183,7 +143,7 @@ export function PrivacyDashboard() {
       icon: Search,
       color: 'blue',
       action: () => navigate('/privacy/discovery'),
-      count: 0
+      count: metrics?.data_discovery?.total_sources || 0
     },
     {
       title: 'Inventário de Dados',
@@ -281,8 +241,12 @@ export function PrivacyDashboard() {
         <div className="flex-1">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Privacidade e LGPD</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Gestão completa de privacidade e proteção de dados pessoais
+            Gestão completa de privacidade e proteção de dados pessoais (LGPD)
           </p>
+          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+            <span className="font-semibold text-primary">Encarregado (DPO):</span>
+            <span>dpo@example.com (Configurar em Ajustes)</span>
+          </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
           <Badge variant="secondary" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1">
@@ -298,7 +262,7 @@ export function PrivacyDashboard() {
       )}
 
       {/* Key Metrics - Mobile-first responsive */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <Card>
           <CardContent className="p-4 h-full">
             <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
@@ -368,6 +332,40 @@ export function PrivacyDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+              </div>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">DPIAs Pendentes</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{metrics?.dpia_assessments?.pending_dpias || 0}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                  {metrics?.dpia_assessments?.total_dpias || 0} avaliações totais
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4 h-full">
+            <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+              <div className="flex justify-center mb-1 sm:mb-2">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-500" />
+              </div>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 sm:mb-3 leading-tight">Atividades de Tratamento</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <p className="text-lg sm:text-2xl font-bold text-foreground mb-1 sm:mb-2 leading-none">{metrics?.compliance_overview?.processing_activities || 0}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
+                  Processos mapeados ativos
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions Grid - Responsivo */}
@@ -391,7 +389,7 @@ export function PrivacyDashboard() {
                 <CardTitle className="text-sm sm:text-base leading-tight group-hover:text-primary transition-colors">{action.title}</CardTitle>
                 <CardDescription className="text-xs sm:text-sm leading-tight">{action.description}</CardDescription>
               </CardHeader>
-              
+
               {/* Efeito de hover - gradiente dinâmico */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
                 background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
@@ -421,7 +419,7 @@ export function PrivacyDashboard() {
               </div>
               <Progress value={complianceScore} className="h-2" />
             </div>
-            
+
             <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 sm:gap-2">
@@ -430,7 +428,7 @@ export function PrivacyDashboard() {
                 </div>
                 <Badge variant="outline" className="text-xs px-1.5 py-0.5">OK</Badge>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
@@ -438,7 +436,7 @@ export function PrivacyDashboard() {
                 </div>
                 <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{metrics?.dpia_assessments?.pending_dpias || 0}</Badge>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
@@ -575,21 +573,21 @@ export function PrivacyDashboard() {
               )}
 
               {/* Success State - All Clear */}
-              {(!metrics?.data_subject_requests?.overdue_requests && 
-                !metrics?.data_inventory?.needs_review && 
+              {(!metrics?.data_subject_requests?.overdue_requests &&
+                !metrics?.data_inventory?.needs_review &&
                 !metrics?.privacy_incidents?.anpd_notifications_required &&
                 !metrics?.privacy_incidents?.open_incidents &&
                 !metrics?.legal_bases?.expiring_soon &&
                 !metrics?.dpia_assessments?.pending_dpias &&
                 !metrics?.consents?.expiring_soon) && (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                  <h3 className="font-medium text-green-800 mb-2">Excelente Conformidade!</h3>
-                  <p className="text-sm text-green-600">
-                    Todas as ações prioritárias estão em dia. Continue monitorando regularmente.
-                  </p>
-                </div>
-              )}
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                    <h3 className="font-medium text-green-800 dark:text-green-300 mb-2">Excelente Conformidade!</h3>
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Todas as ações prioritárias estão em dia. Continue monitorando regularmente.
+                    </p>
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>

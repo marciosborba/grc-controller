@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle, 
+import {
+  Plus,
+  Search,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
   UserCheck,
   Filter,
   Download,
@@ -69,11 +69,11 @@ export function DataSubjectRequestsPage() {
 
   // Filter requests based on search and filters
   const filteredRequests = requests.filter(request => {
-    const matchesSearch = 
-      (request.data_subject_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (request.data_subject_email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (request.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    
+    const matchesSearch =
+      (request.requester_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (request.requester_email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (request.request_description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
     return matchesSearch;
   });
 
@@ -125,7 +125,7 @@ export function DataSubjectRequestsPage() {
       request_id: requestId,
       ...verificationData
     });
-    
+
     if (result.success) {
       toast.success('Identidade verificada com sucesso');
     } else {
@@ -141,7 +141,7 @@ export function DataSubjectRequestsPage() {
       request_id: selectedRequestForProcessing,
       ...processingData
     });
-    
+
     if (result.success) {
       toast.success('Solicitação processada com sucesso');
       setProcessingDialogOpen(false);
@@ -159,7 +159,7 @@ export function DataSubjectRequestsPage() {
       assigned_to: assignedTo,
       assignment_notes: notes
     });
-    
+
     if (result.success) {
       toast.success('Solicitação atribuída com sucesso');
     } else {
@@ -170,7 +170,7 @@ export function DataSubjectRequestsPage() {
   // Handle request escalation
   const handleEscalateRequest = async (requestId: string, escalatedTo: string, reason: string) => {
     const result = await escalateRequest(requestId, escalatedTo, reason);
-    
+
     if (result.success) {
       toast.success('Solicitação escalada com sucesso');
     } else {
@@ -192,15 +192,15 @@ export function DataSubjectRequestsPage() {
   // Get status color for badges
   const getStatusColor = (status: DataSubjectRequestStatus) => {
     switch (status) {
-      case 'received': return 'bg-blue-100 text-blue-800';
-      case 'under_verification': return 'bg-yellow-100 text-yellow-800';
-      case 'verified': return 'bg-green-100 text-green-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'partially_completed': return 'bg-orange-100 text-orange-800';
-      case 'escalated': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'received': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'under_verification': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'verified': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'in_progress': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'partially_completed': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+      case 'escalated': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -220,7 +220,7 @@ export function DataSubjectRequestsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
@@ -241,7 +241,7 @@ export function DataSubjectRequestsPage() {
             </p>
           </div>
         </div>
-        
+
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-2">
@@ -257,9 +257,9 @@ export function DataSubjectRequestsPage() {
 
       {/* Urgent Requests Alert */}
       {urgentRequests.length > 0 && (
-        <Alert className="border-orange-200 bg-orange-50">
-          <AlertTriangle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800/50">
+          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-300">
             <strong>Atenção:</strong> {urgentRequests.length} solicitação(ões) com prazo próximo ao vencimento ou em atraso.
           </AlertDescription>
         </Alert>
@@ -267,9 +267,9 @@ export function DataSubjectRequestsPage() {
 
       {/* Overdue Requests Alert */}
       {stats.overdue > 0 && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
+        <Alert className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800/50">
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+          <AlertDescription className="text-red-800 dark:text-red-300">
             <strong>Urgente:</strong> {stats.overdue} solicitação(ões) com prazo vencido. Resposta obrigatória pela LGPD.
           </AlertDescription>
         </Alert>
@@ -388,8 +388,8 @@ export function DataSubjectRequestsPage() {
                 </SelectContent>
               </Select>
 
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => handleFilterChange('overdue', true)}
                 className="text-red-600 hover:text-red-700"
@@ -470,7 +470,7 @@ export function DataSubjectRequestsPage() {
                   onEscalateRequest={(escalatedTo, reason) => handleEscalateRequest(request.id, escalatedTo, reason)}
                   onGenerateTemplate={() => handleGenerateTemplate(request.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -491,7 +491,7 @@ export function DataSubjectRequestsPage() {
                   onEscalateRequest={(escalatedTo, reason) => handleEscalateRequest(request.id, escalatedTo, reason)}
                   onGenerateTemplate={() => handleGenerateTemplate(request.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -512,7 +512,7 @@ export function DataSubjectRequestsPage() {
                   onEscalateRequest={(escalatedTo, reason) => handleEscalateRequest(request.id, escalatedTo, reason)}
                   onGenerateTemplate={() => handleGenerateTemplate(request.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -521,8 +521,8 @@ export function DataSubjectRequestsPage() {
             {filteredRequests
               .filter(request => {
                 const now = new Date();
-                return !['completed', 'rejected'].includes(request.status) && 
-                       new Date(request.due_date) < now;
+                return !['completed', 'rejected'].includes(request.status) &&
+                  new Date(request.due_date) < now;
               })
               .map((request) => (
                 <DataSubjectRequestCard
@@ -537,7 +537,7 @@ export function DataSubjectRequestsPage() {
                   onEscalateRequest={(escalatedTo, reason) => handleEscalateRequest(request.id, escalatedTo, reason)}
                   onGenerateTemplate={() => handleGenerateTemplate(request.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
 
@@ -558,7 +558,7 @@ export function DataSubjectRequestsPage() {
                   onEscalateRequest={(escalatedTo, reason) => handleEscalateRequest(request.id, escalatedTo, reason)}
                   onGenerateTemplate={() => handleGenerateTemplate(request.id)}
                 />
-            ))}
+              ))}
           </div>
         </TabsContent>
       </Tabs>
@@ -566,7 +566,7 @@ export function DataSubjectRequestsPage() {
       {/* Processing Dialog */}
       <Dialog open={processingDialogOpen} onOpenChange={setProcessingDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <RequestProcessingDialog 
+          <RequestProcessingDialog
             requestId={selectedRequestForProcessing}
             onProcessRequest={handleProcessRequest}
           />

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { 
-  User, 
+import {
+  User,
   Mail,
   Calendar,
   Clock,
@@ -22,12 +22,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger, 
-  DropdownMenuSeparator 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -55,9 +55,9 @@ interface DataSubjectRequestCardProps {
   onGenerateTemplate: () => void;
 }
 
-export function DataSubjectRequestCard({ 
-  request, 
-  selected = false, 
+export function DataSubjectRequestCard({
+  request,
+  selected = false,
   onSelect,
   onVerifyIdentity,
   onProcessRequest,
@@ -85,37 +85,37 @@ export function DataSubjectRequestCard({
 
   // Get status badge properties
   const getStatusBadge = (status: DataSubjectRequestStatus) => {
-    const statusConfig: Record<DataSubjectRequestStatus, { 
-      variant: "default" | "secondary" | "destructive" | "outline", 
-      label: string, 
+    const statusConfig: Record<DataSubjectRequestStatus, {
+      variant: "default" | "secondary" | "destructive" | "outline",
+      label: string,
       color: string,
       icon?: React.ComponentType<any>
     }> = {
-      received: { variant: 'secondary', label: 'Recebida', color: 'text-blue-600', icon: Mail },
-      under_verification: { variant: 'secondary', label: 'Em Verificação', color: 'text-yellow-600', icon: UserCheck },
-      verified: { variant: 'outline', label: 'Verificada', color: 'text-green-600', icon: CheckCircle },
-      in_progress: { variant: 'secondary', label: 'Em Andamento', color: 'text-purple-600', icon: Clock },
-      completed: { variant: 'default', label: 'Concluída', color: 'text-green-600', icon: CheckCircle },
-      rejected: { variant: 'destructive', label: 'Rejeitada', color: 'text-red-600', icon: AlertTriangle },
-      partially_completed: { variant: 'secondary', label: 'Parcialmente Concluída', color: 'text-orange-600', icon: CheckCircle },
-      escalated: { variant: 'destructive', label: 'Escalada', color: 'text-red-600', icon: ArrowUp }
+      received: { variant: 'secondary', label: 'Recebida', color: 'text-blue-600 dark:text-blue-400', icon: Mail },
+      under_verification: { variant: 'secondary', label: 'Em Verificação', color: 'text-yellow-600 dark:text-yellow-400', icon: UserCheck },
+      verified: { variant: 'outline', label: 'Verificada', color: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+      in_progress: { variant: 'secondary', label: 'Em Andamento', color: 'text-purple-600 dark:text-purple-400', icon: Clock },
+      completed: { variant: 'default', label: 'Concluída', color: 'text-green-600 dark:text-green-400', icon: CheckCircle },
+      rejected: { variant: 'destructive', label: 'Rejeitada', color: 'text-red-600 dark:text-red-400', icon: AlertTriangle },
+      partially_completed: { variant: 'secondary', label: 'Parcialmente Concluída', color: 'text-orange-600 dark:text-orange-400', icon: CheckCircle },
+      escalated: { variant: 'destructive', label: 'Escalada', color: 'text-red-600 dark:text-red-400', icon: ArrowUp }
     };
 
-    return statusConfig[status] || { variant: 'outline' as const, label: status, color: 'text-gray-600' };
+    return statusConfig[status] || { variant: 'outline' as const, label: status, color: 'text-gray-600 dark:text-gray-400' };
   };
 
   // Get severity badge for request type
   const getRequestTypeBadge = (type: DataSubjectRequestType) => {
     const criticalTypes: DataSubjectRequestType[] = ['eliminacao', 'bloqueio', 'anonimizacao'];
     const highTypes: DataSubjectRequestType[] = ['acesso', 'correcao', 'portabilidade'];
-    
+
     if (criticalTypes.includes(type)) {
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800';
     }
     if (highTypes.includes(type)) {
-      return 'bg-orange-100 text-orange-800 border-orange-200';
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800';
     }
-    return 'bg-blue-100 text-blue-800 border-blue-200';
+    return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800';
   };
 
   // Calculate days until due
@@ -156,7 +156,7 @@ export function DataSubjectRequestCard({
       toast.error('Selecione um usuário para atribuir');
       return;
     }
-    
+
     onAssignRequest(assignedTo, assignmentNotes || undefined);
     setShowAssignDialog(false);
     setAssignedTo('');
@@ -170,7 +170,7 @@ export function DataSubjectRequestCard({
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-    
+
     onEscalateRequest(escalatedTo, escalationReason);
     setShowEscalateDialog(false);
     setEscalatedTo('');
@@ -182,9 +182,13 @@ export function DataSubjectRequestCard({
   const StatusIcon = statusBadge.icon;
 
   return (
-    <Card className={`transition-all duration-200 hover:shadow-md ${
-      selected ? 'ring-2 ring-primary' : ''
-    } ${isOverdue ? 'border-red-200 bg-red-50' : isUrgent ? 'border-orange-200 bg-orange-50' : ''}`}>
+    <Card className={`transition-all duration-200 hover:shadow-md ${selected ? 'ring-2 ring-primary' : ''
+      } ${isOverdue
+        ? 'border-red-200 bg-red-50 dark:bg-card dark:border-red-800'
+        : isUrgent
+          ? 'border-orange-200 bg-orange-50 dark:bg-card dark:border-orange-800'
+          : ''
+      }`}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3">
@@ -195,37 +199,37 @@ export function DataSubjectRequestCard({
                 className="mt-1"
               />
             )}
-            
+
             <div className="flex-1 space-y-3">
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-lg font-semibold text-foreground">
-                    {request.data_subject_name}
+                    {request.requester_name}
                   </h3>
                   {request.identity_verified && (
-                    <Shield className="w-4 h-4 text-green-600" title="Identidade Verificada" />
+                    <Shield className="w-4 h-4 text-green-600 dark:text-green-500" />
                   )}
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Badge 
+                  <Badge
                     variant={statusBadge.variant}
                     className="flex items-center gap-1"
                   >
                     {StatusIcon && <StatusIcon className="w-3 h-3" />}
                     {statusBadge.label}
                   </Badge>
-                  
+
                   {isOverdue && (
                     <Badge variant="destructive" className="flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
                       Atrasada
                     </Badge>
                   )}
-                  
+
                   {isUrgent && !isOverdue && (
-                    <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800">
+                    <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
                       <Clock className="w-3 h-3" />
                       Urgente
                     </Badge>
@@ -238,9 +242,9 @@ export function DataSubjectRequestCard({
                 <div className="flex items-center space-x-2">
                   <Mail className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Email:</span>
-                  <span className="font-medium">{request.data_subject_email}</span>
+                  <span className="font-medium">{request.requester_email}</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <FileText className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Tipo:</span>
@@ -248,7 +252,7 @@ export function DataSubjectRequestCard({
                     {REQUEST_TYPES[request.request_type]}
                   </Badge>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Recebida:</span>
@@ -256,23 +260,23 @@ export function DataSubjectRequestCard({
                     {new Date(request.received_at).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Clock className={`w-4 h-4 ${isOverdue ? 'text-red-600' : isUrgent ? 'text-orange-600' : 'text-muted-foreground'}`} />
                   <span className="text-muted-foreground">Prazo:</span>
                   <span className={`font-medium ${isOverdue ? 'text-red-600' : isUrgent ? 'text-orange-600' : ''}`}>
-                    {isOverdue ? `${Math.abs(daysUntilDue)} dias atrasada` : 
-                     daysUntilDue === 0 ? 'Vence hoje' : 
-                     `${daysUntilDue} dias restantes`}
+                    {isOverdue ? `${Math.abs(daysUntilDue)} dias atrasada` :
+                      daysUntilDue === 0 ? 'Vence hoje' :
+                        `${daysUntilDue} dias restantes`}
                   </span>
                 </div>
               </div>
 
               {/* Description */}
-              {request.description && (
+              {request.request_description && (
                 <div className="bg-muted p-3 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    <strong>Descrição:</strong> {request.description}
+                    <strong>Descrição:</strong> {request.request_description}
                   </p>
                 </div>
               )}
@@ -287,7 +291,7 @@ export function DataSubjectRequestCard({
                       <span className="font-medium">{request.assigned_to}</span>
                     </div>
                   )}
-                  
+
                   {request.verified_by && (
                     <div className="flex items-center space-x-2">
                       <UserCheck className="w-4 h-4 text-green-600" />
@@ -295,7 +299,7 @@ export function DataSubjectRequestCard({
                       <span className="font-medium">{request.verified_by}</span>
                     </div>
                   )}
-                  
+
                   {request.responded_by && (
                     <div className="flex items-center space-x-2">
                       <Send className="w-4 h-4 text-blue-600" />
@@ -320,33 +324,33 @@ export function DataSubjectRequestCard({
                 <Download className="w-4 h-4 mr-2" />
                 Gerar Template de Resposta
               </DropdownMenuItem>
-              
+
               <DropdownMenuSeparator />
-              
+
               {!request.identity_verified && (
                 <DropdownMenuItem onClick={() => setShowVerifyDialog(true)}>
                   <UserCheck className="w-4 h-4 mr-2" />
                   Verificar Identidade
                 </DropdownMenuItem>
               )}
-              
+
               {request.identity_verified && !request.assigned_to && (
                 <DropdownMenuItem onClick={() => setShowAssignDialog(true)}>
                   <User className="w-4 h-4 mr-2" />
                   Atribuir Solicitação
                 </DropdownMenuItem>
               )}
-              
+
               {(request.status === 'verified' || request.status === 'in_progress') && (
                 <DropdownMenuItem onClick={onProcessRequest}>
                   <FileText className="w-4 h-4 mr-2" />
                   Processar Solicitação
                 </DropdownMenuItem>
               )}
-              
+
               <DropdownMenuSeparator />
-              
-              <DropdownMenuItem 
+
+              <DropdownMenuItem
                 onClick={() => setShowEscalateDialog(true)}
                 className="text-red-600"
               >
@@ -364,18 +368,18 @@ export function DataSubjectRequestCard({
               <span className="text-muted-foreground">Progresso</span>
               <span className="font-medium">
                 {request.status === 'completed' ? '100%' :
-                 request.status === 'in_progress' ? '60%' :
-                 request.status === 'verified' ? '40%' :
-                 request.status === 'under_verification' ? '20%' : '10%'}
+                  request.status === 'in_progress' ? '60%' :
+                    request.status === 'verified' ? '40%' :
+                      request.status === 'under_verification' ? '20%' : '10%'}
               </span>
             </div>
-            <Progress 
+            <Progress
               value={
                 request.status === 'completed' ? 100 :
-                request.status === 'in_progress' ? 60 :
-                request.status === 'verified' ? 40 :
-                request.status === 'under_verification' ? 20 : 10
-              } 
+                  request.status === 'in_progress' ? 60 :
+                    request.status === 'verified' ? 40 :
+                      request.status === 'under_verification' ? 20 : 10
+              }
               className="h-2"
             />
           </div>

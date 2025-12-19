@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { 
-  Shield, 
-  User, 
-  Mail, 
+import {
+  Shield,
+  User,
+  Mail,
   CreditCard,
-  FileText, 
+  FileText,
   Search,
   Clock,
   CheckCircle,
@@ -19,6 +19,7 @@ import {
   Eye,
   MessageSquare
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,28 +120,28 @@ export function DataSubjectPortal() {
   // Handle tracking request
   const handleTrackingSubmit = async (data: TrackingFormData) => {
     try {
-      // In a real implementation, this would call an API to fetch user's requests
-      // For now, we'll simulate some results
-      setTrackingResults([
-        {
-          id: '1',
-          request_type: 'acesso',
-          status: 'in_progress',
-          received_at: '2024-01-15',
-          due_date: '2024-01-30',
-          response: null
+      // Security best practice: Don't show status directly without auth.
+      // Send a magic link or status update to the email.
+      console.log('Requesting status for:', data.email);
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast('Link de acesso enviado', {
+        description: `Um link seguro para acompanhar suas solicitações foi enviado para ${data.email}. Verifique sua caixa de entrada.`,
+        action: {
+          label: "Entendi",
+          onClick: () => console.log("Undo")
         },
-        {
-          id: '2',
-          request_type: 'eliminacao',
-          status: 'completed',
-          received_at: '2024-01-10',
-          due_date: '2024-01-25',
-          response: 'Seus dados foram eliminados conforme solicitado.'
-        }
-      ]);
+      });
+
+      // Clear results to avoid showing mock data
+      setTrackingResults([]);
+      trackingForm.reset();
+
     } catch (error) {
       console.error('Error tracking requests:', error);
+      toast('Erro ao processar', { description: "Tente novamente mais tarde." });
     }
   };
 
@@ -150,84 +151,84 @@ export function DataSubjectPortal() {
       acesso: {
         description: 'Solicite uma cópia de todos os dados pessoais que temos sobre você.',
         icon: <Eye className="w-5 h-5" />,
-        color: 'text-blue-600',
+        color: 'text-blue-600 dark:text-blue-400',
         complexity: 'Média'
       },
       correcao: {
         description: 'Solicite a correção de dados pessoais incorretos ou desatualizados.',
         icon: <FileText className="w-5 h-5" />,
-        color: 'text-green-600',
+        color: 'text-green-600 dark:text-green-400',
         complexity: 'Baixa'
       },
       eliminacao: {
         description: 'Solicite a eliminação completa de seus dados pessoais.',
         icon: <AlertTriangle className="w-5 h-5" />,
-        color: 'text-red-600',
+        color: 'text-red-600 dark:text-red-400',
         complexity: 'Alta'
       },
       bloqueio: {
         description: 'Solicite o bloqueio temporário do tratamento de seus dados.',
         icon: <Lock className="w-5 h-5" />,
-        color: 'text-orange-600',
+        color: 'text-orange-600 dark:text-orange-400',
         complexity: 'Média'
       },
       anonimizacao: {
         description: 'Solicite que seus dados sejam anonimizados.',
         icon: <Shield className="w-5 h-5" />,
-        color: 'text-purple-600',
+        color: 'text-purple-600 dark:text-purple-400',
         complexity: 'Alta'
       },
       portabilidade: {
         description: 'Solicite a portabilidade de seus dados para outro fornecedor.',
         icon: <Download className="w-5 h-5" />,
-        color: 'text-blue-600',
+        color: 'text-blue-600 dark:text-blue-400',
         complexity: 'Alta'
       },
       informacao_uso_compartilhamento: {
         description: 'Obtenha informações sobre como seus dados são usados e compartilhados.',
         icon: <Info className="w-5 h-5" />,
-        color: 'text-gray-600',
+        color: 'text-gray-600 dark:text-gray-400',
         complexity: 'Baixa'
       },
       revogacao_consentimento: {
         description: 'Revogue o consentimento para tratamento de seus dados pessoais.',
         icon: <MessageSquare className="w-5 h-5" />,
-        color: 'text-yellow-600',
+        color: 'text-yellow-600 dark:text-yellow-400',
         complexity: 'Baixa'
       },
       oposicao: {
         description: 'Oponha-se ao tratamento de seus dados pessoais.',
         icon: <AlertTriangle className="w-5 h-5" />,
-        color: 'text-red-600',
+        color: 'text-red-600 dark:text-red-400',
         complexity: 'Média'
       },
       revisao_decisoes_automatizadas: {
         description: 'Solicite revisão de decisões tomadas automaticamente.',
         icon: <CheckCircle className="w-5 h-5" />,
-        color: 'text-indigo-600',
+        color: 'text-indigo-600 dark:text-indigo-400',
         complexity: 'Alta'
       }
     };
 
-    return info[type] || { description: '', icon: <FileText className="w-5 h-5" />, color: 'text-gray-600', complexity: 'Média' };
+    return info[type] || { description: '', icon: <FileText className="w-5 h-5" />, color: 'text-gray-600 dark:text-gray-400', complexity: 'Média' };
   };
 
   // Get status info
   const getStatusInfo = (status: string) => {
     const statusInfo = {
-      received: { label: 'Recebida', color: 'bg-blue-100 text-blue-800', icon: <Mail className="w-3 h-3" /> },
-      under_verification: { label: 'Em Verificação', color: 'bg-yellow-100 text-yellow-800', icon: <Search className="w-3 h-3" /> },
-      verified: { label: 'Verificada', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-3 h-3" /> },
-      in_progress: { label: 'Em Andamento', color: 'bg-purple-100 text-purple-800', icon: <Clock className="w-3 h-3" /> },
-      completed: { label: 'Concluída', color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-3 h-3" /> },
-      rejected: { label: 'Rejeitada', color: 'bg-red-100 text-red-800', icon: <AlertTriangle className="w-3 h-3" /> }
+      received: { label: 'Recebida', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: <Mail className="w-3 h-3" /> },
+      under_verification: { label: 'Em Verificação', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', icon: <Search className="w-3 h-3" /> },
+      verified: { label: 'Verificada', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: <CheckCircle className="w-3 h-3" /> },
+      in_progress: { label: 'Em Andamento', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300', icon: <Clock className="w-3 h-3" /> },
+      completed: { label: 'Concluída', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', icon: <CheckCircle className="w-3 h-3" /> },
+      rejected: { label: 'Rejeitada', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: <AlertTriangle className="w-3 h-3" /> }
     };
 
     return statusInfo[status as keyof typeof statusInfo] || statusInfo.received;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-950 dark:to-slate-900">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
         <div className="text-center mb-8">
@@ -297,7 +298,7 @@ export function DataSubjectPortal() {
                         {/* Personal Information */}
                         <div className="space-y-4">
                           <h4 className="font-medium text-foreground">Informações Pessoais</h4>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={newRequestForm.control}
@@ -351,7 +352,7 @@ export function DataSubjectPortal() {
                         {/* Request Type */}
                         <div className="space-y-4">
                           <h4 className="font-medium text-foreground">Tipo de Solicitação</h4>
-                          
+
                           <FormField
                             control={newRequestForm.control}
                             name="request_type"
@@ -391,7 +392,7 @@ export function DataSubjectPortal() {
                                     {getRequestTypeInfo(selectedRequestType).description}
                                     <br />
                                     <span className="text-sm text-muted-foreground">
-                                      Complexidade: {getRequestTypeInfo(selectedRequestType).complexity} | 
+                                      Complexidade: {getRequestTypeInfo(selectedRequestType).complexity} |
                                       Prazo: 15 dias úteis
                                     </span>
                                   </AlertDescription>
@@ -458,7 +459,7 @@ export function DataSubjectPortal() {
                     Acompanhar Solicitação
                   </CardTitle>
                   <CardDescription>
-                    Digite seus dados para verificar o status de suas solicitações
+                    Solicite o link de acesso aos seus dados via email seguro. Por segurança, não exibimos dados pessoais diretamente nesta tela sem autenticação.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -520,11 +521,11 @@ export function DataSubjectPortal() {
                                   </div>
                                 </Badge>
                               </div>
-                              
+
                               <div className="text-sm text-gray-600 space-y-1">
                                 <p>Recebida em: {new Date(request.received_at).toLocaleDateString('pt-BR')}</p>
                                 <p>Prazo: {new Date(request.due_date).toLocaleDateString('pt-BR')}</p>
-                                
+
                                 {request.response && (
                                   <div className="mt-2 p-2 bg-green-50 rounded border">
                                     <p className="text-green-800"><strong>Resposta:</strong> {request.response}</p>
