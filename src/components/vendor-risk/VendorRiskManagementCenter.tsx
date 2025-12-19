@@ -400,6 +400,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
                 selectedFilter={selectedFilter}
                 loading={loading}
                 showFilters={showFilters}
+                assessments={assessments}
               />
             </TabsContent>
 

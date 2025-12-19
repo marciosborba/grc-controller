@@ -56,7 +56,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
       compliance: 'Olá! Sou ALEX COMPLIANCE - especialista em conformidade regulatória. Posso ajudar com frameworks regulatórios e controles de compliance.',
       privacy: 'Olá! Sou ALEX PRIVACY - especialista em privacidade de dados e LGPD. Posso ajudar com questões de proteção de dados e conformidade.',
       incident: 'Olá! Sou ALEX INCIDENT - especialista em gestão de incidentes. Posso ajudar com resposta a incidentes e planos de continuidade.',
-      vendor: 'Olá! Sou ALEX VENDOR - especialista em riscos de fornecedores e IA. Posso ajudar com avaliação e gestão de terceiros.',
+      vendor: 'Olá! Sou seu especialista em riscos de fornecedores e IA. Posso ajudar com avaliação e gestão de terceiros.',
       ethics: 'Olá! Sou ALEX ETHICS - especialista em ética e ouvidoria corporativa. Posso ajudar com questões éticas e compliance comportamental.'
     };
     return welcomeMessages[assistantType] || welcomeMessages.general;
@@ -130,7 +130,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Erro ao enviar mensagem para IA (Dialog):', error);
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         type: 'assistant',
@@ -139,7 +139,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
       };
 
       setMessages(prev => [...prev, errorMessage]);
-      
+
       toast({
         title: 'Erro',
         description: 'Erro ao enviar mensagem para o assistente de IA. Verifique as configurações.',
@@ -191,7 +191,7 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
           </Button>
         )}
       </DialogTrigger>
-      
+
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -214,11 +214,10 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.type === 'user'
+                    className={`max-w-[80%] p-3 rounded-lg ${message.type === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     <p className="text-xs opacity-70 mt-1">
@@ -250,8 +249,8 @@ export const AIChatDialog: React.FC<AIChatDialogProps> = ({
               disabled={isLoading}
               className="flex-1"
             />
-            <Button 
-              onClick={sendMessage} 
+            <Button
+              onClick={sendMessage}
               disabled={isLoading || !inputValue.trim()}
               size="sm"
             >

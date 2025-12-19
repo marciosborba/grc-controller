@@ -3545,7 +3545,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
         <CardContent className="p-4">
           <h4 className="flex items-center gap-2 text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
             <Target className="h-4 w-4" />
-            ALEX VENDOR - Análise do Assessment
+            Análise do Assessment
           </h4>
           <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
             {!isComplete && (

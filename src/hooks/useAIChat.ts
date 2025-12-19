@@ -60,7 +60,7 @@ export const useAIChat = (config: AIChatConfig) => {
       compliance: 'Olá! Sou ALEX COMPLIANCE - especialista em conformidade regulatória. Posso ajudar com frameworks regulatórios e controles de compliance.',
       privacy: 'Olá! Sou ALEX PRIVACY - especialista em privacidade de dados e LGPD. Posso ajudar com questões de proteção de dados e conformidade.',
       incident: 'Olá! Sou ALEX INCIDENT - especialista em gestão de incidentes. Posso ajudar com resposta a incidentes e planos de continuidade.',
-      vendor: 'Olá! Sou ALEX VENDOR - especialista em riscos de fornecedores e IA. Posso ajudar com avaliação e gestão de terceiros.',
+      vendor: 'Olá! Sou seu especialista em riscos de fornecedores e IA. Posso ajudar com avaliação e gestão de terceiros.',
       ethics: 'Olá! Sou ALEX ETHICS - especialista em ética e ouvidoria corporativa. Posso ajudar com questões éticas e compliance comportamental.'
     };
     return welcomeMessages[config.type] || welcomeMessages.general;
@@ -125,13 +125,13 @@ export const useAIChat = (config: AIChatConfig) => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      
+
       // Log assistant response
       await logMessage('assistant', data.response, responseTime);
 
     } catch (error) {
       console.error('Erro ao enviar mensagem para IA:', error);
-      
+
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         type: 'assistant',
@@ -140,10 +140,10 @@ export const useAIChat = (config: AIChatConfig) => {
       };
 
       setMessages(prev => [...prev, errorMessage]);
-      
+
       // Log error
       await logMessage('assistant', errorMessage.content, Date.now() - startTime, error.message);
-      
+
       toast({
         title: 'Erro',
         description: 'Erro ao enviar mensagem para o assistente de IA.',

@@ -42,7 +42,7 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
         ];
       default:
         return [
-          'ALEX VENDOR está monitorando continuamente seus fornecedores',
+          'O sistema de GRC está monitorando continuamente seus fornecedores',
           'Sistema preparado para análises avançadas de risco',
           'IA ativa para otimização de processos'
         ];
@@ -61,7 +61,7 @@ export const AlexVendorIntegration: React.FC<AlexVendorIntegrationProps> = ({
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                ALEX VENDOR - Insights Contextuais
+                Insights Contextuais
               </span>
               <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
                 IA Ativa

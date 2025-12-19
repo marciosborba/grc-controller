@@ -1908,7 +1908,7 @@ Equipe de Compliance`;
 
               <div className="bg-primary/10 p-3 rounded-lg">
                 <h4 className="text-sm font-medium text-primary mb-1">
-                  🎯 ALEX VENDOR - Dica Inteligente
+                  🎯 Dica Inteligente
                 </h4>
                 <p className="text-sm text-primary/80">
                   O link expira automaticamente em 30 dias por segurança. O fornecedor receberá

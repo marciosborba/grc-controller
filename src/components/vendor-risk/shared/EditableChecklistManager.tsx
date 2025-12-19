@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
+import {
   Plus,
   Edit,
   Trash2,
@@ -18,8 +18,7 @@ import {
   XCircle,
   Settings,
   FileCheck,
-  Brain,
-  Zap
+  Brain
 } from 'lucide-react';
 import {
   Dialog,
@@ -31,7 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 // Componente de botão de compliance com estilos forçados
 interface ComplianceButtonProps {
@@ -42,12 +41,12 @@ interface ComplianceButtonProps {
   children: React.ReactNode;
 }
 
-const ComplianceButton: React.FC<ComplianceButtonProps> = ({ 
-  status, 
-  isSelected, 
-  onClick, 
-  disabled = false, 
-  children 
+const ComplianceButton: React.FC<ComplianceButtonProps> = ({
+  status,
+  isSelected,
+  onClick,
+  disabled = false,
+  children
 }) => {
   console.log('ComplianceButton render:', { status, isSelected });
 
@@ -71,23 +70,23 @@ const ComplianceButton: React.FC<ComplianceButtonProps> = ({
         opacity: disabled ? 0.5 : 1,
         minHeight: '36px',
         // Cores forçadas baseadas no status e seleção
-        backgroundColor: isSelected 
-          ? (status === 'compliant' ? '#16a34a' 
-             : status === 'compliant_with_reservation' ? '#ca8a04' 
-             : '#dc2626')
+        backgroundColor: isSelected
+          ? (status === 'compliant' ? '#16a34a'
+            : status === 'compliant_with_reservation' ? '#ca8a04'
+              : '#dc2626')
           : 'transparent',
-        color: isSelected 
+        color: isSelected
           ? '#ffffff'
           : (status === 'compliant' ? '#15803d'
-             : status === 'compliant_with_reservation' ? '#a16207'
-             : '#dc2626'),
+            : status === 'compliant_with_reservation' ? '#a16207'
+              : '#dc2626'),
         borderColor: isSelected
           ? (status === 'compliant' ? '#16a34a'
-             : status === 'compliant_with_reservation' ? '#ca8a04'
-             : '#dc2626')
+            : status === 'compliant_with_reservation' ? '#ca8a04'
+              : '#dc2626')
           : (status === 'compliant' ? '#86efac'
-             : status === 'compliant_with_reservation' ? '#fde047'
-             : '#fca5a5')
+            : status === 'compliant_with_reservation' ? '#fde047'
+              : '#fca5a5')
       }}
       className="compliance-button"
     >
@@ -177,7 +176,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
   const [responses, setResponses] = useState<Record<string, ChecklistResponse>>({});
   const [isEditing, setIsEditing] = useState(false);
@@ -203,19 +202,19 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
     const completedRequired = requiredItems.filter(item => {
       const response = responses[item.id];
       const isCompleted = response?.status === 'compliant' || response?.status === 'compliant_with_reservation';
-      
+
       // Verificar se justificativa é obrigatória para "non_compliant"
       if (response?.status === 'non_compliant' && item.required) {
         const hasJustification = response.justification && response.justification.trim().length > 0;
         console.log(`Item ${item.id} (${item.title}) - Non-compliant com justificativa:`, hasJustification);
         return hasJustification; // Considera completo se tem justificativa
       }
-      
+
       return isCompleted;
     });
-    
+
     const isComplete = requiredItems.length > 0 && completedRequired.length === requiredItems.length;
-    
+
     console.log('Validação do checklist:', {
       totalRequired: requiredItems.length,
       completedRequired: completedRequired.length,
@@ -224,14 +223,14 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
         id: item.id,
         title: item.title,
         response: responses[item.id],
-        isCompleted: responses[item.id]?.status === 'compliant' || 
-                     responses[item.id]?.status === 'compliant_with_reservation' ||
-                     (responses[item.id]?.status === 'non_compliant' && responses[item.id]?.justification?.trim())
+        isCompleted: responses[item.id]?.status === 'compliant' ||
+          responses[item.id]?.status === 'compliant_with_reservation' ||
+          (responses[item.id]?.status === 'non_compliant' && responses[item.id]?.justification?.trim())
       }))
     });
-    
+
     onChecklistComplete(isComplete);
-    
+
     if (onResponsesChange) {
       onResponsesChange(responses);
     }
@@ -240,7 +239,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
   // Carregar checklist do banco ou criar padrão
   const loadChecklist = async () => {
     console.log('Carregando checklist...', { tenantId: user?.tenantId, vendorId });
-    
+
     if (!user?.tenantId) {
       console.log('Sem tenant ID, usando checklist padrão local');
       // Fallback para checklist padrão local se não houver tenant
@@ -374,7 +373,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
       }
 
       console.log('Respostas carregadas:', data?.length || 0, 'respostas');
-      
+
       if (data) {
         const responsesMap: Record<string, ChecklistResponse> = {};
         data.forEach(response => {
@@ -398,7 +397,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
   // Salvar resposta
   const saveResponse = async (itemId: string, response: Partial<ChecklistResponse>) => {
     console.log('Salvando resposta:', { itemId, response, vendorId, userId: user?.id });
-    
+
     if (!vendorId || !user?.id) {
       console.error('Vendor ID ou User ID não encontrado:', { vendorId, userId: user?.id });
       toast({
@@ -539,7 +538,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
       }
     }
 
-    setChecklistItems(prev => 
+    setChecklistItems(prev =>
       prev.map(i => i.id === item.id ? { ...item, updatedAt: new Date().toISOString() } : i)
     );
     setEditingItem(null);
@@ -584,7 +583,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
     }
 
     setChecklistItems(prev => prev.filter(i => i.id !== itemId));
-    
+
     // Remover respostas relacionadas
     setResponses(prev => {
       const newResponses = { ...prev };
@@ -601,7 +600,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
   // Atualizar resposta local
   const updateResponse = async (itemId: string, field: keyof ChecklistResponse, value: any) => {
     console.log('Atualizando resposta:', { itemId, field, value, vendorId });
-    
+
     const updatedResponse = {
       ...responses[itemId],
       itemId,
@@ -619,7 +618,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
       try {
         await saveResponse(itemId, updatedResponse);
         console.log('Resposta salva com sucesso');
-        
+
         toast({
           title: "Resposta Salva",
           description: `Status atualizado para: ${value === 'compliant' ? 'Compliance' : value === 'compliant_with_reservation' ? 'Compliance com Ressalva' : 'Não Compliance'}`,
@@ -638,19 +637,19 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
   // Obter cor do botão de status
   const getStatusButtonClass = (status: ComplianceStatus, currentStatus: ComplianceStatus) => {
     const isActive = status === currentStatus;
-    
+
     switch (status) {
       case 'compliant':
-        return isActive 
-          ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' 
+        return isActive
+          ? 'bg-green-600 hover:bg-green-700 text-white border-green-600'
           : 'border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20';
       case 'compliant_with_reservation':
-        return isActive 
-          ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600' 
+        return isActive
+          ? 'bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600'
           : 'border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:hover:bg-yellow-950/20';
       case 'non_compliant':
-        return isActive 
-          ? 'bg-red-600 hover:bg-red-700 text-white border-red-600' 
+        return isActive
+          ? 'bg-red-600 hover:bg-red-700 text-white border-red-600'
           : 'border-red-300 text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20';
       default:
         return 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-950/20';
@@ -675,9 +674,9 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
   const requiredItems = checklistItems.filter(item => item.required);
   const completedRequired = requiredItems.filter(item => {
     const response = responses[item.id];
-    return response?.status === 'compliant' || 
-           response?.status === 'compliant_with_reservation' ||
-           (response?.status === 'non_compliant' && response?.justification?.trim());
+    return response?.status === 'compliant' ||
+      response?.status === 'compliant_with_reservation' ||
+      (response?.status === 'non_compliant' && response?.justification?.trim());
   }).length;
   const isComplete = requiredItems.length > 0 && completedRequired === requiredItems.length;
 
@@ -696,7 +695,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                 Checklist editável para avaliação de fornecedores
               </p>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -710,29 +709,27 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full ${
-                isComplete ? 'bg-green-500' : 'bg-yellow-500'
-              }`}></div>
+              <div className={`w-4 h-4 rounded-full ${isComplete ? 'bg-green-500' : 'bg-yellow-500'
+                }`}></div>
               <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
                 {completedRequired}/{requiredItems.length} itens obrigatórios
               </span>
             </div>
-            
+
             <div className="flex-1">
               <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    isComplete ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
+                <div
+                  className={`h-2 rounded-full transition-all duration-300 ${isComplete ? 'bg-green-500' : 'bg-yellow-500'
+                    }`}
                   style={{ width: `${requiredItems.length > 0 ? (completedRequired / requiredItems.length) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>
-            
+
             <Badge variant={isComplete ? "default" : "secondary"} className={
               isComplete ? "bg-green-600 text-white" : "bg-yellow-600 text-white"
             }>
@@ -767,7 +764,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                       placeholder="Ex: Certificação ISO 27001"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="new-category">Categoria</Label>
                     <select
@@ -784,7 +781,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="new-description">Descrição</Label>
                   <Textarea
@@ -795,7 +792,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                     rows={2}
                   />
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="new-required"
@@ -804,14 +801,14 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                   />
                   <Label htmlFor="new-required">Item obrigatório</Label>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <Button onClick={addNewItem} disabled={!newItem.title}>
                     <Save className="h-4 w-4 mr-2" />
                     Salvar
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setIsAddingNew(false);
                       setNewItem({
@@ -840,7 +837,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
           .map((item) => {
             const response = responses[item.id];
             const isEditingThis = editingItem?.id === item.id;
-            
+
             // Debug: log do estado da resposta
             if (process.env.NODE_ENV === 'development') {
               console.log(`Item ${item.id} (${item.title}):`, {
@@ -849,19 +846,18 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                 hasResponse: !!response
               });
             }
-            
+
             return (
-              <Card key={item.id} className={`transition-all duration-200 ${
-                response?.status === 'compliant' 
-                  ? 'border-green-300 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20'
-                  : response?.status === 'compliant_with_reservation'
+              <Card key={item.id} className={`transition-all duration-200 ${response?.status === 'compliant'
+                ? 'border-green-300 bg-green-50/30 dark:border-green-800 dark:bg-green-950/20'
+                : response?.status === 'compliant_with_reservation'
                   ? 'border-yellow-300 bg-yellow-50/30 dark:border-yellow-800 dark:bg-yellow-950/20'
                   : response?.status === 'non_compliant'
-                  ? 'border-red-300 bg-red-50/30 dark:border-red-800 dark:bg-red-950/20'
-                  : item.required
-                  ? 'border-orange-300 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20'
-                  : 'border-gray-300 dark:border-gray-700'
-              }`}>
+                    ? 'border-red-300 bg-red-50/30 dark:border-red-800 dark:bg-red-950/20'
+                    : item.required
+                      ? 'border-orange-300 bg-orange-50/30 dark:border-orange-800 dark:bg-orange-950/20'
+                      : 'border-gray-300 dark:border-gray-700'
+                }`}>
                 <CardContent className="p-4">
                   {!isEditingThis ? (
                     <div className="space-y-4">
@@ -883,7 +879,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             <p className="text-sm text-muted-foreground">{item.description}</p>
                           )}
                         </div>
-                        
+
                         {isEditing && (
                           <div className="flex gap-1 ml-2">
                             <Button
@@ -907,7 +903,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Botões de status */}
                       <div className="space-y-3">
                         <div className="flex flex-col sm:flex-row gap-2">
@@ -923,7 +919,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             {getStatusIcon('compliant')}
                             Compliance
                           </ComplianceButton>
-                          
+
                           <ComplianceButton
                             status="compliant_with_reservation"
                             isSelected={response?.status === 'compliant_with_reservation'}
@@ -936,7 +932,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             {getStatusIcon('compliant_with_reservation')}
                             Compliance com Ressalva
                           </ComplianceButton>
-                          
+
                           <ComplianceButton
                             status="non_compliant"
                             isSelected={response?.status === 'non_compliant'}
@@ -950,7 +946,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             Não Compliance
                           </ComplianceButton>
                         </div>
-                        
+
                         {!vendorId && (
                           <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
                             ⚠️ Para responder o checklist, é necessário ter um fornecedor selecionado no workflow de onboarding.
@@ -968,16 +964,15 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             </Label>
                             <Textarea
                               id={`justification-${item.id}`}
-                              placeholder={response.status === 'non_compliant' && item.required 
-                                ? "Justificativa obrigatória para itens não compliance..." 
+                              placeholder={response.status === 'non_compliant' && item.required
+                                ? "Justificativa obrigatória para itens não compliance..."
                                 : "Descreva a justificativa para esta avaliação..."}
                               value={response.justification || ''}
                               onChange={(e) => updateResponse(item.id, 'justification', e.target.value)}
-                              className={`text-xs min-h-[60px] ${
-                                response.status === 'non_compliant' && item.required && !response.justification?.trim()
-                                  ? 'border-red-300 focus:border-red-500'
-                                  : ''
-                              }`}
+                              className={`text-xs min-h-[60px] ${response.status === 'non_compliant' && item.required && !response.justification?.trim()
+                                ? 'border-red-300 focus:border-red-500'
+                                : ''
+                                }`}
                               required={response.status === 'non_compliant' && item.required}
                             />
                             {response.status === 'non_compliant' && item.required && !response.justification?.trim() && (
@@ -1001,7 +996,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                             onChange={(e) => setEditingItem(prev => prev ? { ...prev, title: e.target.value } : null)}
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <Label htmlFor={`edit-category-${item.id}`}>Categoria</Label>
                           <select
@@ -1018,7 +1013,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                           </select>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor={`edit-description-${item.id}`}>Descrição</Label>
                         <Textarea
@@ -1028,7 +1023,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                           rows={2}
                         />
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id={`edit-required-${item.id}`}
@@ -1037,17 +1032,17 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
                         />
                         <Label htmlFor={`edit-required-${item.id}`}>Item obrigatório</Label>
                       </div>
-                      
+
                       <div className="flex gap-2">
-                        <Button 
-                          onClick={() => editingItem && updateItem(editingItem)} 
+                        <Button
+                          onClick={() => editingItem && updateItem(editingItem)}
                           disabled={!editingItem?.title}
                         >
                           <Save className="h-4 w-4 mr-2" />
                           Salvar
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => setEditingItem(null)}
                         >
                           <X className="h-4 w-4 mr-2" />
@@ -1066,8 +1061,7 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
       <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
         <CardContent className="p-4">
           <h4 className="flex items-center gap-2 text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-            <Zap className="h-4 w-4" />
-            ALEX VENDOR - Insights do Checklist
+            Insights do Checklist
           </h4>
           <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
             {!isComplete && (
@@ -1076,14 +1070,14 @@ export const EditableChecklistManager: React.FC<EditableChecklistManagerProps> =
             {isComplete && (
               <p>✅ Todos os requisitos obrigatórios estão em Compliance!</p>
             )}
-            
+
             {/* Resumo de status */}
             {(() => {
               const totalResponses = Object.values(responses);
               const compliantCount = totalResponses.filter(r => r?.status === 'compliant').length;
               const withReservationCount = totalResponses.filter(r => r?.status === 'compliant_with_reservation').length;
               const nonCompliantCount = totalResponses.filter(r => r?.status === 'non_compliant').length;
-              
+
               return (
                 <div className="flex gap-4 text-xs">
                   {compliantCount > 0 && <span>✅ {compliantCount} em compliance</span>}

@@ -55,6 +55,7 @@ interface VendorTableViewProps {
   selectedFilter: string;
   loading?: boolean;
   showFilters?: boolean;
+  assessments?: any[];
 }
 
 interface VendorFormData {
@@ -79,7 +80,8 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   searchTerm,
   selectedFilter,
   loading: externalLoading,
-  showFilters
+  showFilters,
+  assessments = []
 }) => {
   const {
     vendors,
@@ -664,13 +666,34 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                     </TableCell>
 
                     <TableCell className="text-xs p-3 w-[10%]">
-                      {vendor.last_assessment_date ? (
-                        <div className="text-xs text-muted-foreground">
-                          <div className="text-xs">{format(new Date(vendor.last_assessment_date), 'dd/MM/yy', { locale: ptBR })}</div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Nunca avaliado</span>
-                      )}
+                      {(() => {
+                        // Tenta encontrar a data no campo do fornecedor ou na lista de assessments
+                        let displayDate = vendor.last_assessment_date;
+
+                        // Se não tem data no fornecedor, procura na lista de assessments
+                        if (!displayDate && assessments && assessments.length > 0) {
+                          const vendorAssessments = assessments
+                            .filter(a => a.vendor_id === vendor.id && (a.status === 'completed' || a.status === 'approved' || (a.status === 'submitted' && a.vendor_submitted_at)))
+                            .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+
+                          if (vendorAssessments.length > 0) {
+                            displayDate = vendorAssessments[0].vendor_submitted_at || vendorAssessments[0].updated_at || vendorAssessments[0].created_at;
+                          }
+                        }
+
+                        // Se ainda não encontrou e o fornecedor está ativo, usa a data de atualização
+                        if (!displayDate && vendor.status === 'active') {
+                          displayDate = vendor.updated_at || vendor.created_at;
+                        }
+
+                        return displayDate ? (
+                          <div className="text-xs text-muted-foreground">
+                            <div className="text-xs">{format(new Date(displayDate), 'dd/MM/yy', { locale: ptBR })}</div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Nunca avaliado</span>
+                        );
+                      })()}
                     </TableCell>
 
                     <TableCell className="p-3 w-[11%]">
