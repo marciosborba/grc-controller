@@ -118,18 +118,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
     ).length;
     const complianceRate = vendors.length > 0 ? (compliantVendors / vendors.length) * 100 : 100;
 
-    // 3. Tempo Médio de Assessment (dias)
-    const completedAssessments = assessments.filter(a =>
-      a.status === 'completed' && a.start_date && a.completion_date
-    );
 
-    let avgAssessmentDays = 0;
-    if (completedAssessments.length > 0) {
-      const totalDays = completedAssessments.reduce((acc, a) => {
-        return acc + differenceInDays(parseISO(a.completion_date), parseISO(a.start_date));
-      }, 0);
-      avgAssessmentDays = Math.round(totalDays / completedAssessments.length);
-    }
     // 4. Cobertura de Avaliação (Avaliados vs Total)
     // 4. Cobertura de Avaliação (Avaliados vs Total)
     const assessedVendorsCount = vendors.filter(v => {
@@ -158,57 +147,48 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
 
     return [
       {
-        title: "Cobertura de Avaliação",
+        title: 'Cobertura de Avaliação',
         value: `${assessedVendorsCount}/${totalVendors}`,
-        change: `${coveragePercentage.toFixed(0)}%`,
-        trend: "up",
+        change: '', // Removed incoherent hardcoded change
         icon: FileCheck,
-        description: "Fornecedores avaliados vs. total"
+        description: 'Fornecedores avaliados nos últimos 12 meses',
+        trend: 'neutral' as const
       },
       {
-        title: "Planos de Ação",
-        value: `${openPlans}`,
-        change: `${overdueActivities} atrasados`,
-        trend: overdueActivities > 0 ? "down" : "up", // Down is bad (risk) or good? Here trending down means getting worse risk-wise if negative context, but usually arrow direction. Let's keep neutral or use check logic.
-        // Actually for action plans: many open plans might be neutral work, but overdue is bad.
-        // Let's simluate:
+        title: 'Planos de Ação',
+        value: openPlans.toString(),
+        change: '',
         icon: Target,
-        description: "Ações de melhoria em andamento"
+        description: 'Planos de ação em aberto',
+        trend: 'neutral' as const
       },
       {
-        title: "Taxa de Conformidade",
+        title: 'Taxa de Conformidade',
         value: `${complianceRate.toFixed(1)}%`,
-        change: "+2.1%", // Idealmente comparar com mês anterior
-        trend: "up",
-        icon: CheckCircle,
-        description: "Fornecedores dentro do apetite de risco"
-      },
-      {
-        title: "Tempo Médio de Avaliação",
-        value: `${avgAssessmentDays} dias`,
-        change: "-3 dias",
-        trend: "up", // Menor é melhor, mas "up" aqui simboliza melhoria (verde)
-        icon: Clock,
-        description: "Duração média do processo"
-      },
-      {
-        title: "Score Médio de Risco",
-        value: `${avgRiskScore.toFixed(1)}/5.0`,
-        change: "-0.2",
-        trend: "down", // Menor é melhor (menos risco)
+        change: '',
         icon: Shield,
-        description: "Média ponderada da base"
+        description: 'Fornecedores em conformidade com requisitos',
+        trend: 'neutral' as const
+      },
+      // REMOVED: Tempo Médio de Avaliação (often incoherent/0)
+      {
+        title: 'Score Médio de Risco',
+        value: avgRiskScore.toFixed(1),
+        change: '',
+        icon: Activity,
+        description: 'Média ponderada de risco da base',
+        trend: 'neutral' as const
       },
       {
-        title: "Fornecedores Críticos",
-        value: dashboardMetrics?.critical_vendors || 0,
-        change: "Sem mudança",
-        trend: "stable",
+        title: 'Fornecedores Críticos',
+        value: (dashboardMetrics?.critical_vendors || vendors.filter(v => v.criticality_level === 'critical' || v.criticality_level === 'high').length).toString(),
+        change: '',
         icon: AlertTriangle,
-        description: "Necessitam monitoramento contínuo"
+        description: 'Fornecedores com classificação de risco alto/crítico',
+        trend: 'neutral' as const
       }
     ];
-  }, [vendors, assessments, dashboardMetrics]);
+  }, [dashboardMetrics, vendors, plans]);
 
   // --- DADOS PARA GRÁFICOS ---
 
