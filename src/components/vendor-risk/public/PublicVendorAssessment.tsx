@@ -89,6 +89,7 @@ interface Message {
   sender_type: 'vendor' | 'internal';
   content: string;
   created_at: string;
+  attachments?: any[];
 }
 
 interface PublicVendorAssessmentProps {
@@ -114,6 +115,9 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load messages
   const loadMessages = async () => {
@@ -141,21 +145,82 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   }, [showChat, publicLinkId]);
 
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newAttachments = [...attachments];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from('chat-attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-attachments')
+          .getPublicUrl(filePath);
+
+        newAttachments.push({
+          name: file.name,
+          url: publicUrl,
+          type: file.type,
+          size: file.size
+        });
+
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast({ title: "Erro no Upload", description: `Falha ao enviar ${file.name}`, variant: "destructive" });
+      }
+    }
+
+    setAttachments(newAttachments);
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        const file = items[i].getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length > 0) {
+      e.preventDefault();
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+      handleFileUpload(dt.files);
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!chatMessage.trim()) return;
+    if (!chatMessage.trim() && attachments.length === 0) return;
 
     try {
       setSendingMessage(true);
 
       const { data, error } = await supabase.rpc('send_public_assessment_message', {
         p_link: publicLinkId,
-        p_content: chatMessage
+        p_content: chatMessage,
+        p_attachments: attachments
       });
 
       if (error) throw error;
 
       if (data && data.success) {
         setChatMessage('');
+        setAttachments([]);
         await loadMessages(); // Refresh immediately
       } else {
         throw new Error(data?.error || 'Erro ao enviar mensagem');
@@ -828,32 +893,64 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
                 <MessageSquare className="h-10 w-10 mb-2 opacity-20" />
                 <p className="text-sm">Nenhuma mensagem ainda.</p>
-                <p className="text-xs mt-1">Envie uma mensagem para falar com nossa equipe.</p>
+                <p className="text-xs mt-1">Envie uma mensagem</p>
               </div>
             ) : (
-              chatHistory.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.sender_type === 'vendor' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${msg.sender_type === 'vendor'
-                      ? 'bg-primary text-primary-foreground rounded-br-none'
-                      : 'bg-card border border-border shadow-sm rounded-bl-none'
-                      }`}
-                  >
-                    <p>{msg.content}</p>
-                    <span className={`text-[10px] block mt-1 opacity-70 ${msg.sender_type === 'vendor' ? 'text-primary-foreground' : 'text-muted-foreground'
-                      }`}>
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {chatHistory.map((msg) => {
+                    const isVendor = msg.sender_type === 'vendor';
+                    return (
+                      <div key={msg.id} className={`flex ${isVendor ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-[80%] p-3 rounded-lg ${isVendor
+                            ? 'bg-primary text-primary-foreground rounded-tr-none'
+                            : 'bg-muted text-foreground rounded-tl-none'
+                            }`}
+                        >
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+
+                          {/* Attachments */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {msg.attachments.map((att: any, i: number) => (
+                                <div key={i} className="flex items-center gap-2 p-1.5 bg-background/10 rounded border border-white/10 overflow-hidden">
+                                  <Paperclip className="h-3 w-3 shrink-0" />
+                                  <span className="text-xs truncate flex-1 block max-w-[150px]">{att.name}</span>
+                                  <a href={att.url} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-white/20 rounded">
+                                    <Download className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <span className="text-[10px] opacity-70 block mt-1 text-right">
+                            {new Date(msg.created_at).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))
+              </ScrollArea>
             )}
           </div>
 
           <div className="p-4 border-t bg-background">
+            {/* Attachment Previews */}
+            {attachments.length > 0 && (
+              <div className="flex gap-2 mb-2 overflow-x-auto">
+                {attachments.map((att, idx) => (
+                  <div key={idx} className="relative bg-muted p-1 rounded border shrink-0">
+                    <span className="text-xs max-w-[100px] truncate block">{att.name}</span>
+                    <button onClick={() => setAttachments(p => p.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5">
+                      <X className="h-2 w-2" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -861,13 +958,31 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               }}
               className="flex gap-2"
             >
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                ref={fileInputRef}
+                onChange={(e) => handleFileUpload(e.target.files)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading || sendingMessage}
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               <Input
+                placeholder="Digite sua dúvida ou cole imagem..."
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
-                placeholder="Digite sua dúvida..."
-                className="flex-1"
+                onPaste={handlePaste}
+                disabled={sendingMessage}
+                autoComplete="off"
               />
-              <Button type="submit" size="icon" disabled={!chatMessage.trim() || sendingMessage}>
+              <Button type="submit" size="icon" disabled={sendingMessage || isUploading}>
                 {sendingMessage ? (
                   <div className="h-4 w-4 rounded-full border-2 border-primary-foreground border-t-transparent animate-spin" />
                 ) : (

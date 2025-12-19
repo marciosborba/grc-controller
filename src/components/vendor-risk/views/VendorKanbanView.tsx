@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   DndContext,
   closestCenter,
@@ -15,7 +16,6 @@ import {
   DragStartEvent,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -29,7 +29,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   Clock,
-  User,
   Calendar,
   Building,
   MoreHorizontal,
@@ -42,7 +41,8 @@ import {
   FileCheck,
   Brain,
   Link,
-  AlertTriangle
+  AlertTriangle,
+  GripHorizontal
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -78,9 +78,9 @@ interface KanbanColumn {
   id: AssessmentStatus;
   title: string;
   color: string;
+  bgConfig: string;
   description: string;
   icon: React.ComponentType<any>;
-  gradient: string;
 }
 
 interface SortableAssessmentCardProps {
@@ -100,59 +100,59 @@ interface DroppableColumnProps {
 const KANBAN_COLUMNS: KanbanColumn[] = [
   {
     id: 'draft',
-    title: 'Rascunho',
-    color: 'text-slate-600',
-    description: 'Em preparação',
+    title: 'Planejamento',
+    color: 'text-muted-foreground',
+    bgConfig: 'bg-muted/50 border-muted',
+    description: 'Definição do escopo',
     icon: Edit,
-    gradient: 'from-slate-500 to-slate-600'
   },
   {
     id: 'sent',
-    title: 'Enviado',
-    color: 'text-blue-600',
-    description: 'Aguardando resposta',
+    title: 'Aguardando Fornecedor',
+    color: 'text-blue-500',
+    bgConfig: 'bg-blue-500/5 border-blue-200/50 dark:border-blue-900/50',
+    description: 'Convite enviado',
     icon: Send,
-    gradient: 'from-blue-500 to-blue-600'
   },
   {
     id: 'in_progress',
-    title: 'Em Progresso',
-    color: 'text-amber-600',
-    description: 'Em preenchimento',
+    title: 'Preenchimento',
+    color: 'text-amber-500',
+    bgConfig: 'bg-amber-500/5 border-amber-200/50 dark:border-amber-900/50',
+    description: 'Fornecedor respondendo',
     icon: Clock,
-    gradient: 'from-amber-500 to-amber-600'
   },
   {
     id: 'completed',
-    title: 'Completado',
-    color: 'text-indigo-600',
-    description: 'Aguardando revisão',
+    title: 'Em Análise Interna',
+    color: 'text-indigo-500',
+    bgConfig: 'bg-indigo-500/5 border-indigo-200/50 dark:border-indigo-900/50',
+    description: 'Revisão de respostas',
     icon: FileCheck,
-    gradient: 'from-indigo-500 to-indigo-600'
   },
   {
     id: 'approved',
-    title: 'Aprovado',
-    color: 'text-green-600',
-    description: 'Concluído com sucesso',
+    title: 'Homologado',
+    color: 'text-green-500',
+    bgConfig: 'bg-green-500/5 border-green-200/50 dark:border-green-900/50',
+    description: 'Aprovado pelo GRC',
     icon: CheckCircle2,
-    gradient: 'from-green-500 to-green-600'
   },
   {
     id: 'rejected',
-    title: 'Rejeitado',
-    color: 'text-red-600',
-    description: 'Necessita correções',
+    title: 'Revisão Necessária',
+    color: 'text-red-500',
+    bgConfig: 'bg-red-500/5 border-red-200/50 dark:border-red-900/50',
+    description: 'Devolvido para ajustes',
     icon: XCircle,
-    gradient: 'from-red-500 to-red-600'
   },
   {
     id: 'expired',
-    title: 'Expirado',
-    color: 'text-gray-600',
-    description: 'Prazo vencido',
+    title: 'Vencido',
+    color: 'text-destructive',
+    bgConfig: 'bg-destructive/5 border-destructive/20',
+    description: 'Prazo expirado',
     icon: AlertTriangle,
-    gradient: 'from-gray-500 to-gray-600'
   }
 ];
 
@@ -178,21 +178,21 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
 
   const getRiskLevelColor = (level?: string) => {
     switch (level) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'critical': return 'bg-red-500/10 text-red-600 border-red-200/50 dark:border-red-900/50';
+      case 'high': return 'bg-orange-500/10 text-orange-600 border-orange-200/50 dark:border-orange-900/50';
+      case 'medium': return 'bg-yellow-500/10 text-yellow-600 border-yellow-200/50 dark:border-yellow-900/50';
+      case 'low': return 'bg-green-500/10 text-green-600 border-green-200/50 dark:border-green-900/50';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'low': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'urgent': return 'bg-red-500/10 text-red-600 border-red-200/50 dark:border-red-900/50';
+      case 'high': return 'bg-orange-500/10 text-orange-600 border-orange-200/50 dark:border-orange-900/50';
+      case 'medium': return 'bg-blue-500/10 text-blue-600 border-blue-200/50 dark:border-blue-900/50';
+      case 'low': return 'bg-muted text-muted-foreground border-border';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -216,35 +216,40 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
     <Card
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={`
-        mb-3 cursor-grab active:cursor-grabbing transition-all duration-200 
-        hover:shadow-md border-l-4 
-        ${isOverdue() ? 'border-l-red-500 bg-red-50/50' : 
-          isDueSoon() ? 'border-l-amber-500 bg-amber-50/50' : 
-          'border-l-primary/30'}
-        ${isDragging ? 'rotate-3 scale-105 shadow-lg' : ''}
+        mb-3 relative group transition-all duration-200 hover:shadow-md border bg-card
+        ${isOverdue() ? 'border-l-4 border-l-red-500 dark:border-l-red-500' :
+          isDueSoon() ? 'border-l-4 border-l-amber-500 dark:border-l-amber-500' :
+            'border-l-4 border-l-primary/30'}
+        ${isDragging ? 'rotate-2 scale-105 shadow-xl z-50 ring-2 ring-primary' : ''}
       `}
     >
+      <div
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 right-2 p-1 text-muted-foreground/20 hover:text-foreground cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <GripHorizontal className="h-4 w-4" />
+      </div>
+
       <CardContent className="p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-3 pr-6">
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm text-gray-900 truncate">
+            <h4 className="font-semibold text-sm text-foreground truncate" title={assessment.assessment_name}>
               {assessment.assessment_name}
             </h4>
             <div className="flex items-center gap-1 mt-1">
-              <Building className="h-3 w-3 text-gray-500" />
-              <span className="text-xs text-gray-600 truncate">
+              <Building className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground truncate">
                 {assessment.vendor_registry?.name || 'Fornecedor não identificado'}
               </span>
             </div>
           </div>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 absolute top-2 right-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -255,7 +260,7 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
                 <Eye className="mr-2 h-4 w-4" />
                 Visualizar
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { }}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
@@ -263,10 +268,6 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
               <DropdownMenuItem>
                 <Link className="mr-2 h-4 w-4" />
                 Link Público
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Brain className="mr-2 h-4 w-4" />
-                Análise Alex
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -276,39 +277,33 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
         {assessment.progress_percentage > 0 && (
           <div className="mb-3">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-600">Progresso</span>
-              <span className="text-xs font-semibold text-gray-800">
+              <span className="text-[10px] text-muted-foreground uppercase font-medium">Progresso</span>
+              <span className="text-xs font-semibold text-foreground">
                 {assessment.progress_percentage}%
               </span>
             </div>
-            <Progress 
-              value={assessment.progress_percentage} 
-              className="h-2"
+            <Progress
+              value={assessment.progress_percentage}
+              className="h-1.5"
             />
           </div>
         )}
 
         {/* Badges */}
         <div className="flex flex-wrap gap-2 mb-3">
-          <Badge 
-            variant="outline" 
-            className={`text-xs ${getPriorityColor(assessment.priority)}`}
+          <Badge
+            variant="outline"
+            className={`text-xs border ${getPriorityColor(assessment.priority)}`}
           >
             {assessment.priority}
           </Badge>
-          
-          {assessment.risk_level && (
-            <Badge 
-              variant="outline" 
-              className={`text-xs ${getRiskLevelColor(assessment.risk_level)}`}
-            >
-              {assessment.risk_level}
-            </Badge>
-          )}
 
-          {assessment.assessment_type && (
-            <Badge variant="secondary" className="text-xs">
-              {assessment.assessment_type}
+          {assessment.risk_level && (
+            <Badge
+              variant="outline"
+              className={`text-xs border ${getRiskLevelColor(assessment.risk_level)}`}
+            >
+              Risco {assessment.risk_level}
             </Badge>
           )}
 
@@ -317,32 +312,26 @@ const SortableAssessmentCard: React.FC<SortableAssessmentCardProps> = ({
               Vencido
             </Badge>
           )}
-
-          {isDueSoon() && !isOverdue() && (
-            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-200">
-              Vence em breve
-            </Badge>
-          )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground/80 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-1.5">
             <Calendar className="h-3 w-3" />
             <span>
-              {assessment.due_date 
-                ? format(new Date(assessment.due_date), 'dd/MM/yyyy', { locale: ptBR })
+              {assessment.due_date
+                ? format(new Date(assessment.due_date), 'dd MMM', { locale: ptBR })
                 : 'Sem prazo'
               }
             </span>
           </div>
-          
+
           {assessment.overall_score && (
-            <div className="flex items-center gap-1">
-              <span className="font-semibold">
+            <div className="flex items-center gap-1 bg-muted px-1.5 py-0.5 rounded text-foreground font-medium">
+              <Brain className="h-3 w-3 text-primary" />
+              <span>
                 {assessment.overall_score.toFixed(1)}
               </span>
-              <span>/5.0</span>
             </div>
           )}
         </div>
@@ -361,68 +350,73 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
   const { setNodeRef } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex-1 min-w-80">
-      <Card className="h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`p-2 rounded-lg bg-gradient-to-r ${column.gradient} text-white`}>
-                <column.icon className="h-4 w-4" />
+    <div className="flex-1 min-w-[320px] h-full flex flex-col">
+      <div className={`
+        rounded-xl border h-full flex flex-col shadow-sm transition-all
+        ${column.bgConfig} bg-opacity-40
+      `}>
+        {/* Column Header */}
+        <div className="p-4 border-b border-inherit bg-background/50 backdrop-blur-sm rounded-t-xl shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-2 rounded-lg shadow-sm bg-background border border-border/50`}>
+                <column.icon className={`h-4 w-4 ${column.color}`} />
               </div>
               <div>
-                <CardTitle className={`text-sm font-semibold ${column.color}`}>
+                <h3 className="font-bold text-sm text-foreground">
                   {column.title}
-                </CardTitle>
-                <p className="text-xs text-gray-500">{column.description}</p>
+                </h3>
+                <span className="text-xs text-muted-foreground">{column.description}</span>
               </div>
             </div>
-            
-            <div className="text-right">
-              <div className={`text-lg font-bold ${column.color}`}>
-                {assessments.length}
-              </div>
-              <div className="text-xs text-gray-500">assessments</div>
-            </div>
+            <Badge variant="secondary" className="font-mono text-xs">
+              {assessments.length}
+            </Badge>
           </div>
-          
+
           {(stats.highPriority > 0 || stats.overdue > 0) && (
-            <div className="flex gap-2 text-xs">
+            <div className="flex gap-2 text-[10px] mt-2">
               {stats.highPriority > 0 && (
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded border border-orange-500/20">
+                  <AlertCircle className="h-3 w-3" />
                   {stats.highPriority} urgente
-                </Badge>
+                </span>
               )}
               {stats.overdue > 0 && (
-                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                <span className="flex items-center gap-1 text-red-600 dark:text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20">
+                  <AlertTriangle className="h-3 w-3" />
                   {stats.overdue} vencido
-                </Badge>
+                </span>
               )}
             </div>
           )}
-        </CardHeader>
-        
-        <CardContent ref={setNodeRef} className="pt-0 pb-4 min-h-96 max-h-96 overflow-y-auto">
-          <SortableContext items={assessments.map(a => a.id)} strategy={verticalListSortingStrategy}>
-            {assessments.map((assessment) => (
-              <SortableAssessmentCard
-                key={assessment.id}
-                assessment={assessment}
-                onUpdate={onUpdate}
-                onView={onView}
-              />
-            ))}
-          </SortableContext>
-          
-          {assessments.length === 0 && (
-            <div className="flex items-center justify-center h-32 text-gray-500">
-              <div className="text-center">
-                <column.icon className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum assessment</p>
-              </div>
+        </div>
+
+        {/* Column Content */}
+        <div ref={setNodeRef} className="flex-1 p-2 overflow-hidden flex flex-col">
+          <ScrollArea className="flex-1 -mr-3 pr-3">
+            <div className="pb-4 min-h-[150px]">
+              <SortableContext items={assessments.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                {assessments.map((assessment) => (
+                  <SortableAssessmentCard
+                    key={assessment.id}
+                    assessment={assessment}
+                    onUpdate={onUpdate}
+                    onView={onView}
+                  />
+                ))}
+              </SortableContext>
+
+              {assessments.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-32 text-muted-foreground/40 border-2 border-dashed border-muted rounded-xl bg-muted/20 m-2">
+                  <column.icon className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-sm font-medium">Vazio</p>
+                </div>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </ScrollArea>
+        </div>
+      </div>
     </div>
   );
 };
@@ -449,14 +443,13 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
     })
   );
 
-  // Filtrar assessments
   const filteredAssessments = useMemo(() => {
     return assessments.filter(assessment => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch = searchTerm === '' ||
         assessment.assessment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assessment.vendor_registry?.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesFilter = selectedFilter === 'all' || 
+      const matchesFilter = selectedFilter === 'all' ||
         assessment.status === selectedFilter ||
         assessment.priority === selectedFilter ||
         assessment.risk_level === selectedFilter;
@@ -465,7 +458,6 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
     });
   }, [assessments, searchTerm, selectedFilter]);
 
-  // Agrupar por status
   const assessmentsByStatus = useMemo(() => {
     const groups: Record<AssessmentStatus, VendorAssessment[]> = {
       draft: [],
@@ -486,7 +478,6 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
     return groups;
   }, [filteredAssessments]);
 
-  // Calcular estatísticas por coluna
   const getColumnStats = (assessments: VendorAssessment[]) => {
     const today = new Date();
     return {
@@ -512,11 +503,9 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Encontrar o assessment que está sendo movido
     const activeAssessment = filteredAssessments.find(a => a.id === activeId);
     if (!activeAssessment) return;
 
-    // Se mudou de coluna, atualizar status
     if (overId !== activeAssessment.status) {
       try {
         await updateAssessment(activeId, { status: overId as AssessmentStatus });
@@ -556,32 +545,32 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+    <div className="space-y-6 h-full flex flex-col">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+        <Card className="bg-card border-none shadow-sm ring-1 ring-border">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <FileCheck className="h-5 w-5 text-blue-600" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10 text-primary">
+                <FileCheck className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{filteredAssessments.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total de Assessments</p>
+                <p className="text-2xl font-bold text-foreground">{filteredAssessments.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-none shadow-sm ring-1 ring-border">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100">
-                <Clock className="h-5 w-5 text-amber-600" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Em Progresso</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-muted-foreground">Em Progresso</p>
+                <p className="text-2xl font-bold text-foreground">
                   {assessmentsByStatus.in_progress.length}
                 </p>
               </div>
@@ -589,15 +578,15 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-none shadow-sm ring-1 ring-border">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprovados</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-muted-foreground">Aprovados</p>
+                <p className="text-2xl font-bold text-foreground">
                   {assessmentsByStatus.approved.length}
                 </p>
               </div>
@@ -605,15 +594,15 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-none shadow-sm ring-1 ring-border">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100">
-                <AlertCircle className="h-5 w-5 text-red-600" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
+                <AlertCircle className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Atrasados</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-muted-foreground">Atrasados</p>
+                <p className="text-2xl font-bold text-foreground">
                   {Object.values(assessmentsByStatus).flat().filter(a => {
                     if (!a.due_date) return false;
                     return new Date(a.due_date) < new Date();
@@ -626,94 +615,96 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
       </div>
 
       {/* Kanban Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {KANBAN_COLUMNS.map((column) => (
-            <DroppableColumn
-              key={column.id}
-              column={column}
-              assessments={assessmentsByStatus[column.id]}
-              stats={getColumnStats(assessmentsByStatus[column.id])}
-              onUpdate={handleUpdateAssessment}
-              onView={handleViewAssessment}
-            />
-          ))}
-        </div>
-        
-        <DragOverlay>
-          {activeId ? (
-            <div className="rotate-3 scale-105 shadow-lg">
-              <Card className="mb-3 border-l-4 border-l-primary/30">
-                <CardContent className="p-4">
-                  <div className="font-semibold text-sm text-gray-900">
-                    {filteredAssessments.find(a => a.id === activeId)?.assessment_name}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      <div className="flex-1 overflow-x-auto min-h-0 pb-2">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-4 h-full min-w-max pb-2">
+            {KANBAN_COLUMNS.map((column) => (
+              <DroppableColumn
+                key={column.id}
+                column={column}
+                assessments={assessmentsByStatus[column.id]}
+                stats={getColumnStats(assessmentsByStatus[column.id])}
+                onUpdate={handleUpdateAssessment}
+                onView={handleViewAssessment}
+              />
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeId ? (
+              <div className="rotate-2 scale-105 shadow-xl cursor-grabbing">
+                <Card className="bg-card border-2 border-primary">
+                  <CardContent className="p-4">
+                    <div className="font-semibold text-sm text-foreground">
+                      {filteredAssessments.find(a => a.id === activeId)?.assessment_name}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {/* Assessment Details Dialog */}
       {selectedAssessment && (
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{selectedAssessment.assessment_name}</DialogTitle>
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="outline">{selectedAssessment.status}</Badge>
+                {selectedAssessment.updated_at && (
+                  <span className="text-xs text-muted-foreground">Updated: {new Date(selectedAssessment.updated_at).toLocaleDateString()}</span>
+                )}
+              </div>
+              <DialogTitle className="text-xl">{selectedAssessment.assessment_name}</DialogTitle>
               <DialogDescription>
-                {selectedAssessment.vendor_registry?.name}
+                <span className="flex items-center gap-2 mt-1">
+                  <Building className="h-4 w-4" />
+                  {selectedAssessment.vendor_registry?.name}
+                </span>
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-gray-600">Status:</span>
-                  <Badge className="ml-2">{selectedAssessment.status}</Badge>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Prioridade:</span>
-                  <Badge variant="outline" className="ml-2">{selectedAssessment.priority}</Badge>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Progresso:</span>
-                  <span className="ml-2">{selectedAssessment.progress_percentage}%</span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Tipo:</span>
-                  <span className="ml-2">{selectedAssessment.assessment_type}</span>
+
+            <div className="grid grid-cols-3 gap-6 py-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Prioridade</p>
+                <Badge variant="secondary">{selectedAssessment.priority}</Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Risco</p>
+                <Badge variant={selectedAssessment.risk_level === 'high' ? 'destructive' : 'outline'}>
+                  {selectedAssessment.risk_level || 'N/A'}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Score</p>
+                <div className="flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-primary" />
+                  <span className="font-bold text-lg">{selectedAssessment.overall_score?.toFixed(1) || '0.0'}</span>
                 </div>
               </div>
-              
-              {selectedAssessment.due_date && (
-                <div className="text-sm">
-                  <span className="font-medium text-gray-600">Data limite:</span>
-                  <span className="ml-2">
-                    {format(new Date(selectedAssessment.due_date), 'dd/MM/yyyy', { locale: ptBR })}
-                  </span>
-                </div>
-              )}
-              
-              {selectedAssessment.overall_score && (
-                <div className="text-sm">
-                  <span className="font-medium text-gray-600">Score:</span>
-                  <span className="ml-2 font-semibold">{selectedAssessment.overall_score.toFixed(1)}/5.0</span>
-                </div>
-              )}
             </div>
-            
-            <DialogFooter>
+
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progresso</span>
+                <span className="font-medium">{selectedAssessment.progress_percentage}%</span>
+              </div>
+              <Progress value={selectedAssessment.progress_percentage} className="h-2" />
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
                 Fechar
               </Button>
               <Button>
-                Editar Assessment
+                Ver Detalhes Completos
               </Button>
             </DialogFooter>
           </DialogContent>

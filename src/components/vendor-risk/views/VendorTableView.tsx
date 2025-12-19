@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { 
+import {
   Users,
   Plus,
   Edit,
@@ -89,7 +89,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     deleteVendor,
     loading
   } = useVendorRiskManagement();
-  
+
   const { toast } = useToast();
 
   // State management
@@ -145,20 +145,20 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const sortedVendors = [...vendors].sort((a, b) => {
     const aVal = a[sortBy as keyof VendorRegistry];
     const bVal = b[sortBy as keyof VendorRegistry];
-    
+
     if (aVal === null || aVal === undefined) return sortOrder === 'asc' ? -1 : 1;
     if (bVal === null || bVal === undefined) return sortOrder === 'asc' ? 1 : -1;
-    
+
     if (typeof aVal === 'string' && typeof bVal === 'string') {
-      return sortOrder === 'asc' 
-        ? aVal.localeCompare(bVal) 
+      return sortOrder === 'asc'
+        ? aVal.localeCompare(bVal)
         : bVal.localeCompare(aVal);
     }
-    
+
     if (typeof aVal === 'number' && typeof bVal === 'number') {
       return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
     }
-    
+
     return 0;
   });
 
@@ -197,7 +197,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   // Form handlers
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (editingVendor) {
       await updateVendor(editingVendor.id, formData);
       setEditingVendor(null);
@@ -205,7 +205,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
       await createVendor(formData as Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>);
       setShowCreateDialog(false);
     }
-    
+
     setFormData({
       vendor_type: 'operational',
       criticality_level: 'medium',
@@ -219,7 +219,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     setEditingVendor(vendor);
     setShowCreateDialog(true);
   };
-  
+
   // Nova função para editar através do wizard completo
   const handleEditWithWorkflow = (vendor: VendorRegistry) => {
     setEditingVendorId(vendor.id);
@@ -235,7 +235,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   // Badge styling functions with proper dark/light theme support
   const getRiskLevelBadgeStyle = (riskScore?: number) => {
     if (!riskScore) return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
-    
+
     if (riskScore >= 4.5) return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:text-white dark:border-red-700';
     if (riskScore >= 3.5) return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:text-white dark:border-orange-700';
     if (riskScore >= 2.5) return 'bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:text-white dark:border-yellow-700';
@@ -245,30 +245,30 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   // Análise de status do processo de onboarding (Etapas 1-4)
   const analyzeVendorProcessStatus = (vendor: VendorRegistry) => {
     // Etapa 1: Dados Básicos
-    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id && 
-                             vendor.primary_contact_name && vendor.primary_contact_email);
-    
+    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id &&
+      vendor.primary_contact_name && vendor.primary_contact_email);
+
     // Etapa 2: Due Diligence (baseado no progresso)
     const step2Complete = vendor.onboarding_progress >= 40;
-    
-    // Etapa 3: Assessment (baseado no progresso e se tem score de risco)
-    const step3Complete = vendor.onboarding_progress >= 60 && vendor.risk_score !== undefined;
-    
+
+    // Etapa 3: Assessment (baseado no progresso e se tem score de risco válido)
+    const step3Complete = vendor.onboarding_progress >= 60 && vendor.risk_score !== undefined && vendor.risk_score !== null;
+
     // Etapa 4: Contrato (baseado no progresso)
     const step4Complete = vendor.onboarding_progress >= 80;
-    
+
     // Verificar se todas as etapas estão completas
     const allStepsComplete = step1Complete && step2Complete && step3Complete && step4Complete;
-    
-    // Verificar se tem assessment respondido e planos de ação cumpridos
-    const hasAssessmentCompleted = vendor.last_assessment_date !== undefined;
+
+    // Verificar se tem assessment respondido e planos de ação cumpridos (validar nulo)
+    const hasAssessmentCompleted = !!vendor.last_assessment_date;
     const hasActionPlanCompleted = vendor.onboarding_status === 'completed';
-    
+
     // Verificar prazos (simular verificação de prazo)
     const now = new Date();
     const assessmentDue = vendor.next_assessment_due ? new Date(vendor.next_assessment_due) : null;
     const withinDeadline = assessmentDue ? now <= assessmentDue : true;
-    
+
     // Lógica de status
     if (allStepsComplete && hasAssessmentCompleted && hasActionPlanCompleted) {
       return {
@@ -303,12 +303,12 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
 
   // Detalhamento das etapas do processo
   const getProcessStepsDetail = (vendor: VendorRegistry) => {
-    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id && 
-                             vendor.primary_contact_name && vendor.primary_contact_email);
+    const step1Complete = !!(vendor.name && vendor.legal_name && vendor.tax_id &&
+      vendor.primary_contact_name && vendor.primary_contact_email);
     const step2Complete = vendor.onboarding_progress >= 40;
     const step3Complete = vendor.onboarding_progress >= 60 && vendor.risk_score !== undefined;
     const step4Complete = vendor.onboarding_progress >= 80;
-    
+
     return {
       step1: { complete: step1Complete, label: 'Dados Básicos', progress: step1Complete ? 100 : 0 },
       step2: { complete: step2Complete, label: 'Due Diligence', progress: Math.min(vendor.onboarding_progress, 40) * 2.5 },
@@ -319,7 +319,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
 
   const getRiskLevelText = (riskScore?: number) => {
     if (!riskScore) return 'N/A';
-    
+
     if (riskScore >= 4.5) return 'Crítico';
     if (riskScore >= 3.5) return 'Alto';
     if (riskScore >= 2.5) return 'Médio';
@@ -337,7 +337,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
       default: return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:text-white dark:border-gray-700';
     }
   };
-  
+
   // Criticality badge styling with dark/light theme support
   const getCriticalityBadgeStyle = (level: string) => {
     switch (level) {
@@ -363,7 +363,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   // Legacy functions for compatibility
   const getRiskLevelStyle = (riskScore?: number) => {
     if (!riskScore) return 'text-gray-600 bg-gray-100';
-    
+
     if (riskScore >= 4.5) return 'text-red-700 bg-red-100 border-red-200';
     if (riskScore >= 3.5) return 'text-orange-700 bg-orange-100 border-orange-200';
     if (riskScore >= 2.5) return 'text-yellow-700 bg-yellow-100 border-yellow-200';
@@ -429,10 +429,10 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 />
               </div>
             </div>
-            
+
             <Select
               value={localFilters.status?.[0] || 'all'}
-              onValueChange={(value) => 
+              onValueChange={(value) =>
                 setLocalFilters(prev => ({
                   ...prev,
                   status: value === 'all' ? undefined : [value]
@@ -453,7 +453,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
 
             <Select
               value={localFilters.criticality_level?.[0] || 'all'}
-              onValueChange={(value) => 
+              onValueChange={(value) =>
                 setLocalFilters(prev => ({
                   ...prev,
                   criticality_level: value === 'all' ? undefined : [value]
@@ -474,7 +474,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
 
             <Select
               value={localFilters.vendor_type?.[0] || 'all'}
-              onValueChange={(value) => 
+              onValueChange={(value) =>
                 setLocalFilters(prev => ({
                   ...prev,
                   vendor_type: value === 'all' ? undefined : [value]
@@ -492,7 +492,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 <SelectItem value="critical">Crítico</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Button
               onClick={() => setShowCreateDialog(true)}
             >
@@ -533,174 +533,174 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
           <div className="w-full">
             <Table className="w-full">
               <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[25%]"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span className="text-xs font-medium">Fornecedor</span>
-                    {sortBy === 'name' && (
-                      <span className="text-xs">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[12%]">Tipo</TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[12%]">Criticidade</TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[10%]">Status</TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[8%]"
-                  onClick={() => handleSort('risk_score')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span className="text-xs font-medium">Risco</span>
-                    {sortBy === 'risk_score' && (
-                      <span className="text-xs">
-                        {sortOrder === 'asc' ? '↑' : '↓'}
-                      </span>
-                    )}
-                  </div>
-                </TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[12%]">Status do Processo</TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[10%]">Contrato</TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[10%]">Último Assessment</TableHead>
-                <TableHead className="text-xs font-medium p-3 w-[11%]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedVendors.map((vendor) => (
-                <TableRow key={vendor.id} className="h-12">
-                  <TableCell className="p-3">
+                <TableRow>
+                  <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedVendors.includes(vendor.id)}
-                      onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
-                      className="h-4 w-4"
+                      checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
+                      onCheckedChange={handleSelectAll}
                     />
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[25%]">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-shrink-0">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                          <span className="text-xs font-medium text-white">
-                            {vendor.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">
-                          {vendor.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {vendor.primary_contact_email || vendor.website?.replace(/^https?:\/\//, '') || ''}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[12%]">
-                    <Badge className={`text-[10px] px-2 py-0.5 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
-                      {getVendorTypeText(vendor.vendor_type)}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[12%]">
-                    <Badge className={`text-[10px] px-2 py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
-                      {getCriticalityText(vendor.criticality_level)}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[10%]">
-                    <Badge className={`text-[10px] px-2 py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
-                      {getStatusText(vendor.status)}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[8%]">
-                    <Badge className={`text-[10px] px-2 py-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
-                      {getRiskLevelText(vendor.risk_score)}
-                      {vendor.risk_score && (
-                        <span className="ml-1 opacity-75 text-[10px]">
-                          ({vendor.risk_score.toFixed(1)})
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[25%]"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs font-medium">Fornecedor</span>
+                      {sortBy === 'name' && (
+                        <span className="text-xs">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
                       )}
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[12%]">
-                    {(() => {
-                      const processStatus = analyzeVendorProcessStatus(vendor);
-                      return (
-                        <Badge 
-                          className={`text-[10px] px-2 py-0.5 ${getProcessStatusBadgeStyle(processStatus.status)}`}
-                          title={processStatus.description}
-                        >
-                          {processStatus.label}
-                        </Badge>
-                      );
-                    })()}
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[10%]">
-                    <div className="text-xs text-muted-foreground">
-                      <span className="text-xs">
-                        {new Intl.NumberFormat('pt-BR', { 
-                          style: 'currency', 
-                          currency: 'BRL',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                          notation: 'compact'
-                        }).format(vendor.contract_value || 0)}
-                      </span>
                     </div>
-                  </TableCell>
-                  
-                  <TableCell className="text-xs p-3 w-[10%]">
-                    {vendor.last_assessment_date ? (
-                      <div className="text-xs text-muted-foreground">
-                        <div className="text-xs">{format(new Date(vendor.last_assessment_date), 'dd/MM/yy', { locale: ptBR })}</div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Nunca avaliado</span>
-                    )}
-                  </TableCell>
-                  
-                  <TableCell className="p-3 w-[11%]">
-                    <div className="flex items-center gap-1">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => handleEditWithWorkflow(vendor)}
-                        title="Editar fornecedor"
-                        className="h-7 w-7 p-0 hover:bg-blue-50"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        onClick={() => handleDelete(vendor.id)}
-                        className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                        title="Excluir fornecedor"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  </TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[12%]">Tipo</TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[12%]">Criticidade</TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[10%]">Status</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[8%]"
+                    onClick={() => handleSort('risk_score')}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs font-medium">Risco</span>
+                      {sortBy === 'risk_score' && (
+                        <span className="text-xs">
+                          {sortOrder === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
                     </div>
-                  </TableCell>
+                  </TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[12%]">Status do Processo</TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[10%]">Contrato</TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[10%]">Último Assessment</TableHead>
+                  <TableHead className="text-xs font-medium p-3 w-[11%]">Ações</TableHead>
                 </TableRow>
-              ))}
+              </TableHeader>
+              <TableBody>
+                {paginatedVendors.map((vendor) => (
+                  <TableRow key={vendor.id} className="h-12">
+                    <TableCell className="p-3">
+                      <Checkbox
+                        checked={selectedVendors.includes(vendor.id)}
+                        onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
+                        className="h-4 w-4"
+                      />
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[25%]">
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <span className="text-xs font-medium text-white">
+                              {vendor.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium truncate">
+                            {vendor.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {vendor.primary_contact_email || vendor.website?.replace(/^https?:\/\//, '') || ''}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[12%]">
+                      <Badge className={`text-[10px] px-2 py-0.5 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
+                        {getVendorTypeText(vendor.vendor_type)}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[12%]">
+                      <Badge className={`text-[10px] px-2 py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                        {getCriticalityText(vendor.criticality_level)}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[10%]">
+                      <Badge className={`text-[10px] px-2 py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
+                        {getStatusText(vendor.status)}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[8%]">
+                      <Badge className={`text-[10px] px-2 py-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
+                        {getRiskLevelText(vendor.risk_score)}
+                        {vendor.risk_score && (
+                          <span className="ml-1 opacity-75 text-[10px]">
+                            ({vendor.risk_score.toFixed(1)})
+                          </span>
+                        )}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[12%]">
+                      {(() => {
+                        const processStatus = analyzeVendorProcessStatus(vendor);
+                        return (
+                          <Badge
+                            className={`text-[10px] px-2 py-0.5 ${getProcessStatusBadgeStyle(processStatus.status)}`}
+                            title={processStatus.description}
+                          >
+                            {processStatus.label}
+                          </Badge>
+                        );
+                      })()}
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[10%]">
+                      <div className="text-xs text-muted-foreground">
+                        <span className="text-xs">
+                          {new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                            notation: 'compact'
+                          }).format(vendor.contract_value || 0)}
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="text-xs p-3 w-[10%]">
+                      {vendor.last_assessment_date ? (
+                        <div className="text-xs text-muted-foreground">
+                          <div className="text-xs">{format(new Date(vendor.last_assessment_date), 'dd/MM/yy', { locale: ptBR })}</div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Nunca avaliado</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="p-3 w-[11%]">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditWithWorkflow(vendor)}
+                          title="Editar fornecedor"
+                          className="h-7 w-7 p-0 hover:bg-blue-50"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(vendor.id)}
+                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                          title="Excluir fornecedor"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
-          
+
           {paginatedVendors.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Nenhum fornecedor encontrado</p>
@@ -753,7 +753,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               {editingVendor ? 'Atualize as informações do fornecedor.' : 'Adicione um novo fornecedor ao seu catálogo.'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -928,7 +928,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 Informações detalhadas do fornecedor
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -947,9 +947,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 <div>
                   <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Website</label>
                   {viewingVendor.website ? (
-                    <a 
-                      href={viewingVendor.website} 
-                      target="_blank" 
+                    <a
+                      href={viewingVendor.website}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline flex items-center space-x-1"
                     >
@@ -971,9 +971,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                   </Badge>
                   <Badge variant="outline" className={
                     viewingVendor.criticality_level === 'critical' ? 'border-red-200 text-red-700 bg-red-50' :
-                    viewingVendor.criticality_level === 'high' ? 'border-orange-200 text-orange-700 bg-orange-50' :
-                    viewingVendor.criticality_level === 'medium' ? 'border-yellow-200 text-yellow-700 bg-yellow-50' :
-                    'border-green-200 text-green-700 bg-green-50'
+                      viewingVendor.criticality_level === 'high' ? 'border-orange-200 text-orange-700 bg-orange-50' :
+                        viewingVendor.criticality_level === 'medium' ? 'border-yellow-200 text-yellow-700 bg-yellow-50' :
+                          'border-green-200 text-green-700 bg-green-50'
                   }>
                     Criticidade: {getCriticalityText(viewingVendor.criticality_level)}
                   </Badge>
@@ -1003,9 +1003,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                   <div>
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Valor do Contrato</label>
                     <p className="text-sm font-medium">
-                      {new Intl.NumberFormat('pt-BR', { 
-                        style: 'currency', 
-                        currency: 'BRL' 
+                      {new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
                       }).format(viewingVendor.contract_value || 0)}
                     </p>
                   </div>
@@ -1013,10 +1013,10 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                     <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Status do Contrato</label>
                     <p className="text-sm font-medium">
                       {viewingVendor.contract_status === 'active' ? 'Ativo' :
-                       viewingVendor.contract_status === 'expired' ? 'Expirado' :
-                       viewingVendor.contract_status === 'terminated' ? 'Encerrado' :
-                       viewingVendor.contract_status === 'draft' ? 'Rascunho' :
-                       viewingVendor.contract_status === 'under_review' ? 'Em Revisão' : 'N/A'}
+                        viewingVendor.contract_status === 'expired' ? 'Expirado' :
+                          viewingVendor.contract_status === 'terminated' ? 'Encerrado' :
+                            viewingVendor.contract_status === 'draft' ? 'Rascunho' :
+                              viewingVendor.contract_status === 'under_review' ? 'Em Revisão' : 'N/A'}
                     </p>
                   </div>
                   {viewingVendor.contract_start_date && (
@@ -1105,7 +1105,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
           </DialogContent>
         </Dialog>
       )}
-      
+
       {/* Onboarding Workflow for Editing */}
       {showOnboardingWorkflow && (
         <VendorOnboardingWorkflow

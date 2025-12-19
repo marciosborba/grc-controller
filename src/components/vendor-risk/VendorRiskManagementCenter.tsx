@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import {
   LayoutDashboard,
   Kanban,
-  GitBranch,
+
   Brain,
   Plus,
   Filter,
@@ -30,14 +30,14 @@ import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 import { VendorDashboardView } from './views/VendorDashboardView';
 import { VendorTableView } from './views/VendorTableView';
 import { VendorKanbanView } from './views/VendorKanbanView';
-import { VendorProcessView } from './views/VendorProcessView';
+
 import { VendorAssessmentManager } from './views/VendorAssessmentManager';
 
 import { VendorOnboardingWorkflow } from './workflows/VendorOnboardingWorkflow';
 import { VendorNotificationSystem } from './notifications/VendorNotificationSystem';
 
 // Tipos
-export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'kanban' | 'process';
+export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'kanban';
 
 interface QuickAction {
   id: string;
@@ -334,7 +334,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         >
           <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between p-4 md:p-6">
-              <TabsList className="grid w-fit grid-cols-5">
+              <TabsList className="grid w-fit grid-cols-4">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
                   Dashboard
@@ -351,10 +351,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   <Kanban className="h-4 w-4" />
                   Kanban
                 </TabsTrigger>
-                <TabsTrigger value="process" className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4" />
-                  Processos
-                </TabsTrigger>
+
               </TabsList>
 
               <div className="flex items-center gap-2">
@@ -425,13 +422,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
               />
             </TabsContent>
 
-            <TabsContent value="process" className="mt-0 h-full">
-              <VendorProcessView
-                vendors={vendors}
-                assessments={assessments}
-                loading={loading}
-              />
-            </TabsContent>
+
           </div>
         </Tabs>
       </div>

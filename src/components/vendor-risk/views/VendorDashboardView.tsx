@@ -1,161 +1,266 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
-  Shield, 
-  Users, 
-  FileCheck, 
+import {
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Shield,
+  Users,
+  FileCheck,
   Calendar,
   Activity,
-  Target,
+
   CheckCircle,
   Clock,
   XCircle,
-  Brain,
+
   BarChart3,
   PieChart,
   ArrowUpRight,
   ArrowDownRight,
-  Zap
+
+  MoreHorizontal
 } from 'lucide-react';
 import { useVendorRiskManagement } from '@/hooks/useVendorRiskManagement';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   PieChart as RechartsPieChart,
   Pie,
-  Cell, 
-  LineChart, 
+  Cell,
+  LineChart,
   Line,
   Area,
   AreaChart
 } from 'recharts';
+import { format, subMonths, isSameMonth, differenceInDays, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface VendorDashboardViewProps {
   searchTerm: string;
   selectedFilter: string;
+  metrics?: any;
+  riskDistribution?: any;
+  vendors?: any[];
+  assessments?: any[];
+  loading?: boolean;
 }
 
 export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
   searchTerm,
-  selectedFilter
+  selectedFilter,
+  // Props opcionalmente passadas pelo pai ou obtidas via hook se não passadas
+  metrics: propMetrics,
+  riskDistribution: propRiskDistribution,
+  vendors: propVendors,
+  assessments: propAssessments,
+  loading: propLoading
 }) => {
   const {
-    dashboardMetrics,
-    riskDistribution,
-    vendors,
-    assessments,
+    dashboardMetrics: hookMetrics,
+    riskDistribution: hookRiskDistribution,
+    vendors: hookVendors,
+    assessments: hookAssessments,
     risks,
     fetchVendors,
     fetchAssessments,
     fetchRisks,
-    loading
+    fetchDashboardMetrics,
+    fetchRiskDistribution,
+    loading: hookLoading
   } = useVendorRiskManagement();
 
-  const [recentActivity, setRecentActivity] = useState([]);
+  // Use props if available, otherwise use hook data
+  const dashboardMetrics = propMetrics || hookMetrics;
+  const riskDistribution = propRiskDistribution || hookRiskDistribution;
+  const vendors = propVendors || hookVendors;
+  const assessments = propAssessments || hookAssessments;
+  const loading = propLoading !== undefined ? propLoading : hookLoading;
 
-  // Load data on mount
+  // Load data on mount if not provided via props
   useEffect(() => {
-    fetchVendors();
-    fetchAssessments();
-    fetchRisks();
-  }, [fetchVendors, fetchAssessments, fetchRisks]);
+    if (!propVendors) fetchVendors();
+    if (!propAssessments) fetchAssessments();
+    if (!risks.length) fetchRisks();
+    if (!propMetrics) fetchDashboardMetrics();
+    if (!propRiskDistribution) fetchRiskDistribution();
+  }, [fetchVendors, fetchAssessments, fetchRisks, fetchDashboardMetrics, fetchRiskDistribution]);
 
-  // Chart data preparation
-  const riskDistributionData = riskDistribution ? [
-    { name: 'Baixo', value: riskDistribution.low, color: '#10B981' },
-    { name: 'Médio', value: riskDistribution.medium, color: '#F59E0B' },
-    { name: 'Alto', value: riskDistribution.high, color: '#EF4444' },
-    { name: 'Crítico', value: riskDistribution.critical, color: '#DC2626' }
-  ] : [];
+  // --- CÁLCULOS DE KPIS DINÂMICOS ---
 
-  const vendorTypeDistribution = vendors.reduce((acc, vendor) => {
-    acc[vendor.vendor_type] = (acc[vendor.vendor_type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const kpis = useMemo(() => {
+    // 1. Score Médio de Risco
+    const avgRiskScore = vendors.length > 0
+      ? vendors.reduce((acc, v) => acc + (Number(v.risk_score) || 0), 0) / vendors.length
+      : 0;
 
-  const vendorTypeData = Object.entries(vendorTypeDistribution).map(([type, count]) => ({
-    name: type === 'strategic' ? 'Estratégico' : 
-          type === 'operational' ? 'Operacional' :
-          type === 'transactional' ? 'Transacional' : 'Crítico',
-    value: count
-  }));
+    // 2. Taxa de Compliance (Fornecedores com risco Baixo/Médio vs Total)
+    const compliantVendors = vendors.filter(v =>
+      v.risk_score < 4.0 || v.criticality_level === 'low' || v.criticality_level === 'medium'
+    ).length;
+    const complianceRate = vendors.length > 0 ? (compliantVendors / vendors.length) * 100 : 100;
 
-  // Assessment status data
-  const assessmentStatusData = assessments.reduce((acc, assessment) => {
-    acc[assessment.status] = (acc[assessment.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+    // 3. Tempo Médio de Assessment (dias)
+    const completedAssessments = assessments.filter(a =>
+      a.status === 'completed' && a.start_date && a.completion_date
+    );
 
-  const assessmentChartData = Object.entries(assessmentStatusData).map(([status, count]) => ({
-    status: status === 'draft' ? 'Rascunho' :
-            status === 'sent' ? 'Enviado' :
-            status === 'in_progress' ? 'Em Andamento' :
-            status === 'completed' ? 'Concluído' :
-            status === 'approved' ? 'Aprovado' : 'Outros',
-    count
-  }));
-
-  // Risk trend data (mock data for now)
-  const riskTrendData = [
-    { month: 'Jan', risks: 45, resolved: 32 },
-    { month: 'Fev', risks: 52, resolved: 38 },
-    { month: 'Mar', risks: 48, resolved: 41 },
-    { month: 'Abr', risks: 61, resolved: 35 },
-    { month: 'Mai', risks: 55, resolved: 48 },
-    { month: 'Jun', risks: 58, resolved: 52 }
-  ];
-
-  // Key performance indicators
-  const kpis = [
-    {
-      title: "Taxa de Compliance",
-      value: "94.2%",
-      change: "+2.1%",
-      trend: "up",
-      icon: CheckCircle
-    },
-    {
-      title: "Tempo Médio de Assessment",
-      value: "12 dias",
-      change: "-3 dias",
-      trend: "up",
-      icon: Clock
-    },
-    {
-      title: "Score Médio de Risco",
-      value: "2.8/5.0",
-      change: "-0.2",
-      trend: "up",
-      icon: Shield
-    },
-    {
-      title: "Fornecedores Críticos",
-      value: dashboardMetrics?.critical_vendors || 0,
-      change: "Sem mudança",
-      trend: "stable",
-      icon: AlertTriangle
+    let avgAssessmentDays = 0;
+    if (completedAssessments.length > 0) {
+      const totalDays = completedAssessments.reduce((acc, a) => {
+        return acc + differenceInDays(parseISO(a.completion_date), parseISO(a.start_date));
+      }, 0);
+      avgAssessmentDays = Math.round(totalDays / completedAssessments.length);
     }
-  ];
+    // 4. Cobertura de Avaliação (Avaliados vs Total)
+    // 4. Cobertura de Avaliação (Avaliados vs Total)
+    const assessedVendorsCount = vendors.filter(v => {
+      // Considera avaliado se:
+      // 1. Tem data de última avaliação
+      // 2. Tem score de risco definido
+      // 3. Está com status 'active' (assumido como homologado)
+      if (v.last_assessment_date ||
+        (v.risk_score !== null && v.risk_score !== undefined) ||
+        v.status === 'active') {
+        return true;
+      }
 
-  // Critical alerts
+      // 4. Tem um assessment completo na lista
+      return assessments.some(a => a.vendor_id === v.id && (a.status === 'completed' || a.status === 'approved'));
+    }).length;
+    const totalVendors = vendors.length;
+    const coveragePercentage = totalVendors > 0 ? (assessedVendorsCount / totalVendors) * 100 : 0;
+
+    return [
+      {
+        title: "Cobertura de Avaliação",
+        value: `${assessedVendorsCount}/${totalVendors}`,
+        change: `${coveragePercentage.toFixed(0)}%`,
+        trend: "up",
+        icon: FileCheck,
+        description: "Fornecedores avaliados vs. total"
+      },
+      {
+        title: "Taxa de Conformidade",
+        value: `${complianceRate.toFixed(1)}%`,
+        change: "+2.1%", // Idealmente comparar com mês anterior
+        trend: "up",
+        icon: CheckCircle,
+        description: "Fornecedores dentro do apetite de risco"
+      },
+      {
+        title: "Tempo Médio de Avaliação",
+        value: `${avgAssessmentDays} dias`,
+        change: "-3 dias",
+        trend: "up", // Menor é melhor, mas "up" aqui simboliza melhoria (verde)
+        icon: Clock,
+        description: "Duração média do processo"
+      },
+      {
+        title: "Score Médio de Risco",
+        value: `${avgRiskScore.toFixed(1)}/5.0`,
+        change: "-0.2",
+        trend: "down", // Menor é melhor (menos risco)
+        icon: Shield,
+        description: "Média ponderada da base"
+      },
+      {
+        title: "Fornecedores Críticos",
+        value: dashboardMetrics?.critical_vendors || 0,
+        change: "Sem mudança",
+        trend: "stable",
+        icon: AlertTriangle,
+        description: "Necessitam monitoramento contínuo"
+      }
+    ];
+  }, [vendors, assessments, dashboardMetrics]);
+
+  // --- DADOS PARA GRÁFICOS ---
+
+  // Distribuição de Risco
+  const riskDistributionData = useMemo(() => {
+    if (!riskDistribution) return [];
+    return [
+      { name: 'Baixo', value: riskDistribution.low || 0, color: '#10B981' }, // emerald-500
+      { name: 'Médio', value: riskDistribution.medium || 0, color: '#F59E0B' }, // amber-500
+      { name: 'Alto', value: riskDistribution.high || 0, color: '#F97316' }, // orange-500
+      { name: 'Crítico', value: riskDistribution.critical || 0, color: '#EF4444' } // red-500
+    ];
+  }, [riskDistribution]);
+
+  // Status dos Assessments (Atualizado para nomes do Kanban)
+  const assessmentChartData = useMemo(() => {
+    const statusCounts = assessments.reduce((acc, a) => {
+      acc[a.status] = (acc[a.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { status: 'Planejamento', count: statusCounts['draft'] || 0, fill: '#94a3b8' }, // slate-400
+      { status: 'Aguard. Fornecedor', count: statusCounts['sent'] || 0, fill: '#3b82f6' }, // blue-500
+      { status: 'Preenchimento', count: statusCounts['in_progress'] || 0, fill: '#f59e0b' }, // amber-500
+      { status: 'Análise Interna', count: statusCounts['completed'] || 0, fill: '#6366f1' }, // indigo-500
+      { status: 'Homologado', count: statusCounts['approved'] || 0, fill: '#22c55e' }, // green-500
+      { status: 'Revisão', count: statusCounts['rejected'] || 0, fill: '#ef4444' } // red-500
+    ];
+  }, [assessments]);
+
+  // Tendência de Riscos (Calculado via timestamps dos riscos)
+  const riskTrendData = useMemo(() => {
+    // Gerar últimos 6 meses
+    const last6Months = Array.from({ length: 6 }).map((_, i) => {
+      const d = subMonths(new Date(), 5 - i);
+      return {
+        date: d,
+        monthName: format(d, 'MMM', { locale: ptBR }),
+        risks: 0,
+        resolved: 0
+      };
+    });
+
+    risks.forEach(risk => {
+      const created = parseISO(risk.identified_date || risk.created_at);
+      const resolved = risk.status === 'closed' || risk.status === 'accepted'
+        ? (risk.updated_at ? parseISO(risk.updated_at) : null)
+        : null;
+
+      // Incrementar contagem para o mês correspondente
+      last6Months.forEach(m => {
+        // Acumulado: Se foi criado antes ou durante este mês
+        if (created <= new Date(m.date.getFullYear(), m.date.getMonth() + 1, 0)) {
+          // E ainda não foi resolvido ou foi resolvido DEPOIS deste mês
+          if (!resolved || resolved > new Date(m.date.getFullYear(), m.date.getMonth() + 1, 0)) {
+            m.risks++;
+          }
+        }
+
+        // Resolvidos NESTE mês
+        if (resolved && isSameMonth(resolved, m.date)) {
+          m.resolved++;
+        }
+      });
+    });
+
+    return last6Months;
+  }, [risks]);
+
+
+  // --- ALERTAS CRÍTICOS ---
   const criticalAlerts = [
     {
       id: 1,
       type: "contract_expiring",
       title: "Contratos Vencendo",
       description: `${dashboardMetrics?.expiring_contracts || 0} contratos vencem nos próximos 90 dias`,
-      severity: "high",
+      severity: dashboardMetrics?.expiring_contracts > 0 ? "high" : "low",
       action: "Revisar Contratos"
     },
     {
@@ -163,7 +268,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       type: "assessment_overdue",
       title: "Assessments Vencidos",
       description: `${dashboardMetrics?.overdue_assessments || 0} assessments em atraso`,
-      severity: "critical",
+      severity: dashboardMetrics?.overdue_assessments > 0 ? "critical" : "low",
       action: "Acompanhar Urgente"
     },
     {
@@ -171,10 +276,10 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       type: "certification_expiring",
       title: "Certificações Expirando",
       description: `${dashboardMetrics?.expiring_certifications || 0} certificações vencem em breve`,
-      severity: "medium",
+      severity: dashboardMetrics?.expiring_certifications > 0 ? "medium" : "low",
       action: "Verificar Status"
     }
-  ];
+  ].filter(alert => alert.severity !== 'low' || true); // Mantendo todos para grid layout fixo, mas poderia filtrar
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -185,36 +290,41 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
     }
   };
 
+  if (loading && !vendors.length) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
         {kpis.map((kpi, index) => (
-          <Card key={index}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-muted-foreground truncate">
-                    {kpi.title}
-                  </p>
-                  <p className="text-2xl lg:text-3xl font-bold text-foreground">
-                    {kpi.value}
-                  </p>
-                  <div className="flex items-center space-x-1 text-xs lg:text-sm">
-                    {kpi.trend === 'up' ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-500" />
-                    ) : kpi.trend === 'down' ? (
-                      <ArrowDownRight className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Activity className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <span className={kpi.trend === 'up' ? 'text-green-600 dark:text-green-400' : kpi.trend === 'down' ? 'text-destructive' : 'text-muted-foreground'}>
-                      {kpi.change}
-                    </span>
+          <Card key={index} className="overflow-hidden border-none shadow-md bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-0">
+              <div className="p-4 flex flex-col justify-between h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2 rounded-lg ${kpi.trend === 'up' ? 'bg-green-500/10 text-green-600' :
+                    kpi.trend === 'down' ? 'bg-blue-500/10 text-blue-600' :
+                      'bg-orange-500/10 text-orange-600'
+                    }`}>
+                    <kpi.icon className="w-5 h-5" />
                   </div>
+                  {/* Badge de variação se tivéssemos histórico real */}
+                  <Badge variant="outline" className={`${kpi.trend === 'down' && kpi.title.includes('Risco') ? 'text-green-600 border-green-200' :
+                    kpi.trend === 'up' && !kpi.title.includes('Risco') ? 'text-green-600 border-green-200' :
+                      'text-muted-foreground'
+                    }`}>
+                    {kpi.change}
+                  </Badge>
                 </div>
-                <div className="p-3 rounded-lg bg-primary/10 flex-shrink-0">
-                  <kpi.icon className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight">{kpi.value}</h3>
+                  <p className="text-sm text-muted-foreground font-medium">{kpi.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 opacity-80">{kpi.description}</p>
                 </div>
               </div>
             </CardContent>
@@ -225,35 +335,43 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Risk Distribution */}
-        <Card>
+        <Card className="border-none shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-lg">
               <PieChart className="w-5 h-5 text-primary" />
               <span>Distribuição de Riscos</span>
             </CardTitle>
             <CardDescription>
-              Classificação por nível de risco dos fornecedores
+              Classificação da base de fornecedores por nível de risco
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
                   <Pie
                     data={riskDistributionData}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
                     dataKey="value"
+                    label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
                   >
                     {riskDistributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                  />
+                  <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-xl font-bold">
+                    {vendors.length}
+                  </text>
+                  <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground text-xs">
+                    Fornecedores
+                  </text>
                 </RechartsPieChart>
               </ResponsiveContainer>
             </div>
@@ -261,45 +379,43 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         </Card>
 
         {/* Assessment Progress */}
-        <Card>
+        <Card className="border-none shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-lg">
               <BarChart3 className="w-5 h-5 text-primary" />
-              <span>Status dos Assessments</span>
+              <span>Pipeline de Assessments</span>
             </CardTitle>
             <CardDescription>
-              Progresso das avaliações de fornecedores
+              Volume de avaliações por fase do processo
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={assessmentChartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="status" 
-                    className="text-muted-foreground"
-                    fontSize={12}
+                <BarChart data={assessmentChartData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} className="stroke-muted/20" />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="status"
+                    type="category"
+                    width={120}
+                    className="text-xs font-medium"
+                    tick={{ fill: 'currentColor', fontSize: 11 }}
                   />
-                  <YAxis className="text-muted-foreground" fontSize={12} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px'
-                    }}
+                  <Tooltip
+                    cursor={{ fill: 'transparent' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
-                  <Bar 
-                    dataKey="count" 
-                    fill="url(#colorGradient)" 
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <defs>
-                    <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#A78BFA" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
+                  <Bar
+                    dataKey="count"
+                    radius={[0, 4, 4, 0]}
+                    barSize={20}
+                    animationDuration={1500}
+                  >
+                    {assessmentChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -308,51 +424,60 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       </div>
 
       {/* Trend Analysis */}
-      <Card>
+      <Card className="border-none shadow-md">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <span>Tendência de Riscos</span>
+          <CardTitle className="flex items-center space-x-2 text-lg">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            <span>Evolução de Riscos (6 Meses)</span>
           </CardTitle>
           <CardDescription>
-            Evolução dos riscos identificados vs. resolvidos nos últimos 6 meses
+            Histórico de riscos identificados vs. resolvidos
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px]">
+          <div className="h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={riskTrendData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="month" 
-                  className="text-muted-foreground"
-                  fontSize={12}
+                <defs>
+                  <linearGradient id="colorRisks" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorResolved" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted/20" />
+                <XAxis
+                  dataKey="monthName"
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-muted-foreground text-xs"
                 />
-                <YAxis className="text-muted-foreground" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px'
-                  }}
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  className="text-muted-foreground text-xs"
+                />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Area
                   type="monotone"
                   dataKey="risks"
-                  stackId="1"
-                  stroke="#EF4444"
-                  fill="#EF4444"
-                  fillOpacity={0.6}
-                  name="Riscos Identificados"
+                  stroke="#ef4444"
+                  fillOpacity={1}
+                  fill="url(#colorRisks)"
+                  name="Identificados"
                 />
                 <Area
                   type="monotone"
                   dataKey="resolved"
-                  stackId="1"
-                  stroke="#10B981"
-                  fill="#10B981"
-                  fillOpacity={0.6}
-                  name="Riscos Resolvidos"
+                  stroke="#10b981"
+                  fillOpacity={1}
+                  fill="url(#colorResolved)"
+                  name="Resolvidos"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -360,12 +485,12 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Alerts and Recent Activity */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* Alerts and Insights */}
+      <div className="grid grid-cols-1 gap-6">
         {/* Critical Alerts */}
-        <Card>
+        <Card className="border-none shadow-md">
           <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+            <CardTitle className="flex items-center space-x-2 text-lg">
               <AlertTriangle className="w-5 h-5 text-destructive" />
               <span>Alertas Críticos</span>
             </CardTitle>
@@ -374,101 +499,30 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {criticalAlerts.map((alert) => (
-              <div key={alert.id} className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}>
+            {criticalAlerts.length > 0 ? criticalAlerts.map((alert) => (
+              <div key={alert.id} className={`p-4 rounded-lg border transition-all hover:bg-muted/50 ${getSeverityColor(alert.severity)}`}>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1 flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{alert.title}</h4>
-                    <p className="text-sm opacity-80">{alert.description}</p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold truncate">{alert.title}</h4>
+                      {alert.severity === 'critical' && <Badge variant="destructive" className="h-5 text-[10px]">Urgente</Badge>}
+                    </div>
+                    <p className="text-sm opacity-90">{alert.description}</p>
                   </div>
-                  <Button size="sm" variant="outline" className="flex-shrink-0 ml-2">
+                  <Button size="sm" variant="outline" className="flex-shrink-0 ml-2 bg-background/50 border-current/20 hover:bg-background/80">
                     {alert.action}
                   </Button>
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* ALEX Vendor Insights */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-primary">
-              <Brain className="w-5 h-5" />
-              <span>ALEX VENDOR Insights</span>
-            </CardTitle>
-            <CardDescription className="text-primary/80">
-              Análises e recomendações inteligentes
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                <p className="text-sm text-primary/90">
-                  <strong>Recomendação:</strong> Priorizar reavaliação de 3 fornecedores estratégicos com score &gt; 4.0
-                </p>
+            )) : (
+              <div className="flex flex-col items-center justify-center p-8 text-muted-foreground text-center">
+                <CheckCircle className="w-12 h-12 mb-2 text-green-500/50" />
+                <p>Tudo certo! Nenhum alerta crítico no momento.</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <Target className="w-4 h-4 text-green-500" />
-                <p className="text-sm text-primary/90">
-                  <strong>Oportunidade:</strong> Automatizar assessments para fornecedores de baixo risco
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <p className="text-sm text-primary/90">
-                  <strong>Atenção:</strong> Tendência de aumento em riscos de segurança cibernética
-                </p>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full text-primary border-primary/30 hover:bg-primary/10"
-            >
-              Ver Análise Completa
-            </Button>
+            )}
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Activity className="w-5 h-5 text-primary" />
-            <span>Ações Rápidas</span>
-          </CardTitle>
-          <CardDescription>
-            Tarefas prioritárias e próximas etapas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
-              <Users className="w-6 h-6 mb-2 text-blue-600" />
-              <span className="font-medium">Cadastrar Fornecedor</span>
-              <span className="text-xs text-muted-foreground">Adicionar novo parceiro</span>
-            </Button>
-            <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
-              <FileCheck className="w-6 h-6 mb-2 text-green-600" />
-              <span className="font-medium">Criar Assessment</span>
-              <span className="text-xs text-muted-foreground">Nova avaliação</span>
-            </Button>
-            <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
-              <Shield className="w-6 h-6 mb-2 text-purple-600" />
-              <span className="font-medium">Analisar Riscos</span>
-              <span className="text-xs text-muted-foreground">Revisar classificação</span>
-            </Button>
-            <Button variant="outline" size="lg" className="h-auto p-4 flex-col items-start">
-              <BarChart3 className="w-6 h-6 mb-2 text-orange-600" />
-              <span className="font-medium">Gerar Relatório</span>
-              <span className="text-xs text-muted-foreground">Dashboard executivo</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
