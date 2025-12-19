@@ -22,8 +22,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 
-  MoreHorizontal
+  MoreHorizontal,
+  Target,
+  Zap,
+  CheckCircle2
 } from 'lucide-react';
+import { useVendorActionPlans } from '@/hooks/useVendorActionPlans';
 import { useVendorRiskManagement } from '@/hooks/useVendorRiskManagement';
 import {
   ResponsiveContainer,
@@ -77,6 +81,12 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
     fetchRiskDistribution,
     loading: hookLoading
   } = useVendorRiskManagement();
+
+  const { plans, fetchPlans } = useVendorActionPlans();
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
 
   // Use props if available, otherwise use hook data
   const dashboardMetrics = propMetrics || hookMetrics;
@@ -139,6 +149,13 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
     const totalVendors = vendors.length;
     const coveragePercentage = totalVendors > 0 ? (assessedVendorsCount / totalVendors) * 100 : 0;
 
+    // 5. Planos de Ação (Ativos e Atrasados)
+    // Using simple hook state for now, ideally would be passed as prop or context
+    const openPlans = plans.filter(p => p.status !== 'completed' && p.status !== 'verified').length;
+    const overdueActivities = plans.reduce((acc, plan) => {
+      return acc + (plan.activities?.filter(a => a.status !== 'completed' && new Date(a.due_date) < new Date()).length || 0);
+    }, 0);
+
     return [
       {
         title: "Cobertura de Avaliação",
@@ -147,6 +164,16 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
         trend: "up",
         icon: FileCheck,
         description: "Fornecedores avaliados vs. total"
+      },
+      {
+        title: "Planos de Ação",
+        value: `${openPlans}`,
+        change: `${overdueActivities} atrasados`,
+        trend: overdueActivities > 0 ? "down" : "up", // Down is bad (risk) or good? Here trending down means getting worse risk-wise if negative context, but usually arrow direction. Let's keep neutral or use check logic.
+        // Actually for action plans: many open plans might be neutral work, but overdue is bad.
+        // Let's simluate:
+        icon: Target,
+        description: "Ações de melhoria em andamento"
       },
       {
         title: "Taxa de Conformidade",

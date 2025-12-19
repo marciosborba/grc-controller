@@ -19,7 +19,8 @@ import {
   ClipboardCheck,
   FileCheck,
   MessageSquare,
-  BarChart3
+  BarChart3,
+  CheckCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
@@ -35,9 +36,10 @@ import { VendorAssessmentManager } from './views/VendorAssessmentManager';
 
 import { VendorOnboardingWorkflow } from './workflows/VendorOnboardingWorkflow';
 import { VendorNotificationSystem } from './notifications/VendorNotificationSystem';
+import { VendorActionPlanManager } from './views/VendorActionPlanManager';
 
 // Tipos
-export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'kanban';
+export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'kanban' | 'action_plans';
 
 interface QuickAction {
   id: string;
@@ -334,7 +336,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         >
           <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex items-center justify-between p-4 md:p-6">
-              <TabsList className="grid w-fit grid-cols-4">
+              <TabsList className="grid w-fit grid-cols-5">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
                   Dashboard
@@ -347,11 +349,14 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   <ClipboardCheck className="h-4 w-4" />
                   Assessments
                 </TabsTrigger>
+                <TabsTrigger value="action_plans" className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Plano de Ação
+                </TabsTrigger>
                 <TabsTrigger value="kanban" className="flex items-center gap-2">
                   <Kanban className="h-4 w-4" />
                   Kanban
                 </TabsTrigger>
-
               </TabsList>
 
               <div className="flex items-center gap-2">
@@ -423,6 +428,9 @@ export const VendorRiskManagementCenter: React.FC = () => {
               />
             </TabsContent>
 
+            <TabsContent value="action_plans" className="mt-0 h-full">
+              <VendorActionPlanManager />
+            </TabsContent>
 
           </div>
         </Tabs>

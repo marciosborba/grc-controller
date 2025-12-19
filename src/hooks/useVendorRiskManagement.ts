@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
 
 // ================================================
 // TYPES AND INTERFACES - VENDOR RISK MANAGEMENT
@@ -268,7 +269,16 @@ export interface RiskFilters {
 export const useVendorRiskManagement = () => {
   const { toast } = useToast();
   const authContext = useAuth();
-  
+
+  if (authContext?.user) {
+    console.log('🔍 [Hook Debug] useVendorRiskManagement initialized', {
+      userId: authContext.user.id,
+      tenantId: authContext.user.tenantId,
+      isPlatformAdmin: authContext.user.isPlatformAdmin,
+      email: authContext.user.email
+    });
+  }
+
   // Verificar se o contexto está disponível
   if (!authContext) {
     console.warn('useVendorRiskManagement: AuthContext não disponível');
@@ -298,10 +308,10 @@ export const useVendorRiskManagement = () => {
       fetchDashboardMetrics: () => Promise.resolve(),
       fetchRiskDistribution: () => Promise.resolve(),
       fetchFrameworks: () => Promise.resolve(),
-      resetError: () => {}
+      resetError: () => { }
     };
   }
-  
+
   const { user } = authContext;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -340,13 +350,17 @@ export const useVendorRiskManagement = () => {
   // ================================================
 
   const fetchVendors = useCallback(async (filters?: VendorFilters) => {
-    if (!user?.tenantId && !user?.tenant_id) return;
-    
+    // Validate tenantId
+    if (!user?.tenantId || user.tenantId === 'default') {
+      console.warn('fetchVendors: Invalid or default tenantId', user?.tenantId);
+      return;
+    }
+
     setLoading(true);
     resetError();
-    
+
     try {
-      const tenantId = user.tenantId || user.tenant_id;
+      const tenantId = user.tenantId;
       let query = supabase
         .from('vendor_registry')
         .select('*')
@@ -386,18 +400,18 @@ export const useVendorRiskManagement = () => {
   }, [user?.tenantId, user?.tenant_id, handleError, resetError]);
 
   const createVendor = useCallback(async (vendor: Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenantId && !user?.tenant_id) return null;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return null;
+
     setLoading(true);
     resetError();
-    
+
     try {
-        const tenantId = user.tenantId || user.tenant_id;
-        const { data, error } = await supabase
-          .from('vendor_registry')
-          .insert({
-            ...vendor,
-            tenant_id: tenantId,
+      const tenantId = user.tenantId || user.tenant_id;
+      const { data, error } = await supabase
+        .from('vendor_registry')
+        .insert({
+          ...vendor,
+          tenant_id: tenantId,
           created_by: user.id,
         })
         .select()
@@ -406,7 +420,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setVendors(prev => [data, ...prev]);
-      
+
       toast({
         title: 'Sucesso',
         description: 'Fornecedor criado com sucesso.',
@@ -424,7 +438,7 @@ export const useVendorRiskManagement = () => {
   const updateVendor = useCallback(async (id: string, updates: Partial<VendorRegistry>) => {
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase
         .from('vendor_registry')
@@ -439,7 +453,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setVendors(prev => prev.map(v => v.id === id ? data : v));
-      
+
       toast({
         title: 'Sucesso',
         description: 'Fornecedor atualizado com sucesso.',
@@ -457,7 +471,7 @@ export const useVendorRiskManagement = () => {
   const deleteVendor = useCallback(async (id: string) => {
     setLoading(true);
     resetError();
-    
+
     try {
       const { error } = await supabase
         .from('vendor_registry')
@@ -467,7 +481,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setVendors(prev => prev.filter(v => v.id !== id));
-      
+
       toast({
         title: 'Sucesso',
         description: 'Fornecedor removido com sucesso.',
@@ -486,12 +500,23 @@ export const useVendorRiskManagement = () => {
   // VENDOR ASSESSMENTS OPERATIONS
   // ================================================
 
+  /* 
+   * Integrating Tenant Selector for Platform Admins 
+   */
+  const { effectiveTenantId, isPlatformAdmin } = useEffectiveTenant();
+
   const fetchAssessments = useCallback(async (filters?: AssessmentFilters) => {
-    if (!user?.tenant_id) return;
-    
+    // Basic validation: ensure we have an effective tenant ID or allowed bypass
+    if (!effectiveTenantId || effectiveTenantId === 'default') {
+      if (!user?.isPlatformAdmin) {
+        console.warn('fetchAssessments: Invalid or default tenantId', effectiveTenantId);
+        return;
+      }
+    }
+
     setLoading(true);
     resetError();
-    
+
     try {
       let query = supabase
         .from('vendor_assessments')
@@ -503,15 +528,22 @@ export const useVendorRiskManagement = () => {
             criticality_level,
             status,
             risk_score
-          ),
-          vendor_assessment_frameworks (
-            id,
-            name,
-            framework_type
           )
-        `)
-        .eq('tenant_id', user.tenant_id)
-        .order('created_at', { ascending: false });
+        `);
+
+      // Apply tenant filter
+      if (isPlatformAdmin) {
+        if (effectiveTenantId) {
+          console.log('[Hook Debug] Platform Admin: Filtering by effective tenant:', effectiveTenantId);
+          query = query.eq('tenant_id', effectiveTenantId);
+        } else {
+          console.log('[Hook Debug] Platform Admin: No tenant selected, fetching ALL');
+        }
+      } else {
+        query = query.eq('tenant_id', effectiveTenantId);
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       // Apply filters
       if (filters?.status?.length) {
@@ -543,20 +575,20 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [user?.tenantId, handleError, resetError]);
 
   const createAssessment = useCallback(async (assessment: Omit<VendorAssessment, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenant_id) return null;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return null;
+
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase
         .from('vendor_assessments')
         .insert({
           ...assessment,
-          tenant_id: user.tenant_id,
+          tenant_id: user.tenantId,
           created_by: user.id,
         })
         .select()
@@ -565,7 +597,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setAssessments(prev => [data, ...prev]);
-      
+
       toast({
         title: 'Sucesso',
         description: 'Avaliação criada com sucesso.',
@@ -583,7 +615,7 @@ export const useVendorRiskManagement = () => {
   const updateAssessment = useCallback(async (id: string, updates: Partial<VendorAssessment>) => {
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase
         .from('vendor_assessments')
@@ -598,7 +630,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setAssessments(prev => prev.map(a => a.id === id ? data : a));
-      
+
       toast({
         title: 'Sucesso',
         description: 'Avaliação atualizada com sucesso.',
@@ -616,7 +648,7 @@ export const useVendorRiskManagement = () => {
   const sendAssessmentToVendor = useCallback(async (assessmentId: string, vendorEmail: string) => {
     setLoading(true);
     resetError();
-    
+
     try {
       // Update assessment status to 'sent'
       const { data, error } = await supabase
@@ -635,7 +667,7 @@ export const useVendorRiskManagement = () => {
       // This would typically involve calling an edge function or email service
 
       setAssessments(prev => prev.map(a => a.id === assessmentId ? data : a));
-      
+
       toast({
         title: 'Sucesso',
         description: 'Avaliação enviada para o fornecedor.',
@@ -655,11 +687,11 @@ export const useVendorRiskManagement = () => {
   // ================================================
 
   const fetchRisks = useCallback(async (filters?: RiskFilters) => {
-    if (!user?.tenant_id) return;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return;
+
     setLoading(true);
     resetError();
-    
+
     try {
       let query = supabase
         .from('vendor_risks')
@@ -672,7 +704,7 @@ export const useVendorRiskManagement = () => {
             status
           )
         `)
-        .eq('tenant_id', user.tenant_id)
+        .eq('tenant_id', user.tenantId)
         .order('overall_score', { ascending: false });
 
       // Apply filters
@@ -711,17 +743,17 @@ export const useVendorRiskManagement = () => {
   }, [user?.tenant_id, handleError, resetError]);
 
   const createRisk = useCallback(async (risk: Omit<VendorRisk, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenant_id) return null;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return null;
+
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase
         .from('vendor_risks')
         .insert({
           ...risk,
-          tenant_id: user.tenant_id,
+          tenant_id: user.tenantId,
           created_by: user.id,
         })
         .select()
@@ -730,7 +762,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setRisks(prev => [data, ...prev]);
-      
+
       toast({
         title: 'Sucesso',
         description: 'Risco criado com sucesso.',
@@ -748,7 +780,7 @@ export const useVendorRiskManagement = () => {
   const updateRisk = useCallback(async (id: string, updates: Partial<VendorRisk>) => {
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase
         .from('vendor_risks')
@@ -763,7 +795,7 @@ export const useVendorRiskManagement = () => {
       if (error) throw error;
 
       setRisks(prev => prev.map(r => r.id === id ? data : r));
-      
+
       toast({
         title: 'Sucesso',
         description: 'Risco atualizado com sucesso.',
@@ -783,14 +815,14 @@ export const useVendorRiskManagement = () => {
   // ================================================
 
   const fetchDashboardMetrics = useCallback(async () => {
-    if (!user?.tenant_id) return;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return;
+
     setLoading(true);
     resetError();
-    
+
     try {
       const { data, error } = await supabase.rpc('get_vendor_dashboard_metrics', {
-        tenant_uuid: user.tenant_id
+        tenant_uuid: user.tenantId
       });
 
       if (error) throw error;
@@ -804,11 +836,11 @@ export const useVendorRiskManagement = () => {
   }, [user?.tenant_id, handleError, resetError]);
 
   const fetchRiskDistribution = useCallback(async () => {
-    if (!user?.tenant_id) return;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return;
+
     try {
       const { data, error } = await supabase.rpc('get_vendor_risk_distribution', {
-        tenant_uuid: user.tenant_id
+        tenant_uuid: user.tenantId
       });
 
       if (error) throw error;
@@ -820,8 +852,8 @@ export const useVendorRiskManagement = () => {
   }, [user?.tenant_id, handleError]);
 
   const fetchFrameworks = useCallback(async () => {
-    if (!user?.tenant_id) return;
-    
+    if (!user?.tenantId || user.tenantId === 'default') return;
+
     try {
       const { data, error } = await supabase
         .from('vendor_assessment_frameworks')
@@ -864,33 +896,33 @@ export const useVendorRiskManagement = () => {
     frameworks,
     dashboardMetrics,
     riskDistribution,
-    
+
     // State
     loading,
     error,
-    
+
     // Vendor Operations
     fetchVendors,
     createVendor,
     updateVendor,
     deleteVendor,
-    
+
     // Assessment Operations
     fetchAssessments,
     createAssessment,
     updateAssessment,
     sendAssessmentToVendor,
-    
+
     // Risk Operations
     fetchRisks,
     createRisk,
     updateRisk,
-    
+
     // Dashboard Operations
     fetchDashboardMetrics,
     fetchRiskDistribution,
     fetchFrameworks,
-    
+
     // Utility
     resetError,
   };
