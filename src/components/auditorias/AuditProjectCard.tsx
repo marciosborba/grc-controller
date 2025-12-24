@@ -4,12 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Calendar, 
-  User, 
-  Target, 
+import {
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  User,
+  Target,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -66,25 +66,25 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
 
   const getStatusColor = (status: string) => {
     const colors = {
-      planejamento: 'bg-blue-100 text-blue-800',
-      execucao: 'bg-yellow-100 text-yellow-800',
-      achados: 'bg-orange-100 text-orange-800',
-      relatorio: 'bg-purple-100 text-purple-800',
-      followup: 'bg-indigo-100 text-indigo-800',
-      concluido: 'bg-green-100 text-green-800',
-      suspenso: 'bg-red-100 text-red-800'
+      planejamento: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+      execucao: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800',
+      achados: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800',
+      relatorio: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+      followup: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800',
+      concluido: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+      suspenso: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800';
   };
 
   const getPriorityColor = (priority: string) => {
     const colors = {
-      baixa: 'bg-green-100 text-green-800',
-      media: 'bg-yellow-100 text-yellow-800',
-      alta: 'bg-orange-100 text-orange-800',
-      critica: 'bg-red-100 text-red-800'
+      baixa: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+      media: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800',
+      alta: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800',
+      critica: 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
     };
-    return colors[priority] || 'bg-gray-100 text-gray-800';
+    return colors[priority] || 'bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800';
   };
 
   const getPhaseIcon = (phase: string) => {
@@ -103,7 +103,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
     const value = Math.round(project[`completude_${phase}`] || 0);
     return value;
   };
-  
+
   const getOverallProgress = () => {
     // Sempre usar progresso do projeto
     return project.progresso_geral || 0;
@@ -147,32 +147,32 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              
+
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-semibold">{project.codigo}</h3>
-                  <Badge className={getStatusColor(project.status)}>
+                  <Badge variant="outline" className={getStatusColor(project.status)}>
                     {project.status}
                   </Badge>
-                  <Badge className={getPriorityColor(project.prioridade)}>
+                  <Badge variant="outline" className={getPriorityColor(project.prioridade)}>
                     {project.prioridade}
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{project.titulo}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm font-medium">{Math.round(getOverallProgress())}%</p>
                 <Progress value={getOverallProgress()} className="w-20 h-2" />
               </div>
-              
+
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Auditor Líder</p>
                 <p className="text-sm font-medium">{project.auditor_lider}</p>
               </div>
-              
+
               {daysRemaining !== null && (
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Prazo</p>
@@ -201,14 +201,14 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
             >
               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </Button>
-            
+
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <CardTitle className="text-lg">{project.codigo}</CardTitle>
-                <Badge className={getStatusColor(project.status)}>
+                <Badge variant="outline" className={getStatusColor(project.status)}>
                   {project.status}
                 </Badge>
-                <Badge className={getPriorityColor(project.prioridade)}>
+                <Badge variant="outline" className={getPriorityColor(project.prioridade)}>
                   {project.prioridade}
                 </Badge>
               </div>
@@ -218,7 +218,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
               <p className="text-sm text-muted-foreground mt-1">{project.area_auditada}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm">
               <Eye className="h-4 w-4" />
@@ -243,7 +243,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
               <p className="text-sm font-medium">{project.auditor_lider}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -251,7 +251,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
               <p className="text-sm font-medium">{formatDate(project.data_fim_prevista)}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
             <div>
@@ -259,13 +259,13 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
               <p className="text-sm font-medium">{Math.round(getOverallProgress())}%</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Apontamentos</p>
               <p className="text-sm font-medium">
-                {project.total_apontamentos} 
+                {project.total_apontamentos}
                 {project.apontamentos_criticos > 0 && (
                   <span className="text-red-600 ml-1">({project.apontamentos_criticos} críticos)</span>
                 )}
@@ -290,22 +290,20 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
             const completeness = getPhaseCompleteness(phase.id);
             const isActive = phase.id === project.fase_atual;
             const isCompleted = completeness === 100;
-            
+
             return (
               <div
                 key={phase.id}
-                className={`p-3 rounded-lg border-2 transition-all ${
-                  isActive 
-                    ? 'border-primary bg-primary/5' 
-                    : isCompleted 
-                    ? 'border-primary bg-primary/10' 
+                className={`p-3 rounded-lg border-2 transition-all ${isActive
+                  ? 'border-primary bg-primary/5'
+                  : isCompleted
+                    ? 'border-primary bg-primary/10'
                     : 'border-border bg-muted'
-                }`}
+                  }`}
               >
                 <div className="flex flex-col items-center text-center">
-                  <IconComponent className={`h-5 w-5 mb-1 ${
-                    isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
-                  }`} />
+                  <IconComponent className={`h-5 w-5 mb-1 ${isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
+                    }`} />
                   <span className="text-xs font-medium">{phase.name}</span>
                   <span className="text-xs text-muted-foreground">{Math.round(completeness)}%</span>
                 </div>
@@ -317,7 +315,7 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
         {/* Workflow Expandido */}
         {isExpanded && (
           <div className="border-t pt-6">
-            <AuditWorkflowFixed 
+            <AuditWorkflowFixed
               project={project}
               activePhase={activePhase}
               onPhaseChange={setActivePhase}

@@ -5,20 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Search, 
-  Plus, 
-  Filter, 
-  BarChart3, 
-  Target, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Search,
+  Plus,
+  Filter,
+  BarChart3,
+  Target,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   TrendingUp,
   FileText,
   Users,
   Calendar,
   ChevronRight,
+  ChevronLeft,
   PlayCircle,
   PauseCircle,
   Settings,
@@ -26,6 +27,19 @@ import {
   Edit,
   MoreHorizontal
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
 import { AuditProjectCard } from './AuditProjectCard';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -33,6 +47,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { secureLog } from '@/utils/securityLogger';
+import { useAuditIntegration } from '@/hooks/useAuditIntegration';
 
 interface AuditProject {
   id: string;
@@ -48,14 +63,14 @@ interface AuditProject {
   prioridade: 'baixa' | 'media' | 'alta' | 'critica';
   area_auditada: string;
   tipo_auditoria: string;
-  
+
   // Métricas calculadas
   total_trabalhos: number;
   trabalhos_concluidos: number;
   total_apontamentos: number;
   apontamentos_criticos: number;
   planos_acao: number;
-  
+
   // Completude por fase
   completude_planejamento: number;
   completude_execucao: number;
@@ -77,217 +92,33 @@ interface DashboardMetrics {
 
 export function AuditDashboardNew() {
   const { user } = useAuth();
-  const selectedTenantId = useCurrentTenantId();
-  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
 
-  const [projects, setProjects] = useState<AuditProject[]>([]);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const {
+    projects,
+    loading,
+    metrics,
+    page,
+    setPage,
+    perPage,
+    totalItems,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    searchTerm,
+    setSearchTerm
+  } = useAuditIntegration();
+
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  useEffect(() => {
-    if (effectiveTenantId) {
-      loadDashboardData();
-    }
-  }, [effectiveTenantId]);
+  const totalPages = Math.ceil(totalItems / perPage);
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Carregar projetos com métricas
-      const { data: projectsData, error: projectsError } = await supabase
-        .from('projetos_auditoria')
-        .select(`
-          *,
-          trabalhos_auditoria(id, status),
-          apontamentos_auditoria(id, criticidade, status),
-          planos_acao(id, status)
-        `)
-        .eq('tenant_id', effectiveTenantId)
-        .order('created_at', { ascending: false });
-        
-
-
-      if (projectsError) throw projectsError;
-
-      // Processar dados dos projetos
-      const processedProjects = projectsData?.map(project => {
-        const trabalhos = project.trabalhos_auditoria || [];
-        const apontamentos = project.apontamentos_auditoria || [];
-        const planos = project.planos_acao || [];
-        
-
-
-        return {
-          id: project.id,
-          codigo: project.codigo || `AUD-${project.id.slice(0, 8)}`,
-          titulo: project.titulo,
-          descricao: project.descricao || '',
-          status: project.status || 'planejamento',
-          fase_atual: project.fase_atual || 'planejamento',
-          progresso_geral: calculateOverallProgress(project),
-          auditor_lider: project.chefe_auditoria || 'Não definido',
-          data_inicio: project.data_inicio,
-          data_fim_prevista: project.data_fim_planejada,
-          prioridade: project.prioridade || 'media',
-          area_auditada: project.area_auditada || 'Não definida',
-          tipo_auditoria: project.tipo_auditoria || 'Operacional',
-          
-          total_trabalhos: trabalhos.length,
-          trabalhos_concluidos: trabalhos.filter(t => t.status === 'concluido').length,
-          total_apontamentos: apontamentos.length,
-          apontamentos_criticos: apontamentos.filter(a => a.criticidade === 'critica').length,
-          planos_acao: planos.length,
-          
-          // Usar APENAS valores do banco de dados - fonte única da verdade
-          completude_planejamento: Math.round(project.completude_planejamento || 0),
-          completude_execucao: Math.round(project.completude_execucao || 0),
-          completude_achados: Math.round(project.completude_achados || 0),
-          completude_relatorio: Math.round(project.completude_relatorio || 0),
-          completude_followup: Math.round(project.completude_followup || 0),
-        };
-      }) || [];
-
-      setProjects(processedProjects);
-
-      // Calcular métricas do dashboard
-      const dashboardMetrics = calculateDashboardMetrics(processedProjects);
-      setMetrics(dashboardMetrics);
-
-    } catch (error) {
-      secureLog('error', 'Erro ao carregar dados do dashboard', error);
-      toast.error('Erro ao carregar dados do dashboard');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const calculateOverallProgress = (project: any): number => {
-    // Usar apenas os valores reais de completude do banco de dados
-    const completudes = [
-      project.completude_planejamento || 0,
-      project.completude_execucao || 0,
-      project.completude_achados || 0,
-      project.completude_relatorio || 0,
-      project.completude_followup || 0
-    ];
-    
-    // Calcular média ponderada das fases
-    const totalCompletude = completudes.reduce((sum, completude) => sum + completude, 0);
-    const progressoGeral = Math.round(totalCompletude / completudes.length);
-    
-    console.log('calculateOverallProgress:', {
-      project_id: project.id,
-      completudes,
-      totalCompletude,
-      progressoGeral
-    });
-    
-    return progressoGeral;
-  };
-
-  const calculatePhaseCompleteness = (project: any, phase: string): number => {
-
-    
-    // Usar os valores reais de completude do banco de dados se disponíveis
-    const completudeField = `completude_${phase}`;
-    if (project[completudeField] !== undefined && project[completudeField] !== null) {
-      return Math.round(project[completudeField]);
-    }
-    
-    // Fallback para lógica de cálculo se não houver dados no banco
-    switch (phase) {
-      case 'planejamento':
-        let planejamentoScore = 0;
-        if (project.objetivos) planejamentoScore += 25;
-        if (project.escopo) planejamentoScore += 25;
-        if (project.metodologia) planejamentoScore += 25;
-        if (project.cronograma) planejamentoScore += 25;
-        return planejamentoScore;
-      case 'execucao':
-        const trabalhos = project.trabalhos_auditoria || [];
-        return trabalhos.length > 0 ? Math.round((trabalhos.filter((t: any) => t.status === 'concluido').length / trabalhos.length) * 100) : 0;
-      case 'achados':
-        const apontamentos = project.apontamentos_auditoria || [];
-        if (apontamentos.length === 0) return 0;
-        
-        // Calcular baseado no status dos apontamentos
-        const validados = apontamentos.filter(a => ['validado', 'comunicado', 'aceito'].includes(a.status)).length;
-        return Math.round((validados / apontamentos.length) * 100);
-      case 'relatorio':
-        return project.relatorio_final ? 100 : 0;
-      case 'followup':
-        const planos = project.planos_acao || [];
-        return planos.length > 0 ? Math.round((planos.filter((p: any) => p.status === 'implementado').length / planos.length) * 100) : 0;
-      default:
-        return 0;
-    }
-  };
-
-  const calculateDashboardMetrics = (projects: AuditProject[]): DashboardMetrics => {
-    const total = projects.length;
-    const ativos = projects.filter(p => ['planejamento', 'execucao', 'achados', 'relatorio'].includes(p.status)).length;
-    const concluidos = projects.filter(p => p.status === 'concluido').length;
-    const atrasados = projects.filter(p => {
-      if (!p.data_fim_prevista) return false;
-      return new Date(p.data_fim_prevista) < new Date() && p.status !== 'concluido';
-    }).length;
-    
-    const totalApontamentos = projects.reduce((sum, p) => sum + p.total_apontamentos, 0);
-    const apontamentosCriticos = projects.reduce((sum, p) => sum + p.apontamentos_criticos, 0);
-    const taxaConclusao = total > 0 ? (concluidos / total) * 100 : 0;
-    
-    return {
-      total_projetos: total,
-      projetos_ativos: ativos,
-      projetos_concluidos: concluidos,
-      projetos_atrasados: atrasados,
-      total_apontamentos: totalApontamentos,
-      apontamentos_criticos: apontamentosCriticos,
-      taxa_conclusao: taxaConclusao,
-      cobertura_auditoria: 85 // Valor simulado
-    };
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      planejamento: 'bg-blue-100 text-blue-800',
-      execucao: 'bg-yellow-100 text-yellow-800',
-      achados: 'bg-orange-100 text-orange-800',
-      relatorio: 'bg-purple-100 text-purple-800',
-      followup: 'bg-indigo-100 text-indigo-800',
-      concluido: 'bg-green-100 text-green-800',
-      suspenso: 'bg-red-100 text-red-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      baixa: 'bg-green-100 text-green-800',
-      media: 'bg-yellow-100 text-yellow-800',
-      alta: 'bg-orange-100 text-orange-800',
-      critica: 'bg-red-100 text-red-800'
-    };
-    return colors[priority] || 'bg-gray-100 text-gray-800';
-  };
-
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = !searchTerm || 
-      project.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.area_auditada.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || project.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  if (loading) {
+  if (loading && projects.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -303,15 +134,31 @@ export function AuditDashboardNew() {
           <h1 className="text-3xl font-bold">Auditoria Interna</h1>
           <p className="text-muted-foreground">Gestão Integrada de Projetos de Auditoria</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
+
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Ordenação */}
+          <div className="flex items-center gap-2">
+            <Select
+              value={`${sortBy}-${sortOrder}`}
+              onValueChange={(value) => {
+                const [newSortBy, newSortOrder] = value.split('-');
+                setSortBy(newSortBy);
+                setSortOrder(newSortOrder as 'asc' | 'desc');
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at-desc">Mais Recentes</SelectItem>
+                <SelectItem value="created_at-asc">Mais Antigos</SelectItem>
+                <SelectItem value="titulo-asc">Título (A-Z)</SelectItem>
+                <SelectItem value="titulo-desc">Título (Z-A)</SelectItem>
+                <SelectItem value="prioridade-desc">Maior Prioridade</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             Novo Projeto
@@ -384,15 +231,15 @@ export function AuditDashboardNew() {
               Heatmap de Riscos
             </CardTitle>
             <CardDescription>
-              Distribuição de riscos por área auditada
+              Distribuição de riscos dos <strong>projetos visíveis</strong>
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RiskLevelDisplay 
-              risks={projects.map(p => ({ 
-                risk_level: p.prioridade === 'critica' ? 'Muito Alto' : 
-                           p.prioridade === 'alta' ? 'Alto' : 
-                           p.prioridade === 'media' ? 'Médio' : 'Baixo'
+            <RiskLevelDisplay
+              risks={projects.map(p => ({
+                risk_level: p.prioridade === 'critica' ? 'Muito Alto' :
+                  p.prioridade === 'alta' ? 'Alto' :
+                    p.prioridade === 'media' ? 'Médio' : 'Baixo'
               }))}
               size="md"
               responsive={true}
@@ -411,27 +258,78 @@ export function AuditDashboardNew() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar projetos..."
+                    placeholder="Buscar por título, código ou área..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
               </div>
+
               <div className="flex gap-2">
-                <select 
-                  value={filterStatus} 
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-3 py-2 border rounded-md"
-                >
-                  <option value="all">Todos os Status</option>
-                  <option value="planejamento">Planejamento</option>
-                  <option value="execucao">Execução</option>
-                  <option value="achados">Achados</option>
-                  <option value="relatorio">Relatório</option>
-                  <option value="followup">Follow-up</option>
-                  <option value="concluido">Concluído</option>
-                </select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filtros Avançados
+                      {(statusFilter !== 'all' || priorityFilter !== 'all') && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                          {(statusFilter !== 'all' ? 1 : 0) + (priorityFilter !== 'all' ? 1 : 0)}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4">
+                    <div className="space-y-4">
+
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Toos" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            <SelectItem value="planejamento">Planejamento</SelectItem>
+                            <SelectItem value="execucao">Execução</SelectItem>
+                            <SelectItem value="achados">Achados</SelectItem>
+                            <SelectItem value="relatorio">Relatório</SelectItem>
+                            <SelectItem value="concluido">Concluído</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Prioridade</Label>
+                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Todas" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas</SelectItem>
+                            <SelectItem value="critica">Crítica</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => {
+                          setStatusFilter('all');
+                          setPriorityFilter('all');
+                        }}
+                      >
+                        Limpar Filtros
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
@@ -456,15 +354,15 @@ export function AuditDashboardNew() {
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Projetos de Auditoria</h2>
-          <Badge variant="secondary">{filteredProjects.length} projetos</Badge>
+          <Badge variant="secondary">{totalItems} projetos encontrados</Badge>
         </div>
 
-        {filteredProjects.length === 0 ? (
+        {projects.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
-              <p className="text-muted-foreground">Crie seu primeiro projeto de auditoria ou ajuste os filtros.</p>
+              <p className="text-muted-foreground">Tente ajustar seus filtros ou crie um novo projeto.</p>
               <Button className="mt-4">
                 <Plus className="h-4 w-4 mr-2" />
                 Criar Projeto
@@ -473,7 +371,7 @@ export function AuditDashboardNew() {
           </Card>
         ) : (
           <div className={viewMode === 'grid' ? 'grid grid-cols-1 gap-6' : 'space-y-4'}>
-            {filteredProjects.map((project) => (
+            {projects.map((project) => (
               <AuditProjectCard
                 key={project.id}
                 project={project}
@@ -485,6 +383,59 @@ export function AuditDashboardNew() {
           </div>
         )}
       </div>
+
+      {/* Paginação */}
+      {totalItems > 0 && (
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {((page - 1) * perPage) + 1} a {Math.min(page * perPage, totalItems)} de {totalItems} projetos
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let p = i + 1;
+                // Simple logic to show current page surroundings if totalPages > 5
+                // enhancing this would require a complex pagination component
+                // For now, simple logic: if page > 3, shift window
+                if (totalPages > 5 && page > 3) {
+                  p = page - 3 + i;
+                  if (p > totalPages) p = totalPages - (4 - i);
+                }
+
+                return (
+                  <Button
+                    key={p}
+                    variant={page === p ? "default" : "outline"}
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

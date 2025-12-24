@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Target, 
-  Play, 
-  AlertTriangle, 
-  FileText, 
+import {
+  Target,
+  Play,
+  AlertTriangle,
+  FileText,
   CheckCircle,
   ChevronRight,
   Clock,
@@ -123,22 +123,22 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
   const currentPhase = phases[currentPhaseIndex];
   const canAdvance = currentPhase?.completeness >= 80; // Mínimo 80% para avançar
   const canGoBack = currentPhaseIndex > 0;
-  
+
   // Determinar quais fases são acessíveis
   const getPhaseAccessibility = (phaseIndex: number) => {
     // Sempre pode acessar a primeira fase
     if (phaseIndex === 0) return true;
-    
+
     // Pode acessar fases anteriores se já passou por elas
     if (phaseIndex <= currentPhaseIndex) return true;
-    
+
     // Pode acessar a próxima fase se a atual estiver 80% completa
     if (phaseIndex === currentPhaseIndex + 1 && currentPhase?.completeness >= 80) return true;
-    
+
     // Pode acessar fases completadas (100%)
     const phase = phases[phaseIndex];
     if (phase?.completeness >= 100) return true;
-    
+
     return false;
   };
 
@@ -155,7 +155,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
         .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-      
+
       secureLog('info', 'Fase do projeto atualizada', { projectId: project.id, newPhase });
       return true;
     } catch (error) {
@@ -168,12 +168,12 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
   // Função para navegação direta entre fases
   const handleDirectPhaseChange = async (phaseId: string) => {
     if (phaseId === activePhase) return; // Já está na fase
-    
+
     setIsTransitioning(true);
-    
+
     try {
       const success = await updateProjectPhase(phaseId);
-      
+
       if (success) {
         onPhaseChange(phaseId);
         const phaseName = phases.find(p => p.id === phaseId)?.name || phaseId;
@@ -191,7 +191,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
   const savePhaseProgress = async () => {
     try {
       setSaving(true);
-      
+
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
@@ -202,7 +202,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
         .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-      
+
       toast.success('Progresso salvo com sucesso!');
       secureLog('info', 'Progresso da fase salvo', { projectId: project.id, phase: activePhase });
     } catch (error) {
@@ -215,7 +215,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
 
   const handlePhaseTransition = async (direction: 'next' | 'previous') => {
     setIsTransitioning(true);
-    
+
     try {
       let newPhaseIndex;
       if (direction === 'next' && currentPhaseIndex < phases.length - 1) {
@@ -225,17 +225,17 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
       } else {
         return;
       }
-      
+
       const newPhase = phases[newPhaseIndex];
-      
+
       // Atualizar no banco de dados primeiro
       const success = await updateProjectPhase(newPhase.id);
-      
+
       if (success) {
         onPhaseChange(newPhase.id);
         toast.success(`Fase alterada para: ${newPhase.name}`);
       }
-      
+
     } catch (error) {
       console.error('Erro ao transicionar fase:', error);
     } finally {
@@ -244,14 +244,30 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
   };
 
   const getPhaseColor = (color: string) => {
-    const colors = {
-      blue: 'border-primary bg-primary/10 text-primary',
-      yellow: 'border-primary bg-primary/5 text-primary',
-      orange: 'border-primary bg-primary/15 text-primary',
-      purple: 'border-primary bg-primary/20 text-primary',
-      green: 'border-primary bg-primary/10 text-primary'
-    };
-    return colors[color] || 'border-border bg-muted text-muted-foreground';
+    // This simple component doesn't have the sophisticated status object, so we rely on active/completed logic embedded in render
+    // However, the caller uses this function to style the buttons directly based on phase.id
+    // But wait, the button usage below uses this function passing phase.color
+    // AND it has inline logic for `isActive` and `isCompleted`.
+    // We should simplify the inline logic class string instead of just changing this map.
+    return ''; // Helper function usage refactored below
+  };
+
+  const getPhaseButtonClass = (phase: any, isActive: boolean, isCompleted: boolean, isAccessible: boolean) => {
+    // User requested Blue for Active/Selected phase.
+    if (isActive) {
+      return 'border-blue-600 bg-blue-600 text-white font-semibold shadow-md ring-2 ring-blue-600/20 scale-105';
+    }
+    if (isCompleted) {
+      return 'border-emerald-600 bg-emerald-600 text-white font-medium';
+    }
+    // Visited logic is harder here without prop, but generally if not active and not completed but accessible, it's future/todo.
+    // If we wanted to show "visited" (Yellow) here we'd need more state.
+    // For now, Green vs Blue vs Gray is safer.
+
+    if (isAccessible) {
+      return 'border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300';
+    }
+    return 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-700';
   };
 
   const renderPhaseContent = () => {
@@ -281,27 +297,20 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
             const isActive = phase.id === activePhase;
             const isCompleted = phase.completeness >= 100;
             const isAccessible = getPhaseAccessibility(index);
-            
+
             return (
               <React.Fragment key={phase.id}>
                 <button
                   onClick={() => isAccessible && handleDirectPhaseChange(phase.id)}
                   disabled={!isAccessible}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
-                    isActive 
-                      ? getPhaseColor(phase.color)
-                      : isCompleted
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : isAccessible
-                      ? 'border-border bg-background text-foreground hover:border-border/80'
-                      : 'border-muted bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${getPhaseButtonClass(phase, isActive, isCompleted, isAccessible)
+                    }`}
                 >
                   <IconComponent className="h-4 w-4" />
                   <span className="text-sm font-medium">{phase.name}</span>
                   {isCompleted && <CheckCircle className="h-3 w-3 text-primary" />}
                 </button>
-                
+
                 {index < phases.length - 1 && (
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                 )}
@@ -309,7 +318,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
             );
           })}
         </div>
-        
+
         {/* Controles de Navegação */}
         <div className="flex items-center gap-2">
           <Button
@@ -321,7 +330,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
             <ArrowLeft className="h-4 w-4 mr-1" />
             Anterior
           </Button>
-          
+
           <Button
             variant="default"
             size="sm"
@@ -347,7 +356,7 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
                 <CardDescription>{currentPhase?.description}</CardDescription>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Completude</p>
@@ -391,18 +400,18 @@ export function AuditWorkflow({ project, activePhase, onPhaseChange }: AuditWork
                 Última atualização: {new Date().toLocaleString('pt-BR')}
               </span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-1" />
                 Exportar
               </Button>
-              
+
               <Button variant="outline" size="sm">
                 <Upload className="h-4 w-4 mr-1" />
                 Importar
               </Button>
-              
+
               <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
                 <Save className="h-4 w-4 mr-1" />
                 {saving ? 'Salvando...' : 'Salvar Progresso'}

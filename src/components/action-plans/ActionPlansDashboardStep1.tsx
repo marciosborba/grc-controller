@@ -1,5 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,16 +41,37 @@ import { useActionPlansIntegration } from '@/hooks/useActionPlansIntegration';
 
 export const ActionPlansDashboard: React.FC = () => {
   const navigate = useNavigate();
+
+  // Debug log to verify component mount
+  React.useEffect(() => {
+    console.log('🏁 ActionPlansDashboardStep1 Mounted');
+  }, []);
+
   const {
     actionPlans,
     loading,
     getActionPlanMetrics,
     getActionPlansByModule,
     getOverduePlans,
-    updateActionPlan
+    updateActionPlan,
+    page,
+    setPage,
+    totalPages,
+    totalItems,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    searchTerm,
+    setSearchTerm,
+    metrics
   } = useActionPlansIntegration();
 
-  const metrics = getActionPlanMetrics();
+  // metrics are now loaded from the hook (server-side)
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -88,16 +123,111 @@ export const ActionPlansDashboard: React.FC = () => {
           <h1 className="text-3xl font-bold">Gestão de Planos de Ação</h1>
           <p className="text-muted-foreground">Central de Gestão e Acompanhamento de Planos de Ação</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-          <Button onClick={() => navigate('/action-plans/create')}>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <div className="relative w-full sm:w-[250px]">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar planos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={statusFilter !== 'all' || priorityFilter !== 'all' ? "bg-muted border-primary" : ""}>
+                <Filter className="h-4 w-4 mr-2" />
+                Filtros Avançados
+                {(statusFilter !== 'all' || priorityFilter !== 'all') && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 rounded-full text-[10px]">
+                    {(statusFilter !== 'all' ? 1 : 0) + (priorityFilter !== 'all' ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none">Filtros</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Refine sua busca por status e prioridade.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger id="status" className="col-span-2 h-8">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="planejado">Planejado</SelectItem>
+                        <SelectItem value="em_execucao">Em Execução</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
+                        <SelectItem value="atrasado">Atrasado</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <Label htmlFor="priority">Prioridade</Label>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger id="priority" className="col-span-2 h-8">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="media">Média</SelectItem>
+                        <SelectItem value="baixa">Baixa</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(statusFilter !== 'all' || priorityFilter !== 'all') && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setPriorityFilter('all');
+                    }}
+                    className="w-full mt-2"
+                  >
+                    Limpar Filtros
+                  </Button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-md">
+            <span className="text-xs text-muted-foreground pl-2 hidden lg:inline-block">Ordernar por:</span>
+            <Select
+              value={`${sortBy}-${sortOrder}`}
+              onValueChange={(value) => {
+                const [newSortBy, newSortOrder] = value.split('-');
+                setSortBy(newSortBy);
+                setSortOrder(newSortOrder as 'asc' | 'desc');
+              }}
+            >
+              <SelectTrigger className="w-[180px] h-9 bg-background">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at-desc">Mais Recentes</SelectItem>
+                <SelectItem value="created_at-asc">Mais Antigos</SelectItem>
+                <SelectItem value="title-asc">Título (A-Z)</SelectItem>
+                <SelectItem value="title-desc">Título (Z-A)</SelectItem>
+                <SelectItem value="origin_name-asc">Origem (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button onClick={() => navigate('/action-plans/new')}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Plano
           </Button>
@@ -191,6 +321,19 @@ export const ActionPlansDashboard: React.FC = () => {
               </div>
               <CheckCircle className="h-10 w-10 text-emerald-600" />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Progresso Médio</p>
+                <p className="text-2xl font-bold text-blue-600">{metrics.avgProgress}%</p>
+              </div>
+              <BarChart3 className="h-10 w-10 text-blue-600" />
+            </div>
+            <Progress value={metrics.avgProgress} className="h-1 mt-3" />
           </CardContent>
         </Card>
       </div>
@@ -315,6 +458,82 @@ export const ActionPlansDashboard: React.FC = () => {
               ))
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {actionPlans.length > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-muted-foreground hidden sm:block">
+                Mostrando página {page} de {totalPages || 1}
+              </div>
+              <div className="flex items-center gap-1 mx-auto sm:mx-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  <ArrowRight className="h-4 w-4 rotate-180" />
+                  <span className="sr-only">Anterior</span>
+                </Button>
+
+                {/* Page Numbers */}
+                {(() => {
+                  const pages = [];
+                  const maxVisiblePages = 5;
+
+                  if (totalPages <= maxVisiblePages) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    if (page <= 3) {
+                      for (let i = 1; i <= 4; i++) pages.push(i);
+                      pages.push(-1); // Ellipsis
+                      pages.push(totalPages);
+                    } else if (page >= totalPages - 2) {
+                      pages.push(1);
+                      pages.push(-1); // Ellipsis
+                      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+                    } else {
+                      pages.push(1);
+                      pages.push(-1);
+                      pages.push(page - 1);
+                      pages.push(page);
+                      pages.push(page + 1);
+                      pages.push(-1);
+                      pages.push(totalPages);
+                    }
+                  }
+
+                  return pages.map((p, i) => (
+                    p === -1 ? (
+                      <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        key={p}
+                        variant={page === p ? "default" : "outline"}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    )
+                  ));
+                })()}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Próxima</span>
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -37,7 +37,15 @@ export interface AssessmentFramework {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
+
+  // Extended fields used in Framework Center
+  codigo?: string;
+  status?: string;
+  categoria?: string;
+  padrao_origem?: string;
+  peso_total?: number;
+  publico?: boolean;
+
   // Relacionamentos
   domains?: AssessmentDomain[];
   assessments?: Assessment[];
@@ -54,7 +62,10 @@ export interface AssessmentDomain {
   tenant_id: string;
   created_at: string;
   updated_at: string;
-  
+
+  // Extended fields
+  ativo?: boolean;
+
   // Relacionamentos
   framework?: AssessmentFramework;
   controls?: AssessmentControl[];
@@ -74,7 +85,14 @@ export interface AssessmentControl {
   tenant_id: string;
   created_at: string;
   updated_at: string;
-  
+
+  // Extended fields
+  ativo?: boolean;
+  categoria?: string;
+  subcategoria?: string;
+  pontuacao_maxima?: number;
+  obrigatorio?: boolean;
+
   // Relacionamentos
   domain?: AssessmentDomain;
   questions?: AssessmentQuestion[];
@@ -94,7 +112,13 @@ export interface AssessmentQuestion {
   tenant_id: string;
   created_at: string;
   updated_at: string;
-  
+
+  // Extended fields
+  codigo?: string;
+  texto?: string; // sometimes aliased to 'pergunta'
+  descricao?: string;
+  obrigatorio?: boolean;
+
   // Relacionamentos
   control?: AssessmentControl;
   responses?: AssessmentResponse[];
@@ -121,7 +145,7 @@ export interface Assessment {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
+
   // Relacionamentos
   framework?: AssessmentFramework;
   responses?: AssessmentResponse[];
@@ -147,7 +171,7 @@ export interface AssessmentResponse {
   tenant_id: string;
   created_at: string;
   updated_at: string;
-  
+
   // Relacionamentos
   assessment?: Assessment;
   question?: AssessmentQuestion;
@@ -174,7 +198,7 @@ export interface AssessmentActionPlan {
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
+
   // Relacionamentos
   assessment?: Assessment;
   control?: AssessmentControl;
@@ -193,7 +217,7 @@ export interface AssessmentReport {
   gerado_por?: string;
   tenant_id: string;
   created_at: string;
-  
+
   // Relacionamentos
   assessment?: Assessment;
 }
@@ -206,7 +230,7 @@ export interface AssessmentHistory {
   usuario_id?: string;
   timestamp: string;
   tenant_id: string;
-  
+
   // Relacionamentos
   assessment?: Assessment;
 }
@@ -226,6 +250,19 @@ export interface AssessmentFrameworkTemplate {
 // =====================================================
 // TIPOS PARA FORMULÁRIOS E UI
 // =====================================================
+
+export interface FrameworkFormData {
+  codigo: string;
+  nome: string;
+  descricao: string;
+  versao: string;
+  tipo_framework: string;
+  categoria?: string;
+  padrao_origem?: string;
+  industria_aplicavel?: string[];
+  publico?: boolean;
+  status?: string;
+}
 
 export interface CreateAssessmentFrameworkData {
   nome: string;

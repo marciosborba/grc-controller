@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { 
+import {
   ChevronDown,
   ChevronUp,
   Target,
@@ -67,6 +67,7 @@ export interface ActionPlan {
   titulo: string;
   descricao?: string;
   modulo_origem: string;
+  nome_origem?: string;
   origem_id?: string;
   categoria: string;
   prioridade: 'critica' | 'alta' | 'media' | 'baixa';
@@ -88,7 +89,7 @@ export interface ActionPlan {
   updated_at: string;
   created_by: string;
   dias_para_vencimento?: number;
-  
+
   // Related data
   responsavel?: {
     id: string;
@@ -268,7 +269,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
 
     try {
       setLoading(true);
-      
+
       // Here you would implement the actual database update
       const { error } = await supabase
         .from('action_plans')
@@ -304,14 +305,14 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
   const handleUpdateProgress = async (newProgress: number) => {
     try {
       setLoading(true);
-      
+
       const updatedPlan = { ...editedPlan, percentual_conclusao: newProgress };
       setEditedPlan(updatedPlan);
-      
+
       // Update in database
       await supabase
         .from('action_plans')
-        .update({ 
+        .update({
           percentual_conclusao: newProgress,
           updated_at: new Date().toISOString()
         })
@@ -331,14 +332,14 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
   const handleStatusChange = async (newStatus: string) => {
     try {
       setLoading(true);
-      
+
       const updatedPlan = { ...editedPlan, status: newStatus as any };
       setEditedPlan(updatedPlan);
-      
+
       // Update in database
       await supabase
         .from('action_plans')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
@@ -373,7 +374,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
         ...editedPlan,
         comentarios: [...(editedPlan.comentarios || []), comment]
       };
-      
+
       setEditedPlan(updatedPlan);
       setNewComment('');
       onUpdate?.(updatedPlan);
@@ -460,7 +461,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 {editedPlan.status.replace('_', ' ')}
               </Badge>
             </div>
-            
+
             {isEditing ? (
               <Input
                 value={editedPlan.titulo}
@@ -472,14 +473,14 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 {editedPlan.titulo}
               </CardTitle>
             )}
-            
+
             {editedPlan.descricao && (
               <CardDescription className="line-clamp-2">
                 {editedPlan.descricao}
               </CardDescription>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2 ml-4">
             {showModuleLink && (
               <Button variant="ghost" size="sm" className="text-xs">
@@ -487,7 +488,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 {getModuleName(editedPlan.modulo_origem)}
               </Button>
             )}
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -510,11 +511,11 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 <Calendar className="h-3 w-3 text-muted-foreground" />
                 <span className={daysToDeadline < 0 ? 'text-red-600' : daysToDeadline < 7 ? 'text-orange-600' : ''}>
                   {daysToDeadline < 0 ? `${Math.abs(daysToDeadline)} dias atrasado` :
-                   daysToDeadline === 0 ? 'Vence hoje' :
-                   `${daysToDeadline} dias restantes`}
+                    daysToDeadline === 0 ? 'Vence hoje' :
+                      `${daysToDeadline} dias restantes`}
                 </span>
               </div>
-              
+
               {editedPlan.responsavel && (
                 <div className="flex items-center gap-1">
                   <User className="h-3 w-3 text-muted-foreground" />
@@ -522,12 +523,12 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold">{editedPlan.percentual_conclusao}%</span>
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <Progress value={editedPlan.percentual_conclusao} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -558,7 +559,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 </>
               )}
             </Button>
-            
+
             {isEditing && (
               <Button
                 size="sm"
@@ -569,7 +570,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 Salvar
               </Button>
             )}
-            
+
             {editedPlan.status === 'planejado' && (
               <Button
                 variant="outline"
@@ -581,7 +582,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 Iniciar
               </Button>
             )}
-            
+
             {editedPlan.status === 'em_execucao' && (
               <Button
                 variant="outline"
@@ -593,7 +594,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                 Pausar
               </Button>
             )}
-            
+
             {editedPlan.status !== 'concluido' && (
               <Button
                 variant="outline"
@@ -638,7 +639,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <Label>Impacto Esperado</Label>
                     {isEditing ? (
@@ -654,7 +655,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                       </p>
                     )}
                   </div>
-                  
+
                   <div>
                     <Label>Critério de Sucesso</Label>
                     {isEditing ? (
@@ -671,7 +672,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -697,7 +698,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div>
                       <Label>Status</Label>
                       {isEditing ? (
@@ -723,7 +724,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                       )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label>Progresso</Label>
                     <div className="space-y-2">
@@ -746,7 +747,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                       </div>
                     </div>
                   </div>
-                  
+
                   {editedPlan.orcamento_planejado && (
                     <div>
                       <Label>Orçamento</Label>
@@ -809,7 +810,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                           </Select>
                         </div>
                       </div>
-                      
+
                       <div>
                         <Label>Descrição</Label>
                         <Textarea
@@ -856,9 +857,9 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                           <Save className="h-3 w-3 mr-1" />
                           Salvar
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => setShowAddActivity(false)}
                         >
                           <X className="h-3 w-3 mr-1" />
@@ -869,21 +870,20 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Lista de Atividades */}
               <div className="space-y-3">
                 {editedPlan.atividades?.map((activity, index) => {
                   const currentStatus = getActivityStatus(activity);
                   const daysToActivityDeadline = getDaysToDeadline(activity.data_fim_replanejada || activity.data_fim_planejada);
                   const needsNotification = shouldSendNotification(activity);
-                  
+
                   return (
-                    <Card key={activity.id} className={`border-l-4 ${
-                      currentStatus === 'atrasada' ? 'border-l-red-500' :
-                      currentStatus === 'concluida' ? 'border-l-green-500' :
-                      activity.prioridade === 'critica' ? 'border-l-red-400' :
-                      activity.prioridade === 'alta' ? 'border-l-orange-400' : 'border-l-blue-400'
-                    }`}>
+                    <Card key={activity.id} className={`border-l-4 ${currentStatus === 'atrasada' ? 'border-l-red-500' :
+                        currentStatus === 'concluida' ? 'border-l-green-500' :
+                          activity.prioridade === 'critica' ? 'border-l-red-400' :
+                            activity.prioridade === 'alta' ? 'border-l-orange-400' : 'border-l-blue-400'
+                      }`}>
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           {/* Header da Atividade */}
@@ -899,13 +899,13 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                                   </Badge>
                                 )}
                               </div>
-                              
+
                               <div className="flex flex-wrap gap-2 mb-2">
                                 <Badge className={getActivityStatusColor(currentStatus)}>
-                                  {currentStatus === 'atrasada' ? 'Atrasada' : 
-                                   currentStatus === 'concluida' ? 'Concluída' :
-                                   currentStatus === 'em_execucao' ? 'Em Execução' :
-                                   currentStatus === 'pendente' ? 'Pendente' : 'Cancelada'}
+                                  {currentStatus === 'atrasada' ? 'Atrasada' :
+                                    currentStatus === 'concluida' ? 'Concluída' :
+                                      currentStatus === 'em_execucao' ? 'Em Execução' :
+                                        currentStatus === 'pendente' ? 'Pendente' : 'Cancelada'}
                                 </Badge>
                                 <Badge className={getActivityPriorityColor(activity.prioridade)}>
                                   <Flag className="h-3 w-3 mr-1" />
@@ -923,14 +923,14 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                                 <p className="text-sm text-muted-foreground mb-3">{activity.descricao}</p>
                               )}
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <div className="text-right">
                                 <div className="text-lg font-bold">{activity.percentual_conclusao}%</div>
                                 <Progress value={activity.percentual_conclusao} className="w-16 h-2" />
                               </div>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => {
                                   setSelectedActivity(activity);
@@ -951,7 +951,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                               </div>
                               <div className="font-medium">{formatDate(activity.data_fim_planejada)}</div>
                             </div>
-                            
+
                             {activity.data_fim_replanejada && (
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1 text-orange-600">
@@ -963,7 +963,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                                 </div>
                               </div>
                             )}
-                            
+
                             {activity.data_fim_real && (
                               <div className="space-y-1">
                                 <div className="flex items-center gap-1 text-green-600">
@@ -978,11 +978,10 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                           </div>
 
                           {/* Status do Prazo */}
-                          <div className={`p-2 rounded text-sm ${
-                            currentStatus === 'atrasada' ? 'bg-red-50 text-red-700' :
-                            daysToActivityDeadline <= 3 ? 'bg-orange-50 text-orange-700' :
-                            'bg-blue-50 text-blue-700'
-                          }`}>
+                          <div className={`p-2 rounded text-sm ${currentStatus === 'atrasada' ? 'bg-red-50 text-red-700' :
+                              daysToActivityDeadline <= 3 ? 'bg-orange-50 text-orange-700' :
+                                'bg-blue-50 text-blue-700'
+                            }`}>
                             <div className="flex items-center gap-2">
                               {currentStatus === 'atrasada' ? (
                                 <AlertOctagon className="h-4 w-4" />
@@ -992,13 +991,13 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                                 <ClockIcon className="h-4 w-4" />
                               )}
                               <span>
-                                {currentStatus === 'atrasada' ? 
+                                {currentStatus === 'atrasada' ?
                                   `Atrasada há ${Math.abs(daysToActivityDeadline)} dias` :
-                                 daysToActivityDeadline === 0 ? 
-                                  'Vence hoje' :
-                                 daysToActivityDeadline < 0 ? 
-                                  `Venceu há ${Math.abs(daysToActivityDeadline)} dias` :
-                                  `${daysToActivityDeadline} dias restantes`}
+                                  daysToActivityDeadline === 0 ?
+                                    'Vence hoje' :
+                                    daysToActivityDeadline < 0 ?
+                                      `Venceu há ${Math.abs(daysToActivityDeadline)} dias` :
+                                      `${daysToActivityDeadline} dias restantes`}
                               </span>
                             </div>
                           </div>
@@ -1017,7 +1016,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                                 </div>
                               )}
                             </div>
-                            
+
                             <div className="flex gap-1">
                               {currentStatus !== 'concluida' && (
                                 <Button size="sm" variant="outline" className="h-7 px-2">
@@ -1038,20 +1037,20 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     </Card>
                   );
                 }) || (
-                  <Card className="border-dashed">
-                    <CardContent className="text-center py-8">
-                      <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Nenhuma atividade cadastrada</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Adicione atividades para acompanhar o progresso detalhado do plano
-                      </p>
-                      <Button size="sm" onClick={() => setShowAddActivity(true)}>
-                        <Plus className="h-3 w-3 mr-1" />
-                        Criar Primeira Atividade
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+                    <Card className="border-dashed">
+                      <CardContent className="text-center py-8">
+                        <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">Nenhuma atividade cadastrada</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Adicione atividades para acompanhar o progresso detalhado do plano
+                        </p>
+                        <Button size="sm" onClick={() => setShowAddActivity(true)}>
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar Primeira Atividade
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
             </TabsContent>
 
@@ -1063,7 +1062,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                   Enviar Evidência
                 </Button>
               </div>
-              
+
               <div className="space-y-3">
                 {editedPlan.evidencias?.map((evidence) => (
                   <div key={evidence.id} className="flex items-center justify-between border rounded-lg p-3">
@@ -1081,10 +1080,10 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     </Button>
                   </div>
                 )) || (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhuma evidência enviada
-                  </p>
-                )}
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhuma evidência enviada
+                    </p>
+                  )}
               </div>
             </TabsContent>
 
@@ -1102,9 +1101,9 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     Enviar
                   </Button>
                 </div>
-                
+
                 <Separator />
-                
+
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {editedPlan.comentarios?.map((comment) => (
                     <div key={comment.id} className="flex gap-3">
@@ -1122,10 +1121,10 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                       </div>
                     </div>
                   )) || (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhum comentário
-                    </p>
-                  )}
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum comentário
+                      </p>
+                    )}
                 </div>
               </div>
             </TabsContent>
@@ -1142,7 +1141,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     <p className="text-xs text-muted-foreground">vs. última semana</p>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -1153,7 +1152,7 @@ export const EnhancedActionPlanCard: React.FC<EnhancedActionPlanCardProps> = ({
                     <p className="text-xs text-muted-foreground">vs. meta 85%</p>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 mb-2">

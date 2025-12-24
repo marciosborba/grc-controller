@@ -20,24 +20,51 @@ export const useActionPlansIntegration = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  const [metrics, setMetrics] = useState({
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    overdue: 0,
+    nearDeadline: 0,
+    critical: 0,
+    avgProgress: 0,
+    completionRate: 0
+  });
+
   // Determine effective tenant ID - use override for super users or current user's tenant
   const effectiveTenantId = overrideTenantId || user?.tenantId;
   const isSuperUser = user?.isPlatformAdmin || user?.permissions?.includes('manage_all_tenants');
 
   useEffect(() => {
     if (effectiveTenantId) {
-      loadActionPlans();
+      const delayDebounceFn = setTimeout(() => {
+        loadActionPlans();
+      }, 300); // Add debounce for search
+
+      // Load metrics independently from list filters (search, sort, page)
+      // Only reload metrics if structural context changes (Module, Origin)
+      loadDashboardMetrics();
+
+      return () => clearTimeout(delayDebounceFn);
     }
-  }, [effectiveTenantId, moduleType, originId]);
+  }, [effectiveTenantId, moduleType, originId, page, perPage, sortBy, sortOrder, statusFilter, priorityFilter, searchTerm]);
 
-  const loadActionPlans = async () => {
+  const loadDashboardMetrics = async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       let query = supabase
         .from('vw_action_plans_unified')
-        .select('*')
+        .select('id, status, priority, due_date, percentual_conclusao')
         .eq('tenant_id', effectiveTenantId);
 
       if (moduleType) {
@@ -48,9 +75,124 @@ export const useActionPlansIntegration = ({
         query = query.eq('origin_id', originId);
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      // We do NOT apply transient filters (search, status, priority) to metrics
+      // to maintain a global view of the context.
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error loading metrics:', error);
+        return;
+      }
+
+      const allPlans = data || [];
+      const total = allPlans.length;
+
+      const completed = allPlans.filter(p => p.status === 'completed' || p.status === 'concluido').length;
+      const inProgress = allPlans.filter(p => p.status === 'in_progress' || p.status === 'em_execucao').length;
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const overdue = allPlans.filter(p => {
+        if (!p.due_date) return false;
+        const due = new Date(p.due_date);
+        return due < today && (p.status !== 'completed' && p.status !== 'concluido');
+      }).length;
+
+      const nearDeadline = allPlans.filter(p => {
+        if (!p.due_date) return false;
+        const due = new Date(p.due_date);
+        const diffTime = due.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 7 && (p.status !== 'completed' && p.status !== 'concluido');
+      }).length;
+
+      const critical = allPlans.filter(p => p.priority === 'critical' || p.priority === 'critica').length;
+
+      const avgProgress = total > 0
+        ? allPlans.reduce((sum, p) => sum + (p.percentual_conclusao || 0), 0) / total
+        : 0;
+
+      setMetrics({
+        total,
+        completed,
+        inProgress,
+        overdue,
+        nearDeadline,
+        critical,
+        avgProgress: Math.round(avgProgress),
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
+      });
+
+    } catch (err) {
+      console.error('Unexpected error loading metrics:', err);
+    }
+  };
+
+  const loadActionPlans = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      let query = supabase
+        .from('vw_action_plans_unified')
+        .select('*', { count: 'exact' })
+        .eq('tenant_id', effectiveTenantId);
+
+      if (moduleType) {
+        query = query.eq('module', moduleType);
+      }
+
+      if (originId) {
+        query = query.eq('origin_id', originId);
+      }
+
+      if (searchTerm) {
+        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+
+      if (statusFilter && statusFilter !== 'all') {
+        // Map frontend status to backend status if needed, or assume view matches
+        const backendStatus = statusFilter === 'em_execucao' ? 'in_progress' :
+          statusFilter === 'concluido' ? 'completed' :
+            statusFilter === 'atrasado' ? 'overdue' : // View might not have 'overdue' status column directly usually calculated? Check view
+              statusFilter;
+        // if status is 'atrasado', we might need special logic or rely on view having it. 
+        // For now let's assume standard statuses: pending, in_progress, completed, cancelled
+        if (backendStatus !== 'overdue') {
+          query = query.eq('status', backendStatus);
+        } else {
+          // For overdue, ideally we check due_date < now. Supabase filter:
+          const today = new Date().toISOString().split('T')[0];
+          query = query.lt('due_date', today).neq('status', 'completed');
+        }
+      }
+
+      if (priorityFilter && priorityFilter !== 'all') {
+        const backendPriority = priorityFilter === 'alta' ? 'high' :
+          priorityFilter === 'critica' ? 'critical' :
+            priorityFilter === 'media' ? 'medium' :
+              priorityFilter === 'baixa' ? 'low' : priorityFilter;
+        query = query.eq('priority', backendPriority);
+      }
+
+      // Pagination
+      const from = (page - 1) * perPage;
+      const to = from + perPage - 1;
+
+      // Map frontend sort keys to database columns
+      let dbSortColumn = 'created_at';
+      if (sortBy === 'title') dbSortColumn = 'title';
+      if (sortBy === 'origin_name') dbSortColumn = 'origin_name';
+
+      const { data, error, count } = await query
+        .order(dbSortColumn, { ascending: sortOrder === 'asc' })
+        .range(from, to);
 
       if (error) throw error;
+
+      setTotalItems(count || 0);
 
       // Map view data to ActionPlan interface expected by components
       // Note: The view returns normalized English, mapping back to PT for frontend compatibility
@@ -68,21 +210,35 @@ export const useActionPlansIntegration = ({
         else if (plan.priority === 'critical') prioridade = 'critica';
         else if (plan.priority === 'low') prioridade = 'baixa';
 
+        const responsibleId = plan.responsible_id || 'unassigned';
+
         return {
           ...plan,
           modulo_origem: plan.module,
           nome_origem: plan.origin_name,
+          origem_id: plan.origin_id,
           dias_para_vencimento: daysToDeadline,
           data_fim_planejada: plan.due_date,
           titulo: plan.title,
           descricao: plan.description,
           status,
           prioridade,
+          responsavel_id: responsibleId,
           responsavel: {
+            id: responsibleId,
             nome: plan.responsible_name || 'N/A',
             email: plan.responsible_email || '',
             avatar_url: plan.responsible_avatar
           },
+          // Defaults for fields missing in view but required by interface
+          categoria: 'Geral',
+          gut_score: 0,
+          orcamento_planejado: 0,
+          created_by: 'system',
+          updated_at: plan.created_at, // Fallback since view might not expose updated_at
+          tenant_id: plan.tenant_id,
+          created_at: plan.created_at,
+
           // Populate arrays with empty defaults via cast since they aren't in view
           atividades: [],
           evidencias: [],
@@ -124,6 +280,8 @@ export const useActionPlansIntegration = ({
       if (error) throw error;
 
       setActionPlans(prev => [data, ...prev]);
+      // Refresh list to update counts/pagination if needed
+      if (page === 1) loadActionPlans();
       toast.success('Plano de ação criado com sucesso');
 
       return data;
@@ -183,6 +341,7 @@ export const useActionPlansIntegration = ({
       if (error) throw error;
 
       setActionPlans(prev => prev.filter(plan => plan.id !== planId));
+      loadActionPlans(); // Refresh to keep pagination consistent
       toast.success('Plano de ação removido com sucesso');
     } catch (err) {
       console.error('Erro ao remover plano de ação:', err);
@@ -334,15 +493,18 @@ export const useActionPlansIntegration = ({
   };
 
   const getActionPlanMetrics = () => {
-    const total = actionPlans.length;
+    // Note: Metrics should ideally come from a separate aggregate query instead of just the current page
+    // For now we calculate based on loaded items, but this might be inaccurate with pagination.
+    // In a future improvement, we should fetch metrics separately.
+    const total = totalItems;
     const completed = actionPlans.filter(p => p.status === 'concluido').length;
     const inProgress = actionPlans.filter(p => p.status === 'em_execucao').length;
     const overdue = getOverduePlans().length;
     const nearDeadline = getPlansNearDeadline().length;
     const critical = actionPlans.filter(p => p.prioridade === 'critica').length;
 
-    const avgProgress = total > 0
-      ? actionPlans.reduce((sum, plan) => sum + plan.percentual_conclusao, 0) / total
+    const avgProgress = actionPlans.length > 0
+      ? actionPlans.reduce((sum, plan) => sum + plan.percentual_conclusao, 0) / actionPlans.length
       : 0;
 
     return {
@@ -353,7 +515,7 @@ export const useActionPlansIntegration = ({
       nearDeadline,
       critical,
       avgProgress: Math.round(avgProgress),
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
+      completionRate: actionPlans.length > 0 ? Math.round((completed / actionPlans.length) * 100) : 0
     };
   };
 
@@ -363,6 +525,12 @@ export const useActionPlansIntegration = ({
     error,
     effectiveTenantId,
     isSuperUser,
+    page,
+    setPage,
+    perPage,
+    setPerPage,
+    totalItems,
+    totalPages: Math.ceil(totalItems / perPage),
     loadActionPlans,
     createActionPlan,
     updateActionPlan,
@@ -375,6 +543,17 @@ export const useActionPlansIntegration = ({
     getActionPlansByPriority,
     getOverduePlans,
     getPlansNearDeadline,
-    getActionPlanMetrics
+    getActionPlanMetrics,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    searchTerm,
+    setSearchTerm,
+    metrics // Expose the calculated metrics
   };
 };

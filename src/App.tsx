@@ -64,6 +64,7 @@ const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyMana
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
 // Módulo Assessment - Versão Profissional Atualizada
+const EnhancedAssessmentHub = lazy(() => import("@/components/assessments/EnhancedAssessmentHub"));
 const AssessmentsDashboard = lazy(() => import("@/components/assessments/AssessmentsDashboard"));
 const AssessmentCRUD = lazy(() => import("@/components/assessments/AssessmentCRUD"));
 const AssessmentsDashboardSimple = lazy(() => import("@/components/assessments/views/AssessmentsDashboardSimple"));
@@ -74,6 +75,8 @@ const FrameworksManagementSimple = lazy(() => import("@/components/assessments/v
 const FrameworksManagementFixed = lazy(() => import("@/components/assessments/views/FrameworksManagementFixed"));
 
 const AssessmentExecution = lazy(() => import("@/components/assessments/AssessmentExecution"));
+const AssessmentExecutionEngine = lazy(() => import("@/components/assessments/AssessmentExecutionEngine"));
+const AssessmentWizard = lazy(() => import("@/components/assessments/AssessmentWizard"));
 const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
 // Componente corrigido após fix do RLS
 import AssessmentsListWorking from "@/components/assessments/AssessmentsListWorking";
@@ -319,7 +322,7 @@ const App = () => (
                       <Route path="dashboard" element={<DashboardPage />} />
                       <Route path="assessments" element={
                         <Suspense fallback={<PageLoader />}>
-                          <AssessmentsDashboard />
+                          <EnhancedAssessmentHub />
                         </Suspense>
                       } />
                       <Route path="assessments/manage" element={
@@ -371,6 +374,16 @@ const App = () => (
                       <Route path="assessments/execution/legacy" element={
                         <Suspense fallback={<PageLoader />}>
                           <AssessmentExecution />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/new" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentWizard />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentExecutionEngine />
                         </Suspense>
                       } />
                       <Route path="assessments/list" element={<AssessmentsListWorking />} />

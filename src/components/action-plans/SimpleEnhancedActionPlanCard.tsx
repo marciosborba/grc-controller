@@ -41,72 +41,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface SimpleActionPlan {
-  id: string;
-  codigo: string;
-  titulo: string;
-  descricao?: string;
-  modulo_origem: string;
-  nome_origem?: string;
-  prioridade: 'critica' | 'alta' | 'media' | 'baixa';
-  status: string;
-  percentual_conclusao: number;
-  data_fim_planejada: string;
-  responsavel?: {
-    nome: string;
-    email: string;
-  };
-  atividades?: SimpleActivity[];
-  evidencias?: SimpleEvidence[];
-  comentarios?: SimpleComment[];
-}
-
-interface SimpleEvidence {
-  id: string;
-  nome: string;
-  tipo: 'documento' | 'imagem' | 'link' | 'outro';
-  arquivo_url?: string;
-  link_url?: string;
-  descricao?: string;
-  data_upload: string;
-  tamanho?: number;
-  activity_id?: string;
-}
-
-interface SimpleComment {
-  id: string;
-  texto: string;
-  autor: {
-    nome: string;
-    email: string;
-  };
-  data_criacao: string;
-  tipo: 'geral' | 'atividade' | 'evidencia';
-  referencia_id?: string;
-}
-
-interface SimpleActivity {
-  id: string;
-  titulo: string;
-  descricao?: string;
-  status: string;
-  data_fim_planejada: string;
-  data_fim_replanejada?: string;
-  data_fim_real?: string;
-  responsavel?: {
-    nome: string;
-    email: string;
-  };
-  percentual_conclusao: number;
-  prioridade: string;
-  evidencias_count?: number;
-  notificacoes_count?: number;
-  evidencias?: SimpleEvidence[];
-}
+import { ActionPlan, ActionPlanActivity, ActionPlanEvidence, ActionPlanComment, ActivityEvidence } from './EnhancedActionPlanCard';
 
 interface SimpleEnhancedActionPlanCardProps {
-  actionPlan: SimpleActionPlan;
-  onUpdate?: (plan: SimpleActionPlan) => void;
+  actionPlan: ActionPlan;
+  onUpdate?: (plan: ActionPlan) => void;
   isExpandedByDefault?: boolean;
   showModuleLink?: boolean;
 }
@@ -277,21 +216,24 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       return;
     }
 
-    const activity: SimpleActivity = {
+    const activity: ActionPlanActivity = {
       id: `activity_${Date.now()}`,
+      action_plan_id: localActionPlan.id,
       titulo: newActivity.titulo,
       descricao: newActivity.descricao,
       status: 'pendente',
       data_fim_planejada: newActivity.data_fim_planejada,
+      responsavel_id: newActivity.responsavel_email || 'unknown', // Placeholder
       responsavel: {
+        id: 'temp_id', // Placeholder
         nome: newActivity.responsavel_nome || 'Não atribuído',
-        email: newActivity.responsavel_email || ''
+        email: newActivity.responsavel_email || '',
       },
       percentual_conclusao: 0,
+      ordem: (localActionPlan.atividades?.length || 0) + 1,
       prioridade: newActivity.prioridade,
-      evidencias_count: 0,
-      notificacoes_count: 0,
-      evidencias: []
+      evidencias: [],
+      created_at: new Date().toISOString()
     };
 
     const updatedPlan = {
@@ -343,34 +285,45 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       return;
     }
 
-    const evidence: SimpleEvidence = {
-      id: `evidence_${Date.now()}`,
-      nome: newEvidence.nome,
-      tipo: newEvidence.tipo,
-      descricao: newEvidence.descricao,
-      link_url: newEvidence.link_url,
-      data_upload: new Date().toISOString(),
-      activity_id: newEvidence.activity_id || undefined
-    };
-
-    let updatedPlan;
-
     if (newEvidence.activity_id) {
       // Evidência de atividade específica
+      const evidence: ActivityEvidence = {
+        id: `evidence_${Date.now()}`,
+        activity_id: newEvidence.activity_id,
+        titulo: newEvidence.nome,
+        tipo_arquivo: newEvidence.tipo,
+        descricao: newEvidence.descricao,
+        url_arquivo: newEvidence.link_url || '',
+        tamanho_arquivo: 0,
+        uploaded_by: 'current_user',
+        uploaded_at: new Date().toISOString()
+      };
+
       updatedPlan = {
         ...localActionPlan,
         atividades: localActionPlan.atividades?.map(activity =>
           activity.id === newEvidence.activity_id
             ? {
               ...activity,
-              evidencias: [...(activity.evidencias || []), evidence],
-              evidencias_count: (activity.evidencias_count || 0) + 1
+              evidencias: [...(activity.evidencias || []), evidence]
             }
             : activity
         )
       };
     } else {
       // Evidência geral do plano
+      const evidence: ActionPlanEvidence = {
+        id: `evidence_${Date.now()}`,
+        action_plan_id: localActionPlan.id,
+        titulo: newEvidence.nome,
+        tipo_arquivo: newEvidence.tipo,
+        descricao: newEvidence.descricao,
+        url_arquivo: newEvidence.link_url || '',
+        tamanho_arquivo: 0,
+        uploaded_by: 'current_user',
+        created_at: new Date().toISOString()
+      };
+
       updatedPlan = {
         ...localActionPlan,
         evidencias: [...(localActionPlan.evidencias || []), evidence]
@@ -426,16 +379,14 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       return;
     }
 
-    const comment: SimpleComment = {
+    const comment: ActionPlanComment = {
       id: `comment_${Date.now()}`,
-      texto: newComment.texto,
-      autor: {
-        nome: 'Usuário Atual', // TODO: Pegar do contexto de auth
-        email: 'usuario@empresa.com'
-      },
-      data_criacao: new Date().toISOString(),
+      action_plan_id: localActionPlan.id,
+      conteudo: newComment.texto,
+      autor_id: 'current_user',
+      autor_nome: 'Usuário Atual', // TODO: Pegar do contexto de auth
+      created_at: new Date().toISOString(),
       tipo: newComment.tipo,
-      referencia_id: newComment.referencia_id || undefined
     };
 
     const updatedPlan = {
@@ -1036,13 +987,14 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Paperclip className="h-3 w-3" />
-                                <span>{activity.evidencias_count || 0} evidências</span>
+                                <span>{activity.evidencias?.length || 0} evidências</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Bell className="h-3 w-3" />
-                                <span>{activity.notificacoes_count || 0} notificações</span>
+                                <span>{activity.notificacoes_enviadas?.length || 0} notificações</span>
                               </div>
                             </div>
+
 
                             <div className="flex gap-1">
                               <Button
@@ -1224,17 +1176,18 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <FileText className="h-4 w-4 text-muted-foreground" />
-                              <h6 className="font-medium">{evidence.nome}</h6>
-                              <Badge variant="outline" className={`text-xs ${getEvidenceTypeColor(evidence.tipo)}`}>
-                                {evidence.tipo}
+                              <h6 className="font-medium">{evidence.titulo}</h6>
+                              <Badge variant="outline" className={`text-xs ${getEvidenceTypeColor(evidence.tipo_arquivo)}`}>
+                                {evidence.tipo_arquivo}
                               </Badge>
                             </div>
                             {evidence.descricao && (
                               <p className="text-sm text-muted-foreground mb-2">{evidence.descricao}</p>
                             )}
                             <div className="text-xs text-muted-foreground">
-                              Adicionado em {formatDate(evidence.data_upload)}
+                              Adicionado em {formatDate(evidence.created_at)}
                             </div>
+
                           </div>
                           <div className="flex gap-1">
                             {evidence.link_url && (
@@ -1281,16 +1234,17 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <FileText className="h-4 w-4 text-muted-foreground" />
-                                <h6 className="font-medium">{evidence.nome}</h6>
-                                <Badge variant="outline" className={`text-xs ${getEvidenceTypeColor(evidence.tipo)}`}>
-                                  {evidence.tipo}
+                                <h6 className="font-medium">{evidence.titulo}</h6>
+                                <Badge variant="outline" className={`text-xs ${getEvidenceTypeColor(evidence.tipo_arquivo)}`}>
+                                  {evidence.tipo_arquivo}
                                 </Badge>
                               </div>
+
                               {evidence.descricao && (
                                 <p className="text-sm text-muted-foreground mb-2">{evidence.descricao}</p>
                               )}
                               <div className="text-xs text-muted-foreground">
-                                Adicionado em {formatDate(evidence.data_upload)}
+                                Adicionado em {formatDate(evidence.uploaded_at)}
                               </div>
                             </div>
                             <div className="flex gap-1">
@@ -1405,7 +1359,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
               <div className="space-y-3">
                 {localActionPlan.comentarios?.length ? (
                   localActionPlan.comentarios
-                    .sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime())
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .map((comment) => (
                       <Card key={comment.id} className="border-l-4 border-l-purple-400">
                         <CardContent className="p-4">
@@ -1413,14 +1367,15 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{comment.autor.nome}</span>
+                                <span className="font-medium">{comment.autor_nome}</span>
                                 <Badge variant="outline" className={`text-xs ${getCommentTypeColor(comment.tipo)}`}>
                                   {comment.tipo}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
-                                  {formatDate(comment.data_criacao)}
+                                  {formatDate(comment.created_at)}
                                 </span>
                               </div>
+
 
                               {comment.referencia_id && comment.tipo === 'atividade' && (
                                 <div className="text-xs text-blue-600 mb-2">
@@ -1428,7 +1383,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                                 </div>
                               )}
 
-                              <p className="text-sm whitespace-pre-wrap">{comment.texto}</p>
+                              <p className="text-sm whitespace-pre-wrap">{comment.conteudo}</p>
                             </div>
 
                             <Button

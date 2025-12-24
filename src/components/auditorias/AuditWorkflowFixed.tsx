@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Target, 
-  Play, 
-  AlertTriangle, 
-  FileText, 
+import {
+  Target,
+  Play,
+  AlertTriangle,
+  FileText,
   CheckCircle,
   ChevronRight,
   Clock,
@@ -84,14 +84,14 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
   const [saving, setSaving] = useState(false);
   const lastClickTime = useRef(0);
   const DEBOUNCE_DELAY = 500; // 500ms de debounce
-  
+
   // Hook centralizado para gerenciar completude
-  const { 
-    completeness, 
+  const {
+    completeness,
     refreshFromDatabase,
     loading: completenessLoading
   } = useProjectCompleteness();
-  
+
   // Carregar dados do banco quando o componente monta
   useEffect(() => {
     if (project.id && effectiveTenantId) {
@@ -102,30 +102,30 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
       refreshFromDatabase(project.id, effectiveTenantId);
     }
   }, [project.id, effectiveTenantId, refreshFromDatabase]);
-  
+
   // Forçar refresh se os dados do projeto mudaram
   useEffect(() => {
     if (project.id && effectiveTenantId && !completenessLoading) {
       // Se temos dados de completude no projeto mas não no contexto, forçar refresh
-      const hasProjectData = project.completude_planejamento > 0 || 
-                            project.completude_execucao > 0 || 
-                            project.completude_achados > 0 || 
-                            project.completude_relatorio > 0 || 
-                            project.completude_followup > 0;
-      
+      const hasProjectData = project.completude_planejamento > 0 ||
+        project.completude_execucao > 0 ||
+        project.completude_achados > 0 ||
+        project.completude_relatorio > 0 ||
+        project.completude_followup > 0;
+
       const hasContextData = completeness.planejamento?.databaseCompleteness > 0 ||
-                            completeness.execucao?.databaseCompleteness > 0 ||
-                            completeness.achados?.databaseCompleteness > 0 ||
-                            completeness.relatorio?.databaseCompleteness > 0 ||
-                            completeness.followup?.databaseCompleteness > 0;
-      
+        completeness.execucao?.databaseCompleteness > 0 ||
+        completeness.achados?.databaseCompleteness > 0 ||
+        completeness.relatorio?.databaseCompleteness > 0 ||
+        completeness.followup?.databaseCompleteness > 0;
+
       if (hasProjectData && !hasContextData) {
         console.log('AuditWorkflowContent - Project has data but context is empty, refreshing...');
         refreshFromDatabase(project.id, effectiveTenantId);
       }
     }
   }, [project, completeness, completenessLoading, refreshFromDatabase, effectiveTenantId]);
-  
+
   // Usar dados centralizados de completude
   console.log('AuditWorkflowFixed - Centralized completeness data:', {
     project_id: project.id,
@@ -144,11 +144,11 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
   const getButtonCompleteness = (phase: string) => {
     const phaseData = completeness[phase as keyof typeof completeness];
     const databaseValue = phaseData?.databaseCompleteness || 0;
-    
+
     // Fallback para dados do projeto se o contexto não tem dados
     const projectValue = Math.round(project[`completude_${phase}`] || 0);
     const finalValue = databaseValue > 0 ? databaseValue : projectValue;
-    
+
     console.log(`AuditWorkflowFixed - getButtonCompleteness for ${phase}:`, {
       project_id: project.id,
       phase,
@@ -157,7 +157,7 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
       finalValue,
       source: databaseValue > 0 ? 'context_database' : 'project_fallback'
     });
-    
+
     return finalValue;
   };
 
@@ -211,12 +211,12 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
 
   const currentPhaseIndex = phases.findIndex(p => p.id === activePhase);
   const currentPhase = phases[currentPhaseIndex];
-  
+
   // LÓGICA DE ACESSIBILIDADE SIMPLIFICADA E MAIS PERMISSIVA
   const getPhaseAccessibility = (phaseIndex: number) => {
     const phase = phases[phaseIndex];
     const faseId = phase?.id;
-    
+
     // NAVEGAÇÃO LIVRE ATIVADA - Permite acesso a todas as fases
     // Isso facilita o trabalho dos auditores e permite flexibilidade
     return { accessible: true, reason: 'Navegação livre ativada - Acesso permitido a todas as fases' };
@@ -229,11 +229,11 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
     const isCompleted = phase?.completeness >= 100;
     const accessibility = getPhaseAccessibility(phaseIndex);
     const isAccessible = accessibility.accessible;
-    
+
     // Determinar se a fase foi visitada
     const fasesVisitadas = project.fases_visitadas || ['planejamento'];
     const isVisited = fasesVisitadas.includes(phase.id) || phase.completeness > 0;
-    
+
     return {
       isActive,
       isCompleted,
@@ -249,8 +249,8 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
     try {
       // Atualizar fases visitadas
       const fasesVisitadas = project.fases_visitadas || ['planejamento'];
-      const novasFasesVisitadas = fasesVisitadas.includes(newPhase) 
-        ? fasesVisitadas 
+      const novasFasesVisitadas = fasesVisitadas.includes(newPhase)
+        ? fasesVisitadas
         : [...fasesVisitadas, newPhase];
 
       const { error } = await supabase
@@ -264,11 +264,11 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
         .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-      
-      secureLog('info', 'Fase do projeto atualizada', { 
-        projectId: project.id, 
+
+      secureLog('info', 'Fase do projeto atualizada', {
+        projectId: project.id,
         newPhase,
-        fasesVisitadas: novasFasesVisitadas 
+        fasesVisitadas: novasFasesVisitadas
       });
       return true;
     } catch (error) {
@@ -279,7 +279,7 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
   };
 
   // Função com debounce para evitar cliques múltiplos
-  const handlePhaseClick = useCallback((phaseId: string) => {
+  const handlePhaseClick = (phaseId: string) => {
     const now = Date.now();
     if (now - lastClickTime.current < DEBOUNCE_DELAY) {
       console.log('Clique ignorado por debounce');
@@ -287,7 +287,7 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
     }
     lastClickTime.current = now;
     handleDirectPhaseChange(phaseId);
-  }, []);
+  };
 
   // Função para navegação direta entre fases - MELHORADA
   const handleDirectPhaseChange = async (phaseId: string) => {
@@ -296,42 +296,42 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
       console.warn('Phase ID não fornecido');
       return;
     }
-    
+
     if (phaseId === activePhase) {
       console.log('Já está na fase:', phaseId);
       return; // Já está na fase
     }
-    
+
     // Verificar se já está em transição
     if (isTransitioning) {
       console.log('Transição já em andamento, ignorando clique');
       return;
     }
-    
+
     const phaseIndex = phases.findIndex(p => p.id === phaseId);
     if (phaseIndex === -1) {
       console.error('Fase não encontrada:', phaseId);
       toast.error('Fase não encontrada');
       return;
     }
-    
+
     const accessibility = getPhaseAccessibility(phaseIndex);
-    
+
     if (!accessibility.accessible) {
       toast.error(`Não é possível acessar esta fase: ${accessibility.reason}`);
       return;
     }
-    
+
     console.log('Iniciando navegação para fase:', phaseId);
     setIsTransitioning(true);
-    
+
     try {
       // Primeiro atualizar o estado local imediatamente para feedback visual
       onPhaseChange(phaseId);
-      
+
       // Depois atualizar o banco de dados
       const success = await updateProjectPhase(phaseId);
-      
+
       if (success) {
         const phaseName = phases.find(p => p.id === phaseId)?.name || phaseId;
         toast.success(`Navegou para: ${phaseName}`);
@@ -354,14 +354,14 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
   const savePhaseProgress = async () => {
     try {
       setSaving(true);
-      
+
       const completenessValue = currentPhase?.completeness || 0;
       console.log(`Saving phase progress for ${activePhase}:`, {
         project_id: project.id,
         phase: activePhase,
         completeness: completenessValue
       });
-      
+
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
@@ -372,10 +372,10 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
         .eq('tenant_id', effectiveTenantId);
 
       if (error) throw error;
-      
+
       toast.success(`Progresso salvo: ${completenessValue}%`);
-      secureLog('info', 'Progresso da fase salvo', { 
-        projectId: project.id, 
+      secureLog('info', 'Progresso da fase salvo', {
+        projectId: project.id,
         phase: activePhase,
         completeness: completenessValue
       });
@@ -390,16 +390,21 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
 
 
   const getPhaseColor = (color: string, status: any) => {
+    // Logic: Active (Selected) -> Blue. Completed -> Green. Visited -> Yellow. Future -> Gray.
+
     if (status.isActive) {
-      return 'border-blue-600 bg-blue-600 text-white font-semibold shadow-md';
+      // User requested: "volte o azul para a fase selecionada"
+      return 'border-blue-600 bg-blue-600 text-white font-semibold shadow-md ring-2 ring-blue-600/20 scale-105';
     } else if (status.isCompleted) {
-      return 'border-green-600 bg-green-600 text-white font-medium';
+      return 'border-emerald-600 bg-emerald-600 text-white font-medium'; // Green for completion
     } else if (status.isVisited) {
-      return 'border-amber-500 bg-amber-500 text-white';
+      return 'border-amber-500 bg-amber-500 text-white'; // Amber/Yellow for in-progress/visited (but not currently selected)
     } else if (status.isAccessible) {
-      return 'border-slate-600 bg-slate-100 text-slate-800 hover:border-slate-700 hover:bg-slate-200 font-medium';
+      // Future but accessible
+      return 'border-slate-300 bg-slate-100 text-slate-700 hover:border-blue-300 hover:bg-blue-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 transition-all';
     } else {
-      return 'border-slate-400 bg-slate-300 text-slate-700 cursor-not-allowed opacity-80';
+      // Locked
+      return 'border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed opacity-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-700';
     }
   };
 
@@ -427,118 +432,117 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
       {/* Breadcrumb de Navegação */}
       <div className="flex flex-wrap items-center gap-1 p-4 bg-muted/30 rounded-lg overflow-x-auto">
         {phases.map((phase, index) => {
-            const IconComponent = phase.icon;
-            const status = getPhaseStatus(index);
-            
-            return (
-              <React.Fragment key={phase.id}>
-                <div className="relative group">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Botão clicado:', phase.id, 'Status:', status);
-                      if (status.isAccessible && !isTransitioning) {
-                        handlePhaseClick(phase.id);
-                      } else {
-                        console.log('Clique ignorado - Não acessível ou em transição');
-                      }
-                    }}
-                    disabled={!status.isAccessible || isTransitioning}
-                    className={`flex items-center gap-1 px-2 py-1.5 rounded-md border-2 transition-all cursor-pointer text-xs ${
-                      getPhaseColor(phase.color, status)
+          const IconComponent = phase.icon;
+          const status = getPhaseStatus(index);
+
+          return (
+            <React.Fragment key={phase.id}>
+              <div className="relative group">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Botão clicado:', phase.id, 'Status:', status);
+                    if (status.isAccessible && !isTransitioning) {
+                      handlePhaseClick(phase.id);
+                    } else {
+                      console.log('Clique ignorado - Não acessível ou em transição');
+                    }
+                  }}
+                  disabled={!status.isAccessible || isTransitioning}
+                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md border-2 transition-all cursor-pointer text-xs ${getPhaseColor(phase.color, status)
                     } ${isTransitioning ? 'opacity-50 cursor-wait' : ''}`}
-                    title={status.accessibilityReason}
-                    type="button"
-                  >
-                    <IconComponent className="h-3 w-3" />
-                    <span className="text-xs font-medium">{phase.name}</span>
-                    <span className="text-xs">({Math.round(phase.completeness || 0)}%)</span>
-                    
-                    {/* Ícones de status */}
-                    {isTransitioning && status.isActive ? (
-                      <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full" />
-                    ) : (
-                      <>
-                        {status.isCompleted && <CheckCircle className="h-2.5 w-2.5 text-green-600" />}
-                        {status.isActive && <Clock className="h-2.5 w-2.5 text-primary" />}
-                        {!status.isAccessible && <Lock className="h-2.5 w-2.5" />}
-                        {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-2.5 w-2.5" />}
-                      </>
-                    )}
-                  </button>
-                  
-                  {/* Tooltip com informações */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
-                    {status.accessibilityReason}
-                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
-                  </div>
-                </div>
-                
-                {index < phases.length - 1 && (
-                  <ChevronRight className="h-3 w-3 text-gray-400" />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-        
-        {/* Alertas e Validações MELHORADOS */}
-        {currentPhase && currentPhase.completeness < 50 && (
-          <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases. 
-                    Você pode navegar livremente entre fases já visitadas.
-                  </p>
+                  title={status.accessibilityReason}
+                  type="button"
+                >
+                  <IconComponent className="h-3 w-3" />
+                  <span className="text-xs font-medium">{phase.name}</span>
+                  <span className="text-xs">({Math.round(phase.completeness || 0)}%)</span>
+
+                  {/* Ícones de status */}
+                  {isTransitioning && status.isActive ? (
+                    <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full" />
+                  ) : (
+                    <>
+                      {status.isCompleted && <CheckCircle className="h-2.5 w-2.5 text-white" />}
+                      {status.isActive && <Clock className="h-2.5 w-2.5 text-white" />}
+                      {!status.isAccessible && <Lock className="h-2.5 w-2.5 icon-slate-400" />}
+                      {status.isAccessible && !status.isActive && !status.isCompleted && <Unlock className="h-2.5 w-2.5 text-slate-500" />}
+                    </>
+                  )}
+                </button>
+
+                {/* Tooltip com informações */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                  {status.accessibilityReason}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Conteúdo da Fase */}
-        <div className="min-h-[400px]">
-          {renderPhaseContent()}
-        </div>
+              {index < phases.length - 1 && (
+                <ChevronRight className="h-3 w-3 text-gray-400" />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
 
-        {/* Ações da Fase MELHORADAS */}
-        <Card>
+      {/* Alertas e Validações MELHORADOS */}
+      {currentPhase && currentPhase.completeness < 50 && (
+        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                <span className="text-sm text-muted-foreground">
-                  Última atualização: {new Date().toLocaleString('pt-BR')}
-                </span>
-                <Badge variant="outline" className="ml-2">
-                  Navegação Livre Ativada
-                </Badge>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-1" />
-                  Exportar
-                </Button>
-                
-                <Button variant="outline" size="sm">
-                  <Upload className="h-4 w-4 mr-1" />
-                  Importar
-                </Button>
-                
-                <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
-                  <Save className="h-4 w-4 mr-1" />
-                  {saving ? 'Salvando...' : 'Salvar Progresso'}
-                </Button>
+            <div className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases.
+                  Você pode navegar livremente entre fases já visitadas.
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Conteúdo da Fase */}
+      <div className="min-h-[400px]">
+        {renderPhaseContent()}
+      </div>
+
+      {/* Ações da Fase MELHORADAS */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              <span className="text-sm text-muted-foreground">
+                Última atualização: {new Date().toLocaleString('pt-BR')}
+              </span>
+              <Badge variant="outline" className="ml-2">
+                Navegação Livre Ativada
+              </Badge>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-1" />
+                Exportar
+              </Button>
+
+              <Button variant="outline" size="sm">
+                <Upload className="h-4 w-4 mr-1" />
+                Importar
+              </Button>
+
+              <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
+                <Save className="h-4 w-4 mr-1" />
+                {saving ? 'Salvando...' : 'Salvar Progresso'}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -547,10 +551,10 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
 export function AuditWorkflowFixed({ project, activePhase, onPhaseChange }: AuditWorkflowProps) {
   return (
     <ProjectCompletenessProvider>
-      <AuditWorkflowContent 
-        project={project} 
-        activePhase={activePhase} 
-        onPhaseChange={onPhaseChange} 
+      <AuditWorkflowContent
+        project={project}
+        activePhase={activePhase}
+        onPhaseChange={onPhaseChange}
       />
     </ProjectCompletenessProvider>
   );
