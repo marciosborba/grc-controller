@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { 
+import {
   ChevronDown,
   ChevronUp,
   Target,
@@ -47,11 +47,12 @@ interface SimpleActionPlan {
   titulo: string;
   descricao?: string;
   modulo_origem: string;
-  prioridade: string;
+  nome_origem?: string;
+  prioridade: 'critica' | 'alta' | 'media' | 'baixa';
   status: string;
   percentual_conclusao: number;
   data_fim_planejada: string;
-  responsavel: {
+  responsavel?: {
     nome: string;
     email: string;
   };
@@ -120,13 +121,13 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
-  
+
   // Local state management para CRUD
   const [localActionPlan, setLocalActionPlan] = useState(actionPlan);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [showAddEvidence, setShowAddEvidence] = useState(false);
   const [showAddComment, setShowAddComment] = useState(false);
-  
+
   // Form states para nova atividade
   const [newActivity, setNewActivity] = useState({
     titulo: '',
@@ -136,23 +137,33 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
     responsavel_nome: '',
     responsavel_email: ''
   });
-  
+
   // Form states para nova evidência
-  const [newEvidence, setNewEvidence] = useState({
+  const [newEvidence, setNewEvidence] = useState<{
+    nome: string;
+    tipo: 'documento' | 'imagem' | 'link' | 'outro';
+    descricao: string;
+    link_url: string;
+    activity_id: string;
+  }>({
     nome: '',
-    tipo: 'documento' as const,
+    tipo: 'documento',
     descricao: '',
     link_url: '',
     activity_id: ''
   });
-  
+
   // Form states para novo comentário
-  const [newComment, setNewComment] = useState({
+  const [newComment, setNewComment] = useState<{
+    texto: string;
+    tipo: 'geral' | 'atividade' | 'evidencia';
+    referencia_id: string;
+  }>({
     texto: '',
-    tipo: 'geral' as const,
+    tipo: 'geral',
     referencia_id: ''
   });
-  
+
   // Form states para edição de atividade
   const [editActivityData, setEditActivityData] = useState({
     titulo: '',
@@ -343,7 +354,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
     };
 
     let updatedPlan;
-    
+
     if (newEvidence.activity_id) {
       // Evidência de atividade específica
       updatedPlan = {
@@ -351,10 +362,10 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
         atividades: localActionPlan.atividades?.map(activity =>
           activity.id === newEvidence.activity_id
             ? {
-                ...activity,
-                evidencias: [...(activity.evidencias || []), evidence],
-                evidencias_count: (activity.evidencias_count || 0) + 1
-              }
+              ...activity,
+              evidencias: [...(activity.evidencias || []), evidence],
+              evidencias_count: (activity.evidencias_count || 0) + 1
+            }
             : activity
         )
       };
@@ -389,10 +400,10 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
         atividades: localActionPlan.atividades?.map(activity =>
           activity.id === activityId
             ? {
-                ...activity,
-                evidencias: activity.evidencias?.filter(ev => ev.id !== evidenceId),
-                evidencias_count: Math.max(0, (activity.evidencias_count || 0) - 1)
-              }
+              ...activity,
+              evidencias: activity.evidencias?.filter(ev => ev.id !== evidenceId),
+              evidencias_count: Math.max(0, (activity.evidencias_count || 0) - 1)
+            }
             : activity
         )
       };
@@ -509,11 +520,10 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
   };
 
   return (
-    <Card className={`transition-all duration-300 hover:shadow-lg border-l-4 ${
-      localActionPlan.prioridade === 'critica' ? 'border-l-red-500' : 
-      localActionPlan.prioridade === 'alta' ? 'border-l-orange-500' : 
-      localActionPlan.prioridade === 'media' ? 'border-l-yellow-500' : 'border-l-green-500'
-    } ${isExpanded ? 'ring-2 ring-primary/20' : ''}`}>
+    <Card className={`transition-all duration-300 hover:shadow-lg border-l-4 ${localActionPlan.prioridade === 'critica' ? 'border-l-red-500' :
+      localActionPlan.prioridade === 'alta' ? 'border-l-orange-500' :
+        localActionPlan.prioridade === 'media' ? 'border-l-yellow-500' : 'border-l-green-500'
+      } ${isExpanded ? 'ring-2 ring-primary/20' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -529,25 +539,30 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                 {localActionPlan.status.replace('_', ' ')}
               </Badge>
             </div>
-            
+
             <CardTitle className="text-lg mb-2 line-clamp-2">
               {localActionPlan.titulo}
             </CardTitle>
-            
+
             {localActionPlan.descricao && (
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {localActionPlan.descricao}
               </p>
             )}
+            {localActionPlan.nome_origem && (
+              <p className="text-xs font-medium text-primary mt-1">
+                Origem: {localActionPlan.nome_origem}
+              </p>
+            )}
           </div>
-          
+
           <div className="flex items-center gap-2 ml-4">
             {showModuleLink && (
               <Badge variant="outline" className={`text-xs ${getModuleColor(localActionPlan.modulo_origem)}`}>
                 {getModuleName(localActionPlan.modulo_origem)}
               </Badge>
             )}
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -570,22 +585,22 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                 <Calendar className="h-3 w-3 text-muted-foreground" />
                 <span className={daysToDeadline < 0 ? 'text-red-600' : daysToDeadline < 7 ? 'text-orange-600' : ''}>
                   {daysToDeadline < 0 ? `${Math.abs(daysToDeadline)} dias atrasado` :
-                   daysToDeadline === 0 ? 'Vence hoje' :
-                   `${daysToDeadline} dias restantes`}
+                    daysToDeadline === 0 ? 'Vence hoje' :
+                      `${daysToDeadline} dias restantes`}
                 </span>
               </div>
-              
+
               <div className="flex items-center gap-1">
                 <User className="h-3 w-3 text-muted-foreground" />
-                <span>{localActionPlan.responsavel.nome}</span>
+                <span>{localActionPlan.responsavel?.nome || 'N/A'}</span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold">{localActionPlan.percentual_conclusao}%</span>
             </div>
           </div>
-          
+
           <div className="space-y-1">
             <Progress value={localActionPlan.percentual_conclusao} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
@@ -615,7 +630,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                 </>
               )}
             </Button>
-            
+
             {isEditing && (
               <Button size="sm" onClick={() => {
                 setIsEditing(false);
@@ -625,7 +640,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                 Salvar
               </Button>
             )}
-            
+
             <Button variant="outline" size="sm">
               <CheckSquare className="h-3 w-3 mr-1" />
               Atualizar Status
@@ -662,7 +677,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                     )}
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -685,7 +700,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                         </Badge>
                       )}
                     </div>
-                    
+
                     <div>
                       <Label>Status</Label>
                       {isEditing ? (
@@ -708,7 +723,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                       )}
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label>Progresso</Label>
                     <div className="space-y-2">
@@ -750,28 +765,28 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label>Título da Atividade *</Label>
-                          <Input 
-                            placeholder="Nome da atividade..." 
+                          <Input
+                            placeholder="Nome da atividade..."
                             value={newActivity.titulo}
-                            onChange={(e) => setNewActivity({...newActivity, titulo: e.target.value})}
+                            onChange={(e) => setNewActivity({ ...newActivity, titulo: e.target.value })}
                           />
                         </div>
                         <div>
                           <Label>Prazo *</Label>
-                          <Input 
-                            type="date" 
+                          <Input
+                            type="date"
                             value={newActivity.data_fim_planejada}
-                            onChange={(e) => setNewActivity({...newActivity, data_fim_planejada: e.target.value})}
+                            onChange={(e) => setNewActivity({ ...newActivity, data_fim_planejada: e.target.value })}
                           />
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <Label>Prioridade</Label>
-                          <Select 
-                            value={newActivity.prioridade} 
-                            onValueChange={(value) => setNewActivity({...newActivity, prioridade: value as any})}
+                          <Select
+                            value={newActivity.prioridade}
+                            onValueChange={(value) => setNewActivity({ ...newActivity, prioridade: value as any })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -786,42 +801,42 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                         </div>
                         <div>
                           <Label>Responsável</Label>
-                          <Input 
-                            placeholder="Nome do responsável..." 
+                          <Input
+                            placeholder="Nome do responsável..."
                             value={newActivity.responsavel_nome}
-                            onChange={(e) => setNewActivity({...newActivity, responsavel_nome: e.target.value})}
+                            onChange={(e) => setNewActivity({ ...newActivity, responsavel_nome: e.target.value })}
                           />
                         </div>
                       </div>
-                      
+
                       <div>
                         <Label>E-mail do Responsável</Label>
-                        <Input 
+                        <Input
                           type="email"
-                          placeholder="email@empresa.com" 
+                          placeholder="email@empresa.com"
                           value={newActivity.responsavel_email}
-                          onChange={(e) => setNewActivity({...newActivity, responsavel_email: e.target.value})}
+                          onChange={(e) => setNewActivity({ ...newActivity, responsavel_email: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label>Descrição</Label>
-                        <Textarea 
-                          placeholder="Descrição detalhada da atividade..." 
-                          rows={2} 
+                        <Textarea
+                          placeholder="Descrição detalhada da atividade..."
+                          rows={2}
                           value={newActivity.descricao}
-                          onChange={(e) => setNewActivity({...newActivity, descricao: e.target.value})}
+                          onChange={(e) => setNewActivity({ ...newActivity, descricao: e.target.value })}
                         />
                       </div>
-                      
+
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleCreateActivity}>
                           <Save className="h-3 w-3 mr-1" />
                           Salvar Atividade
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => setShowAddActivity(false)}
                         >
                           <X className="h-3 w-3 mr-1" />
@@ -832,7 +847,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                   </CardContent>
                 </Card>
               )}
-              
+
               <div className="space-y-3">
                 {localActionPlan.atividades?.map((activity, index) => (
                   <Card key={activity.id} className="border-l-4 border-l-blue-400">
@@ -844,21 +859,21 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             <Badge variant="outline" className="text-xs">#{index + 1}</Badge>
                             <span className="text-sm font-medium text-blue-600">Editando Atividade</span>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <Label>Título *</Label>
                               <Input
                                 value={editActivityData.titulo}
-                                onChange={(e) => setEditActivityData({...editActivityData, titulo: e.target.value})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, titulo: e.target.value })}
                                 placeholder="Nome da atividade..."
                               />
                             </div>
                             <div>
                               <Label>Status</Label>
-                              <Select 
-                                value={editActivityData.status} 
-                                onValueChange={(value) => setEditActivityData({...editActivityData, status: value})}
+                              <Select
+                                value={editActivityData.status}
+                                onValueChange={(value) => setEditActivityData({ ...editActivityData, status: value })}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -873,14 +888,14 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                               </Select>
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                               <Label>Prazo Inicial *</Label>
                               <Input
                                 type="date"
                                 value={editActivityData.data_fim_planejada}
-                                onChange={(e) => setEditActivityData({...editActivityData, data_fim_planejada: e.target.value})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, data_fim_planejada: e.target.value })}
                               />
                             </div>
                             <div>
@@ -888,14 +903,14 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                               <Input
                                 type="date"
                                 value={editActivityData.data_fim_replanejada}
-                                onChange={(e) => setEditActivityData({...editActivityData, data_fim_replanejada: e.target.value})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, data_fim_replanejada: e.target.value })}
                               />
                             </div>
                             <div>
                               <Label>Prioridade</Label>
-                              <Select 
-                                value={editActivityData.prioridade} 
-                                onValueChange={(value) => setEditActivityData({...editActivityData, prioridade: value as any})}
+                              <Select
+                                value={editActivityData.prioridade}
+                                onValueChange={(value) => setEditActivityData({ ...editActivityData, prioridade: value as any })}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -909,13 +924,13 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                               </Select>
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <Label>Responsável</Label>
                               <Input
                                 value={editActivityData.responsavel_nome}
-                                onChange={(e) => setEditActivityData({...editActivityData, responsavel_nome: e.target.value})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, responsavel_nome: e.target.value })}
                                 placeholder="Nome do responsável..."
                               />
                             </div>
@@ -924,12 +939,12 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                               <Input
                                 type="email"
                                 value={editActivityData.responsavel_email}
-                                onChange={(e) => setEditActivityData({...editActivityData, responsavel_email: e.target.value})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, responsavel_email: e.target.value })}
                                 placeholder="email@empresa.com"
                               />
                             </div>
                           </div>
-                          
+
                           <div>
                             <Label>Progresso (%)</Label>
                             <div className="flex items-center gap-2">
@@ -938,24 +953,24 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                                 min="0"
                                 max="100"
                                 value={editActivityData.percentual_conclusao}
-                                onChange={(e) => setEditActivityData({...editActivityData, percentual_conclusao: parseInt(e.target.value) || 0})}
+                                onChange={(e) => setEditActivityData({ ...editActivityData, percentual_conclusao: parseInt(e.target.value) || 0 })}
                                 className="w-20"
                               />
                               <Progress value={editActivityData.percentual_conclusao} className="flex-1" />
                               <span className="text-sm text-muted-foreground">{editActivityData.percentual_conclusao}%</span>
                             </div>
                           </div>
-                          
+
                           <div>
                             <Label>Descrição</Label>
                             <Textarea
                               value={editActivityData.descricao}
-                              onChange={(e) => setEditActivityData({...editActivityData, descricao: e.target.value})}
+                              onChange={(e) => setEditActivityData({ ...editActivityData, descricao: e.target.value })}
                               placeholder="Descrição detalhada da atividade..."
                               rows={3}
                             />
                           </div>
-                          
+
                           <div className="flex gap-2 pt-2 border-t">
                             <Button size="sm" onClick={() => handleSaveEditActivity(activity.id)}>
                               <Save className="h-3 w-3 mr-1" />
@@ -980,123 +995,123 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                                   {activity.prioridade}
                                 </Badge>
                               </div>
-                              
+
                               {activity.descricao && (
                                 <p className="text-sm text-muted-foreground mb-3">{activity.descricao}</p>
                               )}
                             </div>
-                            
+
                             <div className="text-right">
                               <div className="text-lg font-bold">{activity.percentual_conclusao}%</div>
                               <Progress value={activity.percentual_conclusao} className="w-16 h-2" />
                             </div>
                           </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <div className="text-muted-foreground">Prazo Inicial</div>
-                            <div className="font-medium">{formatDate(activity.data_fim_planejada)}</div>
-                          </div>
-                          
-                          {activity.data_fim_replanejada && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div>
-                              <div className="text-orange-600">Replanejado</div>
-                              <div className="font-medium text-orange-600">
-                                {formatDate(activity.data_fim_replanejada)}
-                              </div>
+                              <div className="text-muted-foreground">Prazo Inicial</div>
+                              <div className="font-medium">{formatDate(activity.data_fim_planejada)}</div>
                             </div>
-                          )}
-                          
-                          {activity.data_fim_real && (
-                            <div>
-                              <div className="text-green-600">Entrega Efetiva</div>
-                              <div className="font-medium text-green-600">
-                                {formatDate(activity.data_fim_real)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <Paperclip className="h-3 w-3" />
-                              <span>{activity.evidencias_count || 0} evidências</span>
+                            {activity.data_fim_replanejada && (
+                              <div>
+                                <div className="text-orange-600">Replanejado</div>
+                                <div className="font-medium text-orange-600">
+                                  {formatDate(activity.data_fim_replanejada)}
+                                </div>
+                              </div>
+                            )}
+
+                            {activity.data_fim_real && (
+                              <div>
+                                <div className="text-green-600">Entrega Efetiva</div>
+                                <div className="font-medium text-green-600">
+                                  {formatDate(activity.data_fim_real)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Paperclip className="h-3 w-3" />
+                                <span>{activity.evidencias_count || 0} evidências</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Bell className="h-3 w-3" />
+                                <span>{activity.notificacoes_count || 0} notificações</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <Bell className="h-3 w-3" />
-                              <span>{activity.notificacoes_count || 0} notificações</span>
+
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  setNewEvidence({ ...newEvidence, activity_id: activity.id });
+                                  setShowAddEvidence(true);
+                                }}
+                              >
+                                <Paperclip className="h-3 w-3 mr-1" />
+                                Anexar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2"
+                                onClick={() => handleUpdateActivity(activity.id, {
+                                  status: activity.status === 'concluida' ? 'em_execucao' : 'concluida',
+                                  percentual_conclusao: activity.status === 'concluida' ? 75 : 100,
+                                  data_fim_real: activity.status === 'concluida' ? undefined : new Date().toISOString().split('T')[0]
+                                })}
+                              >
+                                <CheckSquare className="h-3 w-3 mr-1" />
+                                {activity.status === 'concluida' ? 'Reabrir' : 'Finalizar'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2"
+                                onClick={() => handleStartEditActivity(activity)}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-red-600 hover:text-red-700"
+                                onClick={() => {
+                                  if (window.confirm('Deseja excluir esta atividade?')) {
+                                    handleDeleteActivity(activity.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                           </div>
-                          
-                          <div className="flex gap-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-7 px-2"
-                              onClick={() => {
-                                setNewEvidence({...newEvidence, activity_id: activity.id});
-                                setShowAddEvidence(true);
-                              }}
-                            >
-                              <Paperclip className="h-3 w-3 mr-1" />
-                              Anexar
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-7 px-2"
-                              onClick={() => handleUpdateActivity(activity.id, {
-                                status: activity.status === 'concluida' ? 'em_execucao' : 'concluida',
-                                percentual_conclusao: activity.status === 'concluida' ? 75 : 100,
-                                data_fim_real: activity.status === 'concluida' ? undefined : new Date().toISOString().split('T')[0]
-                              })}
-                            >
-                              <CheckSquare className="h-3 w-3 mr-1" />
-                              {activity.status === 'concluida' ? 'Reabrir' : 'Finalizar'}
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-7 px-2"
-                              onClick={() => handleStartEditActivity(activity)}
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Editar
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="h-7 px-2 text-red-600 hover:text-red-700"
-                              onClick={() => {
-                                if (window.confirm('Deseja excluir esta atividade?')) {
-                                  handleDeleteActivity(activity.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
                         </div>
                       )}
                     </CardContent>
                   </Card>
                 )) || (
-                  <Card className="border-dashed">
-                    <CardContent className="text-center py-8">
-                      <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">Nenhuma atividade cadastrada</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Adicione atividades para acompanhar o progresso detalhado
-                      </p>
-                      <Button size="sm" onClick={() => setShowAddActivity(true)}>
-                        <Plus className="h-3 w-3 mr-1" />
-                        Criar Primeira Atividade
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
+                    <Card className="border-dashed">
+                      <CardContent className="text-center py-8">
+                        <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium mb-2">Nenhuma atividade cadastrada</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Adicione atividades para acompanhar o progresso detalhado
+                        </p>
+                        <Button size="sm" onClick={() => setShowAddActivity(true)}>
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar Primeira Atividade
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
               </div>
             </TabsContent>
 
@@ -1104,7 +1119,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">Evidências do Plano</h4>
                 <Button size="sm" onClick={() => {
-                  setNewEvidence({...newEvidence, activity_id: ''});
+                  setNewEvidence({ ...newEvidence, activity_id: '' });
                   setShowAddEvidence(true);
                 }}>
                   <Plus className="h-3 w-3 mr-1" />
@@ -1121,22 +1136,22 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                         Anexe uma evidência para {newEvidence.activity_id ? 'a atividade específica' : 'o plano geral'}
                       </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <Label>Nome da Evidência *</Label>
-                        <Input 
-                          placeholder="Nome do arquivo ou evidência..." 
+                        <Input
+                          placeholder="Nome do arquivo ou evidência..."
                           value={newEvidence.nome}
-                          onChange={(e) => setNewEvidence({...newEvidence, nome: e.target.value})}
+                          onChange={(e) => setNewEvidence({ ...newEvidence, nome: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label>Tipo</Label>
-                        <Select 
-                          value={newEvidence.tipo} 
-                          onValueChange={(value) => setNewEvidence({...newEvidence, tipo: value as any})}
+                        <Select
+                          value={newEvidence.tipo}
+                          onValueChange={(value) => setNewEvidence({ ...newEvidence, tipo: value as any })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -1149,19 +1164,19 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       {newEvidence.tipo === 'link' && (
                         <div>
                           <Label>URL</Label>
-                          <Input 
+                          <Input
                             type="url"
-                            placeholder="https://..." 
+                            placeholder="https://..."
                             value={newEvidence.link_url}
-                            onChange={(e) => setNewEvidence({...newEvidence, link_url: e.target.value})}
+                            onChange={(e) => setNewEvidence({ ...newEvidence, link_url: e.target.value })}
                           />
                         </div>
                       )}
-                      
+
                       {newEvidence.tipo === 'documento' && (
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                           <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
@@ -1173,18 +1188,18 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                           </Button>
                         </div>
                       )}
-                      
+
                       <div>
                         <Label>Descrição</Label>
-                        <Textarea 
-                          placeholder="Descrição da evidência..." 
-                          rows={3} 
+                        <Textarea
+                          placeholder="Descrição da evidência..."
+                          rows={3}
                           value={newEvidence.descricao}
-                          onChange={(e) => setNewEvidence({...newEvidence, descricao: e.target.value})}
+                          onChange={(e) => setNewEvidence({ ...newEvidence, descricao: e.target.value })}
                         />
                       </div>
                     </div>
-                    
+
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setShowAddEvidence(false)}>
                         Cancelar
@@ -1197,7 +1212,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                   </DialogContent>
                 </Dialog>
               )}
-              
+
               {/* Evidências Gerais do Plano */}
               <div className="space-y-3">
                 <h5 className="text-sm font-medium text-muted-foreground">Evidências Gerais</h5>
@@ -1228,9 +1243,9 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                                 Abrir
                               </Button>
                             )}
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="h-7 px-2 text-red-600 hover:text-red-700"
                               onClick={() => {
                                 if (window.confirm('Deseja excluir esta evidência?')) {
@@ -1251,7 +1266,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                   </div>
                 )}
               </div>
-              
+
               {/* Evidências por Atividade */}
               {localActionPlan.atividades?.map((activity) => (
                 activity.evidencias && activity.evidencias.length > 0 && (
@@ -1285,9 +1300,9 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                                   Abrir
                                 </Button>
                               )}
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 className="h-7 px-2 text-red-600 hover:text-red-700"
                                 onClick={() => {
                                   if (window.confirm('Deseja excluir esta evidência?')) {
@@ -1322,9 +1337,9 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                     <div className="space-y-4">
                       <div>
                         <Label>Tipo de Comentário</Label>
-                        <Select 
-                          value={newComment.tipo} 
-                          onValueChange={(value) => setNewComment({...newComment, tipo: value as any})}
+                        <Select
+                          value={newComment.tipo}
+                          onValueChange={(value) => setNewComment({ ...newComment, tipo: value as any })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -1336,13 +1351,13 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       {newComment.tipo === 'atividade' && (
                         <div>
                           <Label>Atividade</Label>
-                          <Select 
-                            value={newComment.referencia_id} 
-                            onValueChange={(value) => setNewComment({...newComment, referencia_id: value})}
+                          <Select
+                            value={newComment.referencia_id}
+                            onValueChange={(value) => setNewComment({ ...newComment, referencia_id: value })}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione uma atividade" />
@@ -1357,25 +1372,25 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                           </Select>
                         </div>
                       )}
-                      
+
                       <div>
                         <Label>Comentário *</Label>
-                        <Textarea 
-                          placeholder="Escreva seu comentário..." 
-                          rows={3} 
+                        <Textarea
+                          placeholder="Escreva seu comentário..."
+                          rows={3}
                           value={newComment.texto}
-                          onChange={(e) => setNewComment({...newComment, texto: e.target.value})}
+                          onChange={(e) => setNewComment({ ...newComment, texto: e.target.value })}
                         />
                       </div>
-                      
+
                       <div className="flex gap-2">
                         <Button size="sm" onClick={handleCreateComment}>
                           <Save className="h-3 w-3 mr-1" />
                           Publicar Comentário
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => setShowAddComment(false)}
                         >
                           <X className="h-3 w-3 mr-1" />
@@ -1386,52 +1401,52 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                   </CardContent>
                 </Card>
               )}
-              
+
               <div className="space-y-3">
                 {localActionPlan.comentarios?.length ? (
                   localActionPlan.comentarios
                     .sort((a, b) => new Date(b.data_criacao).getTime() - new Date(a.data_criacao).getTime())
                     .map((comment) => (
-                    <Card key={comment.id} className="border-l-4 border-l-purple-400">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{comment.autor.nome}</span>
-                              <Badge variant="outline" className={`text-xs ${getCommentTypeColor(comment.tipo)}`}>
-                                {comment.tipo}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(comment.data_criacao)}
-                              </span>
-                            </div>
-                            
-                            {comment.referencia_id && comment.tipo === 'atividade' && (
-                              <div className="text-xs text-blue-600 mb-2">
-                                Sobre a atividade: {localActionPlan.atividades?.find(a => a.id === comment.referencia_id)?.titulo}
+                      <Card key={comment.id} className="border-l-4 border-l-purple-400">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{comment.autor.nome}</span>
+                                <Badge variant="outline" className={`text-xs ${getCommentTypeColor(comment.tipo)}`}>
+                                  {comment.tipo}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDate(comment.data_criacao)}
+                                </span>
                               </div>
-                            )}
-                            
-                            <p className="text-sm whitespace-pre-wrap">{comment.texto}</p>
+
+                              {comment.referencia_id && comment.tipo === 'atividade' && (
+                                <div className="text-xs text-blue-600 mb-2">
+                                  Sobre a atividade: {localActionPlan.atividades?.find(a => a.id === comment.referencia_id)?.titulo}
+                                </div>
+                              )}
+
+                              <p className="text-sm whitespace-pre-wrap">{comment.texto}</p>
+                            </div>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-red-600 hover:text-red-700"
+                              onClick={() => {
+                                if (window.confirm('Deseja excluir este comentário?')) {
+                                  handleDeleteComment(comment.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
-                          
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-7 px-2 text-red-600 hover:text-red-700"
-                            onClick={() => {
-                              if (window.confirm('Deseja excluir este comentário?')) {
-                                handleDeleteComment(comment.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    ))
                 ) : (
                   <div className="text-center py-8">
                     <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />

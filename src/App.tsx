@@ -42,7 +42,7 @@ const ActionPlanDetails = lazy(() => import("@/components/action-plans/ActionPla
 const ActionPlanForm = lazy(() => import("@/components/action-plans/ActionPlanForm").then(module => ({ default: module.ActionPlanForm })));
 const ActionPlansReports = lazy(() => import("@/components/action-plans/ActionPlansReports").then(module => ({ default: module.ActionPlansReports })));
 const ActionPlansSettings = lazy(() => import("@/components/action-plans/ActionPlansSettings").then(module => ({ default: module.ActionPlansSettings })));
-const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPageFixed"));
+const IncidentManagementPage = lazy(() => import("@/components/incidents/IncidentManagementPage"));
 // Módulo de Compliance
 const ComplianceDashboard = lazy(() => import("@/components/compliance/ComplianceDashboard"));
 const AuditoriasDashboard = lazy(() => import("@/components/auditorias/AuditoriasDashboard"));
@@ -198,7 +198,7 @@ const queryClient = new QueryClient({
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -206,13 +206,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
+
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
-  
+
   console.log('🔐 [PLATFORM ADMIN ROUTE] === VERIFICAÇÃO DE ACESSO ===');
   console.log('👤 [PLATFORM ADMIN ROUTE] Dados do usuário:', {
     user,
@@ -223,10 +223,10 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
     timestamp: new Date().toISOString(),
     currentUrl: window.location.pathname
   });
-  
+
   console.log('🗺️ [PLATFORM ADMIN ROUTE] URL atual:', window.location.pathname);
   console.log('🕰️ [PLATFORM ADMIN ROUTE] Timestamp:', new Date().toISOString());
-  
+
   if (isLoading) {
     console.log('⏳ [PLATFORM ADMIN ROUTE] Usuário ainda carregando...');
     return (
@@ -235,12 +235,12 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
+
   if (!user) {
     console.log('❌ [PLATFORM ADMIN ROUTE] Usuário não logado, redirecionando para /login');
     return <Navigate to="/login" replace />;
   }
-  
+
   if (!user.isPlatformAdmin) {
     console.log('❌ [PLATFORM ADMIN ROUTE] Usuário não é Platform Admin, redirecionando para /dashboard');
     console.log('📊 [PLATFORM ADMIN ROUTE] Detalhes da verificação:', {
@@ -252,16 +252,16 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
     });
     return <Navigate to="/dashboard" replace />;
   }
-  
+
   console.log('✅ [PLATFORM ADMIN ROUTE] Usuário é Platform Admin, permitindo acesso');
   console.log('🔐 [PLATFORM ADMIN ROUTE] === FIM VERIFICAÇÃO ===');
-  
+
   return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -269,7 +269,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
+
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
 
@@ -281,596 +281,596 @@ const App = () => (
           <ThemeProvider>
             <NotificationsRealtimeProvider>
               <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <LoginPage />
-                  </PublicRoute>
-                } />
-                <Route path="/privacy-portal" element={
-                  <Suspense fallback={<PageLoader />}>
-                    <DataSubjectPortal />
-                  </Suspense>
-                } />
-                <Route path="/vendor-assessment/:publicLinkId" element={
-                  <Suspense fallback={<PageLoader />}>
-                    <PublicVendorAssessmentPage />
-                  </Suspense>
-                } />
-                <Route path="/ethics-report" element={
-                  <Suspense fallback={<PageLoader />}>
-                    <PublicEthicsReportPage />
-                  </Suspense>
-                } />
-                
-
-                
-                {/* Protected Routes */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="assessments" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/manage" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentCRUD />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/simple" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsDashboardSimple />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentsDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworksManagementFixed />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/simple" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworksManagementSimple />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/pro" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworksManagement />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/frameworks/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <FrameworksAssessment />
-                    </Suspense>
-                  } />
-
-                  <Route path="assessments/execution" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentExecutionComplete />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/execution/:assessmentId" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentExecutionComplete />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/execution/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentExecution />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/list" element={<AssessmentsListWorking />} />
-                  <Route path="assessments/questions" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <QuestionsManagement />
-                    </Suspense>
-                  } />
-                  {/* Centralized Action Plans Module */}
-                  <Route path="action-plans" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansDashboardStep1 />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/management" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansManagementCentralized />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/details/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlanDetails />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlanForm />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/edit/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlanForm />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansReports />
-                    </Suspense>
-                  } />
-                  <Route path="action-plans/settings" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansSettings />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/action-plans" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansManagementProfessional />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssessmentReporting />
-                    </Suspense>
-                  } />
-                  <Route path="assessments/action-plans/debug" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActionPlansDebugSimple />
-                    </Suspense>
-                  } />
-                  
-                  <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
-                  <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
-                  <Route path="dashboard-test-no-queries" element={<DashboardPageNoQueries />} />
-                  <Route path="risks" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskManagementCenter />
-                    </Suspense>
-                  } />
-                  <Route path="risks-test" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskTestMinimal />
-                    </Suspense>
-                  } />
-                  <Route path="risks-hook-test" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskTestWithHook />
-                    </Suspense>
-                  } />
-                  <Route path="risks-hub" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskManagementHub />
-                    </Suspense>
-                  } />
-
-                  <Route path="risks/matrix" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskMatrixPage />
-                    </Suspense>
-                  } />
-                  <Route path="risk-letters" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RiskAcceptanceManagement />
-                    </Suspense>
-                  } />
-                  <Route path="compliance" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ComplianceDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="incidents" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <IncidentManagementPage />
-                    </Suspense>
-                  } />
-                  <Route path="auditorias" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuditoriasDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="auditorias/planejamento" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PlanejamentoAuditoria />
-                    </Suspense>
-                  } />
-                  <Route path="auditorias/projetos" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ProjetosAuditoria />
-                    </Suspense>
-                  } />
-                  <Route path="auditorias/papeis-trabalho" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PapeisTrabalho />
-                    </Suspense>
-                  } />
-                  <Route path="auditorias/relatorios" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RelatoriosAuditoria />
-                    </Suspense>
-                  } />
-                  <Route path="planejamento-estrategico" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PlanejamentoAuditoriaSimplificado />
-                    </Suspense>
-                  } />
-                  <Route path="planejamento/planos-acao" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PlanosAcaoPage />
-                    </Suspense>
-                  } />
-                  <Route path="planejamento/cronograma" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CronogramaAtividadesPage />
-                    </Suspense>
-                  } />
-                  <Route path="planejamento/timeline" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <TimelineVisualizacao />
-                    </Suspense>
-                  } />
-                  <Route path="planejamento/notificacoes" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <NotificacoesPlanejamento />
-                    </Suspense>
-                  } />
-                  {/* Todas as rotas do módulo Assessment foram removidas */}
-                  <Route path="policy-management" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PolicyManagementPage />
-                    </Suspense>
-                  } />
-                  <Route path="vendors" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VendorsPage />
-                    </Suspense>
-                  } />
-                  <Route path="reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ReportsPage />
-                    </Suspense>
-                  } />
-                  <Route path="ethics" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <EthicsManagementDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="ethics/legacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <EthicsChannelPage />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/management" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityManagement />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/import" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityImport />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/classification" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityClassification />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/reports" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityReports />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/edit/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/list" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityList />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/applications" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <Applications />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/applications/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ApplicationForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/applications/edit/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ApplicationForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/applications/fields-customization" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ApplicationFieldsCustomization />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/cmdb" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <CMDB />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/cmdb/create" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssetForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/cmdb/edit/:id" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssetForm />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/cmdb/fields-customization" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AssetFieldsCustomization />
-                    </Suspense>
-                  } />
-                  <Route path="vulnerabilities/fields-customization" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <VulnerabilityFieldsCustomization />
-                    </Suspense>
-                  } />
-                  <Route path="privacy" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PrivacyDashboard />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/discovery" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DataDiscoveryPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/inventory" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DataInventoryPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/dpia" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DPIAPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/incidents" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <PrivacyIncidentsPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/requests" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DataSubjectRequestsPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/legal-bases" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <LegalBasesPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/consents" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ConsentsPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/processing-activities" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ProcessingActivitiesPage />
-                    </Suspense>
-                  } />
-                  <Route path="privacy/rat-report" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <RATReport />
-                    </Suspense>
-                  } />
-                  <Route path="admin/tenants" element={
-                    <PlatformAdminRoute>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                  <Routes>
+                    {/* Public Routes */}
+                    <Route path="/login" element={
+                      <PublicRoute>
+                        <LoginPage />
+                      </PublicRoute>
+                    } />
+                    <Route path="/privacy-portal" element={
                       <Suspense fallback={<PageLoader />}>
-                        <TenantManagement />
+                        <DataSubjectPortal />
                       </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="admin/system-diagnostic" element={
-                    <PlatformAdminRoute>
+                    } />
+                    <Route path="/vendor-assessment/:publicLinkId" element={
                       <Suspense fallback={<PageLoader />}>
-                        <SystemDiagnosticPage />
+                        <PublicVendorAssessmentPage />
                       </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="admin/platform-migration" element={
-                    <PlatformAdminRoute>
+                    } />
+                    <Route path="/ethics-report" element={
                       <Suspense fallback={<PageLoader />}>
-                        <PlatformAdminMigration />
+                        <PublicEthicsReportPage />
                       </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  {/* AI Manager - New modular structure */}
-                  <Route path="ai-manager" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIManagementPageDirect />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/providers" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIProvidersPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/prompts" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIPromptsPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/workflows" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIWorkflowsPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/usage" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIUsagePage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/settings" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AISettingsPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="ai-manager/audit" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIAuditPage />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  
-                  {/* Legacy AI management routes for compatibility */}
-                  <Route path="ai-management" element={
-                    <PlatformAdminRoute>
-                      <Suspense fallback={<PageLoader />}>
-                        <AIManagerDashboard />
-                      </Suspense>
-                    </PlatformAdminRoute>
-                  } />
-                  <Route path="debug-user" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <DebugUserInfo />
-                    </Suspense>
-                  } />
-                  <Route path="user-debug" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <UserDebugInfo />
-                    </Suspense>
-                  } />
-                  <Route path="auth-debug" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AuthDebugComponent />
-                    </Suspense>
-                  } />
-                  <Route path="permissions-debug" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <UserPermissionsDebug />
-                    </Suspense>
-                  } />
-                  <Route path="ai-manager-test" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <AIManagerDirectTest />
-                    </Suspense>
-                  } />
-                  <Route path="profile" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <UserProfilePage />
-                    </Suspense>
-                  } />
-                  <Route path="settings" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <UserManagementPage />
-                    </Suspense>
-                  } />
-                  <Route path="settings/activity-logs" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <ActivityLogsPage />
-                    </Suspense>
-                  } />
-                  <Route path="settings/general" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <GeneralSettingsPage />
-                    </Suspense>
-                  } />
-                  <Route path="tenant-settings" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <TenantSettingsPage />
-                    </Suspense>
-                  } />
-                  
+                    } />
 
 
-                  <Route path="notifications" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <NotificationsPage />
-                    </Suspense>
-                  } />
-                  <Route path="help" element={
-                    <Suspense fallback={<PageLoader />}>
-                      <HelpPage />
-                    </Suspense>
-                  } />
-                  
-                  {/* Rotas de teste movidas para DENTRO da estrutura aninhada */}
-                  <Route path="test-route" element={
-                    <div style={{padding: '20px'}}>
-                      <h1>🧪 TESTE DE ROTA FUNCIONANDO!</h1>
-                      <p>Se você consegue ver essa mensagem, a aplicação está carregando corretamente.</p>
-                      <p>Timestamp: {new Date().toISOString()}</p>
-                      <div style={{marginTop: '20px', padding: '10px', backgroundColor: '#e8f5e8', border: '1px solid green'}}>
-                        <h3>✅ APLICAÇÃO FUNCIONANDO</h3>
-                        <p>React está renderizando corretamente!</p>
-                      </div>
-                    </div>
-                  } />
-                  <Route path="planejamento-teste" element={
-                    <div style={{padding: '20px', backgroundColor: '#f0f9ff', minHeight: '100vh'}}>
-                      <h1 style={{color: '#1e40af', marginBottom: '20px'}}>🎯 TESTE PLANEJAMENTO ESTRATÉGICO</h1>
-                      <div style={{backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>
-                        <h2>✅ Página de Planejamento Carregou!</h2>
-                        <p>Se você está vendo esta mensagem, o roteamento está funcionando corretamente.</p>
-                        <p><strong>URL atual:</strong> {window.location.pathname}</p>
-                        <p><strong>Timestamp:</strong> {new Date().toLocaleString()}</p>
-                        <div style={{marginTop: '20px', padding: '15px', backgroundColor: '#dcfce7', borderLeft: '4px solid #16a34a'}}>
-                          <h3>Status do Sistema:</h3>
-                          <ul>
-                            <li>✅ React renderizando</li>
-                            <li>✅ Router funcionando</li>
-                            <li>✅ Componente carregando</li>
-                            <li>✅ Servidor ativo na porta 8080</li>
-                          </ul>
+
+                    {/* Protected Routes */}
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <AppLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      <Route path="dashboard" element={<DashboardPage />} />
+                      <Route path="assessments" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentsDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/manage" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentCRUD />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/simple" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentsDashboardSimple />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/legacy" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentsDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/frameworks" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <FrameworksManagementFixed />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/frameworks/simple" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <FrameworksManagementSimple />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/frameworks/pro" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <FrameworksManagement />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/frameworks/legacy" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <FrameworksAssessment />
+                        </Suspense>
+                      } />
+
+                      <Route path="assessments/execution" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentExecutionComplete />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/execution/:assessmentId" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentExecutionComplete />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/execution/legacy" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentExecution />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/list" element={<AssessmentsListWorking />} />
+                      <Route path="assessments/questions" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <QuestionsManagement />
+                        </Suspense>
+                      } />
+                      {/* Centralized Action Plans Module */}
+                      <Route path="action-plans" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansDashboardStep1 />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/management" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansManagementCentralized />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/details/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlanDetails />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/create" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlanForm />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/edit/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlanForm />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/reports" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansReports />
+                        </Suspense>
+                      } />
+                      <Route path="action-plans/settings" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansSettings />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/action-plans" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansManagementProfessional />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/reports" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssessmentReporting />
+                        </Suspense>
+                      } />
+                      <Route path="assessments/action-plans/debug" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActionPlansDebugSimple />
+                        </Suspense>
+                      } />
+
+                      <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
+                      <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
+                      <Route path="dashboard-test-no-queries" element={<DashboardPageNoQueries />} />
+                      <Route path="risks" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskManagementCenter />
+                        </Suspense>
+                      } />
+                      <Route path="risks-test" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskTestMinimal />
+                        </Suspense>
+                      } />
+                      <Route path="risks-hook-test" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskTestWithHook />
+                        </Suspense>
+                      } />
+                      <Route path="risks-hub" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskManagementHub />
+                        </Suspense>
+                      } />
+
+                      <Route path="risks/matrix" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskMatrixPage />
+                        </Suspense>
+                      } />
+                      <Route path="risk-letters" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RiskAcceptanceManagement />
+                        </Suspense>
+                      } />
+                      <Route path="compliance" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ComplianceDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="incidents" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <IncidentManagementPage />
+                        </Suspense>
+                      } />
+                      <Route path="auditorias" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AuditoriasDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="auditorias/planejamento" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PlanejamentoAuditoria />
+                        </Suspense>
+                      } />
+                      <Route path="auditorias/projetos" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ProjetosAuditoria />
+                        </Suspense>
+                      } />
+                      <Route path="auditorias/papeis-trabalho" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PapeisTrabalho />
+                        </Suspense>
+                      } />
+                      <Route path="auditorias/relatorios" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RelatoriosAuditoria />
+                        </Suspense>
+                      } />
+                      <Route path="planejamento-estrategico" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PlanejamentoAuditoriaSimplificado />
+                        </Suspense>
+                      } />
+                      <Route path="planejamento/planos-acao" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PlanosAcaoPage />
+                        </Suspense>
+                      } />
+                      <Route path="planejamento/cronograma" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <CronogramaAtividadesPage />
+                        </Suspense>
+                      } />
+                      <Route path="planejamento/timeline" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <TimelineVisualizacao />
+                        </Suspense>
+                      } />
+                      <Route path="planejamento/notificacoes" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <NotificacoesPlanejamento />
+                        </Suspense>
+                      } />
+                      {/* Todas as rotas do módulo Assessment foram removidas */}
+                      <Route path="policy-management" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PolicyManagementPage />
+                        </Suspense>
+                      } />
+                      <Route path="vendors" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VendorsPage />
+                        </Suspense>
+                      } />
+                      <Route path="reports" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ReportsPage />
+                        </Suspense>
+                      } />
+                      <Route path="ethics" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <EthicsManagementDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="ethics/legacy" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <EthicsChannelPage />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/management" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityManagement />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/import" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityImport />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/classification" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityClassification />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/reports" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityReports />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/create" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/edit/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/list" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityList />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/applications" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <Applications />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/applications/create" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ApplicationForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/applications/edit/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ApplicationForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/applications/fields-customization" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ApplicationFieldsCustomization />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/cmdb" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <CMDB />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/cmdb/create" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssetForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/cmdb/edit/:id" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssetForm />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/cmdb/fields-customization" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AssetFieldsCustomization />
+                        </Suspense>
+                      } />
+                      <Route path="vulnerabilities/fields-customization" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <VulnerabilityFieldsCustomization />
+                        </Suspense>
+                      } />
+                      <Route path="privacy" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PrivacyDashboard />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/discovery" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <DataDiscoveryPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/inventory" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <DataInventoryPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/dpia" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <DPIAPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/incidents" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <PrivacyIncidentsPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/requests" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <DataSubjectRequestsPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/legal-bases" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <LegalBasesPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/consents" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ConsentsPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/processing-activities" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ProcessingActivitiesPage />
+                        </Suspense>
+                      } />
+                      <Route path="privacy/rat-report" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <RATReport />
+                        </Suspense>
+                      } />
+                      <Route path="admin/tenants" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <TenantManagement />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="admin/system-diagnostic" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <SystemDiagnosticPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="admin/platform-migration" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <PlatformAdminMigration />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      {/* AI Manager - New modular structure */}
+                      <Route path="ai-manager" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIManagementPageDirect />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/providers" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIProvidersPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/prompts" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIPromptsPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/workflows" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIWorkflowsPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/usage" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIUsagePage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/settings" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AISettingsPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="ai-manager/audit" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIAuditPage />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+
+                      {/* Legacy AI management routes for compatibility */}
+                      <Route path="ai-management" element={
+                        <PlatformAdminRoute>
+                          <Suspense fallback={<PageLoader />}>
+                            <AIManagerDashboard />
+                          </Suspense>
+                        </PlatformAdminRoute>
+                      } />
+                      <Route path="debug-user" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <DebugUserInfo />
+                        </Suspense>
+                      } />
+                      <Route path="user-debug" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <UserDebugInfo />
+                        </Suspense>
+                      } />
+                      <Route path="auth-debug" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AuthDebugComponent />
+                        </Suspense>
+                      } />
+                      <Route path="permissions-debug" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <UserPermissionsDebug />
+                        </Suspense>
+                      } />
+                      <Route path="ai-manager-test" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <AIManagerDirectTest />
+                        </Suspense>
+                      } />
+                      <Route path="profile" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <UserProfilePage />
+                        </Suspense>
+                      } />
+                      <Route path="settings" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <UserManagementPage />
+                        </Suspense>
+                      } />
+                      <Route path="settings/activity-logs" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <ActivityLogsPage />
+                        </Suspense>
+                      } />
+                      <Route path="settings/general" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <GeneralSettingsPage />
+                        </Suspense>
+                      } />
+                      <Route path="tenant-settings" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <TenantSettingsPage />
+                        </Suspense>
+                      } />
+
+
+
+                      <Route path="notifications" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <NotificationsPage />
+                        </Suspense>
+                      } />
+                      <Route path="help" element={
+                        <Suspense fallback={<PageLoader />}>
+                          <HelpPage />
+                        </Suspense>
+                      } />
+
+                      {/* Rotas de teste movidas para DENTRO da estrutura aninhada */}
+                      <Route path="test-route" element={
+                        <div style={{ padding: '20px' }}>
+                          <h1>🧪 TESTE DE ROTA FUNCIONANDO!</h1>
+                          <p>Se você consegue ver essa mensagem, a aplicação está carregando corretamente.</p>
+                          <p>Timestamp: {new Date().toISOString()}</p>
+                          <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#e8f5e8', border: '1px solid green' }}>
+                            <h3>✅ APLICAÇÃO FUNCIONANDO</h3>
+                            <p>React está renderizando corretamente!</p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  } />
-                </Route>
+                      } />
+                      <Route path="planejamento-teste" element={
+                        <div style={{ padding: '20px', backgroundColor: '#f0f9ff', minHeight: '100vh' }}>
+                          <h1 style={{ color: '#1e40af', marginBottom: '20px' }}>🎯 TESTE PLANEJAMENTO ESTRATÉGICO</h1>
+                          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                            <h2>✅ Página de Planejamento Carregou!</h2>
+                            <p>Se você está vendo esta mensagem, o roteamento está funcionando corretamente.</p>
+                            <p><strong>URL atual:</strong> {window.location.pathname}</p>
+                            <p><strong>Timestamp:</strong> {new Date().toLocaleString()}</p>
+                            <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#dcfce7', borderLeft: '4px solid #16a34a' }}>
+                              <h3>Status do Sistema:</h3>
+                              <ul>
+                                <li>✅ React renderizando</li>
+                                <li>✅ Router funcionando</li>
+                                <li>✅ Componente carregando</li>
+                                <li>✅ Servidor ativo na porta 8080</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      } />
+                    </Route>
 
-                
-                
-                
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
+
+
+
+                    {/* Catch-all */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
               </TooltipProvider>
             </NotificationsRealtimeProvider>
           </ThemeProvider>

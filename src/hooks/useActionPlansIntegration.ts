@@ -21,8 +21,8 @@ export const useActionPlansIntegration = ({
   const [error, setError] = useState<string | null>(null);
 
   // Determine effective tenant ID - use override for super users or current user's tenant
-  const effectiveTenantId = overrideTenantId || user?.tenant_id;
-  const isSuperUser = user?.role === 'platform_admin' || user?.permissions?.includes('manage_all_tenants');
+  const effectiveTenantId = overrideTenantId || user?.tenantId;
+  const isSuperUser = user?.isPlatformAdmin || user?.permissions?.includes('manage_all_tenants');
 
   useEffect(() => {
     if (effectiveTenantId) {
@@ -36,30 +36,61 @@ export const useActionPlansIntegration = ({
       setError(null);
 
       let query = supabase
-        .from('action_plans')
-        .select(`
-          *,
-          responsavel:profiles!responsavel_id(id, nome, email, avatar_url),
-          equipe:profiles(id, nome, email, avatar_url),
-          atividades:action_plan_activities(*),
-          evidencias:action_plan_evidences(*),
-          comentarios:action_plan_comments(*)
-        `)
+        .from('vw_action_plans_unified')
+        .select('*')
         .eq('tenant_id', effectiveTenantId);
 
       if (moduleType) {
-        query = query.eq('modulo_origem', moduleType);
+        query = query.eq('module', moduleType);
       }
 
       if (originId) {
-        query = query.eq('origem_id', originId);
+        query = query.eq('origin_id', originId);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setActionPlans(data || []);
+      // Map view data to ActionPlan interface expected by components
+      // Note: The view returns normalized English, mapping back to PT for frontend compatibility
+      const mappedPlans = (data || []).map((plan: any) => {
+        const daysToDeadline = plan.due_date ? Math.ceil((new Date(plan.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+        let status = 'planejado';
+        if (plan.status === 'in_progress') status = 'em_execucao';
+        else if (plan.status === 'completed') status = 'concluido';
+        else if (plan.status === 'cancelled') status = 'cancelado';
+        else if (plan.status === 'pending') status = 'planejado';
+
+        let prioridade = 'media';
+        if (plan.priority === 'high') prioridade = 'alta';
+        else if (plan.priority === 'critical') prioridade = 'critica';
+        else if (plan.priority === 'low') prioridade = 'baixa';
+
+        return {
+          ...plan,
+          modulo_origem: plan.module,
+          nome_origem: plan.origin_name,
+          dias_para_vencimento: daysToDeadline,
+          data_fim_planejada: plan.due_date,
+          titulo: plan.title,
+          descricao: plan.description,
+          status,
+          prioridade,
+          responsavel: {
+            nome: plan.responsible_name || 'N/A',
+            email: plan.responsible_email || '',
+            avatar_url: plan.responsible_avatar
+          },
+          // Populate arrays with empty defaults via cast since they aren't in view
+          atividades: [],
+          evidencias: [],
+          comentarios: []
+        };
+      });
+
+      setActionPlans(mappedPlans);
     } catch (err) {
       console.error('Erro ao carregar planos de ação:', err);
       setError('Erro ao carregar planos de ação');
@@ -94,7 +125,7 @@ export const useActionPlansIntegration = ({
 
       setActionPlans(prev => [data, ...prev]);
       toast.success('Plano de ação criado com sucesso');
-      
+
       return data;
     } catch (err) {
       console.error('Erro ao criar plano de ação:', err);
@@ -124,10 +155,10 @@ export const useActionPlansIntegration = ({
 
       if (error) throw error;
 
-      setActionPlans(prev => 
+      setActionPlans(prev =>
         prev.map(plan => plan.id === planId ? { ...plan, ...data } : plan)
       );
-      
+
       toast.success('Plano de ação atualizado com sucesso');
       return data;
     } catch (err) {
@@ -168,7 +199,7 @@ export const useActionPlansIntegration = ({
         action_plan_id: planId,
         conteudo: content,
         autor_id: user?.id,
-        autor_nome: user?.nome || user?.email || 'Usuário',
+        autor_nome: user?.name || user?.email || 'Usuário',
         tipo: type,
         created_at: new Date().toISOString()
       };
@@ -182,13 +213,13 @@ export const useActionPlansIntegration = ({
       if (error) throw error;
 
       // Update local state
-      setActionPlans(prev => 
-        prev.map(plan => 
-          plan.id === planId 
-            ? { 
-                ...plan, 
-                comentarios: [...(plan.comentarios || []), data] 
-              }
+      setActionPlans(prev =>
+        prev.map(plan =>
+          plan.id === planId
+            ? {
+              ...plan,
+              comentarios: [...(plan.comentarios || []), data]
+            }
             : plan
         )
       );
@@ -221,13 +252,13 @@ export const useActionPlansIntegration = ({
       if (error) throw error;
 
       // Update local state
-      setActionPlans(prev => 
-        prev.map(plan => 
-          plan.id === planId 
-            ? { 
-                ...plan, 
-                atividades: [...(plan.atividades || []), data] 
-              }
+      setActionPlans(prev =>
+        prev.map(plan =>
+          plan.id === planId
+            ? {
+              ...plan,
+              atividades: [...(plan.atividades || []), data]
+            }
             : plan
         )
       );
@@ -259,13 +290,13 @@ export const useActionPlansIntegration = ({
       if (error) throw error;
 
       // Update local state
-      setActionPlans(prev => 
-        prev.map(plan => 
-          plan.id === planId 
-            ? { 
-                ...plan, 
-                evidencias: [...(plan.evidencias || []), data] 
-              }
+      setActionPlans(prev =>
+        prev.map(plan =>
+          plan.id === planId
+            ? {
+              ...plan,
+              evidencias: [...(plan.evidencias || []), data]
+            }
             : plan
         )
       );
@@ -309,9 +340,9 @@ export const useActionPlansIntegration = ({
     const overdue = getOverduePlans().length;
     const nearDeadline = getPlansNearDeadline().length;
     const critical = actionPlans.filter(p => p.prioridade === 'critica').length;
-    
-    const avgProgress = total > 0 
-      ? actionPlans.reduce((sum, plan) => sum + plan.percentual_conclusao, 0) / total 
+
+    const avgProgress = total > 0
+      ? actionPlans.reduce((sum, plan) => sum + plan.percentual_conclusao, 0) / total
       : 0;
 
     return {
