@@ -23,8 +23,19 @@ async function executeSQL(sql) {
 }
 
 async function run() {
-    await executeSQL(`ALTER TABLE assessment_frameworks ADD COLUMN IF NOT EXISTS is_standard BOOLEAN DEFAULT false;`);
-    await executeSQL(`CREATE INDEX IF NOT EXISTS idx_assessment_frameworks_is_standard ON assessment_frameworks(is_standard);`);
+    const sql = `
+    DO $$
+    BEGIN
+        ALTER TABLE assessment_frameworks DROP CONSTRAINT IF EXISTS assessment_frameworks_tipo_framework_check;
+        ALTER TABLE assessment_frameworks ADD CONSTRAINT assessment_frameworks_tipo_framework_check 
+        CHECK (tipo_framework IN (
+            'compliance', 'security', 'privacy', 'operational', 'financial', 
+            'governance', 'risk_management', 'quality', 'environmental', 'custom',
+            'ISO27001', 'NIST', 'LGPD', 'GDPR', 'PCI_DSS', 'SOX', 'COBIT', 'ITIL', 'CUSTOM'
+        ));
+    END $$;
+    `;
+    await executeSQL(sql);
     console.log('Done.');
 }
 
