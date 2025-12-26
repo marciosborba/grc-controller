@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Search, Edit, Trash2, Eye, Download, Upload, Settings, Target, FileText, BarChart3, Users, Calendar, BookOpen, Copy, ChevronRight, LayoutList } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Download, Upload, Settings, Target, FileText, BarChart3, Users, Calendar, BookOpen, Copy, ChevronRight, LayoutList, ListChecks } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,12 +52,18 @@ export default function FrameworkCenter() {
     try {
       const { data, error } = await supabase
         .from('assessment_frameworks')
-        .select('*')
+        .select('*, assessment_controls(count)')
         .eq('tenant_id', effectiveTenantId)
         .eq('is_standard', false) // Only custom here
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setFrameworks(data || []);
+
+      const frameworksWithCount = data?.map((fw: any) => ({
+        ...fw,
+        controls_count: fw.assessment_controls?.[0]?.count || 0
+      })) || [];
+
+      setFrameworks(frameworksWithCount);
     } catch (err: any) {
       console.error(err);
       toast.error('Erro ao carregar frameworks: ' + (err.message || err.details || JSON.stringify(err)));
@@ -69,11 +75,17 @@ export default function FrameworkCenter() {
     try {
       const { data, error } = await supabase
         .from('assessment_frameworks')
-        .select('*')
+        .select('*, assessment_controls(count)')
         .eq('is_standard', true)
         .order('nome');
       if (error) throw error;
-      setLibraryFrameworks(data || []);
+
+      const libraryWithCount = data?.map((fw: any) => ({
+        ...fw,
+        controls_count: fw.assessment_controls?.[0]?.count || 0
+      })) || [];
+
+      setLibraryFrameworks(libraryWithCount);
     } catch (err) { console.error(err); }
   }, []);
 
@@ -187,48 +199,12 @@ export default function FrameworkCenter() {
     if (!confirm(`Clonar ${fw.nome}?`)) return;
     const toastId = toast.loading('Clonando framework...');
     try {
-      // 1. Clone Framework
-      const { data: newFw, error: fwErr } = await supabase.from('assessment_frameworks').insert({
-        ...fw,
-        id: undefined,
-        created_at: undefined,
-        tenant_id: effectiveTenantId,
-        nome: `${fw.nome} (Cópia)`,
-        codigo: `${fw.codigo}_COPY_${new Date().getTime().toString().slice(-4)}`, // Ensure unique code
-        is_standard: false
-      }).select().single();
-      if (fwErr) throw fwErr;
+      const { data, error } = await supabase.rpc('clone_framework', {
+        source_framework_id: fw.id,
+        target_tenant_id: effectiveTenantId
+      });
 
-      // 2. Clone Structure (Domains -> Controls -> Questions)
-      const { data: domains } = await supabase.from('assessment_domains').select('*').eq('framework_id', fw.id);
-      if (domains) {
-        for (const d of domains) {
-          const { data: newDom } = await supabase.from('assessment_domains').insert({ ...d, id: undefined, framework_id: newFw.id, tenant_id: effectiveTenantId }).select().single();
-
-          if (newDom) {
-            const { data: controls } = await supabase.from('assessment_controls').select('*').eq('domain_id', d.id);
-            if (controls) {
-              for (const c of controls) {
-                const { data: newCtrl } = await supabase.from('assessment_controls').insert({
-                  ...c,
-                  id: undefined,
-                  domain_id: newDom.id,
-                  framework_id: newFw.id, // Explicitly link to new framework
-                  tenant_id: effectiveTenantId
-                }).select().single();
-
-                if (newCtrl) {
-                  const { data: questions } = await supabase.from('assessment_questions').select('*').eq('control_id', c.id);
-                  if (questions) {
-                    const newQs = questions.map(q => ({ ...q, id: undefined, control_id: newCtrl.id, tenant_id: effectiveTenantId }));
-                    await supabase.from('assessment_questions').insert(newQs);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+      if (error) throw error;
 
       toast.dismiss(toastId);
       toast.success('Framework clonado com sucesso!');
@@ -236,7 +212,12 @@ export default function FrameworkCenter() {
     } catch (e: any) {
       toast.dismiss(toastId);
       console.error(e);
-      toast.error('Erro ao clonar: ' + e.message);
+      if (e.message && e.message.includes('Framework not found')) {
+        toast.warning('A lista de frameworks estava desatualizada. Atualizando... Tente clonar novamente.');
+        loadLibrary();
+      } else {
+        toast.error('Erro ao clonar: ' + e.message);
+      }
     }
   };
 
@@ -349,6 +330,7 @@ export default function FrameworkCenter() {
                       <SelectItem value="LGPD">LGPD</SelectItem>
                       <SelectItem value="GDPR">GDPR</SelectItem>
                       <SelectItem value="PCI_DSS">PCI DSS</SelectItem>
+                      <SelectItem value="CIS">CIS Controls</SelectItem>
                       <SelectItem value="SOX">SOX</SelectItem>
                     </SelectContent>
                   </Select>
@@ -397,6 +379,7 @@ export default function FrameworkCenter() {
                 <CardContent className="pb-4 space-y-4">
                   <div className="flex items-center text-sm text-muted-foreground gap-4">
                     <div className="flex items-center gap-1"><Target className="h-3 w-3" /> <span>v{fw.versao}</span></div>
+                    <div className="flex items-center gap-1"><ListChecks className="h-3 w-3" /> <span>{fw.controls_count || 0} controles</span></div>
                     <div className="flex items-center gap-1"><Calendar className="h-3 w-3" /> <span>{new Date(fw.created_at || '').toLocaleDateString()}</span></div>
                   </div>
                   <Button className="w-full" onClick={() => handleOpenEditor(fw)}>
@@ -416,10 +399,20 @@ export default function FrameworkCenter() {
                 <CardHeader>
                   <div className="flex justify-between">
                     <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-300">Mercado</Badge>
-                    <Badge variant="outline">{fw.tipo_framework}</Badge>
+                    <div className="flex items-center gap-2">
+                      {user?.isPlatformAdmin && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6" title="Editar Template (Super Admin)" onClick={() => handleOpenEditor(fw)}>
+                          <Edit className="h-3 w-3 text-orange-500" />
+                        </Button>
+                      )}
+                      <Badge variant="outline">{fw.tipo_framework}</Badge>
+                    </div>
                   </div>
                   <CardTitle className="mt-2 text-lg">{fw.nome}</CardTitle>
                   <CardDescription className="line-clamp-2">{fw.descricao}</CardDescription>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                    <ListChecks className="h-3 w-3" /> <span>{fw.controls_count || 0} controles disponíveis</span>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Button className="w-full" variant="secondary" onClick={() => handleClone(fw)}>

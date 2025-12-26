@@ -2,7 +2,7 @@
 // TIPOS TYPESCRIPT - MÓDULO DE ASSESSMENT
 // =====================================================
 
-export type FrameworkType = 'ISO27001' | 'SOX' | 'NIST' | 'COBIT' | 'LGPD' | 'GDPR' | 'PCI_DSS' | 'HIPAA' | 'CUSTOM';
+export type FrameworkType = 'ISO27001' | 'SOX' | 'NIST' | 'COBIT' | 'LGPD' | 'GDPR' | 'PCI_DSS' | 'HIPAA' | 'CIS' | 'CUSTOM';
 
 export type AssessmentStatus = 'planejado' | 'iniciado' | 'em_andamento' | 'em_revisao' | 'concluido' | 'cancelado';
 
@@ -45,6 +45,7 @@ export interface AssessmentFramework {
   padrao_origem?: string;
   peso_total?: number;
   publico?: boolean;
+  controls_count?: number; // Added for UI display
 
   // Relacionamentos
   domains?: AssessmentDomain[];
