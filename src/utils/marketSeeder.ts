@@ -123,7 +123,35 @@ export const seedISO27001 = async (tenantId: string) => {
             categoria: 'Segurança da Informação'
         }, [
             {
-                nome: 'A.5 Controles Organizacionais', codigo: 'A.5', ordem: 1, peso: 25,
+                nome: '4. Contexto da Organização', codigo: 'CLAUSE-4', ordem: 1, peso: 10,
+                controls: [
+                    {
+                        codigo: '4.1', titulo: 'Entendendo a organização e seu contexto', tipo: 'preventivo', obj: 'Determinar questões externas e internas relevantes.',
+                        questions: [
+                            { pergunta: 'A organização determinou as questões externas e internas que são relevantes para o seu propósito e que afetam sua capacidade de alcançar os resultados pretendidos do SGSI?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    },
+                    {
+                        codigo: '4.2', titulo: 'Entendendo as necessidades e expectativas de partes interessadas', tipo: 'preventivo', obj: 'Identificar partes interessadas e seus requisitos.',
+                        questions: [
+                            { pergunta: 'Foram determinadas as partes interessadas relevantes para o SGSI e seus requisitos?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                nome: '5. Liderança', codigo: 'CLAUSE-5', ordem: 2, peso: 10,
+                controls: [
+                    {
+                        codigo: '5.1', titulo: 'Liderança e comprometimento', tipo: 'diretivo', obj: 'A Alta Direção deve demonstrar liderança e comprometimento com o SGSI.',
+                        questions: [
+                            { pergunta: 'A Alta Direção assegura que a política de segurança e os objetivos sejam estabelecidos e compatíveis com a direção estratégica?', tipo: 'escala_1_5', evidencia: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                nome: 'A.5 Controles Organizacionais', codigo: 'A.5', ordem: 5, peso: 20,
                 controls: [
                     {
                         codigo: 'A.5.1', titulo: 'Políticas de Segurança da Informação', tipo: 'preventivo', obj: 'Assegurar adequação e apoio da direção.',
@@ -148,7 +176,7 @@ export const seedISO27001 = async (tenantId: string) => {
                 ]
             },
             {
-                nome: 'A.6 Controles de Pessoas', codigo: 'A.6', ordem: 2, peso: 25,
+                nome: 'A.6 Controles de Pessoas', codigo: 'A.6', ordem: 6, peso: 15,
                 controls: [
                     {
                         codigo: 'A.6.1', titulo: 'Seleção (Screening)', tipo: 'preventivo', obj: 'Garantir que colaboradores sejam adequados às funções.',
@@ -166,7 +194,7 @@ export const seedISO27001 = async (tenantId: string) => {
                 ]
             },
             {
-                nome: 'A.7 Controles Físicos', codigo: 'A.7', ordem: 3, peso: 25,
+                nome: 'A.7 Controles Físicos', codigo: 'A.7', ordem: 7, peso: 15,
                 controls: [
                     {
                         codigo: 'A.7.1', titulo: 'Perímetros de Segurança Física', tipo: 'preventivo', obj: 'Impedir acesso físico não autorizado.',
@@ -183,7 +211,7 @@ export const seedISO27001 = async (tenantId: string) => {
                 ]
             },
             {
-                nome: 'A.8 Controles Tecnológicos', codigo: 'A.8', ordem: 4, peso: 25,
+                nome: 'A.8 Controles Tecnológicos', codigo: 'A.8', ordem: 8, peso: 30,
                 controls: [
                     {
                         codigo: 'A.8.1', titulo: 'Dispositivos do Usuário Final (Endpoint)', tipo: 'preventivo', obj: 'Proteger informações em dispositivos.',
@@ -203,6 +231,12 @@ export const seedISO27001 = async (tenantId: string) => {
                         codigo: 'A.8.12', titulo: 'Prevenção de Vazamento de Dados (DLP)', tipo: 'preventivo', obj: 'Prevenir divulgação não autorizada.',
                         questions: [
                             { pergunta: 'Existem controles técnicos (DLP) para impedir exfiltração de dados sensíveis?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    },
+                    {
+                        codigo: 'A.8.25', titulo: 'Ciclo de Vida de Desenvolvimento Seguro', tipo: 'preventivo', obj: 'Garantir a segurança no desenvolvimento de software.',
+                        questions: [
+                            { pergunta: 'Regras de desenvolvimento seguro são estabelecidas e aplicadas no desenvolvimento de software de serviços?', tipo: 'sim_nao', evidencia: true }
                         ]
                     }
                 ]
@@ -229,61 +263,85 @@ export const seedLGPD = async (tenantId: string) => {
             categoria: 'Privacidade de Dados'
         }, [
             {
-                nome: 'Princípios e Bases Legais', codigo: 'PRIN', ordem: 1, peso: 20,
+                nome: 'Cap. I e II - Princípios e Bases Legais', codigo: 'PRIN', ordem: 1, peso: 20,
                 controls: [
                     {
                         codigo: 'ART.6', titulo: 'Princípios de Tratamento', tipo: 'preventivo', obj: 'Garantir finalidade, adequação e necessidade.',
                         questions: [
                             { pergunta: 'Para cada atividade de tratamento, a finalidade específica foi documentada?', tipo: 'sim_nao', evidencia: true },
-                            { pergunta: 'Os dados coletados são os mínimos necessários para a finalidade (Minimização)?', tipo: 'sim_nao', evidencia: true }
+                            { pergunta: 'Os dados coletados são os mínimos necessários para a finalidade (Minimização)?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'O tratamento de dados é transparente para os titulares?', tipo: 'escala_1_5', evidencia: true }
                         ]
                     },
                     {
                         codigo: 'ART.7', titulo: 'Bases Legais', tipo: 'preventivo', obj: 'Assegurar legalidade do tratamento.',
                         questions: [
-                            { pergunta: 'Todas as atividades de tratamento possuem uma base legal atribuída (Consentimento, Legítimo Interesse, etc.)?', tipo: 'escala_1_5', evidencia: true }
+                            { pergunta: 'Todas as atividades de tratamento possuem uma base legal atribuída (Consentimento, Legítimo Interesse, Execução de Contrato, etc.)?', tipo: 'escala_1_5', evidencia: true },
+                            { pergunta: 'Quando baseado em legítimo interesse, foi realizado o LIA (Legitimate Interest Assessment)?', tipo: 'sim_nao', evidencia: true }
                         ]
                     }
                 ]
             },
             {
-                nome: 'Direitos dos Titulares', codigo: 'DIR', ordem: 2, peso: 20,
+                nome: 'Cap. III - Direitos dos Titulares', codigo: 'DIR', ordem: 2, peso: 20,
                 controls: [
                     {
                         codigo: 'ART.18', titulo: 'Gestão de Requisições', tipo: 'corretivo', obj: 'Atender aos direitos dos titulares.',
                         questions: [
                             { pergunta: 'Existe um canal oficial e acessível para recebimento de solicitações dos titulares?', tipo: 'sim_nao', evidencia: true },
-                            { pergunta: 'Existe um processo definido para responder em até 15 dias (se completo)?', tipo: 'sim_nao', evidencia: true }
+                            { pergunta: 'Existe um processo definido para responder em até 15 dias (se completo) ou imediatamente (se simplificado)?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'A organização consegue realizar a portabilidade dos dados quando solicitado?', tipo: 'sim_nao', evidencia: false }
                         ]
                     }
                 ]
             },
             {
-                nome: 'Governança e DPO', codigo: 'GOV', ordem: 3, peso: 20,
+                nome: 'Cap. VI - Governança e DPO', codigo: 'GOV', ordem: 3, peso: 20,
                 controls: [
                     {
                         codigo: 'ART.41', titulo: 'Encarregado (DPO)', tipo: 'preventivo', obj: 'Nomear pessoa para comunicação.',
                         questions: [
                             { pergunta: 'O Encarregado pelo Tratamento de Dados Pessoais (DPO) foi nomeado formalmente?', tipo: 'sim_nao', evidencia: true },
-                            { pergunta: 'A identidade e contatos do DPO estão divulgados publicamente no site?', tipo: 'sim_nao', evidencia: true }
+                            { pergunta: 'A identidade e contatos do DPO estão divulgados publicamente no site?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'O DPO possui autonomia e recursos para desempenhar suas funções?', tipo: 'sim_nao', evidencia: false }
+                        ]
+                    },
+                    {
+                        codigo: 'ART.50', titulo: 'Boas Práticas e Governança', tipo: 'preventivo', obj: 'Estabelecer programa de governança em privacidade.',
+                        questions: [
+                            { pergunta: 'A organização possui um inventário de dados pessoais (ROPA) atualizado?', tipo: 'escala_1_5', evidencia: true },
+                            { pergunta: 'É realizada a Análise de Impacto (DPIA/RIPD) para tratamentos de alto risco?', tipo: 'sim_nao', evidencia: true }
                         ]
                     }
                 ]
             },
             {
-                nome: 'Segurança e Incidentes', codigo: 'SEC', ordem: 4, peso: 20,
+                nome: 'Cap. VII - Segurança e Incidentes', codigo: 'SEC', ordem: 4, peso: 20,
                 controls: [
                     {
                         codigo: 'ART.46', titulo: 'Medidas de Segurança', tipo: 'preventivo', obj: 'Proteger dados pessoais contra acessos ilícitos.',
                         questions: [
-                            { pergunta: 'Medidas técnicas (criptografia, firewalls) estão implementadas para proteger dados pessoais?', tipo: 'escala_1_5', evidencia: true },
+                            { pergunta: 'Medidas técnicas (criptografia, firewalls, controles de acesso) estão implementadas para proteger dados pessoais?', tipo: 'escala_1_5', evidencia: true },
                             { pergunta: 'O controle de acesso aos dados pessoais é restrito por necessidade (Need-to-know)?', tipo: 'sim_nao', evidencia: true }
                         ]
                     },
                     {
                         codigo: 'ART.48', titulo: 'Notificação de Incidentes', tipo: 'corretivo', obj: 'Comunicar violações à ANPD e titulares.',
                         questions: [
-                            { pergunta: 'Existe um plano de resposta a incidentes que inclui notificação à ANPD em prazo razoável?', tipo: 'sim_nao', evidencia: true }
+                            { pergunta: 'Existe um plano de resposta a incidentes que inclui notificação à ANPD em prazo razoável?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'Os incidentes de segurança são registrados e analisados quanto ao risco aos titulares?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                nome: 'Transferência Internacional', codigo: 'TRANS', ordem: 5, peso: 10,
+                controls: [
+                    {
+                        codigo: 'ART.33', titulo: 'Transferência de Dados', tipo: 'preventivo', obj: 'Regular a transferência de dados para outros países.',
+                        questions: [
+                            { pergunta: 'A organização identifica e mapeia todas as transferências internacionais de dados?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'São utilizadas Cláusulas Padrão Contratuais (SCCs) ou outro mecanismo legal para transferências?', tipo: 'sim_nao', evidencia: true }
                         ]
                     }
                 ]
@@ -319,6 +377,10 @@ export const seedNIST = async (tenantId: string) => {
                     {
                         codigo: 'GV.RM', titulo: 'Gestão de Riscos', tipo: 'preventivo', obj: 'Estabelecer estratégia de gestão de riscos.',
                         questions: [{ pergunta: 'Existe uma estratégia de gestão de riscos de cadeia de suprimentos estabelecida?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'GV.PO', titulo: 'Políticas', tipo: 'diretivo', obj: 'Estabelecer e comunicar políticas de cibersegurança.',
+                        questions: [{ pergunta: 'As políticas de cibersegurança organizacionais são estabelecidas, comunicadas e aplicadas?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             },
@@ -351,6 +413,10 @@ export const seedNIST = async (tenantId: string) => {
                     {
                         codigo: 'PR.DS', titulo: 'Segurança de Dados', tipo: 'preventivo', obj: 'Proteger confidencialidade, integridade e disponibilidade.',
                         questions: [{ pergunta: 'Dados em repouso são protegidos (ex: criptografia)?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'PR.IR', titulo: 'Resiliência de Infraestrutura', tipo: 'preventivo', obj: 'Gerenciar a resiliência dos sistemas.',
+                        questions: [{ pergunta: 'Backups de dados são protegidos e testados regularmente?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             },
@@ -360,6 +426,10 @@ export const seedNIST = async (tenantId: string) => {
                     {
                         codigo: 'DE.AE', titulo: 'Anomalias e Eventos', tipo: 'detectivo', obj: 'Detectar atividades anômalas.',
                         questions: [{ pergunta: 'Logs de eventos são coletados e analisados centralmente (SIEM)?', tipo: 'escala_1_5', evidencia: true }]
+                    },
+                    {
+                        codigo: 'DE.CM', titulo: 'Monitoramento Contínuo', tipo: 'detectivo', obj: 'Monitorar a rede para detectar eventos potenciais.',
+                        questions: [{ pergunta: 'A rede é monitorada para detectar pessoal, conexões, dispositivos e softwares não autorizados?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             },
@@ -368,16 +438,20 @@ export const seedNIST = async (tenantId: string) => {
                 controls: [
                     {
                         codigo: 'RS.MA', titulo: 'Gestão de Incidentes', tipo: 'corretivo', obj: 'Agir sobre incidentes detectados.',
-                        questions: [{ pergunta: 'Existe um plano de resposta a incidentes testado anualmente?', tipo: 'sim_nao', evidencia: true }]
+                        questions: [{ pergunta: 'Existe um plano de resposta a incidentes documentado e testado anualmente?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'RS.AN', titulo: 'Análise', tipo: 'corretivo', obj: 'Analisar incidentes para entender impacto.',
+                        questions: [{ pergunta: 'Incidentes são analisados para entender alvos e métodos de ataque?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             },
             {
-                nome: 'Recuperação (Recover)', codigo: 'RC', ordem: 6, peso: 20,
+                nome: 'Recuperação (Recover)', codigo: 'RC', ordem: 6, peso: 10,
                 controls: [
                     {
                         codigo: 'RC.RP', titulo: 'Planejamento de Recuperação', tipo: 'corretivo', obj: 'Restaurar capacidades.',
-                        questions: [{ pergunta: 'Os processos de backup e recuperação são testados regularmente?', tipo: 'escala_1_5', evidencia: true }]
+                        questions: [{ pergunta: 'Os planos de recuperação de desastres (DRP) e continuidade de negócios (BCP) são gerenciados?', tipo: 'escala_1_5', evidencia: true }]
                     }
                 ]
             }
@@ -408,6 +482,10 @@ export const seedCOBIT = async (tenantId: string) => {
                     {
                         codigo: 'EDM01', titulo: 'Assegurar a definição e manutenção do framework de governança', tipo: 'preventivo', obj: 'Garantir que a governança de TI esteja alinhada aos objetivos.',
                         questions: [{ pergunta: 'Os princípios de governança de TI foram definidos e comunicados?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'EDM03', titulo: 'Assegurar a Otimização de Risco', tipo: 'diretivo', obj: 'Garantir que o apetite e tolerância a risco sejam entendidos.',
+                        questions: [{ pergunta: 'O apetite ao risco da organização foi definido e comunicado?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             },
@@ -421,6 +499,10 @@ export const seedCOBIT = async (tenantId: string) => {
                     {
                         codigo: 'APO12', titulo: 'Gerenciar Riscos', tipo: 'preventivo', obj: 'Identificar e mitigar riscos de TI.',
                         questions: [{ pergunta: 'Existe um processo formal para identificação e avaliação de riscos de TI?', tipo: 'escala_1_5', evidencia: true }]
+                    },
+                    {
+                        codigo: 'APO13', titulo: 'Gerenciar Segurança', tipo: 'preventivo', obj: 'Definir, operar e monitorar sistema de gestão de segurança.',
+                        questions: [{ pergunta: 'Existe um Sistema de Gestão de Segurança da Informação (SGSI) estabelecido?', tipo: 'escala_1_5', evidencia: true }]
                     }
                 ]
             },
@@ -445,6 +527,15 @@ export const seedCOBIT = async (tenantId: string) => {
                         questions: [{ pergunta: 'O controle de acesso lógico é revisado periodicamente?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
+            },
+            {
+                nome: 'Monitorar, Avaliar e Analisar (MEA)', codigo: 'MEA', ordem: 5, peso: 20,
+                controls: [
+                    {
+                        codigo: 'MEA01', titulo: 'Monitorar, Avaliar e Analisar Desempenho e Conformidade', tipo: 'detectivo', obj: 'Monitorar a conformidade com leis e regulamentos.',
+                        questions: [{ pergunta: 'São realizadas auditorias regulares de conformidade?', tipo: 'sim_nao', evidencia: true }]
+                    }
+                ]
             }
         ]);
         toast.dismiss(toastId);
@@ -464,7 +555,7 @@ export const seedITIL = async (tenantId: string) => {
             codigo: 'ITIL-4',
             descricao: 'Melhores práticas para gerenciamento de serviços de TI (ITSM)',
             versao: '4',
-            tipo_framework: 'CUSTOM', // Mapear para custom/outro se não houver tipo especifico
+            tipo_framework: 'ITIL',
             categoria: 'Gestão de Serviços'
         }, [
             {
@@ -493,6 +584,19 @@ export const seedITIL = async (tenantId: string) => {
                     {
                         codigo: 'CHM', titulo: 'Habilitação de Mudança', tipo: 'preventivo', obj: 'Maximizar mudanças de sucesso.',
                         questions: [{ pergunta: 'Existe um CAB (Change Advisory Board) para aprovar mudanças críticas?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'SD', titulo: 'Service Desk', tipo: 'detectivo', obj: 'Ponto único de contato para usuários.',
+                        questions: [{ pergunta: 'O Service Desk opera como ponto único de contato (SPOC) para usuários?', tipo: 'sim_nao', evidencia: true }]
+                    }
+                ]
+            },
+            {
+                nome: 'Práticas de Gerenciamento Técnico', codigo: 'TECH', ordem: 3, peso: 30,
+                controls: [
+                    {
+                        codigo: 'DM', titulo: 'Gerenciamento de Implantação', tipo: 'preventivo', obj: 'Mover hardware/software para produção.',
+                        questions: [{ pergunta: 'As implantações são planejadas e testadas antes de ir para produção?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             }
@@ -518,7 +622,7 @@ export const seedPCI = async (tenantId: string) => {
             categoria: 'Pagamentos'
         }, [
             {
-                nome: 'Construir e Manter Redes Seguras', codigo: 'REQ-1-2', ordem: 1, peso: 20,
+                nome: '1. Construir e Manter Redes e Sistemas Seguros', codigo: 'REQ-1-2', ordem: 1, peso: 20,
                 controls: [
                     {
                         codigo: 'REQ.1', titulo: 'Instalar e manter controles de segurança de rede', tipo: 'preventivo', obj: 'Proteger dados de titular de cartão.',
@@ -531,15 +635,31 @@ export const seedPCI = async (tenantId: string) => {
                 ]
             },
             {
-                nome: 'Proteger Dados da Conta', codigo: 'REQ-3-4', ordem: 2, peso: 20,
+                nome: '2. Proteger Dados da Conta', codigo: 'REQ-3-4', ordem: 2, peso: 20,
                 controls: [
                     {
                         codigo: 'REQ.3', titulo: 'Proteger dados de conta armazenados', tipo: 'preventivo', obj: 'Criptografia e retenção mínima.',
-                        questions: [{ pergunta: 'O PAN (Número do Cartão) é armazenado de forma ilegível (criptografado/truncado)?', tipo: 'sim_nao', evidencia: true }]
+                        questions: [
+                            { pergunta: 'O PAN (Número do Cartão) é armazenado de forma ilegível (criptografado/truncado)?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'A retenção de dados é limitada ao estritamente necessário?', tipo: 'sim_nao', evidencia: true }
+                        ]
                     },
                     {
                         codigo: 'REQ.4', titulo: 'Proteger dados em transmissão', tipo: 'preventivo', obj: 'Criptografia forte em redes públicas.',
                         questions: [{ pergunta: 'A transmissão de PAN em redes públicas (internet) utiliza criptografia forte (TLS 1.2+)?', tipo: 'sim_nao', evidencia: true }]
+                    }
+                ]
+            },
+            {
+                nome: '3. Manter um Programa de Gerenciamento de Vulnerabilidades', codigo: 'REQ-5-6', ordem: 3, peso: 20,
+                controls: [
+                    {
+                        codigo: 'REQ.5', titulo: 'Proteção contra malware', tipo: 'preventivo', obj: 'Antivírus em todos os sistemas.',
+                        questions: [{ pergunta: 'Todos os sistemas comumente afetados por malware têm antivírus ativo e atualizado?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'REQ.6', titulo: 'Desenvolver e manter sistemas seguros', tipo: 'preventivo', obj: 'Patches e codificação segura.',
+                        questions: [{ pergunta: 'Patches de segurança críticos são instalados em até 1 mês do lançamento?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             }
@@ -585,6 +705,15 @@ export const seedGDPR = async (tenantId: string) => {
                         questions: [{ pergunta: 'Can the organization identify and erase personal data upon request?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
+            },
+            {
+                nome: 'Chapter 4 - Controller and Processor', codigo: 'CH4', ordem: 3, peso: 25,
+                controls: [
+                    {
+                        codigo: 'ART.32', titulo: 'Security of processing', tipo: 'preventivo', obj: 'Implement technical and organisational measures.',
+                        questions: [{ pergunta: 'Are measures such as encryption and pseudonymisation implemented?', tipo: 'sim_nao', evidencia: true }]
+                    }
+                ]
             }
         ]);
         toast.dismiss(toastId);
@@ -608,13 +737,26 @@ export const seedSOX = async (tenantId: string) => {
             categoria: 'Financeiro/Contábil'
         }, [
             {
-                nome: 'Access Control', codigo: 'AC', ordem: 1, peso: 30,
+                nome: 'Access Control (Logical Security)', codigo: 'AC', ordem: 1, peso: 30,
                 controls: [
                     {
                         codigo: 'AC.1', titulo: 'User Provisioning/Deprovisioning', tipo: 'preventivo', obj: 'Ensure only authorized users have access.',
                         questions: [
-                            { pergunta: 'Are user access requests formally approved by management?', tipo: 'sim_nao', evidencia: true },
-                            { pergunta: 'Is access revoked immediately upon termination?', tipo: 'sim_nao', evidencia: true }
+                            { pergunta: 'Are user access requests formally approved by management before access is granted?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'Is access revoked immediately (e.g. within 24 hours) upon termination?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    },
+                    {
+                        codigo: 'AC.2', titulo: 'Privileged Access Management', tipo: 'preventivo', obj: 'Restrict powerful accounts.',
+                        questions: [
+                            { pergunta: 'Is administrative access restricted to authorized personnel only?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'Are activities of privileged users logged and reviewed?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    },
+                    {
+                        codigo: 'AC.3', titulo: 'User Access Review', tipo: 'detectivo', obj: 'Validate access appropriateness.',
+                        questions: [
+                            { pergunta: 'Are user access rights reviewed periodically (e.g., quarterly) by business owners?', tipo: 'sim_nao', evidencia: true }
                         ]
                     }
                 ]
@@ -624,7 +766,23 @@ export const seedSOX = async (tenantId: string) => {
                 controls: [
                     {
                         codigo: 'CM.1', titulo: 'Change Authorization', tipo: 'preventivo', obj: 'Prevent unauthorized changes to financial systems.',
-                        questions: [{ pergunta: 'Are all changes to financial applications tested and approved before production?', tipo: 'sim_nao', evidencia: true }]
+                        questions: [
+                            { pergunta: 'Are all changes to financial applications tested and approved before production?', tipo: 'sim_nao', evidencia: true },
+                            { pergunta: 'Is there a segregation of duties between developers and those who move code to production?', tipo: 'sim_nao', evidencia: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                nome: 'IT Operations', codigo: 'OPS', ordem: 3, peso: 20,
+                controls: [
+                    {
+                        codigo: 'OPS.1', titulo: 'Job Scheduling', tipo: 'preventivo', obj: 'Ensure batch processing accuracy.',
+                        questions: [{ pergunta: 'Are batch jobs monitored for failures, and are errors resolved timely?', tipo: 'sim_nao', evidencia: true }]
+                    },
+                    {
+                        codigo: 'OPS.2', titulo: 'Backup and Recovery', tipo: 'corretivo', obj: 'Ensure data availability.',
+                        questions: [{ pergunta: 'Are backups of financial data performed daily and verified?', tipo: 'sim_nao', evidencia: true }]
                     }
                 ]
             }

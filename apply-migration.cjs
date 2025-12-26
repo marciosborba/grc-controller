@@ -12,7 +12,13 @@ async function applyMigration() {
             process.exit(1);
         }
 
-        const migrationPath = path.join(__dirname, 'supabase/migrations/20251226_update_framework_types.sql');
+        const migrationFile = process.argv[2];
+        if (!migrationFile) {
+            console.error('❌ Please provide a migration file path');
+            process.exit(1);
+        }
+
+        const migrationPath = path.resolve(process.cwd(), migrationFile);
         console.log(`📖 Reading migration file: ${migrationPath}`);
 
         if (!fs.existsSync(migrationPath)) {

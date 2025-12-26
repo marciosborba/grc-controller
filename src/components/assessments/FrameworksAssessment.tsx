@@ -15,7 +15,7 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AssessmentFramework } from '@/types/assessment';
 import { useCRUDRateLimit } from '@/hooks/useRateLimit';
-import { seedISO27001, seedLGPD, seedNIST, seedCOBIT, seedITIL, seedPCI, seedGDPR, seedSOX } from '@/utils/marketSeeder';
+import { seedISO27001, seedLGPD, seedNIST, seedCOBIT, seedITIL, seedPCI, seedGDPR, seedSOX } from '@/utils/marketSeederFull';
 import FrameworkEditorModal from './FrameworkEditorModal'; // [NEW] Import Editor Modal
 
 export default function FrameworkCenter() {
@@ -79,48 +79,68 @@ export default function FrameworkCenter() {
 
   useEffect(() => { loadFrameworks(); loadLibrary(); }, [loadFrameworks, loadLibrary]);
 
-  // Auto-Seeder Logic
+  // Reset check when tenant changes
   useEffect(() => {
-    if (!effectiveTenantId || hasCheckedLibrary.current) return;
+    hasCheckedLibrary.current = false;
+  }, [effectiveTenantId]);
 
-    const timer = setTimeout(async () => {
-      const required = [
-        { code: 'ISO-27001', seeder: seedISO27001, name: 'ISO 27001' },
-        { code: 'LGPD-BR', seeder: seedLGPD, name: 'LGPD' },
-        { code: 'NIST-CSF-2.0', seeder: seedNIST, name: 'NIST CSF' },
-        { code: 'COBIT-2019', seeder: seedCOBIT, name: 'COBIT 2019' },
-        { code: 'ITIL-4', seeder: seedITIL, name: 'ITIL 4' },
-        { code: 'PCI-DSS-4.0', seeder: seedPCI, name: 'PCI DSS' },
-        { code: 'GDPR-EU', seeder: seedGDPR, name: 'GDPR' },
-        { code: 'SOX-ITGC', seeder: seedSOX, name: 'SOX' }
-      ];
+  // Auto-Seeder Logic (Robust & One-Time)
+  useEffect(() => {
+    if (!effectiveTenantId) return;
 
-      const missing = required.filter(r => !libraryFrameworks.some(lib => lib.codigo === r.code));
-
-      if (missing.length > 0) {
-        console.log(`[AutoSeeder] Missing ${missing.length} frameworks. Seeding...`);
-
-        let seededCount = 0;
-        for (const m of missing) {
-          try {
-            // @ts-ignore
-            const result = await m.seeder(effectiveTenantId);
-            if (result && typeof result === 'object' && result.action === 'seeded') {
-              seededCount++;
-            }
-          } catch (e) { console.error(`Failed to seed ${m.name}`, e); }
-        }
-
-        if (seededCount > 0) {
-          toast.success('Biblioteca atualizada automaticamente.');
-          loadLibrary();
-        }
-      }
+    const checkAndSeed = async () => {
+      // Prevent double-run or loops
+      if (hasCheckedLibrary.current) return;
       hasCheckedLibrary.current = true;
-    }, 2000);
 
-    return () => clearTimeout(timer);
-  }, [effectiveTenantId, libraryFrameworks, loadLibrary]);
+      try {
+        // 1. Check DB directly (avoid UI state dependencies)
+        const { data: existing } = await supabase
+          .from('assessment_frameworks')
+          .select('codigo')
+          .eq('tenant_id', effectiveTenantId)
+          .eq('is_standard', true);
+
+        const existingCodes = new Set(existing?.map(f => f.codigo) || []);
+
+        const required = [
+          { code: 'ISO-27001', seeder: seedISO27001, name: 'ISO 27001' },
+          { code: 'LGPD-BR', seeder: seedLGPD, name: 'LGPD' },
+          { code: 'NIST-CSF-2.0', seeder: seedNIST, name: 'NIST CSF' },
+          { code: 'COBIT-2019', seeder: seedCOBIT, name: 'COBIT 2019' },
+          { code: 'ITIL-4', seeder: seedITIL, name: 'ITIL 4' },
+          { code: 'PCI-DSS-4.0', seeder: seedPCI, name: 'PCI DSS' },
+          { code: 'GDPR-EU', seeder: seedGDPR, name: 'GDPR' },
+          { code: 'SOX-ITGC', seeder: seedSOX, name: 'SOX' }
+        ];
+
+        const missing = required.filter(r => !existingCodes.has(r.code));
+
+        if (missing.length > 0) {
+          toast.info('Atualizando Biblioteca de Frameworks...');
+          let changed = false;
+
+          for (const m of missing) {
+            try {
+              const res = await m.seeder(effectiveTenantId);
+              if (res && res.action === 'seeded') changed = true;
+            } catch (e) {
+              console.error(`Falha ao semear ${m.name}`, e);
+            }
+          }
+
+          if (changed) {
+            toast.success('Biblioteca atualizada com sucesso!');
+            loadLibrary(); // Verify changes on UI
+          }
+        }
+      } catch (err) {
+        console.error('Erro no auto-seeder:', err);
+      }
+    };
+
+    checkAndSeed();
+  }, [effectiveTenantId, loadLibrary]);
 
   // Handlers
   const handleOpenEditor = (fw: AssessmentFramework) => {
@@ -189,7 +209,13 @@ export default function FrameworkCenter() {
             const { data: controls } = await supabase.from('assessment_controls').select('*').eq('domain_id', d.id);
             if (controls) {
               for (const c of controls) {
-                const { data: newCtrl } = await supabase.from('assessment_controls').insert({ ...c, id: undefined, domain_id: newDom.id, tenant_id: effectiveTenantId }).select().single();
+                const { data: newCtrl } = await supabase.from('assessment_controls').insert({
+                  ...c,
+                  id: undefined,
+                  domain_id: newDom.id,
+                  framework_id: newFw.id, // Explicitly link to new framework
+                  tenant_id: effectiveTenantId
+                }).select().single();
 
                 if (newCtrl) {
                   const { data: questions } = await supabase.from('assessment_questions').select('*').eq('control_id', c.id);
