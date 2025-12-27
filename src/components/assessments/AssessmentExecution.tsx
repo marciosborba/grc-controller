@@ -11,15 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { 
-  Play, 
-  Pause, 
-  Save, 
-  Send, 
-  ArrowLeft, 
-  ArrowRight, 
-  CheckCircle, 
-  Clock, 
+import {
+  Play,
+  Pause,
+  Save,
+  Send,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Clock,
   AlertCircle,
   FileText,
   Target,
@@ -55,12 +55,12 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [executionMode, setExecutionMode] = useState<'guided' | 'free'>('guided');
-  
+
   // Estados de navegação
   const [selectedDomain, setSelectedDomain] = useState<string>('all');
   const [selectedControl, setSelectedControl] = useState<string>('all');
   const [showCompleted, setShowCompleted] = useState(false);
-  
+
   // Estados de resposta atual
   const [currentResponse, setCurrentResponse] = useState<Partial<AssessmentResponse>>({});
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
@@ -113,7 +113,7 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
       if (questionsError) throw questionsError;
 
       // Filtrar questões pelo framework do assessment
-      const frameworkQuestions = questionsData?.filter(q => 
+      const frameworkQuestions = questionsData?.filter(q =>
         q.control?.domain?.id // Ajustar lógica conforme estrutura do banco
       ) || [];
 
@@ -177,7 +177,7 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
           .single();
 
         if (error) throw error;
-        
+
         setResponses(prev => ({
           ...prev,
           [questionId]: data
@@ -186,33 +186,15 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
 
       toast.success('Resposta salva com sucesso');
 
-      // Atualizar progresso do assessment
-      await updateAssessmentProgress();
+      // Atualizar dados do assessment para refletir cálculo do Trigger
+      // O trigger no banco já calculou o progresso e atualizou o status
+      loadAssessmentData();
 
     } catch (error) {
       console.error('Erro ao salvar resposta:', error);
       toast.error('Erro ao salvar resposta');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const updateAssessmentProgress = async () => {
-    try {
-      const totalQuestions = questions.length;
-      const answeredQuestions = Object.keys(responses).length;
-      const progressPercent = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
-
-      await supabase
-        .from('assessments')
-        .update({ 
-          percentual_conclusao: progressPercent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentAssessmentId);
-
-    } catch (error) {
-      console.error('Erro ao atualizar progresso:', error);
     }
   };
 
@@ -232,13 +214,13 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
     const total = questions.length;
     const answered = Object.keys(responses).length;
     const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
-    
+
     return { total, answered, percentage };
   };
 
   const renderQuestionInput = (question: AssessmentQuestion) => {
     const existingResponse = responses[question.id];
-    
+
     switch (question.tipo_pergunta) {
       case 'escala':
         return (
@@ -246,8 +228,8 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             <Label>Avaliação (1-5)</Label>
             <RadioGroup
               value={existingResponse?.resposta_numerica?.toString() || ''}
-              onValueChange={(value) => setCurrentResponse(prev => ({ 
-                ...prev, 
+              onValueChange={(value) => setCurrentResponse(prev => ({
+                ...prev,
                 resposta_numerica: parseInt(value),
                 percentual_conformidade: calculateMaturityScore(parseInt(value))
               }))}
@@ -275,8 +257,8 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             <Label>Resposta</Label>
             <RadioGroup
               value={existingResponse?.resposta_booleana?.toString() || ''}
-              onValueChange={(value) => setCurrentResponse(prev => ({ 
-                ...prev, 
+              onValueChange={(value) => setCurrentResponse(prev => ({
+                ...prev,
                 resposta_booleana: value === 'true',
                 percentual_conformidade: value === 'true' ? 100 : 0
               }))}
@@ -308,7 +290,7 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
                       const newOptions = checked
                         ? [...currentOptions, opcao]
                         : currentOptions.filter(o => o !== opcao);
-                      
+
                       setCurrentResponse(prev => ({
                         ...prev,
                         resposta_multipla_escolha: newOptions
@@ -328,9 +310,9 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             <Label>Resposta Detalhada</Label>
             <Textarea
               value={existingResponse?.resposta_texto || ''}
-              onChange={(e) => setCurrentResponse(prev => ({ 
-                ...prev, 
-                resposta_texto: e.target.value 
+              onChange={(e) => setCurrentResponse(prev => ({
+                ...prev,
+                resposta_texto: e.target.value
               }))}
               placeholder="Descreva sua resposta..."
               rows={4}
@@ -345,9 +327,9 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             <Input
               type="number"
               value={existingResponse?.resposta_numerica || ''}
-              onChange={(e) => setCurrentResponse(prev => ({ 
-                ...prev, 
-                resposta_numerica: parseFloat(e.target.value) 
+              onChange={(e) => setCurrentResponse(prev => ({
+                ...prev,
+                resposta_numerica: parseFloat(e.target.value)
               }))}
               min={question.valor_minimo}
               max={question.valor_maximo}
@@ -362,9 +344,9 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             <Input
               type="date"
               value={existingResponse?.resposta_data || ''}
-              onChange={(e) => setCurrentResponse(prev => ({ 
-                ...prev, 
-                resposta_data: e.target.value 
+              onChange={(e) => setCurrentResponse(prev => ({
+                ...prev,
+                resposta_data: e.target.value
               }))}
             />
           </div>
@@ -412,9 +394,8 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
                   {currentQuestion.control?.domain?.nome} • {currentQuestion.control?.titulo}
                 </p>
               </div>
-              <Badge className={`${
-                isQuestionAnswered(currentQuestion.id) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-              }`}>
+              <Badge className={`${isQuestionAnswered(currentQuestion.id) ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                }`}>
                 {isQuestionAnswered(currentQuestion.id) ? 'Respondida' : 'Pendente'}
               </Badge>
             </div>
@@ -442,9 +423,9 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
               <Textarea
                 placeholder="Justifique sua resposta e inclua evidências..."
                 value={currentResponse.justificativa || ''}
-                onChange={(e) => setCurrentResponse(prev => ({ 
-                  ...prev, 
-                  justificativa: e.target.value 
+                onChange={(e) => setCurrentResponse(prev => ({
+                  ...prev,
+                  justificativa: e.target.value
                 }))}
                 rows={3}
               />
@@ -556,7 +537,7 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
         <div className="grid gap-4">
           {questions.map((question, index) => {
             const isAnswered = isQuestionAnswered(question.id);
-            
+
             return (
               <Card key={question.id} className={isAnswered ? 'border-green-200 bg-green-50' : ''}>
                 <CardHeader>
@@ -635,7 +616,7 @@ export default function AssessmentExecutionProfessional({ assessmentId }: Assess
             {assessment.framework?.nome} • {assessment.responsavel_profile?.full_name}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Badge className="bg-blue-100 text-blue-800">
             {assessment.status.replace('_', ' ')}

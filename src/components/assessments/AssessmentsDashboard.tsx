@@ -115,16 +115,17 @@ export default function AssessmentsDashboard() {
       </div>
 
       {/* Métricas Principais (Server Side) */}
+      {/* Métricas Principais (Server Side) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Atrasados</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
-                <p className="text-xs text-muted-foreground mt-1">Prazo Expirado</p>
+                <p className="text-sm text-muted-foreground">Total Assessments</p>
+                <p className="text-2xl font-bold text-slate-700 dark:text-slate-100">{metrics.total}</p>
+                <p className="text-xs text-muted-foreground mt-1">Registrados</p>
               </div>
-              <Activity className="h-8 w-8 text-red-600" />
+              <FileText className="h-8 w-8 text-slate-500" />
             </div>
           </CardContent>
         </Card>
@@ -146,11 +147,11 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
-                <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
+                <p className="text-sm text-muted-foreground">Atrasados</p>
+                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
+                <p className="text-xs text-muted-foreground mt-1">Prazo Expirado</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <Clock className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -159,11 +160,11 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Maturidade Média</p>
-                <p className="text-2xl font-bold text-blue-600">{metrics.avgMaturity}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Global</p>
+                <p className="text-sm text-muted-foreground">Concluídos</p>
+                <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
+                <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
               </div>
-              <Award className="h-8 w-8 text-blue-600" />
+              <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
