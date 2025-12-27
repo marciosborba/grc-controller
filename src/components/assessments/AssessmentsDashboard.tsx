@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
-  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target
+  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target, Trash2, Edit, Calendar
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { useNavigate } from 'react-router-dom';
@@ -46,12 +47,40 @@ export default function AssessmentsDashboard() {
     frameworks,
     availableUsers,
     createAssessment,
+    updateAssessment,
+    deleteAssessment,
     addAssessmentEvaluators,
     refreshList
   } = useAssessmentIntegration();
 
-  // Create Modal Logic Removed - using Wizard
+  // Edit Dialog State
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<any>(null);
 
+  const handleEditClick = (assessment: any) => {
+    setEditingAssessment({
+      ...assessment,
+      data_fim_planejada: assessment.data_fim_planejada ? assessment.data_fim_planejada.split('T')[0] : ''
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingAssessment) return;
+    try {
+      await updateAssessment(editingAssessment.id, {
+        titulo: editingAssessment.titulo,
+        descricao: editingAssessment.descricao,
+        data_fim_planejada: editingAssessment.data_fim_planejada,
+        status: editingAssessment.status
+      });
+      toast.success('Assessment atualizado com sucesso');
+      setIsEditOpen(false);
+      refreshList();
+    } catch (err) {
+      toast.error('Erro ao atualizar assessment');
+    }
+  };
 
   const totalPages = Math.ceil(totalItems / perPage);
 
@@ -91,11 +120,11 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Assessments</p>
-                <p className="text-2xl font-bold">{metrics.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">Registrados</p>
+                <p className="text-sm text-muted-foreground">Atrasados</p>
+                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
+                <p className="text-xs text-muted-foreground mt-1">Prazo Expirado</p>
               </div>
-              <FileText className="h-8 w-8 text-blue-600" />
+              <Activity className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -271,9 +300,44 @@ export default function AssessmentsDashboard() {
                     <Progress value={assessment.percentual_conclusao} className="h-2" />
                   </div>
                   <div className="flex items-center gap-2 mt-2">
+                    <Button size="sm" variant="outline" onClick={() => handleEditClick(assessment)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => navigate(`/assessments/${assessment.id}`)}>
                       Abrir
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Assessment?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Todos as respostas e evidências associadas serão perdidas.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={async () => {
+                              try {
+                                await deleteAssessment(assessment.id);
+                                toast.success('Assessment excluído com sucesso');
+                                refreshList();
+                              } catch (err) {
+                                toast.error('Erro ao excluir assessment');
+                              }
+                            }}
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </div>
@@ -321,6 +385,65 @@ export default function AssessmentsDashboard() {
           </div>
         </div>
       )}
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Assessment</DialogTitle>
+            <DialogDescription>Atualize os detalhes do assessment abaixo.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input
+                value={editingAssessment?.titulo || ''}
+                onChange={e => setEditingAssessment({ ...editingAssessment, titulo: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={editingAssessment?.descricao || ''}
+                onChange={e => setEditingAssessment({ ...editingAssessment, descricao: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Data Fim Planejada</Label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={editingAssessment?.data_fim_planejada || ''}
+                    onChange={e => setEditingAssessment({ ...editingAssessment, data_fim_planejada: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={editingAssessment?.status || 'planejado'}
+                  onValueChange={val => setEditingAssessment({ ...editingAssessment, status: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planejado">Planejado</SelectItem>
+                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                    <SelectItem value="em_execucao">Em Execução</SelectItem>
+                    <SelectItem value="concluido">Concluído</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+            <Button onClick={handleUpdate}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -179,7 +179,14 @@ export default function FrameworkCenter() {
     if (!editingFrameworkId) return;
     try {
       const { error } = await supabase.from('assessment_frameworks').update({
-        ...frameworkForm,
+        nome: frameworkForm.nome,
+        codigo: frameworkForm.codigo,
+        descricao: frameworkForm.descricao,
+        versao: frameworkForm.versao,
+        tipo_framework: frameworkForm.tipo_framework,
+        status: frameworkForm.status,
+        categoria: frameworkForm.categoria,
+        // Remove controls_count and other read-only props
         updated_at: new Date().toISOString()
       }).eq('id', editingFrameworkId);
       if (error) throw error;

@@ -44,6 +44,9 @@ export const useAssessmentIntegration = () => {
     const [frameworks, setFrameworks] = useState<any[]>([]);
     const [availableUsers, setAvailableUsers] = useState<any[]>([]);
 
+    // List Refresh Trigger
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     // Actions
     const createAssessment = async (assessmentData: any) => {
         const { data, error } = await supabase
@@ -53,6 +56,8 @@ export const useAssessmentIntegration = () => {
             .single();
 
         if (error) throw error;
+        setRefreshTrigger(prev => prev + 1);
+        loadMetrics();
         return data;
     };
 
@@ -73,6 +78,7 @@ export const useAssessmentIntegration = () => {
                 .select('*')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'ativo')
+                .eq('is_standard', false)
                 .order('nome');
 
             if (error) throw error;
@@ -234,7 +240,7 @@ export const useAssessmentIntegration = () => {
             isMounted = false;
             clearTimeout(timeoutId);
         };
-    }, [tenantId, page, perPage, sortBy, sortOrder, statusFilter, priorityFilter, searchTerm]);
+    }, [tenantId, page, perPage, sortBy, sortOrder, statusFilter, priorityFilter, searchTerm, refreshTrigger]);
 
     // Load metrics initially and when tenant changes
     useEffect(() => {
@@ -242,6 +248,42 @@ export const useAssessmentIntegration = () => {
         loadFrameworks();
         loadAvailableUsers();
     }, [loadMetrics, loadFrameworks, loadAvailableUsers]);
+
+    const updateAssessment = async (id: string, updates: any) => {
+        const { error } = await supabase
+            .from('assessments')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+        setRefreshTrigger(prev => prev + 1);
+        loadMetrics();
+    };
+
+    const deleteAssessment = async (id: string) => {
+        // Manually delete dependencies to ensure clean removal
+        // 1. Responses
+        await supabase.from('assessment_responses').delete().eq('assessment_id', id);
+        // 2. Action Plans
+        await supabase.from('assessment_action_plans').delete().eq('assessment_id', id);
+        // 3. User Roles
+        await supabase.from('assessment_user_roles').delete().eq('assessment_id', id);
+        // 4. History (if exists)
+        // await supabase.from('assessment_history').delete().eq('assessment_id', id);
+        // 5. Reports (Missing dependency found)
+        await supabase.from('assessment_reports').delete().eq('assessment_id', id);
+
+        // Finally, delete the assessment
+        const { error } = await supabase
+            .from('assessments')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        // Refresh both list and metrics
+        setRefreshTrigger(prev => prev + 1);
+        loadMetrics();
+    };
 
     return {
         assessments,
@@ -265,10 +307,11 @@ export const useAssessmentIntegration = () => {
         frameworks,
         availableUsers,
         createAssessment,
+        updateAssessment,
+        deleteAssessment,
         addAssessmentEvaluators,
         refreshList: () => {
-            // Trigger re-fetch logic if needed, or rely on dependency updates
-            // For now, loadMetrics handles global refresh, list handles itself
+            setRefreshTrigger(prev => prev + 1);
             loadMetrics();
         }
     };

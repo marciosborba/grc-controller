@@ -12,17 +12,19 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
     ChevronRight, ChevronLeft, CheckCircle, Search,
-    BookOpen, Target, Users, Calendar, AlertCircle
+    BookOpen, Target, Users, Calendar, AlertCircle, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 import { AssessmentFramework } from '@/types/assessment';
 import { useAssessmentIntegration } from '@/hooks/useAssessmentIntegration';
 
 export default function AssessmentWizard() {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { selectedTenantId } = useTenantSelector();
     const { frameworks: availableFrameworks, availableUsers, createAssessment } = useAssessmentIntegration();
 
     // Wizard State
@@ -61,30 +63,43 @@ export default function AssessmentWizard() {
     // Create
     const handleCreate = async () => {
         setLoading(true);
+        console.log('--- Creating Assessment Payload ---');
+
         try {
             const payload = {
-                title: formData.titulo, // The hook expects 'titulo'? No, hook maps it or pass directly.
-                // Let's check useAssessmentIntegration signature. It takes 'assessmentData'.
-                // Map to DB columns
+                codigo: `ASM-${Date.now()}`,
                 titulo: formData.titulo,
                 descricao: formData.descricao,
                 framework_id: formData.framework_id,
-                responsavel_id: formData.responsavel_id,
-                aprovador_id: formData.aprovador_id,
+                responsavel_assessment: formData.responsavel_id,
+                coordenador_assessment: formData.aprovador_id || null,
                 data_inicio: formData.data_inicio,
                 data_fim_planejada: formData.data_fim_planejada,
                 status: 'planejado',
-                tenant_id: (user as any)?.tenant_id,
+                tenant_id: selectedTenantId || (user as any)?.tenantId || (user as any)?.tenant_id,
                 percentual_conclusao: 0,
-                percentual_maturidade: 0,
+                percentual_maturidade: 1,
                 configuracoes_especiais: { prioridade: formData.prioridade }
             };
 
-            const newAssessment = await createAssessment(payload);
+            console.log(payload);
+
+            const { data: newAssessment, error } = await supabase
+                .from('assessments')
+                .insert([payload])
+                .select()
+                .single();
+
+            if (error) {
+                console.error('Supabase Error:', error);
+                throw error;
+            }
+
             toast.success('Assessment criado com sucesso!');
             navigate(`/assessments/${newAssessment.id}`);
         } catch (err: any) {
-            toast.error('Erro ao criar assessment: ' + err.message);
+            console.error('Create Error:', err);
+            toast.error('Erro ao criar assessment: ' + (err.message || 'Erro desconhecido'));
         } finally {
             setLoading(false);
         }
@@ -95,7 +110,7 @@ export default function AssessmentWizard() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Novo Assessment</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Novo Assessment (Fixed)</h1>
                     <p className="text-muted-foreground">Assistente de criação de avaliação</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -110,6 +125,9 @@ export default function AssessmentWizard() {
                         </div>
                     ))}
                 </div>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')}>
+                    <X className="h-6 w-6 text-muted-foreground" />
+                </Button>
             </div>
 
             <Card className="min-h-[500px] flex flex-col">
@@ -291,6 +309,11 @@ export default function AssessmentWizard() {
                     <Button variant="ghost" onClick={prevStep} disabled={step === 1}>
                         <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
                     </Button>
+                    {step === 1 && (
+                        <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate('/assessments')}>
+                            Cancelar
+                        </Button>
+                    )}
                     {step < 3 ? (
                         <Button onClick={nextStep}>
                             Próximo <ChevronRight className="ml-2 h-4 w-4" />

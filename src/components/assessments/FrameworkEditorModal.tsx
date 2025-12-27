@@ -176,6 +176,75 @@ export default function FrameworkEditorModal({ framework, isOpen, onClose, onUpd
         setEditingQuestion(null); // Clear question editor
     };
 
+    const handleCreateDomain = async () => {
+        const nome = prompt('Nome do novo domínio:');
+        if (!nome) return;
+        const codigo = prompt('Código do domínio (ex: DOM-01):', `DOM-${domains.length + 1}`);
+        if (!codigo) return;
+
+        try {
+            const { error } = await supabase.from('assessment_domains').insert({
+                framework_id: framework?.id,
+                tenant_id: framework?.tenant_id,
+                nome,
+                codigo,
+                ordem: domains.length + 1,
+                ativo: true
+            });
+            if (error) throw error;
+            toast.success('Domínio criado');
+            loadStructure();
+        } catch (e: any) { toast.error('Erro ao criar domínio: ' + e.message); }
+    };
+
+    const handleCreateControl = async (domId: string) => {
+        const titulo = prompt('Título do novo controle (será a pergunta):');
+        if (!titulo) return;
+
+        // Auto-generate code based on domain + count
+        const domainControls = controls[domId] || [];
+        const domainObj = domains.find(d => d.id === domId);
+        const nextNum = domainControls.length + 1;
+        const autoCode = domainObj ? `${domainObj.codigo}.${nextNum}` : `CTRL-${nextNum}`;
+        const codigo = prompt('Código do controle:', autoCode);
+        if (!codigo) return;
+
+
+        try {
+            const { data: newCtrl, error: ctrlError } = await supabase.from('assessment_controls').insert({
+                domain_id: domId,
+                framework_id: framework?.id,
+                tenant_id: framework?.tenant_id,
+                codigo,
+                titulo, // Title IS the question text conceptually for list view
+                descricao: titulo,
+                ordem: nextNum,
+                ativo: true,
+                tipo_controle: 'preventivo', // Defaults
+                criticidade: 'media',
+                peso: 1
+            }).select().single();
+
+            if (ctrlError) throw ctrlError;
+
+            // Auto-create the Question associated with this control
+            const { error: qError } = await supabase.from('assessment_questions').insert({
+                control_id: newCtrl.id,
+                tenant_id: framework?.tenant_id,
+                codigo: `${codigo}-Q1`,
+                texto: titulo, // Match title
+                tipo_pergunta: 'sim_nao', // Default
+                ordem: 1,
+                peso: 1,
+                ativa: true
+            });
+            if (qError) throw qError;
+
+            toast.success('Controle criado');
+            loadStructure();
+        } catch (e: any) { toast.error('Erro ao criar controle: ' + e.message); }
+    };
+
     // --- RENDER HELPERS ---
 
     // Helper to get default question data for control editor
@@ -245,7 +314,7 @@ export default function FrameworkEditorModal({ framework, isOpen, onClose, onUpd
                                                     );
                                                 })}
                                                 {(!controls[dom.id] || controls[dom.id].length === 0) && <span className="text-xs text-muted-foreground italic p-2">Sem controles</span>}
-                                                <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-muted-foreground h-8 mt-2 border border-dashed border-muted hover:border-primary/50" onClick={() => toast.info('Funcionalidade de Adicionar Controle em breve')}>
+                                                <Button variant="ghost" size="sm" className="w-full justify-start text-xs text-muted-foreground h-8 mt-2 border border-dashed border-muted hover:border-primary/50" onClick={(e) => { e.stopPropagation(); handleCreateControl(dom.id); }}>
                                                     <Plus className="h-3 w-3 mr-1" /> Novo Controle
                                                 </Button>
                                             </div>
@@ -254,6 +323,11 @@ export default function FrameworkEditorModal({ framework, isOpen, onClose, onUpd
                                 ))}
                             </Accordion>
                         </ScrollArea>
+                        <div className="p-3 border-t bg-muted/10">
+                            <Button variant="outline" className="w-full border-dashed" onClick={handleCreateDomain}>
+                                <Plus className="h-4 w-4 mr-2" /> Novo Domínio
+                            </Button>
+                        </div>
                     </div>
 
                     {/* RIGHT: Editor Panel */}
