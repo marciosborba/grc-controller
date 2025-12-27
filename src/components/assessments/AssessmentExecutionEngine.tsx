@@ -100,6 +100,24 @@ export default function AssessmentExecutionEngine() {
         loadData();
     }, [id]);
 
+    // Lightweight refresh for progress status
+    const refreshAssessmentStatus = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('assessments')
+                .select('percentual_conclusao, status, percentual_maturidade')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data && assessment) {
+                setAssessment(prev => prev ? ({ ...prev, ...data }) : null);
+            }
+        } catch (err) {
+            console.error('Failed to refresh status:', err);
+        }
+    };
+
     // Save Response Logic
     const saveResponseDirect = async (questionId: string, value: any, evidences?: any[]) => {
         setSaving(true);
@@ -131,6 +149,9 @@ export default function AssessmentExecutionEngine() {
             if (error) throw error;
             // Update with server response
             setResponses(prev => ({ ...prev, [questionId]: data }));
+
+            // Refresh progress from DB (Trigger updated it)
+            await refreshAssessmentStatus();
         } catch (err: any) {
             console.error('Erro detalhado ao salvar:', err);
             toast.error('Erro ao salvar: ' + (err.message || err.error_description || 'Erro desconhecido'));

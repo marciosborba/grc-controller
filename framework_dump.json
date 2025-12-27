@@ -1,0 +1,1526 @@
+{
+  "COBIT": {
+    "id": "65ab7d32-58a3-4fea-b168-7bd0156ad864",
+    "controls": [
+      {
+        "id": "b44bb27f-b3dd-442e-94ff-dab5cd3c840b",
+        "titulo": "Governance Framework"
+      },
+      {
+        "id": "b5598aad-c995-4685-bc07-1b5971ac6c1a",
+        "titulo": "Benefits Delivery"
+      },
+      {
+        "id": "8c2cfaed-bb6b-440a-b3a3-01f23713b066",
+        "titulo": "Risk Optimization"
+      },
+      {
+        "id": "c54bea36-77d4-4887-977f-01969d833b01",
+        "titulo": "Resource Optimization"
+      },
+      {
+        "id": "8d0b6661-7412-4d43-b581-7170d9f80b11",
+        "titulo": "Stakeholder Engagement"
+      },
+      {
+        "id": "cbad885c-673a-4d04-8d0c-bcb9ef767845",
+        "titulo": "Management Framework"
+      },
+      {
+        "id": "0ce517b0-1d5e-4202-a036-073b4cef47e5",
+        "titulo": "Strategy"
+      },
+      {
+        "id": "7ee28fa3-f328-4b74-9f45-b256c8137ef8",
+        "titulo": "Enterprise Architecture"
+      },
+      {
+        "id": "079a65d9-c4a7-4ce8-a544-b067ae5cb4d6",
+        "titulo": "Innovation"
+      },
+      {
+        "id": "2553c656-b7e5-4a87-8870-476e86bd893d",
+        "titulo": "Portfolio"
+      },
+      {
+        "id": "d28e42bc-7f3f-4deb-acf7-eff3e2bbe7de",
+        "titulo": "Budget & Costs"
+      },
+      {
+        "id": "569610ab-fca6-4e18-ae87-d526247c2cf5",
+        "titulo": "Human Resources"
+      },
+      {
+        "id": "fb5cf465-86d0-46d4-93db-5198beec907d",
+        "titulo": "Relationships"
+      },
+      {
+        "id": "730c013d-adc7-40f7-89b9-2a683d81c0e9",
+        "titulo": "Service Agreements"
+      },
+      {
+        "id": "6885ab5c-8a2e-4187-ba92-96b74cf2e98d",
+        "titulo": "Vendors"
+      },
+      {
+        "id": "3d261171-f647-46f8-b6ae-83f60421147c",
+        "titulo": "Quality"
+      },
+      {
+        "id": "a74030e1-127c-4daa-b04d-8d8ff6af55b1",
+        "titulo": "Risk"
+      },
+      {
+        "id": "a438ff72-8f6a-403a-bc96-8cc3714d6c68",
+        "titulo": "Security"
+      },
+      {
+        "id": "074a7b26-dc81-45df-89b0-5323b95f05b4",
+        "titulo": "Data"
+      },
+      {
+        "id": "96c30e88-8e33-4e06-a3bc-2b9200e56701",
+        "titulo": "Programs"
+      },
+      {
+        "id": "bd225619-6d00-44fc-9d64-3ec03b333585",
+        "titulo": "Requirements"
+      },
+      {
+        "id": "4b64a761-88c7-485b-a338-6dbba192fd20",
+        "titulo": "Solutions Build"
+      },
+      {
+        "id": "4a0c4cb1-b15e-4a5a-a1e0-906d1e1bb5fc",
+        "titulo": "Availability & Capacity"
+      },
+      {
+        "id": "3c7c29b1-c821-4dd4-8b78-8ed2679a8c8e",
+        "titulo": "Change"
+      },
+      {
+        "id": "64176bb3-0b5e-401c-bf58-3ca8ae88e32f",
+        "titulo": "Changes IT"
+      },
+      {
+        "id": "0c9a37e1-5cb7-4c30-9daa-816cbc199cf6",
+        "titulo": "Transition"
+      },
+      {
+        "id": "13fcdc4f-cea6-4b0d-bf2b-262cfa4025b4",
+        "titulo": "Knowledge"
+      },
+      {
+        "id": "4f6d8605-ac25-4402-a8d4-88ec5fcb318d",
+        "titulo": "Assets"
+      },
+      {
+        "id": "ee8bba24-e13e-4ba9-8396-7685acf15bb6",
+        "titulo": "Configuration"
+      },
+      {
+        "id": "d8602be3-6f40-487d-97ea-5975e857dc4a",
+        "titulo": "Projects"
+      },
+      {
+        "id": "15e076d5-fca8-4352-a758-3e1f3f513ef1",
+        "titulo": "Operations"
+      },
+      {
+        "id": "0615a935-db2f-48a3-9849-3a3f50ec45bc",
+        "titulo": "Requests & Incidents"
+      },
+      {
+        "id": "c1e6f5d6-6388-4ec3-ac8b-825b7995b13c",
+        "titulo": "Problems"
+      },
+      {
+        "id": "c9713197-cf01-49a8-b983-c2bcc9ceaa48",
+        "titulo": "Continuity"
+      },
+      {
+        "id": "55be2312-da4b-44fe-8299-85485cb1844b",
+        "titulo": "Security Services"
+      },
+      {
+        "id": "c7cf7b63-7f92-4a39-b94a-152deecd8025",
+        "titulo": "Business Controls"
+      },
+      {
+        "id": "18646762-6963-43a8-9c81-6b6503650821",
+        "titulo": "Performance & Compliance"
+      },
+      {
+        "id": "0fa03e53-7681-46d2-be5c-0e2d4e8d3963",
+        "titulo": "Internal Control"
+      },
+      {
+        "id": "ae16cbf5-7727-40c2-bf56-55d6c5a5102f",
+        "titulo": "External Compliance"
+      },
+      {
+        "id": "134649d3-ee29-4cee-90a5-703ca57f03c3",
+        "titulo": "Governance System"
+      }
+    ],
+    "questions": [
+      {
+        "id": "3319a4b0-34f9-4736-bbef-bf264fd0f410",
+        "texto": "Sistema de governança estabelecido?",
+        "control_id": "b44bb27f-b3dd-442e-94ff-dab5cd3c840b"
+      },
+      {
+        "id": "0d8a8f80-254e-489c-a5e0-6bf12f73c15e",
+        "texto": "Entrega de valor otimizada?",
+        "control_id": "b5598aad-c995-4685-bc07-1b5971ac6c1a"
+      },
+      {
+        "id": "3bfd2e78-f5ee-4092-8251-f4e16a6d655d",
+        "texto": "Risco otimizado?",
+        "control_id": "8c2cfaed-bb6b-440a-b3a3-01f23713b066"
+      },
+      {
+        "id": "ffe49561-2f72-499f-8a91-2d7363a28761",
+        "texto": "Recursos otimizados?",
+        "control_id": "c54bea36-77d4-4887-977f-01969d833b01"
+      },
+      {
+        "id": "7d92cbe3-0cea-46b9-b7f5-2e6485363b12",
+        "texto": "Stakeholders engajados?",
+        "control_id": "8d0b6661-7412-4d43-b581-7170d9f80b11"
+      },
+      {
+        "id": "fcecf487-efc7-478e-9dd5-58cbb9a495e5",
+        "texto": "Sistema de gestão de TI implementado?",
+        "control_id": "cbad885c-673a-4d04-8d0c-bcb9ef767845"
+      },
+      {
+        "id": "3a9377ea-c3fe-4c3c-b85e-b613a200c5c2",
+        "texto": "Estratégia alinhada?",
+        "control_id": "0ce517b0-1d5e-4202-a036-073b4cef47e5"
+      },
+      {
+        "id": "76898907-deaa-447d-9515-0eac0770fbfb",
+        "texto": "Arquitetura definida?",
+        "control_id": "7ee28fa3-f328-4b74-9f45-b256c8137ef8"
+      },
+      {
+        "id": "428ccc9b-0767-4c03-aa19-a3134c3ec6e2",
+        "texto": "Inovação gerenciada?",
+        "control_id": "079a65d9-c4a7-4ce8-a544-b067ae5cb4d6"
+      },
+      {
+        "id": "7e471078-3521-473b-ab7c-14cc34e4a8ab",
+        "texto": "Portfólio otimizado?",
+        "control_id": "2553c656-b7e5-4a87-8870-476e86bd893d"
+      },
+      {
+        "id": "1e737e57-50de-4387-8edd-031c8660a8e8",
+        "texto": "Orçamento gerenciado?",
+        "control_id": "d28e42bc-7f3f-4deb-acf7-eff3e2bbe7de"
+      },
+      {
+        "id": "b7eb7922-4f14-40dc-a658-d5bdbfec1a77",
+        "texto": "RH de TI gerenciado?",
+        "control_id": "569610ab-fca6-4e18-ae87-d526247c2cf5"
+      },
+      {
+        "id": "c54076b2-63ff-4ecf-b2e8-df80580c441b",
+        "texto": "Relacionamentos com negócio geridos?",
+        "control_id": "fb5cf465-86d0-46d4-93db-5198beec907d"
+      },
+      {
+        "id": "c8ad384e-3e2f-40a5-aed6-cfb5393fd5a3",
+        "texto": "SLAs definidos?",
+        "control_id": "730c013d-adc7-40f7-89b9-2a683d81c0e9"
+      },
+      {
+        "id": "be41f9aa-48bb-4fd1-916f-0d3b179ef990",
+        "texto": "Fornecedores gerenciados?",
+        "control_id": "6885ab5c-8a2e-4187-ba92-96b74cf2e98d"
+      },
+      {
+        "id": "6e69b42f-f173-4009-9ec2-4420f94afb11",
+        "texto": "Qualidade gerenciada?",
+        "control_id": "3d261171-f647-46f8-b6ae-83f60421147c"
+      },
+      {
+        "id": "bd1715a7-19ac-4df2-b96f-3274c5c7a036",
+        "texto": "Risco de TI gerenciado?",
+        "control_id": "a74030e1-127c-4daa-b04d-8d8ff6af55b1"
+      },
+      {
+        "id": "10752f96-491f-4085-94db-c0028dfeefdb",
+        "texto": "Segurança gerenciada (SGSI)?",
+        "control_id": "a438ff72-8f6a-403a-bc96-8cc3714d6c68"
+      },
+      {
+        "id": "3ef2996c-26d2-4f04-a911-c6bd526caf48",
+        "texto": "Dados gerenciados?",
+        "control_id": "074a7b26-dc81-45df-89b0-5323b95f05b4"
+      },
+      {
+        "id": "067606bf-d6e4-4d2f-96e7-24c4d9b51882",
+        "texto": "Programas gerenciados?",
+        "control_id": "96c30e88-8e33-4e06-a3bc-2b9200e56701"
+      },
+      {
+        "id": "dfadd5cb-a996-47e9-bc46-19f2feae666b",
+        "texto": "Requisitos definidos?",
+        "control_id": "bd225619-6d00-44fc-9d64-3ec03b333585"
+      },
+      {
+        "id": "16c64f89-898d-4cf8-ae37-ce3d878e2668",
+        "texto": "Soluções construídas?",
+        "control_id": "4b64a761-88c7-485b-a338-6dbba192fd20"
+      },
+      {
+        "id": "9502aa49-3cf9-46df-8260-e3b30ebe8faa",
+        "texto": "Disponibilidade garantida?",
+        "control_id": "4a0c4cb1-b15e-4a5a-a1e0-906d1e1bb5fc"
+      },
+      {
+        "id": "f8beb06f-faec-47d6-908f-465d0b5791a8",
+        "texto": "Mudanças gerenciadas?",
+        "control_id": "3c7c29b1-c821-4dd4-8b78-8ed2679a8c8e"
+      },
+      {
+        "id": "9a3ce20f-6ad3-4977-bb46-f06a82399a5b",
+        "texto": "Mudanças de TI aceitas?",
+        "control_id": "64176bb3-0b5e-401c-bf58-3ca8ae88e32f"
+      },
+      {
+        "id": "2943b3f8-140a-4ffd-8fa3-1ed12af73cbb",
+        "texto": "Transição implementada?",
+        "control_id": "0c9a37e1-5cb7-4c30-9daa-816cbc199cf6"
+      },
+      {
+        "id": "881f5f24-c6cd-42d7-b1cc-db888323781c",
+        "texto": "Conhecimento gerenciado?",
+        "control_id": "13fcdc4f-cea6-4b0d-bf2b-262cfa4025b4"
+      },
+      {
+        "id": "91ced240-1258-497e-90a7-0d909e8fd004",
+        "texto": "Ativos gerenciados?",
+        "control_id": "4f6d8605-ac25-4402-a8d4-88ec5fcb318d"
+      },
+      {
+        "id": "daac47d2-a5ab-42de-9486-24448e0c0c68",
+        "texto": "Configuração gerenciada?",
+        "control_id": "ee8bba24-e13e-4ba9-8396-7685acf15bb6"
+      },
+      {
+        "id": "d3364156-c451-4cb7-945d-a75954219099",
+        "texto": "Projetos gerenciados?",
+        "control_id": "d8602be3-6f40-487d-97ea-5975e857dc4a"
+      },
+      {
+        "id": "b9e26618-f763-4842-a90f-a89faafedff2",
+        "texto": "Operações gerenciadas?",
+        "control_id": "15e076d5-fca8-4352-a758-3e1f3f513ef1"
+      },
+      {
+        "id": "9d8c86fb-3ad9-45a3-9a1d-c5a5af133835",
+        "texto": "Incidentes resolvidos?",
+        "control_id": "0615a935-db2f-48a3-9849-3a3f50ec45bc"
+      },
+      {
+        "id": "dfce67c1-e2f1-48fb-a61e-5721e25d66a8",
+        "texto": "Problemas gerenciados?",
+        "control_id": "c1e6f5d6-6388-4ec3-ac8b-825b7995b13c"
+      },
+      {
+        "id": "0e4ff50d-1f5a-4694-942a-6c83d5454e82",
+        "texto": "Continuidade garantida?",
+        "control_id": "c9713197-cf01-49a8-b983-c2bcc9ceaa48"
+      },
+      {
+        "id": "a971f1df-ab23-495e-8bb9-aa799f29a0f5",
+        "texto": "Serviços de segurança operados?",
+        "control_id": "55be2312-da4b-44fe-8299-85485cb1844b"
+      },
+      {
+        "id": "15114ba1-7227-4ee6-a470-914756c4441f",
+        "texto": "Controles de processo de negócio?",
+        "control_id": "c7cf7b63-7f92-4a39-b94a-152deecd8025"
+      },
+      {
+        "id": "5d1077fa-0ee0-4dc1-bd48-b488419b2ede",
+        "texto": "Conformidade monitorada?",
+        "control_id": "18646762-6963-43a8-9c81-6b6503650821"
+      },
+      {
+        "id": "0d7b8d81-1198-46b8-964f-bab227455dc2",
+        "texto": "Controles internos avaliados?",
+        "control_id": "0fa03e53-7681-46d2-be5c-0e2d4e8d3963"
+      },
+      {
+        "id": "51e32735-5d63-4972-8bf4-52c9fb702a95",
+        "texto": "Conformidade externa garantida?",
+        "control_id": "ae16cbf5-7727-40c2-bf56-55d6c5a5102f"
+      },
+      {
+        "id": "1d64b4d9-f5c3-411f-836f-45ff684c0cfc",
+        "texto": "Sistema de governança avaliado?",
+        "control_id": "134649d3-ee29-4cee-90a5-703ca57f03c3"
+      }
+    ]
+  },
+  "NIST": {
+    "id": "66b9a622-7ff1-48ea-bed4-ba50b8c1dea5",
+    "controls": [
+      {
+        "id": "9ce729eb-4baa-4c4b-adcf-6ee151fa7f97",
+        "titulo": "Mission & Vision"
+      },
+      {
+        "id": "40f4366a-e448-461f-bdd1-5d0061a4991d",
+        "titulo": "Internal/External Stakeholders"
+      },
+      {
+        "id": "d121d526-09e3-4123-be35-e71444d0f1b7",
+        "titulo": "Legal & Regulatory"
+      },
+      {
+        "id": "e08c7534-9256-4c33-869f-bc3587d3a206",
+        "titulo": "Critical Objectives"
+      },
+      {
+        "id": "43aca5c3-8c19-4269-bad8-a390002c6ebe",
+        "titulo": "Outcomes"
+      },
+      {
+        "id": "ae7b322d-22db-4249-b91b-cdc19bd8258d",
+        "titulo": "Risk Strategy"
+      },
+      {
+        "id": "777c41ab-e0d0-46f8-89ac-8572b77250f7",
+        "titulo": "Risk Appetite"
+      },
+      {
+        "id": "979f3848-88ac-4c7a-bab1-59d7bb4ed4fa",
+        "titulo": "Risk Assessment Context"
+      },
+      {
+        "id": "3d3a4de9-42ce-4497-be5a-927758cca643",
+        "titulo": "Risk Taxonomy"
+      },
+      {
+        "id": "dc6243f7-17bd-4cbb-bce0-2def5811aadb",
+        "titulo": "Risk Improvement"
+      },
+      {
+        "id": "5f2ec941-957d-4943-9109-39f73ad7d867",
+        "titulo": "Risk Reporting"
+      },
+      {
+        "id": "d3e5d97b-4db6-41df-8969-3c92065eac3e",
+        "titulo": "Risk Culture"
+      },
+      {
+        "id": "0cb65c94-b155-404b-a2fa-82cec08faaf0",
+        "titulo": "Leadership"
+      },
+      {
+        "id": "4ea52c30-751a-403d-981b-9263ede25105",
+        "titulo": "Roles & Resp"
+      },
+      {
+        "id": "b679dfa8-3a04-410c-b868-d66cffb9f595",
+        "titulo": "Resources"
+      },
+      {
+        "id": "c1dfe090-641b-4891-880c-e75f68539bae",
+        "titulo": "Personnel Vetting"
+      },
+      {
+        "id": "06a3c8f3-816b-4bbf-b45a-7e491a976c9b",
+        "titulo": "Policies Estab"
+      },
+      {
+        "id": "76848288-0d02-433c-8215-8e1ee2feba86",
+        "titulo": "Policy Comms"
+      },
+      {
+        "id": "ef4e5fee-dcad-438f-8a49-4fc28b9b027e",
+        "titulo": "Program Monitoring"
+      },
+      {
+        "id": "ebbf7e2e-d0c6-4490-b8b4-f020a3d02e9e",
+        "titulo": "Corrective Action"
+      },
+      {
+        "id": "8130bb8b-7516-45e3-a7cf-f6bdd0760112",
+        "titulo": "Program Review"
+      },
+      {
+        "id": "3d51968e-dab5-4417-96d8-ba0f4b0ce503",
+        "titulo": "SCRM Strategy"
+      },
+      {
+        "id": "ff64adbe-b92e-4d49-9292-344f406af4d0",
+        "titulo": "Supplier Requirements"
+      },
+      {
+        "id": "7ac883a9-f314-499f-8ea6-306b568eaf26",
+        "titulo": "Supplier Contracts"
+      },
+      {
+        "id": "d8133fc4-c0a0-4445-a509-6dfc2ffd09c3",
+        "titulo": "Supplier Assessment"
+      },
+      {
+        "id": "d21f69f4-da9f-4465-9a66-476d66a5089b",
+        "titulo": "Supplier Monitoring"
+      },
+      {
+        "id": "0641cb97-2063-48bb-bade-817c25df32c0",
+        "titulo": "Supplier Termination"
+      },
+      {
+        "id": "0807a294-9fae-40c9-ba0b-e1eb090003bd",
+        "titulo": "SCRM Response"
+      },
+      {
+        "id": "33486d40-0b98-4970-9d97-414a14d35936",
+        "titulo": "SCRM Improvement"
+      },
+      {
+        "id": "0b585da2-5b93-4b38-b78f-6e167a10fa47",
+        "titulo": "SCRM Integration"
+      },
+      {
+        "id": "c549528c-be62-48b3-872c-2d3ac658da5b",
+        "titulo": "Technology Acquisition"
+      },
+      {
+        "id": "cc407033-f70a-430b-956a-8454c67b2161",
+        "titulo": "Hardware Inventory"
+      },
+      {
+        "id": "da0ba736-f2d6-4116-a6b6-c7e848c659f5",
+        "titulo": "Software Inventory"
+      },
+      {
+        "id": "1a3ff9a9-9072-492f-9991-36da835f2d15",
+        "titulo": "Data Flow"
+      },
+      {
+        "id": "9382ef23-30ae-4f2e-9640-8c793500d2e5",
+        "titulo": "External Systems"
+      },
+      {
+        "id": "4cc8f85b-6cf1-4ada-89ec-7d0a9fc8232c",
+        "titulo": "Asset Criticality"
+      },
+      {
+        "id": "3e5ca2fe-ae8e-4d51-a533-873ef30fb120",
+        "titulo": "Dependency Mapping"
+      },
+      {
+        "id": "457e3acd-d466-436c-8afe-374859e35531",
+        "titulo": "Lifecycle Mgmt"
+      },
+      {
+        "id": "8dbc033f-cc15-4f21-a618-8bdba50619ab",
+        "titulo": "Vulnerability Mgmt"
+      },
+      {
+        "id": "1ed68cd5-0315-4df4-aac4-66f179a75c0f",
+        "titulo": "Threat Analysis"
+      },
+      {
+        "id": "b677fa17-94e5-433d-9203-c41982b77d83",
+        "titulo": "Internal Threats"
+      },
+      {
+        "id": "a884031d-13fc-4b6a-a289-dec8cd77fa30",
+        "titulo": "Business Impact"
+      },
+      {
+        "id": "10b04da2-033f-4635-b772-58a17c316d8b",
+        "titulo": "Likelihood"
+      },
+      {
+        "id": "b91b3f00-54f3-406b-9886-2c0a8d7d9436",
+        "titulo": "Risk Register"
+      },
+      {
+        "id": "098d6cf7-5dae-43ca-937c-850db4546a7d",
+        "titulo": "Risk Responses"
+      },
+      {
+        "id": "55f29105-3b07-43fe-b48a-7b364aca6715",
+        "titulo": "Improvement Plans"
+      },
+      {
+        "id": "9414e66c-a557-4388-8b1c-60b0523dc026",
+        "titulo": "Strategy Update"
+      },
+      {
+        "id": "d1eb2f91-4f84-4832-8e98-acf49e7dbb47",
+        "titulo": "Testing & Exercises"
+      },
+      {
+        "id": "d389692d-db0a-42dc-9bbc-da94302c3393",
+        "titulo": "Identity Mgmt"
+      },
+      {
+        "id": "bcb55764-2c48-4e8b-ba1d-97955630c56c",
+        "titulo": "Physical Access"
+      },
+      {
+        "id": "c7ab8c9c-d970-48b3-8613-cf975a52394b",
+        "titulo": "Remote Access"
+      },
+      {
+        "id": "9b0b41c1-6afe-439f-8c10-ee7de33e181d",
+        "titulo": "Authorizations"
+      },
+      {
+        "id": "a94ac465-d725-46c6-bc82-449b2973afbe",
+        "titulo": "Least Privilege"
+      },
+      {
+        "id": "0e30140c-e886-4ddf-a825-7e2439cfb48f",
+        "titulo": "Separation of Duties"
+      },
+      {
+        "id": "15ef661e-ee22-4651-b8cd-94903e236ed3",
+        "titulo": "Authentication"
+      },
+      {
+        "id": "a9cd93a9-770e-4e4b-89d5-5770c9c1e7c0",
+        "titulo": "Audit Logs"
+      },
+      {
+        "id": "17ac8c8d-830b-45e9-8a1b-05e88598ecfa",
+        "titulo": "Awareness Program"
+      },
+      {
+        "id": "a329701d-aed3-45aa-a2e3-64df5e8e49fa",
+        "titulo": "Privileged Users"
+      },
+      {
+        "id": "66e97795-27b0-4513-8466-1bb9685abb07",
+        "titulo": "Role-Based Training"
+      },
+      {
+        "id": "7f8d3f14-8846-476a-9350-ef406c806561",
+        "titulo": "3rd Party Training"
+      },
+      {
+        "id": "f89800c7-3c85-4833-acca-09e49a7675c3",
+        "titulo": "Data at Rest"
+      },
+      {
+        "id": "ab4f3770-7968-47eb-8a56-164c1f011c55",
+        "titulo": "Data in Transit"
+      },
+      {
+        "id": "9e9f2343-a2c1-4a32-ac70-0e3e9d82d7aa",
+        "titulo": "Asset Management"
+      },
+      {
+        "id": "0fb16876-ce80-4117-aa3b-a3f3f7a1cf0f",
+        "titulo": "Capacity Mgmt"
+      },
+      {
+        "id": "920d8dd4-4b6d-40ca-9714-7c989f9012ce",
+        "titulo": "Data Leakage"
+      },
+      {
+        "id": "9256231d-ba4c-4c21-864f-3ca68dbe30a7",
+        "titulo": "Integrity Checking"
+      },
+      {
+        "id": "cdb5e8ed-c955-4e89-b2f6-be8af1ae14d6",
+        "titulo": "Backups"
+      },
+      {
+        "id": "a9e364d3-f8b9-4c17-a267-97a742feffdb",
+        "titulo": "Development Env"
+      },
+      {
+        "id": "b09633ce-6623-4f87-aa33-4dd59ddb836b",
+        "titulo": "Data Destruction"
+      },
+      {
+        "id": "4b5b104e-6f00-4f6d-b260-bac45097ad6b",
+        "titulo": "Availability"
+      },
+      {
+        "id": "a0baf664-d2d0-4665-8478-17fd0daf47ac",
+        "titulo": "Config Mgmt"
+      },
+      {
+        "id": "a9350991-48ea-4158-89f1-7eb538fd20ac",
+        "titulo": "Change Control"
+      },
+      {
+        "id": "a09cccee-de6c-4b62-9f9e-53f25fef21e0",
+        "titulo": "Software Install"
+      },
+      {
+        "id": "58dd2bcd-e4df-4fd4-8e3a-a9bea0fe3a3a",
+        "titulo": "Log Management"
+      },
+      {
+        "id": "dcf90ab1-0daa-4b8d-85ab-80b1f627c3d2",
+        "titulo": "Resilient Networks"
+      },
+      {
+        "id": "5ffbb639-96e1-4a66-876a-46f5c6e09598",
+        "titulo": "Resilient Systems"
+      },
+      {
+        "id": "36a0cbaf-9abd-49d8-99c9-fdab936bc1cb",
+        "titulo": "Virtualization"
+      },
+      {
+        "id": "350687f4-f4ed-4a65-b8aa-2844e07f4d9a",
+        "titulo": "Event Detection"
+      },
+      {
+        "id": "92b5045a-fb21-4139-accf-8d19779ed5a6",
+        "titulo": "Event Analysis"
+      },
+      {
+        "id": "1c954025-b8f2-460b-80e2-9c35df773929",
+        "titulo": "Impact Analysis"
+      },
+      {
+        "id": "c8f6bb71-b8bd-4247-80d6-b2c7a50e7faf",
+        "titulo": "Thresholds"
+      },
+      {
+        "id": "fc2cd7d8-027f-4b70-b8d6-d674ae9562c7",
+        "titulo": "Network Monitoring"
+      },
+      {
+        "id": "f319692a-f771-4fed-8407-da706ead3a8a",
+        "titulo": "Physical Monitoring"
+      },
+      {
+        "id": "8f1e41e0-99a8-48cb-9e1c-ac1d94cf23e9",
+        "titulo": "Personnel Activity"
+      },
+      {
+        "id": "cb50cbfd-4269-4cad-bfab-8da1946cf53e",
+        "titulo": "External Monitoring"
+      },
+      {
+        "id": "81581abf-91d7-434a-9a21-fd171bb843b7",
+        "titulo": "Roles & Resp"
+      },
+      {
+        "id": "af2fd6c2-9aea-4388-9454-6dbb032fe6dc",
+        "titulo": "Event Info Comm"
+      },
+      {
+        "id": "6e5ed14e-f95c-4463-b1a4-74aca4e46aaa",
+        "titulo": "Incident Plan"
+      },
+      {
+        "id": "4ae3437a-c121-42db-b8f0-e022687df58d",
+        "titulo": "Incident Report"
+      },
+      {
+        "id": "a357b55e-00f8-4b1e-80f8-b16d7c29be3c",
+        "titulo": "Personnel Support"
+      },
+      {
+        "id": "f32b8ba7-a0ff-4848-a8a7-e62649144e9c",
+        "titulo": "Forensics"
+      },
+      {
+        "id": "31cb526e-ea3c-4329-882d-d0716cb39509",
+        "titulo": "Categorization"
+      },
+      {
+        "id": "da0f327c-2301-453e-9b85-176239cd20ba",
+        "titulo": "Vulnerability Mit"
+      },
+      {
+        "id": "6de1f0af-d111-4429-b90b-eab7b2aa5ed6",
+        "titulo": "Response Coord"
+      },
+      {
+        "id": "2301ae46-58b5-4ccc-b83d-5f55357f9588",
+        "titulo": "Stakeholders"
+      },
+      {
+        "id": "3ae3de2d-2ace-4bed-a12d-de638748b236",
+        "titulo": "Public Relation"
+      },
+      {
+        "id": "4a65dbc8-4414-45d7-88e0-5cad2ac9fd80",
+        "titulo": "Containment"
+      },
+      {
+        "id": "82a66d04-d6af-47a1-8bae-ae287df05bc5",
+        "titulo": "Eradication"
+      },
+      {
+        "id": "0b7fdff7-a893-4429-bea1-7126f2d02a97",
+        "titulo": "Recovery Plan"
+      },
+      {
+        "id": "7d9556e9-70c3-4558-9438-03455f2df22b",
+        "titulo": "Recovery Scope"
+      },
+      {
+        "id": "e8780572-3b1c-4775-904a-63f469fe903a",
+        "titulo": "Recovery Time"
+      },
+      {
+        "id": "652a4f8f-2937-40c5-bf3e-c634b97798a8",
+        "titulo": "Lessons Learned"
+      },
+      {
+        "id": "5482ff7f-a4e5-4828-8f9d-eb16858cce31",
+        "titulo": "Plan Update"
+      },
+      {
+        "id": "dfe93f75-c78a-455f-8bf1-7faf94f5e251",
+        "titulo": "Public Relations"
+      },
+      {
+        "id": "61563d34-49ae-4890-9945-9d81cec4b9c3",
+        "titulo": "Reputation"
+      },
+      {
+        "id": "2602193b-0b67-4a0f-8517-e5b2346385cc",
+        "titulo": "Status Comms"
+      }
+    ],
+    "questions": [
+      {
+        "id": "4993b725-349e-4860-afce-43d525a28627",
+        "texto": "A missão é compreendida e informa a gestão de riscos?",
+        "control_id": "9ce729eb-4baa-4c4b-adcf-6ee151fa7f97"
+      },
+      {
+        "id": "be094645-1b88-4a78-aeb0-fcb9cd2a4083",
+        "texto": "Requisitos das partes interessadas são compreendidos?",
+        "control_id": "40f4366a-e448-461f-bdd1-5d0061a4991d"
+      },
+      {
+        "id": "4a26f0bd-8090-4b61-b1ed-722a9cde7370",
+        "texto": "Requisitos legais e contratuais são gerenciados?",
+        "control_id": "d121d526-09e3-4123-be35-e71444d0f1b7"
+      },
+      {
+        "id": "7a9aada3-a1c5-4c14-9b39-6336d67279a7",
+        "texto": "Objetivos críticos de serviço são identificados?",
+        "control_id": "e08c7534-9256-4c33-869f-bc3587d3a206"
+      },
+      {
+        "id": "8fc7c66f-ba57-4783-84fd-bddac2b25533",
+        "texto": "Resultados de desempenho são priorizados?",
+        "control_id": "43aca5c3-8c19-4269-bad8-a390002c6ebe"
+      },
+      {
+        "id": "07b8b983-414d-425b-9a77-f46e9e3c2b52",
+        "texto": "Estratégia de risco é estabelecida?",
+        "control_id": "ae7b322d-22db-4249-b91b-cdc19bd8258d"
+      },
+      {
+        "id": "4e7b1854-f5b5-4fac-a947-4c909241a7b1",
+        "texto": "Apetite ao risco é definido?",
+        "control_id": "777c41ab-e0d0-46f8-89ac-8572b77250f7"
+      },
+      {
+        "id": "53a0ffca-5b63-4bf4-8dce-dd51274b9c1f",
+        "texto": "O contexto para avaliações de risco é estabelecido?",
+        "control_id": "979f3848-88ac-4c7a-bab1-59d7bb4ed4fa"
+      },
+      {
+        "id": "c986e493-df08-4454-bd89-c111aca7af6b",
+        "texto": "Uma taxonomia de risco padronizada é usada?",
+        "control_id": "3d3a4de9-42ce-4497-be5a-927758cca643"
+      },
+      {
+        "id": "86bcdc5a-21ae-4ad1-acb9-07bf20f3c429",
+        "texto": "A gestão de riscos é melhorada continuamente?",
+        "control_id": "dc6243f7-17bd-4cbb-bce0-2def5811aadb"
+      },
+      {
+        "id": "85f83c6b-b042-4124-82db-1428f5b8a000",
+        "texto": "Riscos são reportados aos níveis apropriados?",
+        "control_id": "5f2ec941-957d-4943-9109-39f73ad7d867"
+      },
+      {
+        "id": "e826244c-b2da-4964-a8f5-6fca33d1b915",
+        "texto": "Uma cultura de consciência de risco é promovida?",
+        "control_id": "d3e5d97b-4db6-41df-8969-3c92065eac3e"
+      },
+      {
+        "id": "2a5b9f9b-a524-463e-8df3-fae6dc3eed16",
+        "texto": "A liderança demonstra compromisso com a cibersegurança?",
+        "control_id": "0cb65c94-b155-404b-a2fa-82cec08faaf0"
+      },
+      {
+        "id": "c310e5de-1f45-4029-9773-d583d86268db",
+        "texto": "Responsabilidades de segurança são atribuídas?",
+        "control_id": "4ea52c30-751a-403d-981b-9263ede25105"
+      },
+      {
+        "id": "078ea24b-5921-4f4a-85f4-f78f376f2ab2",
+        "texto": "Recursos adequados são alocados?",
+        "control_id": "b679dfa8-3a04-410c-b868-d66cffb9f595"
+      },
+      {
+        "id": "ff7c5e1a-6a81-40ed-8216-6eeaf62f2ba1",
+        "texto": "A verificação de pessoal é realizada?",
+        "control_id": "c1dfe090-641b-4891-880c-e75f68539bae"
+      },
+      {
+        "id": "e9ddbed0-0f5e-4ff4-919d-7c3266934401",
+        "texto": "Políticas organizacionais são estabelecidas?",
+        "control_id": "06a3c8f3-816b-4bbf-b45a-7e491a976c9b"
+      },
+      {
+        "id": "56389f3c-ee32-4bfd-89c7-7b0d8b1f4a92",
+        "texto": "Políticas são comunicadas e reforçadas?",
+        "control_id": "76848288-0d02-433c-8215-8e1ee2feba86"
+      },
+      {
+        "id": "6af987d4-8c09-4bab-8667-bd7f4e107126",
+        "texto": "O desempenho do programa de segurança é monitorado?",
+        "control_id": "ef4e5fee-dcad-438f-8a49-4fc28b9b027e"
+      },
+      {
+        "id": "363e7705-1bed-49f7-b664-f402cd6e71da",
+        "texto": "Ações corretivas são tomadas para deficiências?",
+        "control_id": "ebbf7e2e-d0c6-4490-b8b4-f020a3d02e9e"
+      },
+      {
+        "id": "81d7cc22-73de-443e-afc6-8cad29ebd1b9",
+        "texto": "O programa é revisado periodicamente?",
+        "control_id": "8130bb8b-7516-45e3-a7cf-f6bdd0760112"
+      },
+      {
+        "id": "c4c35ffa-5cf0-4b5b-a839-df543ab0277a",
+        "texto": "Estratégia de risco da cadeia de suprimentos definida?",
+        "control_id": "3d51968e-dab5-4417-96d8-ba0f4b0ce503"
+      },
+      {
+        "id": "450f616e-2c2b-4b90-bca9-7e82a98f1590",
+        "texto": "Requisitos de segurança para fornecedores definidos?",
+        "control_id": "ff64adbe-b92e-4d49-9292-344f406af4d0"
+      },
+      {
+        "id": "733b6cdc-8a5e-45c1-93d7-cfce32e721f9",
+        "texto": "Contratos incluem cláusulas de segurança?",
+        "control_id": "7ac883a9-f314-499f-8ea6-306b568eaf26"
+      },
+      {
+        "id": "d427dcc1-7111-47ae-99b2-c3bab18d1ded",
+        "texto": "Fornecedores são avaliados antes da contratação?",
+        "control_id": "d8133fc4-c0a0-4445-a509-6dfc2ffd09c3"
+      },
+      {
+        "id": "070b2b11-a751-413c-ac5d-02ca14c5cb5d",
+        "texto": "Fornecedores são monitorados continuamente?",
+        "control_id": "d21f69f4-da9f-4465-9a66-476d66a5089b"
+      },
+      {
+        "id": "0f50f7ea-a3ae-4fab-bf5f-0bbbc764f036",
+        "texto": "Processos de encerramento de fornecedores definidos?",
+        "control_id": "0641cb97-2063-48bb-bade-817c25df32c0"
+      },
+      {
+        "id": "7f8b88d8-555d-4269-928a-81e4b21e4ad6",
+        "texto": "Incidentes na cadeia de suprimentos são gerenciados?",
+        "control_id": "0807a294-9fae-40c9-ba0b-e1eb090003bd"
+      },
+      {
+        "id": "c641c2c6-596f-451e-ab4f-bc3b38a1228d",
+        "texto": "O processo SCRM é melhorado?",
+        "control_id": "33486d40-0b98-4970-9d97-414a14d35936"
+      },
+      {
+        "id": "bb8c3ad5-9f6f-488b-8506-0005840e7029",
+        "texto": "SCRM integrado ao risco corporativo?",
+        "control_id": "0b585da2-5b93-4b38-b78f-6e167a10fa47"
+      },
+      {
+        "id": "b03ab86a-0adb-4881-8444-a9f039141b15",
+        "texto": "Segurança considerada na aquisição de tecnologia?",
+        "control_id": "c549528c-be62-48b3-872c-2d3ac658da5b"
+      },
+      {
+        "id": "7e0398ab-015a-41ff-8f9c-cda346dbc67e",
+        "texto": "Inventário de hardware gerenciado?",
+        "control_id": "cc407033-f70a-430b-956a-8454c67b2161"
+      },
+      {
+        "id": "99e66179-4e18-4cd5-b420-be8a53fe6b34",
+        "texto": "Inventário de software gerenciado?",
+        "control_id": "da0ba736-f2d6-4116-a6b6-c7e848c659f5"
+      },
+      {
+        "id": "121bc9db-2467-4291-823a-335186ead38d",
+        "texto": "Fluxo de dados mapeado?",
+        "control_id": "1a3ff9a9-9072-492f-9991-36da835f2d15"
+      },
+      {
+        "id": "fccdff1e-8c0b-4234-b81e-6493c2c8f2e6",
+        "texto": "Sistemas externos catalogados?",
+        "control_id": "9382ef23-30ae-4f2e-9640-8c793500d2e5"
+      },
+      {
+        "id": "66450ff8-8223-47e5-84c7-b5bd97164ead",
+        "texto": "Ativos priorizados por criticidade?",
+        "control_id": "4cc8f85b-6cf1-4ada-89ec-7d0a9fc8232c"
+      },
+      {
+        "id": "ba761ed6-78ab-426c-8fc1-6f18d01a6121",
+        "texto": "Dependências de sistemas mapeadas?",
+        "control_id": "3e5ca2fe-ae8e-4d51-a533-873ef30fb120"
+      },
+      {
+        "id": "f0a79ffd-e70d-4565-a06e-5111897a1ebb",
+        "texto": "Ciclo de vida dos ativos gerenciado?",
+        "control_id": "457e3acd-d466-436c-8afe-374859e35531"
+      },
+      {
+        "id": "a300f917-d0cb-4d49-a564-fabe0799ea43",
+        "texto": "Vulnerabilidades identificadas e gerenciadas?",
+        "control_id": "8dbc033f-cc15-4f21-a618-8bdba50619ab"
+      },
+      {
+        "id": "71c437a1-35f1-49bb-87f3-942808fde60f",
+        "texto": "Inteligência de ameaças utilizada?",
+        "control_id": "1ed68cd5-0315-4df4-aac4-66f179a75c0f"
+      },
+      {
+        "id": "16d71f19-dbc6-4066-b810-8d9493a68ead",
+        "texto": "Ameaças internas consideradas?",
+        "control_id": "b677fa17-94e5-433d-9203-c41982b77d83"
+      },
+      {
+        "id": "cbf1b554-da10-4596-bd0e-8c09e67b298a",
+        "texto": "Impactos nos negócios analisados?",
+        "control_id": "a884031d-13fc-4b6a-a289-dec8cd77fa30"
+      },
+      {
+        "id": "2e7b1170-fbcf-4895-b04b-287c8513fbc4",
+        "texto": "Probabilidade de risco determinada?",
+        "control_id": "10b04da2-033f-4635-b772-58a17c316d8b"
+      },
+      {
+        "id": "f925dd9d-bad3-4d30-81e9-4fcddbec53e5",
+        "texto": "Registro de riscos mantido?",
+        "control_id": "b91b3f00-54f3-406b-9886-2c0a8d7d9436"
+      },
+      {
+        "id": "e197d5e7-308e-459a-872e-03af2ece5112",
+        "texto": "Respostas aos riscos priorizadas?",
+        "control_id": "098d6cf7-5dae-43ca-937c-850db4546a7d"
+      },
+      {
+        "id": "89c28282-a521-4989-962f-d66508c3b3a8",
+        "texto": "Planos de melhoria estabelecidos?",
+        "control_id": "55f29105-3b07-43fe-b48a-7b364aca6715"
+      },
+      {
+        "id": "ac508417-a3a6-4221-84b6-c66d764c2001",
+        "texto": "Estratégia atualizada com lições aprendidas?",
+        "control_id": "9414e66c-a557-4388-8b1c-60b0523dc026"
+      },
+      {
+        "id": "b5b0ddb5-6263-42c2-83ab-950a83fa49a8",
+        "texto": "Planos testados regularmente?",
+        "control_id": "d1eb2f91-4f84-4832-8e98-acf49e7dbb47"
+      },
+      {
+        "id": "d1a52841-51a2-49ec-bb9c-3a43909c1f2b",
+        "texto": "Identidades gerenciadas?",
+        "control_id": "d389692d-db0a-42dc-9bbc-da94302c3393"
+      },
+      {
+        "id": "2568d9e3-c476-4e5b-9f15-9c4d03fb3b10",
+        "texto": "Acesso físico gerido?",
+        "control_id": "bcb55764-2c48-4e8b-ba1d-97955630c56c"
+      },
+      {
+        "id": "3e6fd26a-854a-4bd8-bd95-11f1bda139e0",
+        "texto": "Acesso remoto protegido?",
+        "control_id": "c7ab8c9c-d970-48b3-8613-cf975a52394b"
+      },
+      {
+        "id": "db559a02-e0ae-4761-a824-e55c4af12ec7",
+        "texto": "Permissões gerenciadas?",
+        "control_id": "9b0b41c1-6afe-439f-8c10-ee7de33e181d"
+      },
+      {
+        "id": "e6594e49-bdc3-4533-81ae-4faa7c61934d",
+        "texto": "Menor privilégio aplicado?",
+        "control_id": "a94ac465-d725-46c6-bc82-449b2973afbe"
+      },
+      {
+        "id": "8063ebc0-4e56-4aa9-80f0-99d68ad35400",
+        "texto": "Segregação de funções aplicada?",
+        "control_id": "0e30140c-e886-4ddf-a825-7e2439cfb48f"
+      },
+      {
+        "id": "d0ef12e6-74c7-4879-b23e-da16c8f2d8c6",
+        "texto": "Autenticação forte utilizada?",
+        "control_id": "15ef661e-ee22-4651-b8cd-94903e236ed3"
+      },
+      {
+        "id": "7832a145-35a6-4710-ab58-334ea19bed57",
+        "texto": "Atividades de usuário logadas?",
+        "control_id": "a9cd93a9-770e-4e4b-89d5-5770c9c1e7c0"
+      },
+      {
+        "id": "4a52a19a-dca7-455c-926e-69505a323387",
+        "texto": "Programa de conscientização ativo?",
+        "control_id": "17ac8c8d-830b-45e9-8a1b-05e88598ecfa"
+      },
+      {
+        "id": "c5d83101-9dde-49c6-8285-10105b70f300",
+        "texto": "Treinamento para usuários privilegiados?",
+        "control_id": "a329701d-aed3-45aa-a2e3-64df5e8e49fa"
+      },
+      {
+        "id": "a5cadbd9-eb04-4a60-b458-be1c9f200e93",
+        "texto": "Treinamento baseado em função?",
+        "control_id": "66e97795-27b0-4513-8466-1bb9685abb07"
+      },
+      {
+        "id": "96efefcd-d89f-4b0b-b1a6-067ccdf2593f",
+        "texto": "Treinamento para terceiros/parceiros?",
+        "control_id": "7f8d3f14-8846-476a-9350-ef406c806561"
+      },
+      {
+        "id": "59445660-b6d5-464e-b075-d0639569560b",
+        "texto": "Dados em repouso protegidos?",
+        "control_id": "f89800c7-3c85-4833-acca-09e49a7675c3"
+      },
+      {
+        "id": "a4e3247f-7c8d-489e-8717-9f48e4deea92",
+        "texto": "Dados em trânsito protegidos?",
+        "control_id": "ab4f3770-7968-47eb-8a56-164c1f011c55"
+      },
+      {
+        "id": "f7d6d6a2-71eb-408f-8f10-a5e963182c2b",
+        "texto": "Mudanças em ativos controladas?",
+        "control_id": "9e9f2343-a2c1-4a32-ac70-0e3e9d82d7aa"
+      },
+      {
+        "id": "e0367fc3-fcba-4ac6-b126-161deda6b285",
+        "texto": "Capacidade gerenciada?",
+        "control_id": "0fb16876-ce80-4117-aa3b-a3f3f7a1cf0f"
+      },
+      {
+        "id": "19e2593e-eb3b-4e3e-8c71-5c0b482a6510",
+        "texto": "Proteção contra vazamento de dados?",
+        "control_id": "920d8dd4-4b6d-40ca-9714-7c989f9012ce"
+      },
+      {
+        "id": "c432a065-c17f-4cff-b35e-c10bebf4bd3d",
+        "texto": "Integridade verificada?",
+        "control_id": "9256231d-ba4c-4c21-864f-3ca68dbe30a7"
+      },
+      {
+        "id": "6eb0a0a2-4938-402e-8716-3c4f999e0741",
+        "texto": "Backups mantidos e testados?",
+        "control_id": "cdb5e8ed-c955-4e89-b2f6-be8af1ae14d6"
+      },
+      {
+        "id": "52546a07-58b0-4ed7-806b-ba4b868954cc",
+        "texto": "Ambientes de desenvolvimento protegidos?",
+        "control_id": "a9e364d3-f8b9-4c17-a267-97a742feffdb"
+      },
+      {
+        "id": "650b6df8-1fc0-48f5-96ab-852c5f554869",
+        "texto": "Descarte seguro de dados?",
+        "control_id": "b09633ce-6623-4f87-aa33-4dd59ddb836b"
+      },
+      {
+        "id": "b274b132-b303-4a5f-9a41-e7a78894ac86",
+        "texto": "Disponibilidade mantida?",
+        "control_id": "4b5b104e-6f00-4f6d-b260-bac45097ad6b"
+      },
+      {
+        "id": "397ccb67-bd45-4eba-9f87-939ab7f2a42a",
+        "texto": "Configurações de base mantidas?",
+        "control_id": "a0baf664-d2d0-4665-8478-17fd0daf47ac"
+      },
+      {
+        "id": "a03abef7-8e4a-48be-a423-bb8c520fedae",
+        "texto": "Controle de mudanças implementado?",
+        "control_id": "a9350991-48ea-4158-89f1-7eb538fd20ac"
+      },
+      {
+        "id": "606c5de5-9ad2-4de3-b5cc-584fdf8d8763",
+        "texto": "Instalação de software controlada?",
+        "control_id": "a09cccee-de6c-4b62-9f9e-53f25fef21e0"
+      },
+      {
+        "id": "19dfeb63-1228-4c8f-bdc3-02208aebf19a",
+        "texto": "Logs configurados e mantidos?",
+        "control_id": "58dd2bcd-e4df-4fd4-8e3a-a9bea0fe3a3a"
+      },
+      {
+        "id": "aa6eeb67-aeb8-499f-8974-dd2526d68334",
+        "texto": "Redes resilientes implementadas?",
+        "control_id": "dcf90ab1-0daa-4b8d-85ab-80b1f627c3d2"
+      },
+      {
+        "id": "12658434-e560-462d-beeb-5b90c18ddb72",
+        "texto": "Sistemas resilientes implementados?",
+        "control_id": "5ffbb639-96e1-4a66-876a-46f5c6e09598"
+      },
+      {
+        "id": "04787f21-4095-4c25-bc2e-720bce8714c5",
+        "texto": "Virtualização segura?",
+        "control_id": "36a0cbaf-9abd-49d8-99c9-fdab936bc1cb"
+      },
+      {
+        "id": "dcc1be19-8c7e-4d17-a069-d9ca2ae8de49",
+        "texto": "Eventos detectados em tempo hábil?",
+        "control_id": "350687f4-f4ed-4a65-b8aa-2844e07f4d9a"
+      },
+      {
+        "id": "aff48c65-e70f-42f3-8a21-bba479b68978",
+        "texto": "Eventos analisados para entender alvos?",
+        "control_id": "92b5045a-fb21-4139-accf-8d19779ed5a6"
+      },
+      {
+        "id": "7df3b36f-e3c9-4ef8-9232-654d6f4f7b1c",
+        "texto": "Impacto de eventos determinado?",
+        "control_id": "1c954025-b8f2-460b-80e2-9c35df773929"
+      },
+      {
+        "id": "976be15c-c1a0-439b-b4e3-efbba3ac1fa2",
+        "texto": "Limites de alerta estabelecidos?",
+        "control_id": "c8f6bb71-b8bd-4247-80d6-b2c7a50e7faf"
+      },
+      {
+        "id": "b83e80cc-e297-413c-9a57-e8931a890058",
+        "texto": "Monitoramento de rede ativo?",
+        "control_id": "fc2cd7d8-027f-4b70-b8d6-d674ae9562c7"
+      },
+      {
+        "id": "5e5b855f-8671-414d-b078-f8702762773f",
+        "texto": "Monitoramento de ambiente físico?",
+        "control_id": "f319692a-f771-4fed-8407-da706ead3a8a"
+      },
+      {
+        "id": "79f35814-ca3d-4f9e-aefb-0b00ea2352f4",
+        "texto": "Atividade de pessoal monitorada?",
+        "control_id": "8f1e41e0-99a8-48cb-9e1c-ac1d94cf23e9"
+      },
+      {
+        "id": "88ece9ab-8e2a-4f8f-b8fe-6c82ed46f6ef",
+        "texto": "Monitoramento de serviços externos?",
+        "control_id": "cb50cbfd-4269-4cad-bfab-8da1946cf53e"
+      },
+      {
+        "id": "53229c4c-1c82-47b6-affd-471095def4a0",
+        "texto": "Papéis de detecção definidos?",
+        "control_id": "81581abf-91d7-434a-9a21-fd171bb843b7"
+      },
+      {
+        "id": "5ae1a966-2d1c-49bb-8aa6-a2e8371f6e11",
+        "texto": "Informação de eventos comunicada?",
+        "control_id": "af2fd6c2-9aea-4388-9454-6dbb032fe6dc"
+      },
+      {
+        "id": "b16e8fcb-d231-4d09-b037-1a5b01891f06",
+        "texto": "Plano de resposta executado?",
+        "control_id": "6e5ed14e-f95c-4463-b1a4-74aca4e46aaa"
+      },
+      {
+        "id": "056c97f2-45c0-4559-bd3f-b7c452be2eb4",
+        "texto": "Incidentes reportados?",
+        "control_id": "4ae3437a-c121-42db-b8f0-e022687df58d"
+      },
+      {
+        "id": "2d59f05d-eca1-477d-9332-839cdf7a1f03",
+        "texto": "Suporte a pessoal durante incidentes?",
+        "control_id": "a357b55e-00f8-4b1e-80f8-b16d7c29be3c"
+      },
+      {
+        "id": "0fb5c518-4bbe-469c-962d-7d23bba1b41e",
+        "texto": "Análise forense realizada?",
+        "control_id": "f32b8ba7-a0ff-4848-a8a7-e62649144e9c"
+      },
+      {
+        "id": "92eb40c7-936c-410e-8485-32bb6e7d5924",
+        "texto": "Incidentes categorizados?",
+        "control_id": "31cb526e-ea3c-4329-882d-d0716cb39509"
+      },
+      {
+        "id": "eace46e4-0c88-4a78-b5e7-d9849846cb39",
+        "texto": "Vulnerabilidades exploradas mitigadas?",
+        "control_id": "da0f327c-2301-453e-9b85-176239cd20ba"
+      },
+      {
+        "id": "d0ca82c6-d93d-40f5-8977-a3275ffdf620",
+        "texto": "Resposta coordenada?",
+        "control_id": "6de1f0af-d111-4429-b90b-eab7b2aa5ed6"
+      },
+      {
+        "id": "d42438bd-3add-4cf8-b50b-7ccb105c6a4b",
+        "texto": "Stakeholders notificados?",
+        "control_id": "2301ae46-58b5-4ccc-b83d-5f55357f9588"
+      },
+      {
+        "id": "f600e91a-7aa6-4381-adb1-c3ce8a70fd59",
+        "texto": "Comunicação pública gerenciada?",
+        "control_id": "3ae3de2d-2ace-4bed-a12d-de638748b236"
+      },
+      {
+        "id": "258b35a0-67b0-4d51-81c2-90bd17a050ed",
+        "texto": "Incidentes contidos?",
+        "control_id": "4a65dbc8-4414-45d7-88e0-5cad2ac9fd80"
+      },
+      {
+        "id": "46f24836-183e-48b9-938b-4632ded474a0",
+        "texto": "Ameaças erradicadas?",
+        "control_id": "82a66d04-d6af-47a1-8bae-ae287df05bc5"
+      },
+      {
+        "id": "e10f3c25-8953-4ff1-af9e-0d4435ab96db",
+        "texto": "Plano de recuperação executado?",
+        "control_id": "0b7fdff7-a893-4429-bea1-7126f2d02a97"
+      },
+      {
+        "id": "5f8a0a92-ef14-49cb-aa53-0edb1f548ce1",
+        "texto": "Escopo de recuperação definido?",
+        "control_id": "7d9556e9-70c3-4558-9438-03455f2df22b"
+      },
+      {
+        "id": "acff6536-9b34-4120-a51d-1e35e8bd07da",
+        "texto": "Tempos de recuperação atingidos?",
+        "control_id": "e8780572-3b1c-4775-904a-63f469fe903a"
+      },
+      {
+        "id": "bb06bb29-aaab-4c93-bfdd-71966770b5fe",
+        "texto": "Lições aprendidas incorporadas?",
+        "control_id": "652a4f8f-2937-40c5-bf3e-c634b97798a8"
+      },
+      {
+        "id": "f5362f59-93e8-45ea-b541-7f4d4963acb9",
+        "texto": "Estratégias atualizadas?",
+        "control_id": "5482ff7f-a4e5-4828-8f9d-eb16858cce31"
+      },
+      {
+        "id": "700a471c-8de5-4c87-923f-0a99e0f0b386",
+        "texto": "RP gerenciado durante recuperação?",
+        "control_id": "dfe93f75-c78a-455f-8bf1-7faf94f5e251"
+      },
+      {
+        "id": "497e4386-98aa-4da0-99c9-3c51e89d2a02",
+        "texto": "Reputação reparada?",
+        "control_id": "61563d34-49ae-4890-9945-9d81cec4b9c3"
+      },
+      {
+        "id": "08a189ce-28f3-4bf9-b30a-a184b049974a",
+        "texto": "Status de recuperação comunicado?",
+        "control_id": "2602193b-0b67-4a0f-8517-e5b2346385cc"
+      }
+    ]
+  },
+  "GDPR": {
+    "id": "3771789b-b8b4-411b-b8b6-c1a38f0cbe92",
+    "controls": [
+      {
+        "id": "6b308fa6-88cb-4449-be88-2186417b15af",
+        "titulo": "Processing Principles"
+      },
+      {
+        "id": "22907cb9-1171-4683-8998-442e1cabc696",
+        "titulo": "Lawfulness"
+      },
+      {
+        "id": "02875b2c-fbc5-4336-bd80-4e05dc26a598",
+        "titulo": "Consent"
+      },
+      {
+        "id": "20fe45de-b6fa-4e97-b389-bf446e7cd82b",
+        "titulo": "Special Categories"
+      },
+      {
+        "id": "80fd9c6f-5e96-4cea-bd5f-a50a5585fbf6",
+        "titulo": "Transparent Info"
+      },
+      {
+        "id": "5578f1b6-0e83-4986-9ae3-81fa3014fc31",
+        "titulo": "Right of Access"
+      },
+      {
+        "id": "c8ef7208-379f-495e-9ed0-2978c60b9879",
+        "titulo": "Rectification"
+      },
+      {
+        "id": "75917739-74ce-4949-9b02-3a179cdfc3e1",
+        "titulo": "Erasure (Right to be Forgotten)"
+      },
+      {
+        "id": "2764b485-6ad1-41ef-a7a9-825002e313c3",
+        "titulo": "Data Portability"
+      },
+      {
+        "id": "cbbdf38c-fcdc-4240-8f49-092e6a41bbaf",
+        "titulo": "Right to Object"
+      },
+      {
+        "id": "80bbd1ae-9869-416e-bbbf-fb149dbc6857",
+        "titulo": "Controller Responsibility"
+      },
+      {
+        "id": "c48d590c-4e95-43b7-9532-9c71757d3098",
+        "titulo": "Data Protection by Design"
+      },
+      {
+        "id": "8b2b403f-8d34-4275-b42f-c9dcfa7dc417",
+        "titulo": "Processor"
+      },
+      {
+        "id": "2b2572be-9bd1-4ed3-a063-c097bc3893f6",
+        "titulo": "Records of Processing (ROPA)"
+      },
+      {
+        "id": "829c87f9-392f-4bb8-8e73-bfa4f05e4cd4",
+        "titulo": "Security of Processing"
+      },
+      {
+        "id": "68f79112-7350-4c81-9326-7814b262fd45",
+        "titulo": "Breach Notification (Auth)"
+      },
+      {
+        "id": "ae2103db-a146-4922-bff6-87b950d24940",
+        "titulo": "Breach Notification (Subject)"
+      },
+      {
+        "id": "57965cb4-be89-432f-9957-58e9322703ab",
+        "titulo": "DPIA"
+      },
+      {
+        "id": "249d2250-96f9-4a8f-901b-0487f2e3c693",
+        "titulo": "DPO"
+      },
+      {
+        "id": "144a1a47-a8fd-4727-907c-59bc49c4a477",
+        "titulo": "General Principle"
+      },
+      {
+        "id": "d75571ac-8a7b-4fcc-b95d-9fe99be27596",
+        "titulo": "Safeguards"
+      }
+    ],
+    "questions": [
+      {
+        "id": "867bbe8a-da10-4ac7-8374-e94cd389ad6f",
+        "texto": "Are data processed lawfully, fairly and transparently?",
+        "control_id": "6b308fa6-88cb-4449-be88-2186417b15af"
+      },
+      {
+        "id": "8ef54cf0-1d04-4cd2-9e53-220528da3d5f",
+        "texto": "Is there a valid legal basis for each processing activity?",
+        "control_id": "22907cb9-1171-4683-8998-442e1cabc696"
+      },
+      {
+        "id": "949a1d72-5e61-4249-a3cb-36252762df55",
+        "texto": "Are conditions for consent (freely given, specific, informed) met?",
+        "control_id": "02875b2c-fbc5-4336-bd80-4e05dc26a598"
+      },
+      {
+        "id": "083aa476-9861-426d-941c-99cb2281ee81",
+        "texto": "Is processing of special categories of data prohibited unless exception applies?",
+        "control_id": "20fe45de-b6fa-4e97-b389-bf446e7cd82b"
+      },
+      {
+        "id": "393e8e97-a7be-446f-a76c-1ffcc00902bc",
+        "texto": "Is information provided to data subjects concise, transparent, and accessible?",
+        "control_id": "80fd9c6f-5e96-4cea-bd5f-a50a5585fbf6"
+      },
+      {
+        "id": "bc009523-6ba3-4944-b501-8a7edb18b2a6",
+        "texto": "Can the controller provide confirmation and access to personal data?",
+        "control_id": "5578f1b6-0e83-4986-9ae3-81fa3014fc31"
+      },
+      {
+        "id": "a7faf35c-2f13-4f72-ad1e-bc3b22a3de8f",
+        "texto": "Is there a process to rectify inaccurate data without delay?",
+        "control_id": "c8ef7208-379f-495e-9ed0-2978c60b9879"
+      },
+      {
+        "id": "5c40029b-cc94-4b3b-bafc-dba7fde84885",
+        "texto": "Is data erased when no longer necessary or consent is withdrawn?",
+        "control_id": "75917739-74ce-4949-9b02-3a179cdfc3e1"
+      },
+      {
+        "id": "f31112e6-9bb4-4aa7-a081-38b79a0f382f",
+        "texto": "Can data be provided in a structured, machine-readable format?",
+        "control_id": "2764b485-6ad1-41ef-a7a9-825002e313c3"
+      },
+      {
+        "id": "78ecadc7-1aeb-4ceb-ac54-803dc528f003",
+        "texto": "Is the right to object to processing (esp. direct marketing) respected?",
+        "control_id": "cbbdf38c-fcdc-4240-8f49-092e6a41bbaf"
+      },
+      {
+        "id": "25dad72d-9bc3-4f01-b484-b5908a7aca27",
+        "texto": "Are technical and organisational measures implemented to ensure compliance?",
+        "control_id": "80bbd1ae-9869-416e-bbbf-fb149dbc6857"
+      },
+      {
+        "id": "5e7bac6b-c7ec-49ee-865c-856ffaae4ed1",
+        "texto": "Is data protection implemented by design and by default?",
+        "control_id": "c48d590c-4e95-43b7-9532-9c71757d3098"
+      },
+      {
+        "id": "b8009ed4-8f71-444b-86b1-68a99fcf334d",
+        "texto": "Are processors engaged only under binding contract ensuring GDPR compliance?",
+        "control_id": "8b2b403f-8d34-4275-b42f-c9dcfa7dc417"
+      },
+      {
+        "id": "a087b04c-f4d4-4157-9966-2679623e4f0a",
+        "texto": "Is a record of processing activities maintained (if applicable)?",
+        "control_id": "2b2572be-9bd1-4ed3-a063-c097bc3893f6"
+      },
+      {
+        "id": "4ea98384-8416-448b-b0b6-08fa446d8846",
+        "texto": "Are measures (encryption, resilience, testing) in place to ensure security?",
+        "control_id": "829c87f9-392f-4bb8-8e73-bfa4f05e4cd4"
+      },
+      {
+        "id": "dc630891-6548-43bb-b78e-6cb5b5153888",
+        "texto": "Are breaches notified to the supervisory authority within 72h?",
+        "control_id": "68f79112-7350-4c81-9326-7814b262fd45"
+      },
+      {
+        "id": "eb58f79f-79a5-4d6c-94ae-ac11c321e7c9",
+        "texto": "Are high-risk breaches communicated to data subjects without delay?",
+        "control_id": "ae2103db-a146-4922-bff6-87b950d24940"
+      },
+      {
+        "id": "1078596e-1433-4b7b-b252-e747429e1d05",
+        "texto": "Is a Data Protection Impact Assessment carried out for high risks?",
+        "control_id": "57965cb4-be89-432f-9957-58e9322703ab"
+      },
+      {
+        "id": "961a3f74-e1d3-404e-9bec-eefb9b8a171f",
+        "texto": "Is a DPO designated where required?",
+        "control_id": "249d2250-96f9-4a8f-901b-0487f2e3c693"
+      },
+      {
+        "id": "680c5818-2acc-4d19-bf5d-dc55104d1de6",
+        "texto": "Are transfers to third countries compliant with Chapter V?",
+        "control_id": "144a1a47-a8fd-4727-907c-59bc49c4a477"
+      },
+      {
+        "id": "ad0d7550-5031-48ab-a83a-f8f6f5a4f315",
+        "texto": "Are appropriate safeguards (e.g., SCCs, BCRs) in place if no adequacy decision exists?",
+        "control_id": "d75571ac-8a7b-4fcc-b95d-9fe99be27596"
+      }
+    ]
+  }
+}
