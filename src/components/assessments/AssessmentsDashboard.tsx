@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
-  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target, Trash2, Edit, Calendar
+  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target, Trash2, Edit, Calendar, AlertCircle, Eye
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -19,6 +19,20 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { useNavigate } from 'react-router-dom';
 import { useAssessmentIntegration } from '@/hooks/useAssessmentIntegration';
 import { toast } from 'sonner';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const STATUS_COLORS: Record<string, string> = {
+  'concluido': '#10b981', // emerald-500
+  'em_andamento': '#8b5cf6', // violet-500
+  'em_execucao': '#a855f7', // purple-500
+  'planejado': '#3b82f6', // blue-500
+  'aguardando_revisao': '#f97316', // orange-500
+  'cancelado': '#ef4444', // red-500
+};
 
 export default function AssessmentsDashboard() {
   const { user } = useAuth();
@@ -52,6 +66,31 @@ export default function AssessmentsDashboard() {
     addAssessmentEvaluators,
     refreshList
   } = useAssessmentIntegration();
+
+  // Aggregations for Charts
+  const statusData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    assessments.forEach(a => {
+      counts[a.status] = (counts[a.status] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({
+      name: name.replace('_', ' '),
+      key: name,
+      value
+    })).sort((a, b) => b.value - a.value);
+  }, [assessments]);
+
+  const frameworkData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    assessments.forEach(a => {
+      const fwName = a.framework?.nome || 'Customizado';
+      counts[fwName] = (counts[fwName] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value]) => ({
+      name,
+      value
+    })).sort((a, b) => b.value - a.value).slice(0, 5); // Top 5
+  }, [assessments]);
 
   // Edit Dialog State
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -114,8 +153,7 @@ export default function AssessmentsDashboard() {
         </Button>
       </div>
 
-      {/* Métricas Principais (Server Side) */}
-      {/* Métricas Principais (Server Side) */}
+      {/* Métricas Principais (Updated) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
@@ -134,15 +172,42 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Em Andamento</p>
-                <p className="text-2xl font-bold text-purple-600">{metrics.active}</p>
-                <p className="text-xs text-muted-foreground mt-1">Ativos agora</p>
+                <p className="text-sm text-muted-foreground">Taxa de Conformidade</p>
+                <p className="text-2xl font-bold text-emerald-600">{metrics.complianceRate}%</p>
+                <p className="text-xs text-muted-foreground mt-1">Concluídos vs Total</p>
               </div>
-              <Activity className="h-8 w-8 text-purple-600" />
+              <CheckCircle className="h-8 w-8 text-emerald-600" />
             </div>
           </CardContent>
         </Card>
 
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Maturidade Média</p>
+                <p className="text-2xl font-bold text-blue-600">{metrics.avgMaturity}%</p>
+                <p className="text-xs text-muted-foreground mt-1">Geral</p>
+              </div>
+              <Activity className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Aguardando Revisão</p>
+                <p className="text-2xl font-bold text-orange-600">{metrics.reviewPending}</p>
+                <p className="text-xs text-muted-foreground mt-1">Pendências</p>
+              </div>
+              <Eye className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Second Row - Detailed Status Counts */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -160,12 +225,100 @@ export default function AssessmentsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
+                <p className="text-sm text-muted-foreground">Em Andamento</p>
+                <p className="text-2xl font-bold text-purple-600">{metrics.active}</p>
+                <p className="text-xs text-muted-foreground mt-1">Em execução</p>
+              </div>
+              <Activity className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
                 <p className="text-sm text-muted-foreground">Concluídos</p>
                 <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
                 <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pendentes</p>
+                <p className="text-2xl font-bold text-blue-500">{metrics.pending}</p>
+                <p className="text-xs text-muted-foreground mt-1">Planejados</p>
+              </div>
+              <FileText className="h-8 w-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Visual Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Status Distribution */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Distribuição por Status</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={STATUS_COLORS[entry.key] || COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: number) => [value, 'Assessments']}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Legend verticalAlign="middle" align="right" layout="vertical" />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Framework Usage */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Assessments por Framework</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={frameworkData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} strokeOpacity={0.5} />
+                <XAxis type="number" allowDecimals={false} hide />
+                <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} interval={0} />
+                <Tooltip
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Bar dataKey="value" name="Qtd" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
