@@ -34,6 +34,7 @@ interface ExtendedDomain extends AssessmentDomain {
 }
 
 export default function AssessmentExecutionEngine() {
+    // Force rebuild - Fix dispatcher null error
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
