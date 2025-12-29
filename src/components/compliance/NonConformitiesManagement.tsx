@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
-import { 
+import {
   AlertTriangle,
   Plus,
   Search,
@@ -86,8 +86,16 @@ interface ActionPlan {
   percentual_conclusao: number;
 }
 
+interface Requirement {
+  id: string;
+  titulo: string;
+  framework_id: string;
+  framework_nome: string;
+}
+
 const nonConformitySchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
+  requisito_id: z.string().min(1, "Requisito é obrigatório"),
   o_que: z.string().min(1, "Descrição é obrigatória"),
   onde: z.string().optional(),
   quando: z.date().optional(),
@@ -113,6 +121,7 @@ const actionPlanSchema = z.object({
 
 const NonConformitiesManagement: React.FC = () => {
   const [nonConformities, setNonConformities] = useState<NonConformity[]>([]);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -147,11 +156,12 @@ const NonConformitiesManagement: React.FC = () => {
 
   const loadData = async () => {
     if (!tenantId) return;
-    
+
     setLoading(true);
     try {
       await Promise.all([
         loadNonConformities(),
+        loadRequirements(),
         loadUsers()
       ]);
     } catch (error) {
@@ -195,6 +205,31 @@ const NonConformitiesManagement: React.FC = () => {
     setUsers(data || []);
   };
 
+  const loadRequirements = async () => {
+    const { data, error } = await supabase
+      .from('requisitos_compliance')
+      .select(`
+        id,
+        titulo,
+        framework_id,
+        frameworks_compliance!inner(nome)
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'ativo')
+      .order('titulo');
+
+    if (error) throw error;
+
+    const processedRequirements = data?.map(req => ({
+      id: req.id,
+      titulo: req.titulo,
+      framework_id: req.framework_id,
+      framework_nome: req.frameworks_compliance?.nome || 'N/A'
+    })) || [];
+
+    setRequirements(processedRequirements);
+  };
+
   const loadActionPlans = async (nonConformityId: string) => {
     const { data, error } = await supabase
       .from('planos_acao_conformidade')
@@ -217,50 +252,85 @@ const NonConformitiesManagement: React.FC = () => {
 
   const filteredNonConformities = nonConformities.filter(nc => {
     const matchesSearch = nc.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         nc.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         nc.o_que.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      nc.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      nc.o_que.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = selectedStatus === 'all' || nc.status === selectedStatus;
     const matchesCriticality = selectedCriticality === 'all' || nc.criticidade === selectedCriticality;
-    
+
     return matchesSearch && matchesStatus && matchesCriticality;
   });
 
-  const handleCreateNonConformity = async (data: z.infer<typeof nonConformitySchema>) => {
+  const handleSaveNonConformity = async (data: z.infer<typeof nonConformitySchema>) => {
     try {
-      const codigo = `NC-${Date.now()}`;
       const sanitizedData = sanitizeObject(data);
-      
-      const { error } = await supabase
-        .from('nao_conformidades')
-        .insert({
-          tenant_id: tenantId,
-          codigo,
-          titulo: sanitizedData.titulo,
-          o_que: sanitizedData.o_que,
-          onde: sanitizedData.onde,
-          quando: sanitizedData.quando,
-          quem: sanitizedData.quem,
-          por_que: sanitizedData.por_que,
-          categoria: sanitizedData.categoria,
-          criticidade: sanitizedData.criticidade,
-          responsavel_tratamento: sanitizedData.responsavel_tratamento,
-          data_identificacao: format(data.data_identificacao, 'yyyy-MM-dd'),
-          prazo_resolucao: data.prazo_resolucao ? format(data.prazo_resolucao, 'yyyy-MM-dd') : null,
-          status: 'aberta',
-          created_by: user?.id
-        });
+      const payload = {
+        titulo: sanitizedData.titulo,
+        requisito_id: sanitizedData.requisito_id,
+        o_que: sanitizedData.o_que,
+        onde: sanitizedData.onde,
+        quando: sanitizedData.quando,
+        quem: sanitizedData.quem,
+        por_que: sanitizedData.por_que,
+        categoria: sanitizedData.categoria,
+        criticidade: sanitizedData.criticidade,
+        responsavel_tratamento: sanitizedData.responsavel_tratamento,
+        data_identificacao: format(data.data_identificacao, 'yyyy-MM-dd'),
+        prazo_resolucao: data.prazo_resolucao ? format(data.prazo_resolucao, 'yyyy-MM-dd') : null,
+        updated_by: user?.id
+      };
 
-      if (error) throw error;
+      if (editingNonConformity) {
+        const { error } = await supabase
+          .from('nao_conformidades')
+          .update(payload)
+          .eq('id', editingNonConformity.id);
 
-      toast.success('Não conformidade criada com sucesso');
+        if (error) throw error;
+        toast.success('Não conformidade atualizada com sucesso');
+      } else {
+        const codigo = `NC-${Date.now()}`;
+        const { error } = await supabase
+          .from('nao_conformidades')
+          .insert({
+            ...payload,
+            tenant_id: tenantId,
+            codigo,
+            status: 'aberta',
+            created_by: user?.id
+          });
+
+        if (error) throw error;
+        toast.success('Não conformidade criada com sucesso');
+      }
+
       setIsDialogOpen(false);
+      setEditingNonConformity(null);
       nonConformityForm.reset();
       loadNonConformities();
     } catch (error) {
-      secureLog('error', 'Erro ao criar não conformidade', error);
-      toast.error('Erro ao criar não conformidade');
+      secureLog('error', 'Erro ao salvar não conformidade', error);
+      toast.error('Erro ao salvar não conformidade');
     }
+  };
+
+  const handleEdit = (nc: NonConformity) => {
+    setEditingNonConformity(nc);
+    nonConformityForm.reset({
+      titulo: nc.titulo,
+      requisito_id: nc.requisito_id,
+      o_que: nc.o_que,
+      onde: nc.onde,
+      quando: nc.quando ? new Date(nc.quando) : undefined,
+      quem: nc.quem,
+      por_que: nc.por_que,
+      categoria: nc.categoria,
+      criticidade: nc.criticidade,
+      responsavel_tratamento: nc.responsavel_tratamento,
+      data_identificacao: new Date(nc.data_identificacao),
+      prazo_resolucao: nc.prazo_resolucao ? new Date(nc.prazo_resolucao) : undefined
+    });
+    setIsDialogOpen(true);
   };
 
   const handleCreateActionPlan = async (data: z.infer<typeof actionPlanSchema>) => {
@@ -269,7 +339,7 @@ const NonConformitiesManagement: React.FC = () => {
     try {
       const codigo = `PA-${selectedNonConformity.codigo}-${Date.now()}`;
       const sanitizedData = sanitizeObject(data);
-      
+
       const { error } = await supabase
         .from('planos_acao_conformidade')
         .insert({
@@ -367,7 +437,13 @@ const NonConformitiesManagement: React.FC = () => {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingNonConformity(null);
+              nonConformityForm.reset();
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
@@ -376,13 +452,13 @@ const NonConformitiesManagement: React.FC = () => {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Nova Não Conformidade</DialogTitle>
+                <DialogTitle>{editingNonConformity ? 'Editar Não Conformidade' : 'Nova Não Conformidade'}</DialogTitle>
                 <DialogDescription>
-                  Registre uma nova não conformidade identificada
+                  {editingNonConformity ? 'Atualize os dados da não conformidade' : 'Registre uma nova não conformidade identificada'}
                 </DialogDescription>
               </DialogHeader>
               <Form {...nonConformityForm}>
-                <form onSubmit={nonConformityForm.handleSubmit(handleCreateNonConformity)} className="space-y-4">
+                <form onSubmit={nonConformityForm.handleSubmit(handleSaveNonConformity)} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={nonConformityForm.control}
@@ -393,6 +469,31 @@ const NonConformitiesManagement: React.FC = () => {
                           <FormControl>
                             <Input placeholder="Título da não conformidade" {...field} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={nonConformityForm.control}
+                      name="requisito_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Requisito Relacionado</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o requisito" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {requirements.map((req) => (
+                                <SelectItem key={req.id} value={req.id}>
+                                  {req.framework_nome} - {req.titulo}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -573,7 +674,7 @@ const NonConformitiesManagement: React.FC = () => {
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit">Criar Não Conformidade</Button>
+                    <Button type="submit">{editingNonConformity ? 'Salvar Alterações' : 'Criar Não Conformidade'}</Button>
                   </div>
                 </form>
               </Form>
@@ -684,7 +785,7 @@ const NonConformitiesManagement: React.FC = () => {
       <div className="grid gap-4">
         {filteredNonConformities.map((nc) => {
           const daysToDeadline = calculateDaysToDeadline(nc.prazo_resolucao || '');
-          
+
           return (
             <Card key={nc.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -719,7 +820,11 @@ const NonConformitiesManagement: React.FC = () => {
                       <Eye className="h-4 w-4 mr-2" />
                       Visualizar
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(nc)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Editar
                     </Button>
@@ -743,8 +848,8 @@ const NonConformitiesManagement: React.FC = () => {
                       {daysToDeadline !== null && (
                         <span className="block text-xs">
                           {daysToDeadline < 0 ? `${Math.abs(daysToDeadline)} dias atrasado` :
-                           daysToDeadline === 0 ? 'Vence hoje' :
-                           `${daysToDeadline} dias restantes`}
+                            daysToDeadline === 0 ? 'Vence hoje' :
+                              `${daysToDeadline} dias restantes`}
                         </span>
                       )}
                     </p>
@@ -757,7 +862,7 @@ const NonConformitiesManagement: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 {nc.risco_score && (
                   <div className="mb-4">
                     <RiskLevelDisplay level={nc.risco_score} />
@@ -780,7 +885,11 @@ const NonConformitiesManagement: React.FC = () => {
                 : 'Comece registrando a primeira não conformidade do seu sistema.'}
             </p>
             {!searchTerm && selectedStatus === 'all' && selectedCriticality === 'all' && (
-              <Button onClick={() => setIsDialogOpen(true)}>
+              <Button onClick={() => {
+                setEditingNonConformity(null);
+                nonConformityForm.reset();
+                setIsDialogOpen(true);
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Primeira Não Conformidade
               </Button>
@@ -802,14 +911,14 @@ const NonConformitiesManagement: React.FC = () => {
                 Detalhes completos da não conformidade e planos de ação
               </DialogDescription>
             </DialogHeader>
-            
+
             <Tabs defaultValue="details">
               <TabsList>
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
                 <TabsTrigger value="action-plans">Planos de Ação ({actionPlans.length})</TabsTrigger>
                 <TabsTrigger value="history">Histórico</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="details" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
@@ -838,7 +947,7 @@ const NonConformitiesManagement: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <h4 className="font-semibold mb-2">Análise 5W1H</h4>
                       <div className="space-y-2 text-sm">
@@ -867,7 +976,7 @@ const NonConformitiesManagement: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-semibold mb-2">Prazos</h4>
@@ -888,7 +997,7 @@ const NonConformitiesManagement: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     {selectedNonConformity.risco_score && (
                       <div>
                         <h4 className="font-semibold mb-2">Análise de Risco</h4>
@@ -898,7 +1007,7 @@ const NonConformitiesManagement: React.FC = () => {
                   </div>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="action-plans" className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h4 className="font-semibold">Planos de Ação ({actionPlans.length})</h4>
@@ -922,7 +1031,7 @@ const NonConformitiesManagement: React.FC = () => {
                     </DialogContent>
                   </Dialog>
                 </div>
-                
+
                 <div className="space-y-4">
                   {actionPlans.length === 0 && (
                     <div className="text-center py-8">
@@ -939,7 +1048,7 @@ const NonConformitiesManagement: React.FC = () => {
                   )}
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="history">
                 <div className="text-center py-8">
                   <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
