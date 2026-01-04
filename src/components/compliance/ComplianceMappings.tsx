@@ -11,7 +11,10 @@ import {
     SelectContent,
     SelectItem,
     SelectTrigger,
-    SelectValue
+    SelectValue,
+    SelectGroup,
+    SelectLabel,
+    SelectSeparator
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +28,7 @@ import { toast } from 'sonner';
 interface Framework {
     id: string;
     nome: string;
+    is_standard?: boolean;
 }
 
 interface Requirement {
@@ -82,9 +86,10 @@ export default function ComplianceMappings() {
 
         const { data, error } = await supabase
             .from('frameworks_compliance')
-            .select('id, nome')
+            .select('id, nome, is_standard')
             .eq('status', 'ativo')
-            .eq('tenant_id', effectiveTenantId);
+            .or(`tenant_id.eq.${effectiveTenantId},is_standard.eq.true`)
+            .order('nome');
 
         if (data) setFrameworks(data);
         if (error) {
@@ -171,6 +176,9 @@ export default function ComplianceMappings() {
         return partnerList.find(r => r.id === partnerId);
     };
 
+    const standardFrameworks = frameworks.filter(f => f.is_standard);
+    const customFrameworks = frameworks.filter(f => !f.is_standard);
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -201,9 +209,25 @@ export default function ComplianceMappings() {
                                         Nenhum framework encontrado
                                     </div>
                                 ) : (
-                                    frameworks.map(f => (
-                                        <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                                    ))
+                                    <>
+                                        {standardFrameworks.length > 0 && (
+                                            <SelectGroup>
+                                                <SelectLabel>Biblioteca Padrão</SelectLabel>
+                                                {standardFrameworks.map(f => (
+                                                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        )}
+                                        {standardFrameworks.length > 0 && customFrameworks.length > 0 && <SelectSeparator />}
+                                        {customFrameworks.length > 0 && (
+                                            <SelectGroup>
+                                                <SelectLabel>Meus Frameworks</SelectLabel>
+                                                {customFrameworks.map(f => (
+                                                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        )}
+                                    </>
                                 )}
                             </SelectContent>
                         </Select>
@@ -261,9 +285,25 @@ export default function ComplianceMappings() {
                                         Nenhum framework encontrado
                                     </div>
                                 ) : (
-                                    frameworks.map(f => (
-                                        <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                                    ))
+                                    <>
+                                        {standardFrameworks.length > 0 && (
+                                            <SelectGroup>
+                                                <SelectLabel>Biblioteca Padrão</SelectLabel>
+                                                {standardFrameworks.map(f => (
+                                                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        )}
+                                        {standardFrameworks.length > 0 && customFrameworks.length > 0 && <SelectSeparator />}
+                                        {customFrameworks.length > 0 && (
+                                            <SelectGroup>
+                                                <SelectLabel>Meus Frameworks</SelectLabel>
+                                                {customFrameworks.map(f => (
+                                                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        )}
+                                    </>
                                 )}
                             </SelectContent>
                         </Select>

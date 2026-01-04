@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
     Plus,
     Trash2,
@@ -319,18 +320,33 @@ export function FrameworkRequirements({
                         <DialogTitle className="text-xl flex items-center gap-2">
                             <FileText className="h-5 w-5 text-primary" />
                             {frameworkName}
+                            {isStandard && <Badge variant="secondary" className="ml-2">Padrão do Sistema</Badge>}
                         </DialogTitle>
                         <DialogDescription className="mt-1">
-                            Editor de Estrutura e Requisitos
+                            {isStandard
+                                ? 'Visualização da estrutura do framework padrão. Para editar, clone este framework.'
+                                : 'Editor de Estrutura e Requisitos'}
                         </DialogDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => handleCreateNew()}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Novo Requisito Raiz
-                        </Button>
+                        {!isStandard && (
+                            <Button variant="outline" onClick={() => handleCreateNew()}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Novo Requisito Raiz
+                            </Button>
+                        )}
                     </div>
                 </div>
+
+                {isStandard && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900 px-6 py-2 flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                        <Shield className="h-4 w-4" />
+                        <span>
+                            <strong>Modo Somente Leitura:</strong> Este é um framework oficial do sistema.
+                            Você não pode alterar sua estrutura original para garantir a integridade das referências cruzadas.
+                        </span>
+                    </div>
+                )}
 
                 {/* Main Content: Two Columns */}
                 <div className="flex-1 flex overflow-hidden">
@@ -361,15 +377,12 @@ export function FrameworkRequirements({
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <h2 className="text-2xl font-semibold">
-                                                {isCreating ? 'Novo Requisito' : 'Editar Requisito'}
+                                                {isStandard ? 'Detalhes do Requisito' : (isCreating ? 'Novo Requisito' : 'Editar Requisito')}
                                             </h2>
                                             {(() => {
                                                 const codeDots = formData.codigo.split('.').length - 1;
                                                 const likelyDomain = codeDots === 0 && !formData.codigo.includes('.');
-                                                // Simple heuristic: No dots = Domain usually (e.g. "1", "A", "CORE"). 
-                                                // If actively creating with no parent, it's definitely a domain.
                                                 const isRootCreation = isCreating && !parentIdForCreation;
-
                                                 const showDomain = likelyDomain || isRootCreation;
 
                                                 return (
@@ -380,13 +393,12 @@ export function FrameworkRequirements({
                                             })()}
                                         </div>
                                         <p className="text-muted-foreground text-sm">
-                                            {isCreating
-                                                ? parentIdForCreation ? 'Criando um sub-requisito vinculado.' : 'Criando um novo requisito raiz.'
-                                                : 'Editando detalhes e critérios de conformidade.'}
+                                            {isStandard
+                                                ? 'Visualizando detalhes e critérios de conformidade.'
+                                                : (isCreating
+                                                    ? parentIdForCreation ? 'Criando um sub-requisito vinculado.' : 'Criando um novo requisito raiz.'
+                                                    : 'Editando detalhes e critérios de conformidade.')}
                                         </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        {/* Optional actions like 'View History' could go here */}
                                     </div>
                                 </div>
 
@@ -398,6 +410,7 @@ export function FrameworkRequirements({
                                             onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                                             placeholder="1.0"
                                             className="font-mono bg-background"
+                                            disabled={isStandard}
                                         />
                                     </div>
                                     <div className="col-span-3 space-y-2">
@@ -407,6 +420,7 @@ export function FrameworkRequirements({
                                             onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
                                             placeholder="Título do controle"
                                             className="bg-background"
+                                            disabled={isStandard}
                                         />
                                     </div>
                                 </div>
@@ -418,6 +432,7 @@ export function FrameworkRequirements({
                                         onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                                         placeholder="Descreva o objetivo deste controle..."
                                         className="h-24 resize-none bg-background"
+                                        disabled={isStandard}
                                     />
                                 </div>
 
@@ -432,6 +447,7 @@ export function FrameworkRequirements({
                                             onChange={(e) => setFormData({ ...formData, criterios_conformidade: e.target.value })}
                                             placeholder="Liste aqui o que o auditor deve verificar em cada linha..."
                                             className="h-40 border-0 focus-visible:ring-0 p-4 resize-none text-base leading-relaxed"
+                                            disabled={isStandard}
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground ml-1">
@@ -439,31 +455,35 @@ export function FrameworkRequirements({
                                     </p>
                                 </div>
 
-                                <div className="pt-8 flex justify-end gap-3 border-t">
-                                    {editingId && (
-                                        <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 mr-auto" onClick={() => handleDelete(editingId)}>
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            Excluir
+                                {!isStandard && (
+                                    <div className="pt-8 flex justify-end gap-3 border-t">
+                                        {editingId && (
+                                            <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10 mr-auto" onClick={() => handleDelete(editingId)}>
+                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                Excluir
+                                            </Button>
+                                        )}
+                                        <Button variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); }}>
+                                            Cancelar
                                         </Button>
-                                    )}
-                                    <Button variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); }}>
-                                        Cancelar
-                                    </Button>
-                                    <Button onClick={handleSave} className="min-w-[150px]">
-                                        <Save className="h-4 w-4 mr-2" />
-                                        Salvar Alterações
-                                    </Button>
-                                </div>
+                                        <Button onClick={handleSave} className="min-w-[150px]">
+                                            <Save className="h-4 w-4 mr-2" />
+                                            Salvar Alterações
+                                        </Button>
+                                    </div>
+                                )}
 
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50">
                                 <div className="h-24 w-24 rounded-full bg-muted/30 flex items-center justify-center mb-6">
-                                    <CornerDownRight className="h-10 w-10 opacity-40" />
+                                    {isStandard ? <Shield className="h-10 w-10 opacity-40" /> : <CornerDownRight className="h-10 w-10 opacity-40" />}
                                 </div>
                                 <h3 className="text-xl font-medium text-foreground/80">Selecione um requisito</h3>
                                 <p className="text-sm mt-2 max-w-xs text-center">
-                                    Navegue pela árvore à esquerda para editar ou clique em "Novo" para adicionar.
+                                    {isStandard
+                                        ? 'Navegue pela árvore à esquerda para visualizar os detalhes.'
+                                        : 'Navegue pela árvore à esquerda para editar ou clique em "Novo" para adicionar.'}
                                 </p>
                             </div>
                         )}
@@ -474,8 +494,8 @@ export function FrameworkRequirements({
                 {/* Footer */}
                 <div className="p-4 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground">
                     <span className="flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                        Editando em tempo real: {frameworkName}
+                        <div className={`h-2 w-2 rounded-full ${isStandard ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`}></div>
+                        {isStandard ? 'Modo Visualização' : 'Editando em tempo real'}: {frameworkName}
                     </span>
                     <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={onClose}>
