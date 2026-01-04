@@ -320,8 +320,28 @@ const AssessmentsManagement: React.FC = () => {
       toast.success('Avaliação concluída com sucesso');
       loadAssessments();
     } catch (error) {
-      secureLog('error', 'Erro ao concluir avaliação', error);
       toast.error('Erro ao concluir avaliação');
+    }
+  };
+
+  const handleReopenAssessment = async (assessmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('avaliacoes_conformidade')
+        .update({
+          status: 'em_andamento',
+          data_conclusao: null,
+          updated_by: user?.id
+        })
+        .eq('id', assessmentId);
+
+      if (error) throw error;
+
+      toast.success('Avaliação reaberta com sucesso');
+      loadAssessments();
+    } catch (error) {
+      secureLog('error', 'Erro ao reabrir avaliação', error);
+      toast.error('Erro ao reabrir avaliação');
     }
   };
 
@@ -417,8 +437,36 @@ const AssessmentsManagement: React.FC = () => {
         } else if (executionData.resultado_conformidade === 'parcial') {
           updates.score_conformidade = 50;
           updates.pontos_conformes = 0;
-          updates.pontos_nao_conformes = 1; // Count as non-compliant for strict metrics? Or split? Let's keep simple.
+          updates.pontos_nao_conformes = 1;
         }
+
+        // Auto-create Non-Conformity if failed
+        if (executionData.resultado_conformidade === 'nao_conforme' || executionData.resultado_conformidade === 'parcial') {
+          try {
+            // Fetch requirement Code if redundant, but we have it in executingAssessment usually or from relation
+            // Using timestamp for unique code
+            const ncCode = `NC-${Date.now()}`;
+
+            const ncPayload = {
+              tenant_id: executingAssessment.tenant_id,
+              titulo: `Não Conformidade: ${executingAssessment.titulo}`,
+              requisito_id: executingAssessment.requisito_id,
+              o_que: `Identificado durante avaliação de conformidade. Observações: ${executionData.observacoes || 'Sem detalhes informados.'}`,
+              data_identificacao: new Date().toISOString(),
+              status: 'aberta',
+              criticidade: 'media',
+              created_by: user?.id,
+              codigo: ncCode
+            };
+
+            await supabase.from('nao_conformidades').insert(ncPayload);
+            toast.info('Não conformidade registrada automaticamente.');
+          } catch (ncError) {
+            console.error('Error auto-creating NC:', ncError);
+            toast.warning('Avaliação salva, mas houve erro ao gerar a Não Conformidade automática.');
+          }
+        }
+
       } else if (executingAssessment.status === 'planejada') {
         updates.status = 'em_andamento';
         updates.data_inicio = new Date().toISOString();
@@ -705,6 +753,16 @@ const AssessmentsManagement: React.FC = () => {
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Concluir
+                      </Button>
+                    )}
+                    {assessment.status === 'concluida' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReopenAssessment(assessment.id)}
+                      >
+                        <Activity className="h-4 w-4 mr-2" />
+                        Reabrir
                       </Button>
                     )}
                     <Button

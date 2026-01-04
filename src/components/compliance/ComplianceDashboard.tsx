@@ -37,6 +37,7 @@ import MonitoramentoManagement from './MonitoramentoManagement';
 import FrameworksManagement from './FrameworksManagement';
 import ComplianceMappings from './ComplianceMappings';
 import ComplianceReports from './ComplianceReports';
+import { NewAssessmentWizard } from './NewAssessmentWizard';
 
 interface ComplianceMetrics {
   totalFrameworks: number;
@@ -98,6 +99,7 @@ export function ComplianceDashboard() {
   const [nonConformities, setNonConformities] = useState<NonConformity[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('overview');
+  const [isAssessmentWizardOpen, setIsAssessmentWizardOpen] = useState(false);
 
   useEffect(() => {
     if (effectiveTenantId) {
@@ -392,15 +394,7 @@ export function ComplianceDashboard() {
           <p className="text-muted-foreground">Central de Compliance e Gestão Regulatória</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
-          <Button>
+          <Button onClick={() => setIsAssessmentWizardOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Avaliação
           </Button>
@@ -772,6 +766,15 @@ export function ComplianceDashboard() {
           <ComplianceReports />
         </TabsContent>
       </Tabs>
+
+      <NewAssessmentWizard
+        open={isAssessmentWizardOpen}
+        onOpenChange={setIsAssessmentWizardOpen}
+        onSuccess={() => {
+          loadComplianceData();
+          setSelectedTab('assessments');
+        }}
+      />
     </div>
   );
 }

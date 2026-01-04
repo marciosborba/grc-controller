@@ -36,7 +36,8 @@ import {
   Download,
   Upload,
   BarChart3,
-  Activity
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -155,6 +156,7 @@ const NonConformitiesManagement: React.FC = () => {
   }, [tenantId]);
 
   const loadData = async () => {
+    console.log('NonConformities Load. Tenant:', tenantId);
     if (!tenantId) return;
 
     setLoading(true);
@@ -162,7 +164,8 @@ const NonConformitiesManagement: React.FC = () => {
       await Promise.all([
         loadNonConformities(),
         loadRequirements(),
-        loadUsers()
+        loadUsers(),
+        syncAssessmentDiscrepancies()
       ]);
     } catch (error) {
       secureLog('error', 'Erro ao carregar dados de não conformidades', error);
@@ -248,6 +251,54 @@ const NonConformitiesManagement: React.FC = () => {
     })) || [];
 
     setActionPlans(processedPlans);
+  };
+
+  const syncAssessmentDiscrepancies = async () => {
+    try {
+      const { data: assessments, error: fetchError } = await supabase
+        .from('avaliacoes_conformidade')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .or('resultado_conformidade.eq.nao_conforme,resultado_conformidade.eq.parcial');
+
+      if (fetchError || !assessments) return;
+
+      let createdCount = 0;
+
+      for (const assessment of assessments) {
+        // Quick check to avoid redundant inserts
+        // We do this check against the default 'nonConformities' state if loaded, 
+        // but robustly we should check DB or ensure the list is fresh.
+        // Checking DB for each might be slow if many, but safe.
+        const { data: existing } = await supabase.from('nao_conformidades')
+          .select('id')
+          .eq('requisito_id', assessment.requisito_id)
+          .ilike('titulo', `%${assessment.titulo}%`)
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          await supabase.from('nao_conformidades').insert({
+            tenant_id: tenantId,
+            titulo: `NC: ${assessment.titulo}`,
+            requisito_id: assessment.requisito_id,
+            o_que: `Gerado automaticamente da avaliação ${assessment.codigo}. Observações: ${assessment.observacoes || 'Sem detalhes.'}`,
+            data_identificacao: assessment.data_conclusao || new Date().toISOString(),
+            status: 'aberta',
+            criticidade: 'media',
+            created_by: user?.id,
+            codigo: `NC-${assessment.codigo}-${Date.now()}`.substring(0, 20)
+          });
+          createdCount++;
+        }
+      }
+
+      if (createdCount > 0) {
+        toast.success(`${createdCount} novas não conformidades identificadas e importadas automaticamente.`);
+        loadNonConformities(); // Refresh list
+      }
+    } catch (error) {
+      console.error('Auto-sync error:', error);
+    }
   };
 
   const filteredNonConformities = nonConformities.filter(nc => {
@@ -437,6 +488,9 @@ const NonConformitiesManagement: React.FC = () => {
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
+
+
+
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
