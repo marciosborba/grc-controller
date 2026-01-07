@@ -37,6 +37,8 @@ import MonitoramentoManagement from './MonitoramentoManagement';
 import FrameworksManagement from './FrameworksManagement';
 import ComplianceMappings from './ComplianceMappings';
 import ComplianceReports from './ComplianceReports';
+import ProcessesManagement from './ProcessesManagement';
+import SystemsManagement from './SystemsManagement';
 import { NewAssessmentWizard } from './NewAssessmentWizard';
 
 interface ComplianceMetrics {
@@ -583,6 +585,8 @@ export function ComplianceDashboard() {
           <TabsTrigger value="nonconformities" className="flex-1 min-w-[120px]">Não Conformidades</TabsTrigger>
           <TabsTrigger value="monitoring" className="flex-1 min-w-[120px]">Monitoramento</TabsTrigger>
           <TabsTrigger value="reports" className="flex-1 min-w-[120px]">Relatórios</TabsTrigger>
+          <TabsTrigger value="processos" className="flex-1 min-w-[120px]">Processos</TabsTrigger>
+          <TabsTrigger value="sistemas" className="flex-1 min-w-[120px]">Sistemas</TabsTrigger>
           <TabsTrigger value="sox-library" className="flex-1 min-w-[120px]">Biblioteca SOX</TabsTrigger>
         </TabsList>
 
@@ -764,6 +768,14 @@ export function ComplianceDashboard() {
         </TabsContent>
         <TabsContent value="reports">
           <ComplianceReports />
+        </TabsContent>
+
+        <TabsContent value="processos">
+          <ProcessesManagement />
+        </TabsContent>
+
+        <TabsContent value="sistemas">
+          <SystemsManagement />
         </TabsContent>
       </Tabs>
 

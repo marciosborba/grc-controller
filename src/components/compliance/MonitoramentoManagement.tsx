@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
-import { 
+import {
   Activity,
   Plus,
   Search,
@@ -42,6 +42,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
+import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface MonitoringItem {
   id: string;
@@ -89,14 +93,15 @@ const monitoringSchema = z.object({
   responsavel_monitoramento: z.string().min(1, "Responsável é obrigatório"),
   aprovador_alertas: z.string().optional(),
   automatizado: z.boolean().default(false),
-  requer_aprovacao_manual: z.boolean().default(false)
+  requer_aprovacao_manual: z.boolean().default(false),
+  objeto_id: z.string().optional()
 });
 
 const MonitoramentoManagement: React.FC = () => {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
+
   const [monitoringItems, setMonitoringItems] = useState<MonitoringItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +109,11 @@ const MonitoramentoManagement: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MonitoringItem | null>(null);
-  
+  const [controls, setControls] = useState<{ id: string, codigo: string, titulo: string }[]>([]);
+  const [processes, setProcesses] = useState<{ id: string, nome: string }[]>([]);
+  const [systems, setSystems] = useState<{ id: string, nome: string }[]>([]);
+  const [openCombobox, setOpenCombobox] = useState(false);
+
   const monitoringForm = useForm<z.infer<typeof monitoringSchema>>({
     resolver: zodResolver(monitoringSchema),
     defaultValues: {
@@ -123,7 +132,8 @@ const MonitoramentoManagement: React.FC = () => {
       responsavel_monitoramento: '',
       aprovador_alertas: '',
       automatizado: false,
-      requer_aprovacao_manual: false
+      requer_aprovacao_manual: false,
+      objeto_id: ''
     }
   });
 
@@ -133,12 +143,15 @@ const MonitoramentoManagement: React.FC = () => {
 
   const loadData = async () => {
     if (!effectiveTenantId) return;
-    
+
     setLoading(true);
     try {
       await Promise.all([
         loadMonitoringItems(),
-        loadUsers()
+        loadUsers(),
+        loadControls(),
+        loadProcesses(),
+        loadSystems()
       ]);
     } catch (error) {
       secureLog('error', 'Erro ao carregar dados de monitoramento', error);
@@ -180,20 +193,59 @@ const MonitoramentoManagement: React.FC = () => {
     setUsers(data || []);
   };
 
+  const loadControls = async () => {
+    const { data, error } = await supabase
+      .from('biblioteca_controles_sox')
+      .select('id, codigo, titulo')
+      .eq('tenant_id', effectiveTenantId);
+
+    if (error) {
+      console.error('Error loading controls:', error);
+      return;
+    }
+    setControls(data || []);
+  };
+
+  const loadProcesses = async () => {
+    const { data, error } = await supabase
+      .from('processos')
+      .select('id, nome')
+      .eq('tenant_id', effectiveTenantId);
+
+    if (error) {
+      console.error('Error loading processes:', error);
+      return;
+    }
+    setProcesses(data || []);
+  };
+
+  const loadSystems = async () => {
+    const { data, error } = await supabase
+      .from('sistemas')
+      .select('id, nome')
+      .eq('tenant_id', effectiveTenantId);
+
+    if (error) {
+      console.error('Error loading systems:', error);
+      return;
+    }
+    setSystems(data || []);
+  };
+
   const handleCreateMonitoring = async (values: z.infer<typeof monitoringSchema>) => {
     if (!effectiveTenantId || !user) return;
 
     try {
       // Gerar objeto_id temporário para este exemplo
       const objeto_id = crypto.randomUUID();
-      
+
       const sanitizedValues = sanitizeObject(values);
       const { error } = await supabase
         .from('monitoramento_conformidade')
         .insert({
           ...sanitizedValues,
           tenant_id: effectiveTenantId,
-          objeto_id: objeto_id,
+          objeto_id: values.tipo_objeto === 'controle' && values.objeto_id ? values.objeto_id : crypto.randomUUID(),
           status: 'ativo'
         });
 
@@ -227,7 +279,8 @@ const MonitoramentoManagement: React.FC = () => {
       responsavel_monitoramento: item.responsavel_monitoramento,
       aprovador_alertas: item.aprovador_alertas || '',
       automatizado: item.automatizado || false,
-      requer_aprovacao_manual: item.requer_aprovacao_manual || false
+      requer_aprovacao_manual: item.requer_aprovacao_manual || false,
+      objeto_id: item.objeto_id
     });
     setIsDialogOpen(true);
   };
@@ -277,7 +330,7 @@ const MonitoramentoManagement: React.FC = () => {
 
   const handleToggleStatus = async (item: MonitoringItem) => {
     const newStatus = item.status === 'ativo' ? 'pausado' : 'ativo';
-    
+
     try {
       const { error } = await supabase
         .from('monitoramento_conformidade')
@@ -329,11 +382,11 @@ const MonitoramentoManagement: React.FC = () => {
 
   const filteredItems = monitoringItems.filter(item => {
     const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.metrica_monitorada.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.metrica_monitorada.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -367,7 +420,7 @@ const MonitoramentoManagement: React.FC = () => {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {setEditingItem(null); monitoringForm.reset();}}>
+            <Button onClick={() => { setEditingItem(null); monitoringForm.reset(); }}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Monitoramento
             </Button>
@@ -442,21 +495,21 @@ const MonitoramentoManagement: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Status:</span>
           <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
-            <Button 
+            <Button
               variant={selectedStatus === 'all' ? 'default' : 'ghost'}
               onClick={() => setSelectedStatus('all')}
               size="sm"
             >
               Todos
             </Button>
-            <Button 
+            <Button
               variant={selectedStatus === 'ativo' ? 'default' : 'ghost'}
               onClick={() => setSelectedStatus('ativo')}
               size="sm"
             >
               Ativos
             </Button>
-            <Button 
+            <Button
               variant={selectedStatus === 'pausado' ? 'default' : 'ghost'}
               onClick={() => setSelectedStatus('pausado')}
               size="sm"
@@ -503,9 +556,9 @@ const MonitoramentoManagement: React.FC = () => {
                     </Badge>
                   )}
                   <div className="flex gap-1 ml-auto">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleToggleStatus(item)}
                       className="h-6 w-6 p-0"
                     >
@@ -515,17 +568,17 @@ const MonitoramentoManagement: React.FC = () => {
                         <Play className="h-3 w-3" />
                       )}
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleEditMonitoring(item)}
                       className="h-6 w-6 p-0"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => handleDeleteMonitoring(item)}
                       className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
                     >
@@ -542,7 +595,7 @@ const MonitoramentoManagement: React.FC = () => {
                   <TabsTrigger value="metrics">Métricas</TabsTrigger>
                   <TabsTrigger value="schedule">Agendamento</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="details" className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
@@ -563,7 +616,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </div>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="metrics" className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
@@ -596,7 +649,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </div>
                   )}
                 </TabsContent>
-                
+
                 <TabsContent value="schedule" className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -643,13 +696,13 @@ const MonitoramentoManagement: React.FC = () => {
               {editingItem ? 'Editar Monitoramento' : 'Novo Monitoramento'}
             </DialogTitle>
             <DialogDescription>
-              {editingItem 
-                ? 'Edite as informações do monitoramento de conformidade.' 
+              {editingItem
+                ? 'Edite as informações do monitoramento de conformidade.'
                 : 'Crie um novo monitoramento de conformidade para acompanhar métricas importantes.'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...monitoringForm}>
             <form onSubmit={monitoringForm.handleSubmit(handleSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -666,14 +719,22 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="tipo_objeto"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Objeto *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          if (value !== 'controle' && value !== 'processo' && value !== 'sistema') {
+                            monitoringForm.setValue('objeto_id', '');
+                          }
+                        }}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o tipo" />
@@ -692,6 +753,101 @@ const MonitoramentoManagement: React.FC = () => {
                   )}
                 />
               </div>
+
+              {(monitoringForm.watch('tipo_objeto') === 'controle' || monitoringForm.watch('tipo_objeto') === 'processo' || monitoringForm.watch('tipo_objeto') === 'sistema') && (
+                <FormField
+                  control={monitoringForm.control}
+                  name="objeto_id"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>
+                        {monitoringForm.watch('tipo_objeto') === 'controle' ? 'Controle Associado' :
+                          monitoringForm.watch('tipo_objeto') === 'processo' ? 'Processo Associado' :
+                            'Sistema Associado'}
+                      </FormLabel>
+                      <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value
+                                ? monitoringForm.watch('tipo_objeto') === 'controle'
+                                  ? controls.find((c) => c.id === field.value)?.codigo + " - " + controls.find((c) => c.id === field.value)?.titulo
+                                  : monitoringForm.watch('tipo_objeto') === 'processo'
+                                    ? processes.find((p) => p.id === field.value)?.nome
+                                    : systems.find((s) => s.id === field.value)?.nome
+                                : "Selecione..."}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Buscar..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {monitoringForm.watch('tipo_objeto') === 'controle' && controls.map((control) => (
+                                  <CommandItem
+                                    value={control.titulo}
+                                    key={control.id}
+                                    onSelect={() => {
+                                      monitoringForm.setValue("objeto_id", control.id);
+                                      monitoringForm.setValue("nome", `${control.codigo} - ${control.titulo}`);
+                                      setOpenCombobox(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", control.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{control.codigo}</span>
+                                      <span className="text-xs text-muted-foreground truncate max-w-[300px]">{control.titulo}</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                                {monitoringForm.watch('tipo_objeto') === 'processo' && processes.map((process) => (
+                                  <CommandItem
+                                    value={process.nome}
+                                    key={process.id}
+                                    onSelect={() => {
+                                      monitoringForm.setValue("objeto_id", process.id);
+                                      monitoringForm.setValue("nome", process.nome);
+                                      setOpenCombobox(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", process.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    <span>{process.nome}</span>
+                                  </CommandItem>
+                                ))}
+                                {monitoringForm.watch('tipo_objeto') === 'sistema' && systems.map((system) => (
+                                  <CommandItem
+                                    value={system.nome}
+                                    key={system.id}
+                                    onSelect={() => {
+                                      monitoringForm.setValue("objeto_id", system.id);
+                                      monitoringForm.setValue("nome", system.nome);
+                                      setOpenCombobox(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", system.id === field.value ? "opacity-100" : "opacity-0")} />
+                                    <span>{system.nome}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={monitoringForm.control}
@@ -714,10 +870,10 @@ const MonitoramentoManagement: React.FC = () => {
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Descrição detalhada do monitoramento"
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -739,7 +895,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="unidade_medida"
@@ -763,8 +919,8 @@ const MonitoramentoManagement: React.FC = () => {
                     <FormItem>
                       <FormLabel>Valor Alvo</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           placeholder="0"
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -774,7 +930,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="limite_inferior"
@@ -782,8 +938,8 @@ const MonitoramentoManagement: React.FC = () => {
                     <FormItem>
                       <FormLabel>Limite Inferior</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           placeholder="0"
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -793,7 +949,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="limite_superior"
@@ -801,8 +957,8 @@ const MonitoramentoManagement: React.FC = () => {
                     <FormItem>
                       <FormLabel>Limite Superior</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           placeholder="0"
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -812,7 +968,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="limite_critico"
@@ -820,8 +976,8 @@ const MonitoramentoManagement: React.FC = () => {
                     <FormItem>
                       <FormLabel>Limite Crítico</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           placeholder="0"
                           {...field}
                           onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
@@ -859,7 +1015,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="fonte_dados"
@@ -900,7 +1056,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="aprovador_alertas"
@@ -947,7 +1103,7 @@ const MonitoramentoManagement: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={monitoringForm.control}
                   name="requer_aprovacao_manual"
