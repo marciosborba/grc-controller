@@ -223,13 +223,62 @@ export default function ProcessesManagement() {
                             Mapeamento e cadastro de processos de negócio
                         </CardDescription>
                     </div>
-                    <Button onClick={() => {
-                        setEditingProcess(null);
-                        setIsDialogOpen(true);
-                    }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Novo Processo
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={async () => {
+                            if (!confirm('Deseja adicionar processos de exemplo (ITIL/COBIT)?')) return;
+
+                            const examples = [
+                                { nome: 'Gestão de Mudanças', descricao: 'Processo para controlar o ciclo de vida de todas as mudanças, permitindo que mudanças benéficas sejam feitas com o mínimo de interrupção nos serviços de TI.' },
+                                { nome: 'Gestão de Incidentes', descricao: 'Processo responsável por gerenciar o ciclo de vida de todos os incidentes. O objetivo principal é retornar o serviço de TI aos usuários o mais rápido possível.' },
+                                { nome: 'Gestão de Problemas', descricao: 'Processo responsável por gerenciar o ciclo de vida de todos os problemas. O objetivo principal é prevenir incidentes e minimizar o impacto de incidentes que não podem ser prevenidos.' },
+                                { nome: 'Gestão de Acessos', descricao: 'Processo de concessão de direitos aos usuários autorizados para usar um serviço, enquanto previne o acesso a usuários não autorizados.' },
+                                { nome: 'Desenvolvimento Seguro', descricao: 'Conjunto de práticas para garantir que o software seja desenvolvido com requisitos de segurança desde o início.' },
+                                { nome: 'Gestão de Continuidade de Negócio', descricao: 'Processo que gerencia riscos que podem impactar seriamente o negócio e garante que o fornecedor de serviços de TI possa sempre prover o mínimo de níveis de serviço acordados.' },
+                                { nome: 'Gestão de Nível de Serviço', descricao: 'Processo responsável por manter e melhorar a qualidade do serviço de TI, através de um ciclo constante de acordos, monitoramento e relatórios.' }
+                            ];
+
+                            try {
+                                setLoading(true);
+                                let addedCount = 0;
+
+                                for (const ex of examples) {
+                                    // Check overlap
+                                    const exists = processes.some(p => p.nome.toLowerCase() === ex.nome.toLowerCase());
+                                    if (!exists) {
+                                        const { error } = await supabase.from('processos').insert({
+                                            tenant_id: effectiveTenantId,
+                                            nome: ex.nome,
+                                            descricao: ex.descricao,
+                                            responsavel: user?.id
+                                        });
+                                        if (!error) addedCount++;
+                                    }
+                                }
+
+                                if (addedCount > 0) {
+                                    toast.success(`${addedCount} processos de exemplo adicionados!`);
+                                    loadProcesses();
+                                } else {
+                                    toast.info('Todos os exemplos já existem.');
+                                }
+                            } catch (error) {
+                                console.error(error);
+                                toast.error('Erro ao adicionar exemplos');
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar Exemplos
+                        </Button>
+                        <Button onClick={() => {
+                            setEditingProcess(null);
+                            setIsDialogOpen(true);
+                        }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Novo Processo
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
