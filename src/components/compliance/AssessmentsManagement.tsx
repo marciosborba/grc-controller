@@ -43,7 +43,8 @@ import {
   TrendingUp,
   TrendingDown,
   Save,
-  ListFilter
+  ListFilter,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -59,6 +60,7 @@ import { sanitizeInput, sanitizeObject, secureLog } from '@/utils/securityLogger
 
 interface Assessment {
   id: string;
+  tenant_id: string;
   codigo: string;
   titulo: string;
   descricao?: string;
@@ -548,6 +550,42 @@ const AssessmentsManagement: React.FC = () => {
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <CheckCircle className="h-8 w-8 text-green-600" />
             Avaliações de Conformidade
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Para que servem as Avaliações?</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É o "Check-up". Diferente do Monitoramento (que é constante), a Avaliação é pontual e profunda. É onde você audita se as regras realmente estão funcionando.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Cenário:</strong> Você quer garantir que só pessoas autorizadas acessaram o SAP no ano passado.
+                        </li>
+                        <li>
+                          <strong>Nesta Aba (Avaliações):</strong> Você cria uma auditoria <em>"Revisão de Acessos SAP - 2024"</em>.
+                        </li>
+                        <li>
+                          <strong>Ação:</strong> Você amostra 10% dos usuários e verifica manualmente se eles tinham aprovação.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Benefício:</strong> Identifica falhas que o monitoramento automático pode ter deixado passar.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </h1>
           <p className="text-muted-foreground">
             Gestão de avaliações periódicas de conformidade e compliance

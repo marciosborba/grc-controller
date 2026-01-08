@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
   Plus, Download, Upload, Search, Edit, Trash2, BookOpen,
-  Settings, Shield, Award, Target, FileText, CheckCircle, XCircle, Copy
+  Settings, Shield, Award, Target, FileText, CheckCircle, XCircle, Copy, HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { supabase } from '@/integrations/supabase/client';
@@ -334,7 +334,45 @@ export default function FrameworksManagement() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Frameworks</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            Gestão de Frameworks
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Para que servem os Frameworks/Normas?</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É a "Lei". É o conjunto de regras que a empresa decidiu (ou foi obrigada) a seguir.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Externo (Leis):</strong> LGPD (Brasil), GDPR (Europa), SOX (EUA).
+                        </li>
+                        <li>
+                          <strong>Interno (Padrões):</strong> "Política de Segurança da Informação 2024".
+                        </li>
+                        <li>
+                          <strong>Como funciona:</strong> Todo o resto do sistema (Monitoramento, Avaliações) existe para provar que você está obedecendo este Framework.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Dica:</strong> Se você é novo, comece clonando a "ISO 27001" da biblioteca para ver os controles padrão.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </h1>
           <p className="text-muted-foreground">
             Gerencie biblioteca padrão e conformidades da sua organização.
           </p>

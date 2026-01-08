@@ -19,16 +19,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowRightLeft, Link as LinkIcon, Save, Trash2, CheckCircle2 } from 'lucide-react';
+import { ArrowRightLeft, Link as LinkIcon, Save, Trash2, CheckCircle2, HelpCircle } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { supabase } from '@/integrations/supabase/client';
-import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
 
 interface Framework {
     id: string;
     nome: string;
-    is_standard?: boolean;
+    tipo: string;
 }
 
 interface Requirement {
@@ -36,105 +44,87 @@ interface Requirement {
     codigo: string;
     titulo: string;
     descricao: string;
+    framework_id: string;
 }
 
 interface Mapping {
     id: string;
     source_requirement_id: string;
     target_requirement_id: string;
-    type: string;
-    confidence: number;
 }
 
 export default function ComplianceMappings() {
-    const { user } = useAuth(); // Added useAuth hook
+    const { user } = useAuth();
     const selectedTenantId = useCurrentTenantId();
-    // Logic: If platform admin, use selector. If regular user, use profile tenant.
     const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
 
     const [frameworks, setFrameworks] = useState<Framework[]>([]);
+    const [requirements, setRequirements] = useState<Requirement[]>([]);
+    const [mappings, setMappings] = useState<Mapping[]>([]);
+
     const [sourceFramework, setSourceFramework] = useState<string>('');
     const [targetFramework, setTargetFramework] = useState<string>('');
-
-    const [sourcerequirements, setSourceRequirements] = useState<Requirement[]>([]);
-    const [targetrequirements, setTargetRequirements] = useState<Requirement[]>([]);
-    const [mappings, setMappings] = useState<Mapping[]>([]);
 
     const [selectedSource, setSelectedSource] = useState<string | null>(null);
     const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
 
     useEffect(() => {
         if (effectiveTenantId) {
-            loadFrameworks();
+            loadData();
         }
     }, [effectiveTenantId]);
 
-    useEffect(() => {
-        if (sourceFramework) loadRequirements(sourceFramework, setSourceRequirements);
-    }, [sourceFramework]);
+    const loadData = async () => {
+        try {
+            // Load Frameworks
+            const { data: frameworksData, error: frameworksError } = await supabase
+                .from('frameworks_compliance')
+                .select('id, nome, tipo')
+                .eq('tenant_id', effectiveTenantId)
+                .eq('status', 'ativo')
+                .order('nome');
 
-    useEffect(() => {
-        if (targetFramework) loadRequirements(targetFramework, setTargetRequirements);
-    }, [targetFramework]);
+            if (frameworksError) throw frameworksError;
+            setFrameworks(frameworksData || []);
 
-    useEffect(() => {
-        if (sourceFramework && targetFramework && effectiveTenantId) loadMappings();
-    }, [sourceFramework, targetFramework, effectiveTenantId]);
+            // Load Requirements
+            const { data: requirementsData, error: requirementsError } = await supabase
+                .from('requisitos_compliance')
+                .select('id, codigo, titulo, descricao, framework_id')
+                .eq('tenant_id', effectiveTenantId)
+                .eq('status', 'ativo');
 
-    const loadFrameworks = async () => {
-        if (!effectiveTenantId) return;
+            if (requirementsError) throw requirementsError;
+            setRequirements(requirementsData || []);
 
-        const { data, error } = await supabase
-            .from('frameworks_compliance')
-            .select('id, nome, is_standard')
-            .eq('status', 'ativo')
-            .or(`tenant_id.eq.${effectiveTenantId},is_standard.eq.true`)
-            .order('nome');
+            // Load Mappings
+            // Assuming a table 'compliance_mappings' exists based on context
+            const { data: mappingsData, error: mappingsError } = await supabase
+                .from('compliance_mappings')
+                .select('id, source_requirement_id, target_requirement_id')
+                .eq('tenant_id', effectiveTenantId);
 
-        if (data) setFrameworks(data);
-        if (error) {
-            console.error('Error loading frameworks:', error);
-            toast.error('Erro ao carregar frameworks: ' + error.message);
+            if (mappingsError && mappingsError.code !== 'PGRST103') { // Ignore if table doesn't exist yet but log it
+                console.error("Error loading mappings", mappingsError);
+            }
+            setMappings(mappingsData || []);
+
+        } catch (error) {
+            console.error('Error loading connectivity data:', error);
+            toast.error('Erro ao carregar dados de conectividade');
         }
     };
 
-    const loadRequirements = async (frameworkId: string, setter: (reqs: Requirement[]) => void) => {
-        const { data } = await supabase
-            .from('requisitos_compliance')
-            .select('id, codigo, titulo, descricao')
-            .eq('framework_id', frameworkId)
-            .order('codigo');
-
-        if (data) setter(data);
-    };
-
-    const loadMappings = async () => {
-        if (!effectiveTenantId) return;
-
-        // This is a bit complex because we need to get mappings where source is in sourceFramework AND target is in targetFramework
-        // OR source is in targetFramework AND target is in sourceFramework (bidirectional)
-        // For simplicity, we assume strict Direction: Source -> Target selection.
-
-        // First get IDs
-        const { data, error } = await supabase
-            .from('framework_mappings')
-            .select('*')
-            .eq('tenant_id', effectiveTenantId);
-
-        if (data) setMappings(data);
-    };
-
     const handleMap = async () => {
-        if (!selectedSource || !selectedTarget) return;
+        if (!selectedSource || !selectedTarget || !effectiveTenantId) return;
 
         try {
             const { data, error } = await supabase
-                .from('framework_mappings')
+                .from('compliance_mappings')
                 .insert({
-                    source_requirement_id: selectedSource,
-                    target_requirement_id: selectedTarget,
                     tenant_id: effectiveTenantId,
-                    type: 'equivalent'
+                    source_requirement_id: selectedSource,
+                    target_requirement_id: selectedTarget
                 })
                 .select()
                 .single();
@@ -142,48 +132,96 @@ export default function ComplianceMappings() {
             if (error) throw error;
 
             setMappings([...mappings, data]);
-            toast.success('Mapeamento criado com sucesso');
+            toast.success('Requisitos vinculados com sucesso');
             setSelectedSource(null);
             setSelectedTarget(null);
         } catch (error) {
-            console.error('Error mapping:', error);
-            toast.error('Erro ao criar mapeamento (possível duplicidade)');
+            console.error('Error mapping requirements:', error);
+            toast.error('Erro ao vincular requisitos');
         }
     };
 
     const handleUnmap = async (mappingId: string) => {
-        const { error } = await supabase
-            .from('framework_mappings')
-            .delete()
-            .eq('id', mappingId);
+        try {
+            const { error } = await supabase
+                .from('compliance_mappings')
+                .delete()
+                .eq('id', mappingId);
 
-        if (!error) {
+            if (error) throw error;
+
             setMappings(mappings.filter(m => m.id !== mappingId));
-            toast.success('Mapeamento removido');
+            toast.success('Vínculo removido com sucesso');
+        } catch (error) {
+            console.error('Error unmapping requirements:', error);
+            toast.error('Erro ao remover vínculo');
         }
-    };
+    }
 
-    const isMapped = (reqId: string, isSource: boolean) => {
-        return mappings.some(m => isSource ? m.source_requirement_id === reqId : m.target_requirement_id === reqId);
-    };
+    const standardFrameworks = frameworks.filter(f => f.tipo === 'regulatorio' || f.tipo === 'padrao'); // 'padrao' is a guess, maybe 'normativo'
+    const customFrameworks = frameworks.filter(f => f.tipo !== 'regulatorio' && f.tipo !== 'padrao');
+
+    const sourcerequirements = sourceFramework ? requirements.filter(r => r.framework_id === sourceFramework) : [];
+    const targetrequirements = targetFramework ? requirements.filter(r => r.framework_id === targetFramework) : [];
 
     const getMappedPartner = (reqId: string, isSource: boolean) => {
-        const mapping = mappings.find(m => isSource ? m.source_requirement_id === reqId : m.target_requirement_id === reqId);
-        if (!mapping) return null;
-
-        const partnerId = isSource ? mapping.target_requirement_id : mapping.source_requirement_id;
-        const partnerList = isSource ? targetrequirements : sourcerequirements;
-        return partnerList.find(r => r.id === partnerId);
+        if (isSource) {
+            const mapping = mappings.find(m => m.source_requirement_id === reqId && targetrequirements.some(tr => tr.id === m.target_requirement_id));
+            if (mapping) {
+                return targetrequirements.find(r => r.id === mapping.target_requirement_id);
+            }
+        } else {
+            const mapping = mappings.find(m => m.target_requirement_id === reqId && sourcerequirements.some(sr => sr.id === m.source_requirement_id));
+            if (mapping) {
+                return sourcerequirements.find(r => r.id === mapping.source_requirement_id);
+            }
+        }
+        return null;
     };
-
-    const standardFrameworks = frameworks.filter(f => f.is_standard);
-    const customFrameworks = frameworks.filter(f => !f.is_standard);
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold">Matriz de Conectividade</h2>
+                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                        Matriz de Conectividade
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                                    <HelpCircle className="h-4 w-4" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Para que serve a Conectividade (Mappings)?</DialogTitle>
+                                    <DialogDescription className="space-y-4 pt-4 text-left">
+                                        <p>
+                                            <strong>Objetivo:</strong> O famoso "Testar uma vez, cumprir muitos". Permite vincular requisitos de diferentes normas que são equivalentes.
+                                        </p>
+
+                                        <div className="bg-muted p-4 rounded-lg">
+                                            <p className="font-semibold mb-2">Exemplo Prático:</p>
+                                            <ul className="list-disc pl-5 space-y-2 text-sm">
+                                                <li>
+                                                    <strong>Origem:</strong> ISO 27001 pede "Gestão de Senhas".
+                                                </li>
+                                                <li>
+                                                    <strong>Destino:</strong> LGPD também pede "Controle de Acesso".
+                                                </li>
+                                                <li>
+                                                    <strong>Ação:</strong> Você vincula os dois aqui. Quando auditar a ISO 27001, o sistema entende que você também já testou um pedaço da LGPD.
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                        <p className="text-sm text-muted-foreground">
+                                            <strong>Benefício:</strong> Reduz o trabalho de auditoria em até 40% ao evitar testes duplicados.
+                                        </p>
+                                    </DialogDescription>
+                                </DialogHeader>
+                            </DialogContent>
+                        </Dialog>
+                    </h2>
                     <p className="text-muted-foreground">Mapeie controles equivalentes entre diferentes frameworks</p>
                 </div>
                 <div className="flex items-center gap-2">

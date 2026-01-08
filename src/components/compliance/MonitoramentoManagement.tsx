@@ -31,7 +31,8 @@ import {
   Calendar,
   User,
   Database,
-  Zap
+  Zap,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -56,6 +57,8 @@ interface MonitoringItem {
   objeto_id: string;
   frequencia?: string;
   metrica_monitorada: string;
+  responsavel_monitoramento: string;
+  aprovador_alertas?: string;
   unidade_medida?: string;
   valor_alvo?: number;
   limite_inferior?: number;
@@ -413,6 +416,42 @@ const MonitoramentoManagement: React.FC = () => {
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Activity className="h-8 w-8 text-blue-600" />
             Monitoramento de Conformidade
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>O que é o Monitoramento de Conformidade?</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É a "Vigilância Ativa". Aqui você define como o sistema vai checar se os processos e regras estão sendo seguidos.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Regra (Política):</strong> "Todos os funcionários devem trocar de senha a cada 90 dias".
+                        </li>
+                        <li>
+                          <strong>Nesta Aba (Monitoramento):</strong> Você cria um item chamado <em>"Monitor de Troca de Senhas"</em>.
+                        </li>
+                        <li>
+                          <strong>Ação:</strong> Ele pode ser um teste manual (alguém vai lá e checa) ou automático (o sistema conecta no Active Directory e verifica).
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Benefício:</strong> Transforma regras de papel em verificações reais. Se o monitoramento ficar "Vermelho", você sabe que a regra foi quebrada.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </h1>
           <p className="text-muted-foreground">
             Monitore métricas e indicadores de conformidade em tempo real

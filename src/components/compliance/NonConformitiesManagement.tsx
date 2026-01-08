@@ -37,7 +37,8 @@ import {
   Upload,
   BarChart3,
   Activity,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -71,6 +72,7 @@ interface NonConformity {
   impacto_operacional?: number;
   impacto_financeiro?: number;
   planos_acao_count?: number;
+  requisito_id?: string;
 }
 
 interface ActionPlan {
@@ -478,6 +480,42 @@ const NonConformitiesManagement: React.FC = () => {
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <AlertTriangle className="h-8 w-8 text-red-600" />
             Não Conformidades
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Para que serve a Gestão de Não Conformidades?</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É o "Hospital" da Conformidade. Tudo que deu errado (foi achado em monitoramento ou auditoria) vem para cá para ser tratado.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Cenário:</strong> Uma auditoria detectou que um servidor estava sem patch de segurança.
+                        </li>
+                        <li>
+                          <strong>Nesta Aba (Não Conformidades):</strong> É aberto um registro chamado <em>"Servidor XYZ vulnerável"</em>.
+                        </li>
+                        <li>
+                          <strong>Ação (Plano de Ação):</strong> Você cria uma tarefa para TI: <em>"Aplicar patch no servidor XYZ até sexta-feira"</em>.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Dica:</strong> Auditorias externas focam muito aqui. Ter uma não conformidade não é crime, mas deixá-la aberta para sempre é um problema grave.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </h1>
           <p className="text-muted-foreground">
             Gestão de gaps de conformidade e planos de ação corretiva

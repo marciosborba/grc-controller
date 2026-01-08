@@ -24,8 +24,17 @@ import {
   Activity,
   Target,
   Zap,
-  BookOpen
+  BookOpen,
+  HelpCircle
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
@@ -392,7 +401,45 @@ export function ComplianceDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Conformidade</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            Gestão de Conformidade
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bem-vindo ao Dashboard de Compliance</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> Esta é sua "Torre de Controle". Aqui você vê se sua empresa está seguindo as regras (Leis, Normas ou Políticas Internas).
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Por onde começar?</p>
+                      <ol className="list-decimal pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Escolha a Lei (Frameworks):</strong> Diga ao sistema o que você precisa seguir (ex: LGPD, ISO 27001).
+                        </li>
+                        <li>
+                          <strong>Avalie (Avaliações):</strong> Faça check-ups para ver se está cumprindo.
+                        </li>
+                        <li>
+                          <strong>Corrija (Não Conformidades):</strong> Trate o que estiver errado.
+                        </li>
+                      </ol>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Dica:</strong> Uma "Taxa de Conformidade" acima de 80% é considerada excelente para a maioria das auditorias.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </h1>
           <p className="text-muted-foreground">Central de Compliance e Gestão Regulatória</p>
         </div>
         <div className="flex gap-2">

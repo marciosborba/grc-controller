@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
+import {
   Layers,
   ArrowLeft,
   Search,
@@ -49,6 +49,20 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { supabase } from '@/integrations/supabase/client';
+
+type Application = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  url: string;
+  technology: string;
+  owner: string;
+  vulnerabilities: number;
+  last_scan: string;
+  risk_level: string;
+};
 
 export default function Applications() {
   const navigate = useNavigate();
@@ -65,7 +79,7 @@ export default function Applications() {
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [selectedExportFormat, setSelectedExportFormat] = useState<string | null>(null);
-  
+
   // Advanced Filters State
   const [advancedFiltersModalOpen, setAdvancedFiltersModalOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -87,69 +101,59 @@ export default function Applications() {
     isMicroservices: undefined as boolean | undefined
   });
 
-  // Mock data
-  const mockApplications = [
-    {
-      id: 'APP-WEB-001',
-      name: 'Portal Web Principal',
-      type: 'Web Application',
-      status: 'Ativo',
-      url: 'https://portal.empresa.com',
-      technology: 'React/Node.js',
-      owner: 'Equipe Frontend',
-      vulnerabilities: 15,
-      last_scan: '2024-01-15',
-      risk_level: 'Alto'
-    },
-    {
-      id: 'APP-API-001',
-      name: 'API Gateway',
-      type: 'API',
-      status: 'Ativo',
-      url: 'https://api.empresa.com',
-      technology: 'Spring Boot',
-      owner: 'Equipe Backend',
-      vulnerabilities: 8,
-      last_scan: '2024-01-14',
-      risk_level: 'Médio'
-    },
-    {
-      id: 'APP-MOB-001',
-      name: 'App Mobile iOS',
-      type: 'Mobile App',
-      status: 'Ativo',
-      url: 'App Store',
-      technology: 'Swift',
-      owner: 'Equipe Mobile',
-      vulnerabilities: 3,
-      last_scan: '2024-01-13',
-      risk_level: 'Baixo'
-    },
-    {
-      id: 'APP-WEB-002',
-      name: 'Admin Dashboard',
-      type: 'Web Application',
-      status: 'Desenvolvimento',
-      url: 'https://admin.empresa.com',
-      technology: 'Vue.js',
-      owner: 'Equipe DevOps',
-      vulnerabilities: 12,
-      last_scan: '2024-01-12',
-      risk_level: 'Alto'
-    },
-    {
-      id: 'APP-DB-001',
-      name: 'Database Principal',
-      type: 'Database',
-      status: 'Ativo',
-      url: 'db.empresa.com:5432',
-      technology: 'PostgreSQL',
-      owner: 'Equipe DBA',
-      vulnerabilities: 2,
-      last_scan: '2024-01-11',
-      risk_level: 'Baixo'
-    }
-  ];
+  // State for real data
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data from Supabase
+  React.useEffect(() => {
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        if (!tenantId) return;
+
+        // Fetch systems
+        const { data: systemsData, error: systemsError } = await supabase
+          .from('sistemas')
+          .select('*')
+          .eq('tenant_id', tenantId);
+
+        if (systemsError) throw systemsError;
+
+        // Fetch profiles for owner names
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name, email');
+
+        if (profilesError) console.error('Error fetching profiles:', profilesError);
+
+        const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
+
+        // Transform systems to applications format
+        const transformedApps: Application[] = (systemsData || []).map(sys => ({
+          id: sys.id,
+          name: sys.nome,
+          type: sys.tipo || 'Web Application', // Default or map standard types
+          status: sys.status || 'Ativo',
+          url: sys.documentacao_link || '', // Using doc link as URL proxy for now
+          technology: sys.fornecedor || 'Desconhecida',
+          owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
+          vulnerabilities: 0, // Placeholder as we don't have this table yet
+          last_scan: 'N/A',
+          risk_level: sys.criticidade || 'Baixo'
+        }));
+
+        setApplications(transformedApps);
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast.error('Erro ao carregar aplicações do inventário.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, [tenantId]);
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -166,11 +170,12 @@ export default function Applications() {
 
   const getStatusBadgeColor = (status: string) => {
     const colors = {
-      'Ativo': 'bg-green-600 text-white border border-green-700',
-      'Desenvolvimento': 'bg-yellow-600 text-white border border-yellow-700',
-      'Teste': 'bg-blue-600 text-white border border-blue-700',
-      'Descontinuado': 'bg-gray-600 text-white border border-gray-700',
-      'Manutenção': 'bg-orange-600 text-white border border-orange-700',
+      'Ativo': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+      'Em Implementação': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+      'Desenvolvimento': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Teste': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+      'Descontinuado': 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+      'Manutenção': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
     };
     return colors[status as keyof typeof colors] || colors['Ativo'];
   };
@@ -188,12 +193,17 @@ export default function Applications() {
 
   const getRiskBadgeColor = (risk: string) => {
     const colors = {
-      'Crítico': 'bg-red-600 text-white border border-red-700',
-      'Alto': 'bg-orange-600 text-white border border-orange-700',
-      'Médio': 'bg-yellow-600 text-white border border-yellow-700',
-      'Baixo': 'bg-green-600 text-white border border-green-700',
+      'Crítica': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+      'Alta': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+      'Média': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Baixa': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+      // Fallbacks for masculinity
+      'Crítico': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+      'Alto': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+      'Médio': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Baixo': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
     };
-    return colors[risk as keyof typeof colors] || colors['Baixo'];
+    return colors[risk as keyof typeof colors] || colors['Baixa'];
   };
 
   // Real API integration functions
@@ -204,10 +214,10 @@ export default function Applications() {
     }
 
     setIsTestingConnection(true);
-    
+
     try {
       const credentials = getCredentialsFromForm();
-      
+
       const response = await fetch('/api/integrations/applications/test-connection', {
         method: 'POST',
         headers: {
@@ -241,11 +251,11 @@ export default function Applications() {
     }
 
     setIsImporting(true);
-    
+
     try {
       const credentials = getCredentialsFromForm();
       const filters = getFiltersFromForm();
-      
+
       const response = await fetch('/api/integrations/applications/import-applications', {
         method: 'POST',
         headers: {
@@ -279,7 +289,7 @@ export default function Applications() {
 
   const getCredentialsFromForm = () => {
     const credentials: any = {};
-    
+
     switch (selectedImportTool) {
       case 'servicenow':
         credentials.server = (document.getElementById('snow-instance') as HTMLInputElement)?.value;
@@ -289,20 +299,20 @@ export default function Applications() {
         credentials.password = (document.getElementById('snow-password') as HTMLInputElement)?.value;
         credentials.table = (document.querySelector('[data-testid="snow-table"]') as HTMLSelectElement)?.value || 'cmdb_ci_appl';
         credentials.filter = (document.getElementById('snow-filter') as HTMLInputElement)?.value;
-        
+
         // OAuth 2.0 credentials
         if (credentials.authType === 'oauth2') {
           credentials.clientId = (document.getElementById('snow-client-id') as HTMLInputElement)?.value;
           credentials.clientSecret = (document.getElementById('snow-client-secret') as HTMLInputElement)?.value;
         }
-        
+
         // JWT credentials (new)
         if (credentials.authType === 'jwt') {
           credentials.jwtToken = (document.getElementById('snow-jwt-token') as HTMLInputElement)?.value;
           credentials.keyId = (document.getElementById('snow-key-id') as HTMLInputElement)?.value;
         }
         break;
-        
+
       case 'jira':
         credentials.server = (document.getElementById('jira-server') as HTMLInputElement)?.value;
         credentials.apiVersion = 'v3'; // Updated to latest API version
@@ -310,14 +320,14 @@ export default function Applications() {
         credentials.username = (document.getElementById('jira-username') as HTMLInputElement)?.value;
         credentials.apiKey = (document.getElementById('jira-token') as HTMLInputElement)?.value;
         credentials.projectKeys = (document.getElementById('jira-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
-        
+
         // OAuth 2.0 with PKCE (new)
         if (credentials.authType === 'oauth2_pkce') {
           credentials.clientId = (document.getElementById('jira-client-id') as HTMLInputElement)?.value;
           credentials.codeVerifier = (document.getElementById('jira-code-verifier') as HTMLInputElement)?.value;
         }
         break;
-        
+
       case 'github':
         credentials.server = (document.getElementById('github-server') as HTMLInputElement)?.value || 'https://api.github.com';
         credentials.apiVersion = '2024-01-01'; // Updated to latest API version
@@ -326,7 +336,7 @@ export default function Applications() {
         credentials.organization = (document.getElementById('github-org') as HTMLInputElement)?.value;
         credentials.repositories = (document.getElementById('github-repos') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
         credentials.useGraphQL = (document.getElementById('github-use-graphql') as HTMLInputElement)?.checked;
-        
+
         // GitHub App credentials (enhanced)
         if (credentials.authType === 'github_app') {
           credentials.appId = (document.getElementById('github-app-id') as HTMLInputElement)?.value;
@@ -334,7 +344,7 @@ export default function Applications() {
           credentials.installationId = (document.getElementById('github-installation-id') as HTMLInputElement)?.value;
         }
         break;
-        
+
       case 'gitlab':
         credentials.server = (document.getElementById('gitlab-server') as HTMLInputElement)?.value || 'https://gitlab.com';
         credentials.apiVersion = 'v4'; // Confirmed latest version
@@ -343,7 +353,7 @@ export default function Applications() {
         credentials.group = (document.getElementById('gitlab-group') as HTMLInputElement)?.value;
         credentials.projects = (document.getElementById('gitlab-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
         credentials.includeArchived = (document.getElementById('gitlab-include-archived') as HTMLInputElement)?.checked;
-        
+
         // OAuth 2.0 with PKCE (new)
         if (credentials.authType === 'oauth2_pkce') {
           credentials.clientId = (document.getElementById('gitlab-client-id') as HTMLInputElement)?.value;
@@ -351,28 +361,28 @@ export default function Applications() {
           credentials.redirectUri = (document.getElementById('gitlab-redirect-uri') as HTMLInputElement)?.value;
         }
         break;
-        
+
       case 'azure-devops':
         credentials.organization = (document.getElementById('azure-org') as HTMLInputElement)?.value;
         credentials.apiVersion = '7.1-preview'; // Updated to latest API version
         credentials.authType = (document.querySelector('[data-testid="azure-auth-type"]') as HTMLSelectElement)?.value || 'pat';
         credentials.token = (document.getElementById('azure-token') as HTMLInputElement)?.value;
         credentials.projects = (document.getElementById('azure-projects') as HTMLInputElement)?.value?.split(',').map(s => s.trim());
-        
+
         // Azure AD authentication (new)
         if (credentials.authType === 'azure_ad') {
           credentials.tenantId = (document.getElementById('azure-tenant-id') as HTMLInputElement)?.value;
           credentials.clientId = (document.getElementById('azure-client-id') as HTMLInputElement)?.value;
           credentials.clientSecret = (document.getElementById('azure-client-secret') as HTMLInputElement)?.value;
         }
-        
+
         // Service Principal (new)
         if (credentials.authType === 'service_principal') {
           credentials.servicePrincipalId = (document.getElementById('azure-sp-id') as HTMLInputElement)?.value;
           credentials.servicePrincipalSecret = (document.getElementById('azure-sp-secret') as HTMLInputElement)?.value;
         }
         break;
-        
+
       case 'api':
         credentials.server = (document.getElementById('app-api-url') as HTMLInputElement)?.value;
         credentials.method = (document.querySelector('[data-testid="app-api-method"]') as HTMLSelectElement)?.value || 'GET';
@@ -382,17 +392,17 @@ export default function Applications() {
         credentials.username = (document.getElementById('app-api-username') as HTMLInputElement)?.value;
         credentials.password = (document.getElementById('app-api-password') as HTMLInputElement)?.value;
         credentials.dataPath = (document.getElementById('app-api-data-path') as HTMLInputElement)?.value;
-        
+
         // JWT support (new)
         if (credentials.authType === 'jwt') {
           credentials.jwtToken = (document.getElementById('app-api-jwt-token') as HTMLInputElement)?.value;
           credentials.jwtSecret = (document.getElementById('app-api-jwt-secret') as HTMLInputElement)?.value;
         }
-        
+
         const appHeaders = (document.getElementById('app-api-headers') as HTMLTextAreaElement)?.value;
         const appBody = (document.getElementById('app-api-body') as HTMLTextAreaElement)?.value;
         const appFieldMapping = (document.getElementById('app-api-field-mapping') as HTMLTextAreaElement)?.value;
-        
+
         try {
           credentials.headers = appHeaders ? JSON.parse(appHeaders) : {};
           credentials.body = appBody ? JSON.parse(appBody) : undefined;
@@ -402,24 +412,24 @@ export default function Applications() {
         }
         break;
     }
-    
+
     return credentials;
   };
 
   const getFiltersFromForm = () => {
     const filters: any = {};
-    
+
     // Add any additional filters based on the tool
     if (selectedImportTool === 'servicenow') {
       const table = (document.querySelector('[data-testid="snow-table"]') as HTMLSelectElement)?.value;
       if (table) filters.table = table;
     }
-    
+
     if (selectedImportTool === 'github') {
       const includeArchived = (document.getElementById('github-include-archived') as HTMLInputElement)?.checked;
       filters.includeArchived = includeArchived;
     }
-    
+
     return filters;
   };
 
@@ -502,22 +512,21 @@ export default function Applications() {
     }
   };
 
-  const filteredApplications = mockApplications.filter(app => {
+  const filteredApplications = applications.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.technology.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.owner.toLowerCase().includes(searchTerm.toLowerCase());
+      app.technology.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.owner.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || app.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
   // Get unique values for filters
-  const uniqueOwners = [...new Set(mockApplications.map(app => app.owner))];
-  const uniqueTechnologies = [...new Set(mockApplications.map(app => app.technology))];
-  const uniqueRisks = [...new Set(mockApplications.map(app => app.risk_level))];
-  
+  const uniqueOwners = [...new Set(applications.map(app => app.owner))];
+  const uniqueTechnologies = [...new Set(applications.map(app => app.technology))];
+  const uniqueRisks = [...new Set(applications.map(app => app.risk_level))];
+
   // Advanced Filter Options
   const sourceTypeOptions = [
     { value: 'ServiceNow', label: 'ServiceNow CMDB', icon: Database, color: 'bg-blue-600 text-white' },
@@ -527,27 +536,27 @@ export default function Applications() {
     { value: 'Azure DevOps', label: 'Azure DevOps', icon: Cloud, color: 'bg-sky-600 text-white' },
     { value: 'Manual', label: 'Entrada Manual', icon: User, color: 'bg-green-600 text-white' }
   ];
-  
+
   const environmentOptions = [
     { value: 'Production', label: 'Produção', icon: Shield, color: 'bg-red-600 text-white' },
     { value: 'Staging', label: 'Homologação', icon: AlertTriangle, color: 'bg-yellow-600 text-white' },
     { value: 'Development', label: 'Desenvolvimento', icon: Code, color: 'bg-blue-600 text-white' },
     { value: 'Testing', label: 'Teste', icon: Target, color: 'bg-purple-600 text-white' }
   ];
-  
+
   const cloudProviderOptions = [
     { value: 'AWS', label: 'Amazon AWS', icon: Cloud, color: 'bg-orange-600 text-white' },
     { value: 'Azure', label: 'Microsoft Azure', icon: Cloud, color: 'bg-blue-600 text-white' },
     { value: 'GCP', label: 'Google Cloud', icon: Cloud, color: 'bg-green-600 text-white' },
     { value: 'Multi-cloud', label: 'Multi-cloud', icon: Cloud, color: 'bg-purple-600 text-white' }
   ];
-  
+
   const containerPlatformOptions = [
     { value: 'Docker', label: 'Docker', icon: Database, color: 'bg-cyan-600 text-white' },
     { value: 'Kubernetes', label: 'Kubernetes', icon: Database, color: 'bg-indigo-600 text-white' },
     { value: 'OpenShift', label: 'OpenShift', icon: Database, color: 'bg-red-600 text-white' }
   ];
-  
+
   const complianceOptions = [
     { value: 'GDPR', label: 'GDPR', icon: Shield, color: 'bg-blue-600 text-white' },
     { value: 'SOX', label: 'SOX', icon: Shield, color: 'bg-green-600 text-white' },
@@ -561,7 +570,7 @@ export default function Applications() {
     setTypeFilter('all');
     setStatusFilter('all');
   };
-  
+
   // Advanced Filters Functions
   const getActiveFiltersCount = () => {
     let count = 0;
@@ -577,7 +586,7 @@ export default function Applications() {
     if (advancedFilters.isMicroservices !== undefined) count++;
     return count;
   };
-  
+
   const clearAllAdvancedFilters = () => {
     setAdvancedFilters({
       sourceTypes: [],
@@ -592,7 +601,7 @@ export default function Applications() {
       isMicroservices: undefined
     });
   };
-  
+
   const applyAdvancedFilters = () => {
     setAdvancedFiltersModalOpen(false);
     toast.success(`Filtros avançados aplicados! ${getActiveFiltersCount()} filtro${getActiveFiltersCount() > 1 ? 's' : ''} ativo${getActiveFiltersCount() > 1 ? 's' : ''}.`);
@@ -683,13 +692,13 @@ export default function Applications() {
     const headers = Object.keys(data[0]).join(delimiter);
     const rows = data.map(row => Object.values(row).join(delimiter));
     const csvContent = [headers, ...rows].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    
+
     const count = data.length;
     toast.success(`Exportação concluída! ${count} aplicação${count !== 1 ? 'ões' : ''} exportada${count !== 1 ? 's' : ''}.`);
   };
@@ -701,7 +710,7 @@ export default function Applications() {
     link.href = URL.createObjectURL(blob);
     link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    
+
     toast.success('Exportação JSON concluída!');
   };
 
@@ -715,13 +724,13 @@ export default function Applications() {
       xmlContent += '  </aplicacao>\n';
     });
     xmlContent += '</aplicacoes>';
-    
+
     const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `aplicacoes_${new Date().toISOString().split('T')[0]}.xml`;
     link.click();
-    
+
     toast.success('Exportação XML concluída!');
   };
 
@@ -755,12 +764,12 @@ export default function Applications() {
       const headers = Object.keys(exportData[0]);
       const csvContent = [
         headers.join(','),
-        ...exportData.map(row => 
+        ...exportData.map(row =>
           headers.map(header => {
             const value = row[header as keyof typeof row];
             // Escapar valores que contêm vírgulas ou aspas
-            return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
-              ? `"${value.replace(/"/g, '""')}"` 
+            return typeof value === 'string' && (value.includes(',') || value.includes('"'))
+              ? `"${value.replace(/"/g, '""')}"`
               : value;
           }).join(',')
         )
@@ -776,7 +785,7 @@ export default function Applications() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Feedback para o usuário
       const count = filteredApplications.length;
       toast.success(`Exportação concluída! ${count} aplicação${count !== 1 ? 'ões' : ''} exportada${count !== 1 ? 's' : ''}.`);
@@ -894,7 +903,7 @@ export default function Applications() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total de Aplicações</p>
                   <p className="text-2xl font-bold">
-                    {mockApplications.length}
+                    {applications.length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Layers className="h-3 w-3 mr-1 text-blue-600" />
@@ -913,7 +922,7 @@ export default function Applications() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Aplicações Ativas</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {mockApplications.filter(app => app.status === 'Ativo').length}
+                    {applications.filter(app => app.status === 'Ativo').length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Shield className="h-3 w-3 mr-1 text-green-600" />
@@ -932,7 +941,7 @@ export default function Applications() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Risco Alto</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {mockApplications.filter(app => app.risk_level === 'Alto').length}
+                    {applications.filter(app => app.risk_level === 'Alto').length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <AlertTriangle className="h-3 w-3 mr-1 text-red-600" />
@@ -951,7 +960,7 @@ export default function Applications() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Vulnerabilidades</p>
                   <p className="text-2xl font-bold text-orange-600">
-                    {mockApplications.reduce((sum, app) => sum + app.vulnerabilities, 0)}
+                    {applications.reduce((sum, app) => sum + app.vulnerabilities, 0)}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Target className="h-3 w-3 mr-1 text-orange-600" />
@@ -964,197 +973,197 @@ export default function Applications() {
           </Card>
         </div>
 
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Filtros</CardTitle>
-              <CardDescription>
-                Filtre e pesquise aplicações no inventário
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Pesquisar</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Nome, ID ou tecnologia..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo</label>
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Web Application">Web Application</SelectItem>
-                      <SelectItem value="Mobile App">Mobile App</SelectItem>
-                      <SelectItem value="API">API</SelectItem>
-                      <SelectItem value="Database">Database</SelectItem>
-                      <SelectItem value="Cloud Service">Cloud Service</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Status</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="Ativo">Ativo</SelectItem>
-                      <SelectItem value="Desenvolvimento">Desenv.</SelectItem>
-                      <SelectItem value="Teste">Teste</SelectItem>
-                      <SelectItem value="Descontinuado">Descontinuado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Ações</label>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => setAdvancedFiltersModalOpen(true)}
-                  >
-                    <Sliders className="h-4 w-4 mr-2" />
-                    Filtros Avançados
-                    {getActiveFiltersCount() > 0 && (
-                      <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
-                        {getActiveFiltersCount()}
-                      </Badge>
-                    )}
-                  </Button>
+        {/* Filters */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Filtros</CardTitle>
+            <CardDescription>
+              Filtre e pesquise aplicações no inventário
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Pesquisar</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Nome, ID ou tecnologia..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
               </div>
-              
 
-            </CardContent>
-          </Card>
-
-          {/* Applications Table */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Aplicações ({filteredApplications.length})</CardTitle>
-                  <CardDescription>
-                    Lista de aplicações no inventário
-                  </CardDescription>
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo</label>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Web Application">Web Application</SelectItem>
+                    <SelectItem value="Mobile App">Mobile App</SelectItem>
+                    <SelectItem value="API">API</SelectItem>
+                    <SelectItem value="Database">Database</SelectItem>
+                    <SelectItem value="Cloud Service">Cloud Service</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs font-medium">ID</TableHead>
-                      <TableHead className="text-xs font-medium">Nome</TableHead>
-                      <TableHead className="text-xs font-medium">Tipo</TableHead>
-                      <TableHead className="text-xs font-medium">Status</TableHead>
-                      <TableHead className="text-xs font-medium">Tecnologia</TableHead>
-                      <TableHead className="text-xs font-medium">Responsável</TableHead>
-                      <TableHead className="text-xs font-medium">Vulnerabilidades</TableHead>
-                      <TableHead className="text-xs font-medium">Risco</TableHead>
-                      <TableHead className="text-xs font-medium">Último Scan</TableHead>
-                      <TableHead className="text-xs font-medium">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="text-xs">
-                    {filteredApplications.map((app) => (
-                      <TableRow key={app.id}>
-                        <TableCell className="font-medium text-xs">{app.id}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getTypeIcon(app.type)}
-                            <div>
-                              <p className="font-medium text-xs">{app.name}</p>
-                              <p className="text-xs text-muted-foreground">{app.url}</p>
-                            </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Desenvolvimento">Desenv.</SelectItem>
+                    <SelectItem value="Teste">Teste</SelectItem>
+                    <SelectItem value="Descontinuado">Descontinuado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ações</label>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setAdvancedFiltersModalOpen(true)}
+                >
+                  <Sliders className="h-4 w-4 mr-2" />
+                  Filtros Avançados
+                  {getActiveFiltersCount() > 0 && (
+                    <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
+                      {getActiveFiltersCount()}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+
+          </CardContent>
+        </Card>
+
+        {/* Applications Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Aplicações ({filteredApplications.length})</CardTitle>
+                <CardDescription>
+                  Lista de aplicações no inventário
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table className="text-sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs font-medium">ID</TableHead>
+                    <TableHead className="text-xs font-medium">Nome</TableHead>
+                    <TableHead className="text-xs font-medium">Tipo</TableHead>
+                    <TableHead className="text-xs font-medium">Status</TableHead>
+                    <TableHead className="text-xs font-medium">Tecnologia</TableHead>
+                    <TableHead className="text-xs font-medium">Responsável</TableHead>
+                    <TableHead className="text-xs font-medium">Vulnerabilidades</TableHead>
+                    <TableHead className="text-xs font-medium">Risco</TableHead>
+                    <TableHead className="text-xs font-medium">Último Scan</TableHead>
+                    <TableHead className="text-xs font-medium">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="text-xs">
+                  {filteredApplications.map((app) => (
+                    <TableRow key={app.id}>
+                      <TableCell className="font-medium text-xs">{app.id}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getTypeIcon(app.type)}
+                          <div>
+                            <p className="font-medium text-xs">{app.name}</p>
+                            <p className="text-xs text-muted-foreground">{app.url}</p>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-xs">{app.type}</TableCell>
-                        <TableCell>
-                          <Badge className={`${getStatusBadgeColor(app.status)} text-xs px-2 py-1`}>
-                            {getStatusDisplayText(app.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">{app.technology}</TableCell>
-                        <TableCell className="text-xs">{app.owner}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs px-2 py-1">
-                            {app.vulnerabilities} vuln.
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${getRiskBadgeColor(app.risk_level)} text-xs px-2 py-1`}>
-                            {app.risk_level}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs">
-                            {new Date(app.last_scan).toLocaleDateString()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0"
-                                title="Ações"
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  console.log('Visualizar clicado:', app);
-                                  handleViewApplication(app);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Eye className="h-4 w-4 mr-2" />
-                                Visualizar Detalhes
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
-                                className="cursor-pointer"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar Aplicação
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteApplication(app.id)}
-                                className="cursor-pointer text-destructive focus:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir Aplicação
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{app.type}</TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusBadgeColor(app.status)} text-xs px-2 py-1`}>
+                          {getStatusDisplayText(app.status)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs">{app.technology}</TableCell>
+                      <TableCell className="text-xs">{app.owner}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs px-2 py-1">
+                          {app.vulnerabilities} vuln.
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getRiskBadgeColor(app.risk_level)} text-xs px-2 py-1`}>
+                          {app.risk_level}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs">
+                          {new Date(app.last_scan).toLocaleDateString()}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              title="Ações"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                console.log('Visualizar clicado:', app);
+                                handleViewApplication(app);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Visualizar Detalhes
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
+                              className="cursor-pointer"
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar Aplicação
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteApplication(app.id)}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir Aplicação
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Advanced Filters Modal */}
@@ -1193,7 +1202,7 @@ export default function Applications() {
               )}
             </div>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column */}
@@ -1474,7 +1483,7 @@ export default function Applications() {
                           Possui CI/CD Pipeline
                         </Label>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3 p-3 border rounded-lg">
                         <Checkbox
                           id="is-microservices"
@@ -1491,7 +1500,7 @@ export default function Applications() {
                         </Label>
                       </div>
                     </div>
-                    
+
                     {/* Vulnerability Range */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Faixa de Vulnerabilidades</Label>
@@ -1539,7 +1548,7 @@ export default function Applications() {
               </div>
             </div>
           </div>
-          
+
           {/* Footer */}
           <div className="flex justify-between items-center pt-4 border-t bg-muted/20 -mx-6 -mb-6 px-6 py-4">
             <div className="text-sm text-muted-foreground">
@@ -1582,7 +1591,7 @@ export default function Applications() {
               </div>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
             {selectedApplication && (
               <div className="space-y-6 p-1">
@@ -1603,7 +1612,7 @@ export default function Applications() {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="border-l-4 border-l-destructive">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2">
@@ -1617,7 +1626,7 @@ export default function Applications() {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="border-l-4 border-l-orange-500">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2">
@@ -1633,7 +1642,7 @@ export default function Applications() {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="border-l-4 border-l-blue-500">
                     <CardContent className="p-4">
                       <div className="flex items-center gap-2">
@@ -1670,7 +1679,7 @@ export default function Applications() {
                           <p className="font-medium">{selectedApplication.type}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-muted/50">
                           <ExternalLink className="h-4 w-4" />
@@ -1680,7 +1689,7 @@ export default function Applications() {
                           <p className="text-sm break-all font-mono bg-muted/30 px-2 py-1 rounded">{selectedApplication.url}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-muted/50">
                           <Code className="h-4 w-4" />
@@ -1690,7 +1699,7 @@ export default function Applications() {
                           <Badge variant="outline" className="mt-1">{selectedApplication.technology}</Badge>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-start gap-3">
                         <div className="p-2 rounded-lg bg-muted/50">
                           <User className="h-4 w-4" />
@@ -1722,7 +1731,7 @@ export default function Applications() {
                           <Target className="h-6 w-6 text-red-600 dark:text-red-400" />
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="p-3 rounded-lg border">
                           <p className="text-xs text-muted-foreground mb-1">Nível de Risco</p>
@@ -1737,14 +1746,14 @@ export default function Applications() {
                           </Badge>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
                         <Clock className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Última Verificação</p>
-                          <p className="text-xs text-muted-foreground">{new Date(selectedApplication.last_scan).toLocaleDateString('pt-BR', { 
-                            year: 'numeric', 
-                            month: 'long', 
+                          <p className="text-xs text-muted-foreground">{new Date(selectedApplication.last_scan).toLocaleDateString('pt-BR', {
+                            year: 'numeric',
+                            month: 'long',
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
@@ -1762,8 +1771,8 @@ export default function Applications() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="h-auto p-4 flex flex-col items-center gap-2"
                         onClick={() => {
                           setViewModalOpen(false);
@@ -1773,9 +1782,9 @@ export default function Applications() {
                         <Edit className="h-5 w-5" />
                         <span className="text-sm">Editar Aplicação</span>
                       </Button>
-                      
-                      <Button 
-                        variant="outline" 
+
+                      <Button
+                        variant="outline"
                         className="h-auto p-4 flex flex-col items-center gap-2"
                         onClick={() => {
                           // Ação para visualizar vulnerabilidades
@@ -1785,9 +1794,9 @@ export default function Applications() {
                         <Target className="h-5 w-5" />
                         <span className="text-sm">Ver Vulnerabilidades</span>
                       </Button>
-                      
-                      <Button 
-                        variant="outline" 
+
+                      <Button
+                        variant="outline"
                         className="h-auto p-4 flex flex-col items-center gap-2"
                         onClick={() => {
                           // Ação para iniciar scan
@@ -1803,7 +1812,7 @@ export default function Applications() {
               </div>
             )}
           </div>
-          
+
           {/* Footer com Ações */}
           <div className="flex justify-between items-center pt-4 border-t bg-muted/20 -mx-6 -mb-6 px-6 py-4">
             <div className="text-sm text-muted-foreground">
@@ -1815,7 +1824,7 @@ export default function Applications() {
               <Button variant="outline" onClick={() => setViewModalOpen(false)}>
                 Fechar
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setViewModalOpen(false);
                   navigate(`/vulnerabilities/applications/edit/${selectedApplication.id}`);
@@ -1855,7 +1864,7 @@ export default function Applications() {
               })()}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {selectedImportTool === 'servicenow' && (
               <div className="space-y-4">
@@ -1868,7 +1877,7 @@ export default function Applications() {
                     Configure a conexão com o ServiceNow CMDB para importar aplicações
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="snow-instance">Instância ServiceNow *</Label>
                   <Input
@@ -1876,7 +1885,7 @@ export default function Applications() {
                     placeholder="https://sua-empresa.service-now.com"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="snow-auth-type">Tipo de Autenticação</Label>
                   <Select defaultValue="basic">
@@ -1890,7 +1899,7 @@ export default function Applications() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="snow-username">Usuário</Label>
@@ -1901,7 +1910,7 @@ export default function Applications() {
                     <Input id="snow-password" type="password" placeholder="••••••••" />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="snow-client-id">Client ID (OAuth)</Label>
@@ -1912,7 +1921,7 @@ export default function Applications() {
                     <Input id="snow-client-secret" type="password" placeholder="••••••••" />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="snow-jwt-token">JWT Token</Label>
@@ -1924,7 +1933,7 @@ export default function Applications() {
                     <Input id="snow-key-id" placeholder="key-id-jwt" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="snow-table">Tabela CMDB</Label>
                   <Select defaultValue="cmdb_ci_appl">
@@ -1940,7 +1949,7 @@ export default function Applications() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="snow-filter">Filtro (opcional)</Label>
                   <Input
@@ -1948,10 +1957,10 @@ export default function Applications() {
                     placeholder="ex: install_status=1^operational_status=1"
                   />
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -1983,7 +1992,7 @@ export default function Applications() {
                     Configure a conexão com o Atlassian Jira para importar projetos como aplicações
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="jira-server">Servidor Jira *</Label>
                   <Input
@@ -1991,7 +2000,7 @@ export default function Applications() {
                     placeholder="https://sua-empresa.atlassian.net"
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="jira-username">Email</Label>
@@ -2002,7 +2011,7 @@ export default function Applications() {
                     <Input id="jira-token" type="password" placeholder="••••••••" />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="jira-projects">Projetos (opcional)</Label>
                   <Input
@@ -2013,10 +2022,10 @@ export default function Applications() {
                     Chaves dos projetos separadas por vírgula. Deixe vazio para importar todos os projetos.
                   </p>
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -2048,7 +2057,7 @@ export default function Applications() {
                     Configure a conexão com o GitHub para importar repositórios como aplicações
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="github-token">Token de Acesso *</Label>
                   <Input
@@ -2060,7 +2069,7 @@ export default function Applications() {
                     Personal Access Token ou GitHub App token
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="github-server">Servidor GitHub (opcional)</Label>
                   <Input
@@ -2071,7 +2080,7 @@ export default function Applications() {
                     Para GitHub Enterprise, use: https://github.empresa.com/api/v3
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="github-org">Organização (opcional)</Label>
@@ -2082,7 +2091,7 @@ export default function Applications() {
                     <Input id="github-repos" placeholder="org/repo1,org/repo2" />
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -2091,10 +2100,10 @@ export default function Applications() {
                   />
                   <Label htmlFor="github-include-archived">Incluir repositórios arquivados</Label>
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -2126,7 +2135,7 @@ export default function Applications() {
                     Configure a conexão com o GitLab para importar projetos como aplicações
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="gitlab-token">Token de Acesso *</Label>
                   <Input
@@ -2138,7 +2147,7 @@ export default function Applications() {
                     Personal Access Token ou Project Access Token
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="gitlab-server">Servidor GitLab (opcional)</Label>
                   <Input
@@ -2149,7 +2158,7 @@ export default function Applications() {
                     Para GitLab self-hosted, use: https://gitlab.empresa.com
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="gitlab-group">Grupo (opcional)</Label>
@@ -2160,7 +2169,7 @@ export default function Applications() {
                     <Input id="gitlab-projects" placeholder="grupo/projeto1,grupo/projeto2" />
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
@@ -2169,10 +2178,10 @@ export default function Applications() {
                   />
                   <Label htmlFor="gitlab-include-archived">Incluir projetos arquivados</Label>
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -2204,7 +2213,7 @@ export default function Applications() {
                     Configure a conexão com o Azure DevOps para importar projetos como aplicações
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="azure-org">Organização *</Label>
                   <Input
@@ -2215,7 +2224,7 @@ export default function Applications() {
                     Nome da organização no Azure DevOps
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="azure-token">Personal Access Token *</Label>
                   <Input
@@ -2227,7 +2236,7 @@ export default function Applications() {
                     PAT com permissões de leitura para projetos
                   </p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="azure-projects">Projetos (opcional)</Label>
                   <Input
@@ -2238,10 +2247,10 @@ export default function Applications() {
                     Nomes dos projetos separados por vírgula. Deixe vazio para importar todos.
                   </p>
                 </div>
-                
+
                 <div className="bg-muted/50 p-4 rounded-lg">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -2275,7 +2284,7 @@ export default function Applications() {
                       Configure a URL e método HTTP para conectar com sua API de aplicações
                     </p>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="app-api-url">URL da API *</Label>
                     <Input
@@ -2283,7 +2292,7 @@ export default function Applications() {
                       placeholder="https://api.exemplo.com/applications"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-method">Método HTTP</Label>
@@ -2325,7 +2334,7 @@ export default function Applications() {
                       Credenciais de Acesso
                     </h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-key">API Key</Label>
@@ -2344,7 +2353,7 @@ export default function Applications() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-username">Usuário</Label>
@@ -2372,7 +2381,7 @@ export default function Applications() {
                       Processamento de Dados
                     </h3>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="app-api-data-path">Caminho dos Dados (JSONPath)</Label>
                     <Input
@@ -2380,7 +2389,7 @@ export default function Applications() {
                       placeholder="data.applications ou response.projects"
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="app-api-field-mapping">Mapeamento de Campos (JSON)</Label>
                     <Textarea
@@ -2399,7 +2408,7 @@ export default function Applications() {
                       Configuração Avançada
                     </h3>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="app-api-headers">Headers Customizados (JSON)</Label>
                     <Textarea
@@ -2408,7 +2417,7 @@ export default function Applications() {
                       rows={3}
                     />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="app-api-body">Body da Requisição (JSON)</Label>
                     <Textarea
@@ -2428,8 +2437,8 @@ export default function Applications() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Teste a conexão com a API antes de iniciar a importação
                   </p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={testConnection}
                     disabled={isTestingConnection}
                     className="w-full"
@@ -2471,7 +2480,7 @@ export default function Applications() {
               <Button variant="outline" onClick={() => setImportModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleRealImport()}
                 disabled={isImporting || isTestingConnection}
               >
@@ -2508,7 +2517,7 @@ export default function Applications() {
               Configure as opções de exportação para {filteredApplications.length} aplicação{filteredApplications.length !== 1 ? 'ões' : ''}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg">
               <h4 className="font-medium mb-2">Dados a serem exportados:</h4>
@@ -2579,22 +2588,22 @@ export default function Applications() {
               <Button onClick={() => {
                 if (selectedExportFormat) {
                   const options: any = {};
-                  
+
                   if (selectedExportFormat === 'csv') {
                     const delimiterSelect = document.querySelector('[data-testid="csv-delimiter"]') as HTMLSelectElement;
                     options.delimiter = delimiterSelect?.value === 'semicolon' ? ';' : delimiterSelect?.value === 'tab' ? '\t' : ',';
                   }
-                  
+
                   if (selectedExportFormat === 'pdf') {
                     const titleInput = document.getElementById('pdf-title') as HTMLInputElement;
                     options.title = titleInput?.value || 'Relatório de Aplicações';
                   }
-                  
+
                   if (selectedExportFormat === 'excel') {
                     const sheetInput = document.getElementById('excel-sheet') as HTMLInputElement;
                     options.sheetName = sheetInput?.value || 'Aplicações';
                   }
-                  
+
                   executeExport(selectedExportFormat, options);
                   setExportModalOpen(false);
                 }

@@ -28,7 +28,8 @@ import {
   Shield,
   AlertTriangle,
   CheckCircle,
-  Clock
+  Clock,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -690,7 +691,45 @@ export function ComplianceReports() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Central de Relatórios</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            Central de Relatórios
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>A importância do Relatório de Conformidade</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É a sua "Prova". É aqui que você materializa todo o trabalho de monitoramento e controle em um documento (PDF, Excel) para mostrar a auditoria ou diretoria.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Cenário:</strong> Um auditor externo pede provas de que a empresa está em conformidade com a LGPD no último trimestre.
+                        </li>
+                        <li>
+                          <strong>Nesta Aba (Relatórios):</strong> Você gera o relatório <em>"Conformidade LGPD - Q3 2024"</em>.
+                        </li>
+                        <li>
+                          <strong>Resultado:</strong> O sistema compila todos os controles monitorados, incidentes e evidências em um arquivo pronto para entrega.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Benefício:</strong> Transforma dados técnicos em informações de negócio compreensíveis.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </h2>
           <p className="text-muted-foreground">Geração e gestão de relatórios de conformidade</p>
         </div>
 

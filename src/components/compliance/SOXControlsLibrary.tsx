@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { 
+import {
   Shield,
   Search,
   BookOpen,
@@ -25,7 +25,8 @@ import {
   Edit,
   Trash2,
   Globe,
-  Building
+  Building,
+  HelpCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -80,7 +81,7 @@ const SOXControlsLibrary: React.FC = () => {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
+
   const [controls, setControls] = useState<SOXControl[]>([]);
   const [filteredControls, setFilteredControls] = useState<SOXControl[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +89,7 @@ const SOXControlsLibrary: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingControl, setEditingControl] = useState<SOXControl | null>(null);
-  
+
   const controlForm = useForm<z.infer<typeof controlSchema>>({
     resolver: zodResolver(controlSchema),
     defaultValues: {
@@ -120,7 +121,7 @@ const SOXControlsLibrary: React.FC = () => {
 
   const loadSOXControls = async () => {
     if (!effectiveTenantId) return;
-    
+
     try {
       // Carregar controles globais e específicos do tenant
       const { data, error } = await supabase
@@ -154,7 +155,7 @@ const SOXControlsLibrary: React.FC = () => {
 
     // Filtro por termo de busca
     if (searchTerm) {
-      filtered = filtered.filter(control => 
+      filtered = filtered.filter(control =>
         control.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         control.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         control.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,19 +177,19 @@ const SOXControlsLibrary: React.FC = () => {
 
   const getCategoryColor = (categoria: string) => {
     switch (categoria) {
-      case 'entity_level': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'transaction_level': return 'bg-green-100 text-green-800 border-green-300';
-      case 'itgc': return 'bg-purple-100 text-purple-800 border-purple-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'entity_level': return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+      case 'transaction_level': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800';
+      case 'itgc': return 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
     }
   };
 
   const getCriticalityColor = (criticidade: string) => {
     switch (criticidade) {
-      case 'critica': return 'bg-red-100 text-red-800 border-red-300';
-      case 'alta': return 'bg-orange-100 text-orange-800 border-orange-300';
-      case 'media': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'critica': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800';
+      case 'alta': return 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800';
+      case 'media': return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
     }
   };
 
@@ -243,7 +244,7 @@ const SOXControlsLibrary: React.FC = () => {
       toast.error('Controles globais não podem ser editados');
       return;
     }
-    
+
     if (control.tenant_id !== effectiveTenantId) {
       toast.error('Você não tem permissão para editar este controle');
       return;
@@ -306,7 +307,7 @@ const SOXControlsLibrary: React.FC = () => {
       toast.error('Controles globais não podem ser excluídos');
       return;
     }
-    
+
     if (control.tenant_id !== effectiveTenantId) {
       toast.error('Você não tem permissão para excluir este controle');
       return;
@@ -368,20 +369,58 @@ const SOXControlsLibrary: React.FC = () => {
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Shield className="h-8 w-8 text-red-600" />
             Biblioteca SOX
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>O que é a Biblioteca SOX?</DialogTitle>
+                  <DialogDescription className="space-y-4 pt-4 text-left">
+                    <p>
+                      <strong>Objetivo:</strong> É o "Cardápio" de controles prontos. Em vez de inventar controles do zero, você escolhe os que servem para sua empresa.
+                    </p>
+
+                    <div className="bg-muted p-4 rounded-lg">
+                      <p className="font-semibold mb-2">Exemplo Prático:</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm">
+                        <li>
+                          <strong>Cenário:</strong> Você precisa garantir que demitidos percam acesso aos sistemas.
+                        </li>
+                        <li>
+                          <strong>Na Biblioteca:</strong> Você busca por <em>"Terminação de Acesso"</em> e encontra o controle <strong>ITGC-005</strong>.
+                        </li>
+                        <li>
+                          <strong>Ação:</strong> Você copia ou se inspira neste controle para criar o seu próprio, já sabendo que ele segue as melhores práticas da Sarbanes-Oxley.
+                        </li>
+                      </ul>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      <strong>Dica:</strong> Controles <em>"Entity Level"</em> são sobre cultura e governança. <em>"Transaction Level"</em> são financeiros operacionais. <em>"ITGC"</em> são de TI.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </h1>
           <p className="text-muted-foreground">
             Biblioteca global de controles Sarbanes-Oxley para todas as organizações
           </p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {setEditingControl(null); controlForm.reset();}}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Controle
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          <Button
+            onClick={() => {
+              setEditingControl(null);
+              controlForm.reset();
+              setIsDialogOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Controle
+          </Button>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Exportar
@@ -463,28 +502,28 @@ const SOXControlsLibrary: React.FC = () => {
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">Filtros:</span>
           <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
-            <Button 
+            <Button
               variant={selectedCategory === 'all' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('all')}
               size="sm"
             >
               Todos
             </Button>
-            <Button 
+            <Button
               variant={selectedCategory === 'entity_level' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('entity_level')}
               size="sm"
             >
               Entity Level
             </Button>
-            <Button 
+            <Button
               variant={selectedCategory === 'transaction_level' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('transaction_level')}
               size="sm"
             >
               Transaction Level
             </Button>
-            <Button 
+            <Button
               variant={selectedCategory === 'itgc' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('itgc')}
               size="sm"
@@ -506,9 +545,9 @@ const SOXControlsLibrary: React.FC = () => {
                     {getCategoryIcon(control.categoria)}
                     <CardTitle className="text-lg flex items-center gap-2">
                       {control.codigo}
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => copyControlCode(control.codigo)}
                         className="h-6 w-6 p-0"
                       >
@@ -546,17 +585,17 @@ const SOXControlsLibrary: React.FC = () => {
                   {/* Botões de ação para controles personalizados */}
                   {!control.is_global && control.tenant_id === effectiveTenantId && (
                     <div className="flex gap-1 ml-auto">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEditControl(control)}
                         className="h-6 w-6 p-0"
                       >
                         <Edit className="h-3 w-3" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDeleteControl(control)}
                         className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
                       >
@@ -575,7 +614,7 @@ const SOXControlsLibrary: React.FC = () => {
                   <TabsTrigger value="evidence">Evidências</TabsTrigger>
                   <TabsTrigger value="systems">Sistemas</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="details" className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
@@ -604,14 +643,14 @@ const SOXControlsLibrary: React.FC = () => {
                     <p className="text-sm text-muted-foreground">{control.risco_processo}</p>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="activities">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Atividades do Controle</p>
                     <p className="text-sm text-muted-foreground">{control.atividades_controle}</p>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="evidence">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Evidências de Funcionamento</p>
@@ -625,7 +664,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </ul>
                   </div>
                 </TabsContent>
-                
+
                 <TabsContent value="systems">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Sistemas Aplicáveis</p>
@@ -664,13 +703,13 @@ const SOXControlsLibrary: React.FC = () => {
               {editingControl ? 'Editar Controle SOX' : 'Adicionar Novo Controle SOX'}
             </DialogTitle>
             <DialogDescription>
-              {editingControl 
-                ? 'Edite as informações do controle personalizado.' 
+              {editingControl
+                ? 'Edite as informações do controle personalizado.'
                 : 'Crie um novo controle SOX personalizado para sua organização.'
               }
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...controlForm}>
             <form onSubmit={controlForm.handleSubmit(handleSubmit)} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -687,7 +726,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={controlForm.control}
                   name="categoria"
@@ -726,7 +765,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={controlForm.control}
                   name="natureza"
@@ -772,10 +811,10 @@ const SOXControlsLibrary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Descrição *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Descrição detalhada do controle"
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -790,10 +829,10 @@ const SOXControlsLibrary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Objetivo do Controle *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Qual é o objetivo específico deste controle?"
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -825,7 +864,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={controlForm.control}
                   name="frequencia"
@@ -851,7 +890,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={controlForm.control}
                   name="criticidade"
@@ -884,10 +923,10 @@ const SOXControlsLibrary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Atividades do Controle *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Descreva as atividades específicas do controle"
                         className="min-h-[100px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -909,7 +948,7 @@ const SOXControlsLibrary: React.FC = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={controlForm.control}
                   name="risco_processo"
@@ -932,10 +971,10 @@ const SOXControlsLibrary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Evidências de Funcionamento *</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Liste as evidências, uma por linha&#10;Ex:&#10;Relatório de aprovações&#10;Log de sistema&#10;Documentos assinados"
                         className="min-h-[100px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -950,10 +989,10 @@ const SOXControlsLibrary: React.FC = () => {
                   <FormItem>
                     <FormLabel>Sistemas Aplicáveis</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Liste os sistemas, um por linha&#10;Ex:&#10;SAP&#10;Oracle ERP&#10;Sistema Financeiro"
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
