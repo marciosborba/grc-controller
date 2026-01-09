@@ -1,1174 +1,624 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { 
-  CheckSquare,
-  Plus,
-  Edit,
-  Eye,
-  Clock,
-  User,
-  Calendar,
-  AlertTriangle,
-  TrendingUp,
-  Target,
-  FileText,
-  Search,
-  Filter,
-  MoreHorizontal,
-  PlayCircle,
-  PauseCircle,
-  CheckCircle,
-  XCircle,
-  DollarSign
-} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Calendar, CheckCircle, AlertTriangle, Clock, Edit, Trash2, User } from 'lucide-react';
+import { useComplianceActionPlans, ActionPlan, ActionPlanActivity } from '@/hooks/useComplianceActionPlans';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
-import { toast } from 'sonner';
-
-interface ActionPlan {
-  id: string;
-  codigo: string;
-  titulo: string;
-  descricao_acao: string;
-  tipo_acao: string;
-  categoria_acao: string;
-  causa_raiz_endereçada: string;
-  objetivo_acao: string;
-  resultados_esperados: string;
-  responsavel_execucao: string;
-  responsavel_nome: string;
-  responsavel_aprovacao: string;
-  aprovador_nome: string;
-  responsavel_monitoramento: string;
-  monitor_nome: string;
-  data_inicio_planejada: string;
-  data_fim_planejada: string;
-  data_inicio_real: string;
-  data_fim_real: string;
-  orcamento_estimado: number;
-  orcamento_realizado: number;
-  recursos_necessarios: string[];
-  dependencias: string[];
-  status: string;
-  percentual_conclusao: number;
-  marcos_principais: any[];
-  entregas_esperadas: string[];
-  frequencia_monitoramento: string;
-  data_proximo_monitoramento: string;
-  data_verificacao_efetividade: string;
-  efetividade_confirmada: boolean;
-  evidencias_efetividade: string[];
-  observacoes_efetividade: string;
-  nao_conformidade_id: string;
-  nao_conformidade_titulo: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ActionPlanFormData {
-  codigo: string;
-  titulo: string;
-  descricao_acao: string;
-  nao_conformidade_id: string;
-  tipo_acao: string;
-  categoria_acao: string;
-  causa_raiz_endereçada: string;
-  objetivo_acao: string;
-  resultados_esperados: string;
-  responsavel_execucao: string;
-  responsavel_aprovacao: string;
-  responsavel_monitoramento: string;
-  data_inicio_planejada: string;
-  data_fim_planejada: string;
-  orcamento_estimado: number;
-  recursos_necessarios: string[];
-  dependencias: string[];
-  entregas_esperadas: string[];
-  frequencia_monitoramento: string;
-}
-
-const TIPOS_ACAO = [
-  { value: 'corretiva', label: 'Corretiva', color: 'bg-red-100 text-red-800' },
-  { value: 'preventiva', label: 'Preventiva', color: 'bg-blue-100 text-blue-800' },
-  { value: 'melhoria', label: 'Melhoria', color: 'bg-green-100 text-green-800' },
-  { value: 'mitigacao', label: 'Mitigação', color: 'bg-yellow-100 text-yellow-800' }
-];
-
-const CATEGORIAS_ACAO = [
-  'Processo',
-  'Tecnologia',
-  'Pessoas',
-  'Documentação',
-  'Treinamento',
-  'Controles',
-  'Políticas',
-  'Sistemas'
-];
-
-const STATUS_OPTIONS = [
-  { value: 'planejada', label: 'Planejada', color: 'bg-gray-100 text-gray-800', icon: Clock },
-  { value: 'aprovada', label: 'Aprovada', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
-  { value: 'em_execucao', label: 'Em Execução', color: 'bg-yellow-100 text-yellow-800', icon: PlayCircle },
-  { value: 'suspensa', label: 'Suspensa', color: 'bg-orange-100 text-orange-800', icon: PauseCircle },
-  { value: 'concluida', label: 'Concluída', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  { value: 'cancelada', label: 'Cancelada', color: 'bg-red-100 text-red-800', icon: XCircle }
-];
-
-const FREQUENCIAS_MONITORAMENTO = [
-  { value: 'semanal', label: 'Semanal' },
-  { value: 'quinzenal', label: 'Quinzenal' },
-  { value: 'mensal', label: 'Mensal' },
-  { value: 'trimestral', label: 'Trimestral' }
-];
 
 export function ActionPlansManagement() {
-  const { user } = useAuth();
-  const selectedTenantId = useCurrentTenantId();
-  const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
-  const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
-  const [nonConformities, setNonConformities] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<ActionPlan | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<ActionPlan | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterTipo, setFilterTipo] = useState('');
+  const { plans, loading, fetchPlans, createPlan, updatePlan, addActivity, updateActivity, deleteActivity, updateActivityStatus } = useComplianceActionPlans();
+  const effectiveTenantId = useCurrentTenantId();
 
-  const [formData, setFormData] = useState<ActionPlanFormData>({
-    codigo: '',
-    titulo: '',
-    descricao_acao: '',
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [showNewPlanDialog, setShowNewPlanDialog] = useState(false);
+  const [showEditPlanDialog, setShowEditPlanDialog] = useState(false);
+  const [showNewActivityDialog, setShowNewActivityDialog] = useState(false);
+  const [showEditActivityDialog, setShowEditActivityDialog] = useState(false);
+  const [nonConformities, setNonConformities] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+
+  const selectedPlan = plans.find(p => p.id === selectedPlanId) || null;
+
+  // Form States
+  const [newPlanForm, setNewPlanForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
     nao_conformidade_id: '',
-    tipo_acao: '',
-    categoria_acao: '',
-    causa_raiz_endereçada: '',
-    objetivo_acao: '',
-    resultados_esperados: '',
-    responsavel_execucao: '',
-    responsavel_aprovacao: '',
-    responsavel_monitoramento: '',
-    data_inicio_planejada: '',
-    data_fim_planejada: '',
-    orcamento_estimado: 0,
-    recursos_necessarios: [],
-    dependencias: [],
-    entregas_esperadas: [],
-    frequencia_monitoramento: 'mensal'
+    objetivo: '',
+    causa_raiz: '',
+    responsavel_id: ''
   });
 
-  const [progressForm, setProgressForm] = useState({
-    percentual_conclusao: 0,
-    observacoes: '',
-    marcos_atingidos: '',
-    proximas_atividades: ''
+  const [editPlanForm, setEditPlanForm] = useState({
+    id: '',
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    status: 'open',
+    objetivo: '',
+    causa_raiz: '',
+    responsavel_id: ''
+  });
+
+  const [newActivityForm, setNewActivityForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    responsibleId: ''
+  });
+
+  const [editActivityForm, setEditActivityForm] = useState({
+    id: '',
+    title: '',
+    description: '',
+    priority: 'medium',
+    dueDate: '',
+    responsibleId: '',
+    status: 'open'
   });
 
   useEffect(() => {
-    if (effectiveTenantId) {
-      loadData();
-    }
-  }, [effectiveTenantId]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([
-        loadActionPlans(),
-        loadNonConformities(),
-        loadUsers()
-      ]);
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar dados');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadActionPlans = async () => {
-    const { data, error } = await supabase
-      .from('planos_acao_conformidade')
-      .select(`
-        *,
-        responsavel_profile:profiles!planos_acao_conformidade_responsavel_execucao_fkey(full_name),
-        aprovador_profile:profiles!planos_acao_conformidade_responsavel_aprovacao_fkey(full_name),
-        monitor_profile:profiles!planos_acao_conformidade_responsavel_monitoramento_fkey(full_name),
-        nao_conformidades!inner(titulo)
-      `)
-      .eq('tenant_id', effectiveTenantId)
-      .order('data_fim_planejada');
-
-    if (error) throw error;
-
-    const processedPlans = data?.map(plan => ({
-      ...plan,
-      responsavel_nome: plan.responsavel_profile?.full_name || 'Não atribuído',
-      aprovador_nome: plan.aprovador_profile?.full_name || 'Não atribuído',
-      monitor_nome: plan.monitor_profile?.full_name || 'Não atribuído',
-      nao_conformidade_titulo: plan.nao_conformidades?.titulo || 'N/A',
-      recursos_necessarios: plan.recursos_necessarios || [],
-      dependencias: plan.dependencias || [],
-      marcos_principais: plan.marcos_principais || [],
-      entregas_esperadas: plan.entregas_esperadas || [],
-      evidencias_efetividade: plan.evidencias_efetividade || []
-    })) || [];
-
-    setActionPlans(processedPlans);
-  };
+    fetchPlans();
+    loadNonConformities();
+    loadProfiles();
+  }, [fetchPlans]);
 
   const loadNonConformities = async () => {
-    const { data, error } = await supabase
+    if (!effectiveTenantId) return;
+    const { data } = await supabase
       .from('nao_conformidades')
       .select('id, codigo, titulo')
       .eq('tenant_id', effectiveTenantId)
       .in('status', ['aberta', 'em_tratamento']);
-
-    if (error) throw error;
     setNonConformities(data || []);
   };
 
-  const loadUsers = async () => {
-    const { data, error } = await supabase
+  const loadProfiles = async () => {
+    // Basic profile fetch - could be optimized to filter by roles if needed
+    const { data } = await supabase
       .from('profiles')
-      .select('id, full_name')
-      .eq('tenant_id', effectiveTenantId)
-      .order('full_name');
-
-    if (error) throw error;
-    setUsers(data || []);
+      .select('id, full_name, email');
+    setProfiles(data || []);
   };
 
-  const generateNextCode = () => {
-    const year = new Date().getFullYear();
-    const count = actionPlans.length + 1;
-    return `PA-${year}-${count.toString().padStart(3, '0')}`;
+  const handleCreatePlan = async () => {
+    if (!newPlanForm.title) return;
+
+    await createPlan({
+      title: newPlanForm.title,
+      description: newPlanForm.description,
+      priority: newPlanForm.priority,
+      due_date: newPlanForm.dueDate,
+      nao_conformidade_id: newPlanForm.nao_conformidade_id === 'none' ? undefined : newPlanForm.nao_conformidade_id,
+      objetivo: newPlanForm.objetivo,
+      causa_raiz: newPlanForm.causa_raiz,
+      responsavel_id: newPlanForm.responsavel_id
+    });
+
+    setShowNewPlanDialog(false);
+    setNewPlanForm({ title: '', description: '', priority: 'medium', dueDate: '', nao_conformidade_id: '', objetivo: '', causa_raiz: '', responsavel_id: '' });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const payload = {
-        ...formData,
-        tenant_id: effectiveTenantId,
-        codigo: formData.codigo || generateNextCode(),
-        status: 'planejada',
-        percentual_conclusao: 0,
-        created_by: user?.id,
-        updated_by: user?.id
-      };
+  const handleUpdatePlan = async () => {
+    if (!editPlanForm.id || !editPlanForm.title) return;
 
-      let error;
-      if (editingPlan) {
-        const { error: updateError } = await supabase
-          .from('planos_acao_conformidade')
-          .update(payload)
-          .eq('id', editingPlan.id);
-        error = updateError;
-      } else {
-        const { error: insertError } = await supabase
-          .from('planos_acao_conformidade')
-          .insert([payload]);
-        error = insertError;
-      }
+    await updatePlan(editPlanForm.id, {
+      title: editPlanForm.title,
+      description: editPlanForm.description,
+      priority: editPlanForm.priority as any,
+      due_date: editPlanForm.dueDate,
+      status: editPlanForm.status as any,
+      objetivo: editPlanForm.objetivo,
+      causa_raiz: editPlanForm.causa_raiz
+    });
 
-      if (error) throw error;
+    setShowEditPlanDialog(false);
+  };
 
-      toast.success(editingPlan ? 'Plano de ação atualizado!' : 'Plano de ação criado!');
-      setDialogOpen(false);
-      resetForm();
-      loadActionPlans();
-    } catch (error) {
-      console.error('Erro ao salvar plano de ação:', error);
-      toast.error('Erro ao salvar plano de ação');
+  const openEditPlanDialog = (plan: ActionPlan) => {
+    setEditPlanForm({
+      id: plan.id,
+      title: plan.title,
+      description: plan.description,
+      priority: plan.priority,
+      dueDate: plan.due_date || '',
+      status: plan.status,
+      objetivo: plan.objetivo || '',
+      causa_raiz: plan.causa_raiz || '',
+      responsavel_id: '' // Not easily available in plan object without extra profile join mapping in hook, keeping simple
+    });
+    setShowEditPlanDialog(true);
+  };
+
+  const handleAddActivity = async () => {
+    if (!selectedPlan || !newActivityForm.title) return;
+
+    await addActivity(selectedPlan.id, {
+      title: newActivityForm.title,
+      description: newActivityForm.description,
+      priority: newActivityForm.priority,
+      due_date: newActivityForm.dueDate,
+      responsible_id: newActivityForm.responsibleId
+    });
+
+    setShowNewActivityDialog(false);
+    setNewActivityForm({ title: '', description: '', priority: 'medium', dueDate: '', responsibleId: '' });
+  };
+
+  const handleUpdateActivity = async () => {
+    if (!editActivityForm.id || !editActivityForm.title) return;
+
+    await updateActivity(editActivityForm.id, {
+      title: editActivityForm.title,
+      description: editActivityForm.description,
+      priority: editActivityForm.priority,
+      due_date: editActivityForm.dueDate,
+      responsible_id: editActivityForm.responsibleId,
+      status: editActivityForm.status
+    });
+
+    setShowEditActivityDialog(false);
+  };
+
+  const openEditActivityDialog = (activity: ActionPlanActivity) => {
+    setEditActivityForm({
+      id: activity.id,
+      title: activity.title,
+      description: activity.description,
+      priority: activity.priority,
+      dueDate: activity.due_date || '',
+      responsibleId: activity.responsible_id || '',
+      status: activity.status
+    });
+    setShowEditActivityDialog(true);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
     }
   };
 
-  const handleProgressUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedPlan) return;
-
-    try {
-      const { error } = await supabase
-        .from('planos_acao_conformidade')
-        .update({
-          percentual_conclusao: progressForm.percentual_conclusao,
-          updated_by: user?.id
-        })
-        .eq('id', selectedPlan.id);
-
-      if (error) throw error;
-
-      toast.success('Progresso atualizado!');
-      setProgressDialogOpen(false);
-      loadActionPlans();
-    } catch (error) {
-      console.error('Erro ao atualizar progresso:', error);
-      toast.error('Erro ao atualizar progresso');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+      case 'verified': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-transparent';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-transparent';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-transparent';
     }
   };
-
-  const handleStatusChange = async (planId: string, newStatus: string) => {
-    try {
-      const updateData: any = { 
-        status: newStatus,
-        updated_by: user?.id
-      };
-
-      // Se marcando como concluída, definir data de conclusão
-      if (newStatus === 'concluida') {
-        updateData.data_fim_real = new Date().toISOString().split('T')[0];
-        updateData.percentual_conclusao = 100;
-      }
-
-      const { error } = await supabase
-        .from('planos_acao_conformidade')
-        .update(updateData)
-        .eq('id', planId);
-
-      if (error) throw error;
-
-      toast.success('Status atualizado!');
-      loadActionPlans();
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-      toast.error('Erro ao atualizar status');
-    }
-  };
-
-  const handleEdit = (plan: ActionPlan) => {
-    setEditingPlan(plan);
-    setFormData({
-      codigo: plan.codigo,
-      titulo: plan.titulo,
-      descricao_acao: plan.descricao_acao,
-      nao_conformidade_id: plan.nao_conformidade_id,
-      tipo_acao: plan.tipo_acao,
-      categoria_acao: plan.categoria_acao,
-      causa_raiz_endereçada: plan.causa_raiz_endereçada || '',
-      objetivo_acao: plan.objetivo_acao,
-      resultados_esperados: plan.resultados_esperados || '',
-      responsavel_execucao: plan.responsavel_execucao,
-      responsavel_aprovacao: plan.responsavel_aprovacao || '',
-      responsavel_monitoramento: plan.responsavel_monitoramento || '',
-      data_inicio_planejada: plan.data_inicio_planejada,
-      data_fim_planejada: plan.data_fim_planejada,
-      orcamento_estimado: plan.orcamento_estimado || 0,
-      recursos_necessarios: plan.recursos_necessarios,
-      dependencias: plan.dependencias,
-      entregas_esperadas: plan.entregas_esperadas,
-      frequencia_monitoramento: plan.frequencia_monitoramento
-    });
-    setDialogOpen(true);
-  };
-
-  const handleViewDetails = (plan: ActionPlan) => {
-    setSelectedPlan(plan);
-    setDetailsDialogOpen(true);
-  };
-
-  const handleUpdateProgress = (plan: ActionPlan) => {
-    setSelectedPlan(plan);
-    setProgressForm({
-      percentual_conclusao: plan.percentual_conclusao,
-      observacoes: '',
-      marcos_atingidos: '',
-      proximas_atividades: ''
-    });
-    setProgressDialogOpen(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      codigo: '',
-      titulo: '',
-      descricao_acao: '',
-      nao_conformidade_id: '',
-      tipo_acao: '',
-      categoria_acao: '',
-      causa_raiz_endereçada: '',
-      objetivo_acao: '',
-      resultados_esperados: '',
-      responsavel_execucao: '',
-      responsavel_aprovacao: '',
-      responsavel_monitoramento: '',
-      data_inicio_planejada: '',
-      data_fim_planejada: '',
-      orcamento_estimado: 0,
-      recursos_necessarios: [],
-      dependencias: [],
-      entregas_esperadas: [],
-      frequencia_monitoramento: 'mensal'
-    });
-    setEditingPlan(null);
-  };
-
-  const getStatusInfo = (status: string) => {
-    return STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
-  };
-
-  const getTipoColor = (tipo: string) => {
-    const tipoInfo = TIPOS_ACAO.find(t => t.value === tipo);
-    return tipoInfo?.color || 'bg-gray-100 text-gray-800';
-  };
-
-  const getDaysToDeadline = (dataFim: string) => {
-    const deadline = new Date(dataFim);
-    const today = new Date();
-    const diffTime = deadline.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const filteredActionPlans = actionPlans.filter(plan => {
-    const matchesSearch = plan.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.responsavel_nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !filterStatus || plan.status === filterStatus;
-    const matchesTipo = !filterTipo || plan.tipo_acao === filterTipo;
-    
-    return matchesSearch && matchesStatus && matchesTipo;
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Planos de Ação</h2>
-          <p className="text-muted-foreground">Gestão de planos de ação corretiva e preventiva</p>
+          <h2 className="text-2xl font-bold tracking-tight">Planos de Ação e Correção</h2>
+          <p className="text-muted-foreground">Gerencie planos de ação para conformidade e tratamento de não conformidades.</p>
         </div>
-        
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={showNewPlanDialog} onOpenChange={setShowNewPlanDialog}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Plano de Ação
-            </Button>
+            <Button><Plus className="mr-2 h-4 w-4" /> Novo Plano</Button>
           </DialogTrigger>
-          
-          <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
-                {editingPlan ? 'Editar Plano de Ação' : 'Novo Plano de Ação'}
-              </DialogTitle>
-              <DialogDescription>
-                Configure um plano de ação para tratar não conformidades
-              </DialogDescription>
+              <DialogTitle>Criar Novo Plano de Ação</DialogTitle>
+              <DialogDescription>Preencha os dados do plano de ação corretiva ou preventiva.</DialogDescription>
             </DialogHeader>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="basic">Básico</TabsTrigger>
-                  <TabsTrigger value="planning">Planejamento</TabsTrigger>
-                  <TabsTrigger value="resources">Recursos</TabsTrigger>
-                  <TabsTrigger value="monitoring">Monitoramento</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="basic" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="codigo">Código</Label>
-                      <Input
-                        id="codigo"
-                        value={formData.codigo}
-                        onChange={(e) => setFormData(prev => ({ ...prev, codigo: e.target.value }))}
-                        placeholder="Será gerado automaticamente"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="nao_conformidade_id">Não Conformidade*</Label>
-                      <Select value={formData.nao_conformidade_id} onValueChange={(value) => setFormData(prev => ({ ...prev, nao_conformidade_id: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a não conformidade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {nonConformities.map(nc => (
-                            <SelectItem key={nc.id} value={nc.id}>
-                              {nc.codigo} - {nc.titulo}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="titulo">Título do Plano de Ação*</Label>
-                    <Input
-                      id="titulo"
-                      value={formData.titulo}
-                      onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
-                      placeholder="Resumo do plano de ação"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="descricao_acao">Descrição da Ação*</Label>
-                    <Textarea
-                      id="descricao_acao"
-                      value={formData.descricao_acao}
-                      onChange={(e) => setFormData(prev => ({ ...prev, descricao_acao: e.target.value }))}
-                      placeholder="Descreva detalhadamente as ações a serem executadas"
-                      rows={3}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="tipo_acao">Tipo de Ação*</Label>
-                      <Select value={formData.tipo_acao} onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_acao: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TIPOS_ACAO.map(tipo => (
-                            <SelectItem key={tipo.value} value={tipo.value}>
-                              {tipo.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="categoria_acao">Categoria*</Label>
-                      <Select value={formData.categoria_acao} onValueChange={(value) => setFormData(prev => ({ ...prev, categoria_acao: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CATEGORIAS_ACAO.map(categoria => (
-                            <SelectItem key={categoria} value={categoria}>
-                              {categoria}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="planning" className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="causa_raiz_endereçada">Causa Raiz Endereçada</Label>
-                    <Textarea
-                      id="causa_raiz_endereçada"
-                      value={formData.causa_raiz_endereçada}
-                      onChange={(e) => setFormData(prev => ({ ...prev, causa_raiz_endereçada: e.target.value }))}
-                      placeholder="Qual causa raiz será tratada por este plano"
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="objetivo_acao">Objetivo da Ação*</Label>
-                    <Textarea
-                      id="objetivo_acao"
-                      value={formData.objetivo_acao}
-                      onChange={(e) => setFormData(prev => ({ ...prev, objetivo_acao: e.target.value }))}
-                      placeholder="Qual o objetivo a ser alcançado"
-                      rows={2}
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="resultados_esperados">Resultados Esperados</Label>
-                    <Textarea
-                      id="resultados_esperados"
-                      value={formData.resultados_esperados}
-                      onChange={(e) => setFormData(prev => ({ ...prev, resultados_esperados: e.target.value }))}
-                      placeholder="Quais resultados são esperados"
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="data_inicio_planejada">Data Início Planejada*</Label>
-                      <Input
-                        id="data_inicio_planejada"
-                        type="date"
-                        value={formData.data_inicio_planejada}
-                        onChange={(e) => setFormData(prev => ({ ...prev, data_inicio_planejada: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="data_fim_planejada">Data Fim Planejada*</Label>
-                      <Input
-                        id="data_fim_planejada"
-                        type="date"
-                        value={formData.data_fim_planejada}
-                        onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
-                        required
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="resources" className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="responsavel_execucao">Responsável pela Execução*</Label>
-                    <Select value={formData.responsavel_execucao} onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_execucao: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="responsavel_aprovacao">Responsável pela Aprovação</Label>
-                      <Select value={formData.responsavel_aprovacao} onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_aprovacao: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o aprovador" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="responsavel_monitoramento">Responsável pelo Monitoramento</Label>
-                      <Select value={formData.responsavel_monitoramento} onValueChange={(value) => setFormData(prev => ({ ...prev, responsavel_monitoramento: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o monitor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="orcamento_estimado">Orçamento Estimado (R$)</Label>
-                    <Input
-                      id="orcamento_estimado"
-                      type="number"
-                      step="0.01"
-                      value={formData.orcamento_estimado}
-                      onChange={(e) => setFormData(prev => ({ ...prev, orcamento_estimado: parseFloat(e.target.value) || 0 }))}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="recursos_necessarios">Recursos Necessários (separados por vírgula)</Label>
-                    <Textarea
-                      id="recursos_necessarios"
-                      value={formData.recursos_necessarios.join(', ')}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        recursos_necessarios: e.target.value.split(',').map(r => r.trim()).filter(Boolean)
-                      }))}
-                      placeholder="Recursos humanos, tecnológicos, financeiros..."
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="dependencias">Dependências (separadas por vírgula)</Label>
-                    <Textarea
-                      id="dependencias"
-                      value={formData.dependencias.join(', ')}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        dependencias: e.target.value.split(',').map(d => d.trim()).filter(Boolean)
-                      }))}
-                      placeholder="Dependências externas, aprovações, outros projetos..."
-                      rows={2}
-                    />
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="monitoring" className="space-y-4 mt-4">
-                  <div>
-                    <Label htmlFor="frequencia_monitoramento">Frequência de Monitoramento</Label>
-                    <Select value={formData.frequencia_monitoramento} onValueChange={(value) => setFormData(prev => ({ ...prev, frequencia_monitoramento: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FREQUENCIAS_MONITORAMENTO.map(freq => (
-                          <SelectItem key={freq.value} value={freq.value}>
-                            {freq.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="entregas_esperadas">Entregas Esperadas (separadas por vírgula)</Label>
-                    <Textarea
-                      id="entregas_esperadas"
-                      value={formData.entregas_esperadas.join(', ')}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        entregas_esperadas: e.target.value.split(',').map(e => e.trim()).filter(Boolean)
-                      }))}
-                      placeholder="Documentos, treinamentos, implementações..."
-                      rows={2}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {editingPlan ? 'Atualizar' : 'Criar'}
-                </Button>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>Não Conformidade (Opcional)</Label>
+                <Select value={newPlanForm.nao_conformidade_id} onValueChange={(val) => setNewPlanForm({ ...newPlanForm, nao_conformidade_id: val })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma / Ação Preventiva</SelectItem>
+                    {nonConformities.map(nc => (
+                      <SelectItem key={nc.id} value={nc.id}>{nc.codigo} - {nc.titulo}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </form>
+
+              <div className="grid gap-2">
+                <Label>Título do Plano</Label>
+                <Input value={newPlanForm.title} onChange={e => setNewPlanForm({ ...newPlanForm, title: e.target.value })} placeholder="Ex: Implementação de Backup" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Objetivo</Label>
+                <Textarea value={newPlanForm.objetivo} onChange={e => setNewPlanForm({ ...newPlanForm, objetivo: e.target.value })} placeholder="Qual o objetivo a ser atingido?" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Causa Raiz</Label>
+                <Textarea value={newPlanForm.causa_raiz} onChange={e => setNewPlanForm({ ...newPlanForm, causa_raiz: e.target.value })} placeholder="Qual a causa raiz identificada?" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Responsável</Label>
+                  <Select value={newPlanForm.responsavel_id} onValueChange={val => setNewPlanForm({ ...newPlanForm, responsavel_id: val })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {profiles.map(profile => (
+                        <SelectItem key={profile.id} value={profile.id}>{profile.full_name || profile.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Prazo</Label>
+                  <Input type="date" value={newPlanForm.dueDate} onChange={e => setNewPlanForm({ ...newPlanForm, dueDate: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Prioridade</Label>
+                <Select value={newPlanForm.priority} onValueChange={val => setNewPlanForm({ ...newPlanForm, priority: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleCreatePlan}>Criar Plano</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filtros e Busca */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar planos de ação..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-        
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            {STATUS_OPTIONS.map(status => (
-              <SelectItem key={status.value} value={status.value}>
-                {status.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Select value={filterTipo} onValueChange={setFilterTipo}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os tipos</SelectItem>
-            {TIPOS_ACAO.map(tipo => (
-              <SelectItem key={tipo.value} value={tipo.value}>
-                {tipo.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Lista de Planos de Ação */}
-      <div className="space-y-4">
-        {filteredActionPlans.map(plan => {
-          const statusInfo = getStatusInfo(plan.status);
-          const StatusIcon = statusInfo.icon;
-          const daysToDeadline = getDaysToDeadline(plan.data_fim_planejada);
-          const isOverdue = daysToDeadline < 0;
-          const isUrgent = daysToDeadline <= 7 && daysToDeadline >= 0;
-          
-          return (
-            <Card key={plan.id} className={`hover:shadow-md transition-shadow ${isOverdue ? 'border-red-200' : isUrgent ? 'border-yellow-200' : ''}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckSquare className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-muted-foreground">{plan.codigo}</span>
-                      <Badge className={getTipoColor(plan.tipo_acao)}>
-                        {TIPOS_ACAO.find(t => t.value === plan.tipo_acao)?.label}
-                      </Badge>
-                      <Badge className={statusInfo.color}>
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusInfo.label}
-                      </Badge>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* List View */}
+        <div className="md:col-span-1 space-y-4">
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Planos Ativos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y max-h-[600px] overflow-y-auto">
+                {plans.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">Nenhum plano encontrado.</div>
+                ) : (
+                  plans.map(plan => (
+                    <div
+                      key={plan.id}
+                      className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${selectedPlanId === plan.id ? 'bg-muted' : ''}`}
+                      onClick={() => setSelectedPlanId(plan.id)}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-medium text-sm line-clamp-1">{plan.title}</h4>
+                        <Badge variant="outline" className={`text-xs ${getStatusColor(plan.status)} border-0`}>
+                          {plan.status === 'open' ? 'Planejado' :
+                            plan.status === 'in_progress' ? 'Em Andamento' :
+                              plan.status === 'completed' ? 'Concluído' : plan.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {plan.due_date ? format(new Date(plan.due_date), 'dd/MM/yyyy') : 'Sem prazo'}
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getPriorityColor(plan.priority)}`}>{plan.priority}</Badge>
+                      </div>
                     </div>
-                    <CardTitle className="text-lg leading-tight">{plan.titulo}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {plan.nao_conformidade_titulo}
-                    </CardDescription>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detail View */}
+        <div className="md:col-span-2">
+          {selectedPlan ? (
+            <Card className="h-full flex flex-col">
+              <CardHeader className="border-b pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-xl flex items-center gap-2">{selectedPlan.title}</CardTitle>
+                    <CardDescription className="mt-1">{selectedPlan.description || "Sem descrição"}</CardDescription>
+                    {(selectedPlan.causa_raiz || selectedPlan.objetivo || selectedPlan.responsavel_nome) && (
+                      <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                        {selectedPlan.responsavel_nome && <p><span className="font-medium">Responsável:</span> {selectedPlan.responsavel_nome}</p>}
+                        {selectedPlan.objetivo && <p><span className="font-medium">Objetivo:</span> {selectedPlan.objetivo}</p>}
+                        {selectedPlan.causa_raiz && <p><span className="font-medium">Causa Raiz:</span> {selectedPlan.causa_raiz}</p>}
+                      </div>
+                    )}
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => setShowNewActivityDialog(true)}>
+                      <Plus className="h-4 w-4 mr-1" /> Nova Atividade
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(selectedPlan)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="text-muted-foreground h-4 w-4" />
+                    <span>Prazo: <span className="font-medium">{selectedPlan.due_date ? format(new Date(selectedPlan.due_date), 'dd/MM/yyyy') : 'N/A'}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="text-muted-foreground h-4 w-4" />
+                    <span>Prioridade: <span className="capitalize">{selectedPlan.priority}</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="text-muted-foreground h-4 w-4" />
+                    <span>Conclusão: <span className="font-medium">{selectedPlan.progress}%</span></span>
+                  </div>
                 </div>
               </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Progresso */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Progresso</span>
-                    <span className="text-sm font-bold">{plan.percentual_conclusao}%</span>
-                  </div>
-                  <Progress value={plan.percentual_conclusao} className="h-2" />
+              <CardContent className="flex-1 p-0">
+                <div className="p-4 bg-muted/20 border-b">
+                  <h3 className="font-medium text-sm flex items-center gap-2">
+                    Atividades e Etapas
+                    <Badge variant="secondary" className="text-xs">{selectedPlan.activities?.length || 0}</Badge>
+                  </h3>
                 </div>
-                
-                {/* Informações principais */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.responsavel_nome}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{new Date(plan.data_fim_planejada).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Target className="h-4 w-4 text-muted-foreground" />
-                    <span>{plan.categoria_acao}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span>R$ {(plan.orcamento_estimado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-                
-                {/* Status do prazo */}
-                <div className={`flex items-center gap-2 text-sm ${
-                  isOverdue ? 'text-red-600' : isUrgent ? 'text-yellow-600' : 'text-muted-foreground'
-                }`}>
-                  <Clock className="h-4 w-4" />
-                  <span>
-                    {isOverdue 
-                      ? `${Math.abs(daysToDeadline)} dias atrasado`
-                      : daysToDeadline === 0
-                      ? 'Vence hoje'
-                      : `${daysToDeadline} dias restantes`
-                    }
-                  </span>
-                </div>
-                
-                {/* Ações */}
-                <div className="flex gap-2 pt-2 border-t">
-                  <Button variant="outline" size="sm" onClick={() => handleViewDetails(plan)}>
-                    <Eye className="h-3 w-3 mr-1" />
-                    Detalhes
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleUpdateProgress(plan)}>
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Progresso
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(plan)}>
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
-                  </Button>
-                  
-                  {plan.status === 'planejada' && (
-                    <Button variant="outline" size="sm" onClick={() => handleStatusChange(plan.id, 'aprovada')}>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Aprovar
-                    </Button>
-                  )}
-                  
-                  {plan.status === 'aprovada' && (
-                    <Button variant="outline" size="sm" onClick={() => handleStatusChange(plan.id, 'em_execucao')}>
-                      <PlayCircle className="h-3 w-3 mr-1" />
-                      Iniciar
-                    </Button>
-                  )}
-                  
-                  {plan.status === 'em_execucao' && plan.percentual_conclusao >= 100 && (
-                    <Button variant="outline" size="sm" onClick={() => handleStatusChange(plan.id, 'concluida')}>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Concluir
-                    </Button>
+                <div className="divide-y">
+                  {selectedPlan.activities && selectedPlan.activities.length > 0 ? (
+                    selectedPlan.activities.map(activity => (
+                      <div key={activity.id} className="p-4 hover:bg-muted/30 group">
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-5 w-5 rounded-full border ${activity.status === 'completed' ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground'}`}
+                              onClick={e => { e.stopPropagation(); updateActivityStatus(activity.id, activity.status === 'completed' ? 'open' : 'completed'); }}
+                            >
+                              {activity.status === 'completed' && <CheckCircle className="h-3 w-3" />}
+                            </Button>
+                            <div className={activity.status === 'completed' ? 'opacity-60 line-through' : ''}>
+                              <h4 className="text-sm font-medium">{activity.title}</h4>
+                              <p className="text-xs text-muted-foreground mt-0.5">{activity.description}</p>
+                              {activity.responsible_name && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                  <User className="h-3 w-3" /> {activity.responsible_name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={`text-[10px] ${getPriorityColor(activity.priority)}`}>{activity.priority}</Badge>
+                            <span className="text-xs text-muted-foreground">{activity.due_date ? format(new Date(activity.due_date), 'dd/MM') : '-'}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); openEditActivityDialog(activity); }}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => { e.stopPropagation(); deleteActivity(activity.id); }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <p className="text-sm">Nenhuma atividade registrada.</p>
+                      <Button variant="link" size="sm" onClick={() => setShowNewActivityDialog(true)}>Adicionar primeira atividade</Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
-      
-      {filteredActionPlans.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              {searchTerm || filterStatus || filterTipo 
-                ? 'Nenhum plano de ação encontrado com os filtros aplicados.'
-                : 'Nenhum plano de ação criado ainda.'}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Dialog de Detalhes */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Plano de Ação</DialogTitle>
-            <DialogDescription>
-              {selectedPlan?.codigo} - {selectedPlan?.titulo}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedPlan && (
-            <div className="space-y-6">
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-                  <TabsTrigger value="execution">Execução</TabsTrigger>
-                  <TabsTrigger value="monitoring">Monitoramento</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="overview" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Tipo de Ação</Label>
-                      <p className="text-sm text-muted-foreground">{TIPOS_ACAO.find(t => t.value === selectedPlan.tipo_acao)?.label}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Categoria</Label>
-                      <p className="text-sm text-muted-foreground">{selectedPlan.categoria_acao}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Status</Label>
-                      <Badge className={getStatusInfo(selectedPlan.status).color}>
-                        {getStatusInfo(selectedPlan.status).label}
-                      </Badge>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Progresso</Label>
-                      <div className="flex items-center gap-2">
-                        <Progress value={selectedPlan.percentual_conclusao} className="h-2 flex-1" />
-                        <span className="text-sm font-medium">{selectedPlan.percentual_conclusao}%</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Descrição da Ação</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedPlan.descricao_acao}</p>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Objetivo</Label>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedPlan.objetivo_acao}</p>
-                  </div>
-                  
-                  {selectedPlan.causa_raiz_endereçada && (
-                    <div>
-                      <Label className="text-sm font-medium">Causa Raiz Endereçada</Label>
-                      <p className="text-sm text-muted-foreground mt-1">{selectedPlan.causa_raiz_endereçada}</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="execution" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Responsável Execução</Label>
-                      <p className="text-sm text-muted-foreground">{selectedPlan.responsavel_nome}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Responsável Aprovação</Label>
-                      <p className="text-sm text-muted-foreground">{selectedPlan.aprovador_nome}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Data Início Planejada</Label>
-                      <p className="text-sm text-muted-foreground">{new Date(selectedPlan.data_inicio_planejada).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Data Fim Planejada</Label>
-                      <p className="text-sm text-muted-foreground">{new Date(selectedPlan.data_fim_planejada).toLocaleDateString('pt-BR')}</p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="text-sm font-medium">Orçamento Estimado</Label>
-                    <p className="text-sm text-muted-foreground">R$ {(selectedPlan.orcamento_estimado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  </div>
-                  
-                  {selectedPlan.recursos_necessarios.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Recursos Necessários</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedPlan.recursos_necessarios.map(recurso => (
-                          <Badge key={recurso} variant="secondary" className="text-xs">
-                            {recurso}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedPlan.dependencias.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Dependências</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedPlan.dependencias.map(dependencia => (
-                          <Badge key={dependencia} variant="outline" className="text-xs">
-                            {dependencia}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="monitoring" className="space-y-4 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Responsável Monitoramento</Label>
-                      <p className="text-sm text-muted-foreground">{selectedPlan.monitor_nome}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Frequência Monitoramento</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {FREQUENCIAS_MONITORAMENTO.find(f => f.value === selectedPlan.frequencia_monitoramento)?.label}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {selectedPlan.entregas_esperadas.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Entregas Esperadas</Label>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedPlan.entregas_esperadas.map(entrega => (
-                          <Badge key={entrega} variant="secondary" className="text-xs">
-                            {entrega}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedPlan.efetividade_confirmada !== null && (
-                    <div>
-                      <Label className="text-sm font-medium">Efetividade Confirmada</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        {selectedPlan.efetividade_confirmada ? (
-                          <Badge className="bg-green-100 text-green-800">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Confirmada
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Pendente
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center p-8 border rounded-lg border-dashed text-center bg-muted/10">
+              <div className="bg-muted p-4 rounded-full mb-4"><CheckCircle className="h-8 w-8 text-muted-foreground" /></div>
+              <h3 className="text-lg font-medium">Selecione um Plano</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mt-2">Selecione um plano de ação na lista ao lado para ver detalhes e gerenciar suas atividades.</p>
+              <Button className="mt-6" onClick={() => setShowNewPlanDialog(true)}><Plus className="mr-2 h-4 w-4" /> Criar Novo Plano</Button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Edit Plan Dialog */}
+      <Dialog open={showEditPlanDialog} onOpenChange={setShowEditPlanDialog}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Plano de Ação</DialogTitle>
+            <DialogDescription>Atualize as informações do plano.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Título do Plano</Label>
+              <Input value={editPlanForm.title} onChange={e => setEditPlanForm({ ...editPlanForm, title: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descrição</Label>
+              <Textarea value={editPlanForm.description} onChange={e => setEditPlanForm({ ...editPlanForm, description: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Objetivo</Label>
+              <Textarea value={editPlanForm.objetivo} onChange={e => setEditPlanForm({ ...editPlanForm, objetivo: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Causa Raiz</Label>
+              <Textarea value={editPlanForm.causa_raiz} onChange={e => setEditPlanForm({ ...editPlanForm, causa_raiz: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Prioridade</Label>
+                <Select value={editPlanForm.priority} onValueChange={val => setEditPlanForm({ ...editPlanForm, priority: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Prazo</Label>
+                <Input type="date" value={editPlanForm.dueDate} onChange={e => setEditPlanForm({ ...editPlanForm, dueDate: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={editPlanForm.status} onValueChange={val => setEditPlanForm({ ...editPlanForm, status: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Planejado</SelectItem>
+                    <SelectItem value="in_progress">Em Andamento</SelectItem>
+                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="verified">Verificado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleUpdatePlan}>Salvar Alterações</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Atualização de Progresso */}
-      <Dialog open={progressDialogOpen} onOpenChange={setProgressDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* New Activity Dialog */}
+      <Dialog open={showNewActivityDialog} onOpenChange={setShowNewActivityDialog}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Atualizar Progresso</DialogTitle>
-            <DialogDescription>
-              {selectedPlan?.codigo} - {selectedPlan?.titulo}
-            </DialogDescription>
+            <DialogTitle>Nova Atividade</DialogTitle>
+            <DialogDescription>Adicione uma tarefa ao plano "{selectedPlan?.title}".</DialogDescription>
           </DialogHeader>
-          
-          <form onSubmit={handleProgressUpdate} className="space-y-4">
-            <div>
-              <Label htmlFor="percentual_conclusao">Percentual de Conclusão (%)</Label>
-              <div className="flex items-center gap-4 mt-2">
-                <Input
-                  id="percentual_conclusao"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={progressForm.percentual_conclusao}
-                  onChange={(e) => setProgressForm(prev => ({ ...prev, percentual_conclusao: parseInt(e.target.value) || 0 }))}
-                  className="w-20"
-                />
-                <Progress value={progressForm.percentual_conclusao} className="flex-1" />
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Título</Label>
+              <Input value={newActivityForm.title} onChange={e => setNewActivityForm({ ...newActivityForm, title: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label>Descrição</Label>
+              <Textarea value={newActivityForm.description} onChange={e => setNewActivityForm({ ...newActivityForm, description: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Responsável</Label>
+                <Select value={newActivityForm.responsibleId} onValueChange={val => setNewActivityForm({ ...newActivityForm, responsibleId: val })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map(profile => (
+                      <SelectItem key={profile.id} value={profile.id}>{profile.full_name || profile.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Prioridade</Label>
+                <Select value={newActivityForm.priority} onValueChange={val => setNewActivityForm({ ...newActivityForm, priority: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Prazo</Label>
+                <Input type="date" value={newActivityForm.dueDate} onChange={e => setNewActivityForm({ ...newActivityForm, dueDate: e.target.value })} />
               </div>
             </div>
-            
-            <div>
-              <Label htmlFor="observacoes">Observações sobre o Progresso</Label>
-              <Textarea
-                id="observacoes"
-                value={progressForm.observacoes}
-                onChange={(e) => setProgressForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                placeholder="Descreva o progresso realizado, marcos atingidos, etc."
-                rows={3}
-              />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleAddActivity}>Salvar Atividade</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Activity Dialog */}
+      <Dialog open={showEditActivityDialog} onOpenChange={setShowEditActivityDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Atividade</DialogTitle>
+            <DialogDescription>Atualize os detalhes da atividade.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Título</Label>
+              <Input value={editActivityForm.title} onChange={e => setEditActivityForm({ ...editActivityForm, title: e.target.value })} />
             </div>
-            
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setProgressDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Atualizar Progresso
-              </Button>
+            <div className="grid gap-2">
+              <Label>Descrição</Label>
+              <Textarea value={editActivityForm.description} onChange={e => setEditActivityForm({ ...editActivityForm, description: e.target.value })} />
             </div>
-          </form>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Responsável</Label>
+                <Select value={editActivityForm.responsibleId} onValueChange={val => setEditActivityForm({ ...editActivityForm, responsibleId: val })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map(profile => (
+                      <SelectItem key={profile.id} value={profile.id}>{profile.full_name || profile.email}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Prioridade</Label>
+                <Select value={editActivityForm.priority} onValueChange={val => setEditActivityForm({ ...editActivityForm, priority: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="critical">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Prazo</Label>
+                <Input type="date" value={editActivityForm.dueDate} onChange={e => setEditActivityForm({ ...editActivityForm, dueDate: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={editActivityForm.status} onValueChange={val => setEditActivityForm({ ...editActivityForm, status: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Planejado</SelectItem>
+                    <SelectItem value="in_progress">Em Andamento</SelectItem>
+                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="verified">Verificado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleUpdateActivity}>Salvar Alterações</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-export default ActionPlansManagement;

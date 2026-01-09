@@ -49,6 +49,7 @@ import ComplianceReports from './ComplianceReports';
 import ProcessesManagement from './ProcessesManagement';
 import SystemsManagement from './SystemsManagement';
 import { NewAssessmentWizard } from './NewAssessmentWizard';
+import { ActionPlansManagement } from './ActionPlansManagement';
 
 interface ComplianceMetrics {
   totalFrameworks: number;
@@ -87,7 +88,7 @@ interface NonConformity {
   risco_score: number;
 }
 
-export function ComplianceDashboard() {
+export default function ComplianceDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const selectedTenantId = useCurrentTenantId();
@@ -121,14 +122,11 @@ export function ComplianceDashboard() {
   const loadComplianceData = async () => {
     try {
       setLoading(true);
-
-      // Carregar métricas principais
       await Promise.all([
         loadMetrics(),
         loadFrameworks(),
         loadNonConformities()
       ]);
-
     } catch (error) {
       console.error('Erro ao carregar dados de conformidade:', error);
       toast.error('Erro ao carregar dados de conformidade');
@@ -138,87 +136,30 @@ export function ComplianceDashboard() {
   };
 
   const loadMetrics = async () => {
-    // Frameworks ativos
-    const { data: frameworksData } = await supabase
-      .from('frameworks_compliance')
-      .select('id')
-      .eq('tenant_id', effectiveTenantId)
-      .eq('status', 'ativo');
+    const { data: frameworksData } = await supabase.from('frameworks_compliance').select('id').eq('tenant_id', effectiveTenantId).eq('status', 'ativo');
+    const { data: requirementsData } = await supabase.from('requisitos_compliance').select('id, framework_id').eq('tenant_id', effectiveTenantId).eq('status', 'ativo');
+    const { data: nonConformitiesData } = await supabase.from('nao_conformidades').select('id, criticidade, status').eq('tenant_id', effectiveTenantId).in('status', ['aberta', 'em_tratamento']);
+    const { data: overduePlansData } = await supabase.from('planos_acao_conformidade').select('id').eq('tenant_id', effectiveTenantId).lt('data_fim_planejada', new Date().toISOString().split('T')[0]).in('status', ['planejada', 'aprovada', 'em_execucao']);
+    const { data: activePlansData } = await supabase.from('planos_acao_conformidade').select('id').eq('tenant_id', effectiveTenantId).in('status', ['planejada', 'aprovada', 'em_execucao']);
 
-    // Requisitos ativos
-    const { data: requirementsData } = await supabase
-      .from('requisitos_compliance')
-      .select('id, framework_id')
-      .eq('tenant_id', effectiveTenantId)
-      .eq('status', 'ativo');
-
-    // Não conformidades abertas
-    const { data: nonConformitiesData } = await supabase
-      .from('nao_conformidades')
-      .select('id, criticidade, status')
-      .eq('tenant_id', effectiveTenantId)
-      .in('status', ['aberta', 'em_tratamento']);
-
-    // Planos de ação em atraso
-    const { data: overduePlansData } = await supabase
-      .from('planos_acao_conformidade')
-      .select('id')
-      .eq('tenant_id', effectiveTenantId)
-      .lt('data_fim_planejada', new Date().toISOString().split('T')[0])
-      .in('status', ['planejada', 'aprovada', 'em_execucao']);
-
-    // Planos de ação ativos (todos os status ativos)
-    const { data: activePlansData } = await supabase
-      .from('planos_acao_conformidade')
-      .select('id')
-      .eq('tenant_id', effectiveTenantId)
-      .in('status', ['planejada', 'aprovada', 'em_execucao']);
-
-    // Avaliações próximas (próximos 30 dias)
     const today = new Date().toISOString().split('T')[0];
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const { data: upcomingAssessmentsData } = await supabase.from('requisitos_compliance').select('id, data_proxima_avaliacao').eq('tenant_id', effectiveTenantId).eq('status', 'ativo').gte('data_proxima_avaliacao', today).lte('data_proxima_avaliacao', thirtyDaysFromNow.toISOString().split('T')[0]).not('data_proxima_avaliacao', 'is', null);
 
-    const { data: upcomingAssessmentsData } = await supabase
-      .from('requisitos_compliance')
-      .select('id, data_proxima_avaliacao')
-      .eq('tenant_id', effectiveTenantId)
-      .eq('status', 'ativo')
-      .gte('data_proxima_avaliacao', today)
-      .lte('data_proxima_avaliacao', thirtyDaysFromNow.toISOString().split('T')[0])
-      .not('data_proxima_avaliacao', 'is', null);
-
-    // Calcular tendência mensal (Non-conformities created this month vs last month)
     const startOfCurrentMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const startOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString();
-
-    const { count: currentMonthNC } = await supabase
-      .from('nao_conformidades')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', effectiveTenantId)
-      .gte('created_at', startOfCurrentMonth);
-
-    const { count: lastMonthNC } = await supabase
-      .from('nao_conformidades')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', effectiveTenantId)
-      .gte('created_at', startOfLastMonth)
-      .lt('created_at', startOfCurrentMonth);
+    const { count: currentMonthNC } = await supabase.from('nao_conformidades').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).gte('created_at', startOfCurrentMonth);
+    const { count: lastMonthNC } = await supabase.from('nao_conformidades').select('*', { count: 'exact', head: true }).eq('tenant_id', effectiveTenantId).gte('created_at', startOfLastMonth).lt('created_at', startOfCurrentMonth);
 
     let monthlyTrend = 0;
     if (lastMonthNC && lastMonthNC > 0) {
       monthlyTrend = ((currentMonthNC || 0) - lastMonthNC) / lastMonthNC * 100;
     } else if (currentMonthNC && currentMonthNC > 0) {
-      monthlyTrend = 100; // 100% increase if starting from 0
+      monthlyTrend = 100;
     }
 
-    // Calcular taxa de conformidade geral
-    const { data: conformityData } = await supabase
-      .from('avaliacoes_conformidade')
-      .select('score_conformidade')
-      .eq('tenant_id', effectiveTenantId)
-      .eq('status', 'concluida');
-
+    const { data: conformityData } = await supabase.from('avaliacoes_conformidade').select('score_conformidade').eq('tenant_id', effectiveTenantId).eq('status', 'concluida');
     let conformityRate = 0;
     if (conformityData && conformityData.length > 0) {
       const total = conformityData.reduce((acc, curr) => acc + (curr.score_conformidade || 0), 0);
@@ -235,74 +176,43 @@ export function ComplianceDashboard() {
       upcomingAssessments: upcomingAssessmentsData?.length || 0,
       monthlyTrend
     });
-
     setActivePlans(activePlansData?.length || 0);
   };
 
   const loadFrameworks = async () => {
-    // 1. Fetch Frameworks with Requirements count
     const { data: frameworksData } = await supabase
       .from('frameworks_compliance')
-      .select(`
-        id,
-        nome,
-        origem,
-        categoria,
-        status,
-        codigo,
-        tipo,
-        requisitos_compliance(count)
-      `)
+      .select('id, nome, origem, categoria, status, codigo, tipo, requisitos_compliance(count)')
       .eq('tenant_id', effectiveTenantId)
       .eq('status', 'ativo')
       .order('nome');
 
     if (!frameworksData) return;
 
-    // 2. Fetch Latest Assessments for the requirements of these frameworks
     const { data: complianceAssessments } = await supabase
       .from('avaliacoes_conformidade')
-      .select(`
-        id,
-        score_conformidade,
-        data_conclusao,
-        updated_at,
-        requisitos_compliance!inner(
-          framework_id
-        )
-      `)
+      .select('id, score_conformidade, data_conclusao, updated_at, requisitos_compliance!inner(framework_id)')
       .eq('tenant_id', effectiveTenantId)
       .eq('status', 'concluida')
       .order('updated_at', { ascending: false });
 
     const frameworksWithScores = frameworksData.map(framework => {
-      // Filter assessments for this framework
       const frameworkAssessments = complianceAssessments?.filter(
         (a: any) => a.requisitos_compliance?.framework_id === framework.id
       ) || [];
-
       const totalRequirements = framework.requisitos_compliance?.[0]?.count || 0;
-
-      // Calculate average score if there are assessments
       let conformityScore = 0;
       let lastAssessmentDate = 'Não avaliado';
-
       if (frameworkAssessments.length > 0) {
-        // Average score of all assessments for this framework
         const totalScore = frameworkAssessments.reduce((acc: number, curr: any) => acc + (curr.score_conformidade || 0), 0);
         conformityScore = Math.round(totalScore / frameworkAssessments.length);
-
-        // Find the most recent date
-        const mostRecent = frameworkAssessments[0]; // Already ordered by updated_at desc
+        const mostRecent = frameworkAssessments[0];
         const dateStr = mostRecent.data_conclusao || mostRecent.updated_at;
         if (dateStr) {
           lastAssessmentDate = new Date(dateStr).toLocaleDateString('pt-BR');
         }
       }
-
-      // Calculate conformeRequirements based on score > 70 (or other threshold)
       const conformeRequirements = frameworkAssessments.filter((a: any) => (a.score_conformidade || 0) >= 100).length;
-
       return {
         id: framework.id,
         nome: framework.nome,
@@ -315,24 +225,13 @@ export function ComplianceDashboard() {
         categoria: framework.categoria || 'Geral'
       };
     });
-
     setFrameworks(frameworksWithScores);
   };
 
   const loadNonConformities = async () => {
     const { data: nonConformitiesData } = await supabase
       .from('nao_conformidades')
-      .select(`
-        id,
-        codigo,
-        titulo,
-        criticidade,
-        status,
-        prazo_resolucao,
-        risco_score,
-        responsavel_tratamento,
-        profiles!nao_conformidades_responsavel_tratamento_fkey(full_name)
-      `)
+      .select('id, codigo, titulo, criticidade, status, prazo_resolucao, risco_score, responsavel_tratamento, profiles!nao_conformidades_responsavel_tratamento_fkey(full_name)')
       .eq('tenant_id', effectiveTenantId)
       .in('status', ['aberta', 'em_tratamento'])
       .order('risco_score', { ascending: false })
@@ -345,7 +244,6 @@ export function ComplianceDashboard() {
         const diasVencimento = prazoResolucao
           ? Math.ceil((prazoResolucao.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
           : 0;
-
         return {
           id: nc.id,
           codigo: nc.codigo,
@@ -358,7 +256,6 @@ export function ComplianceDashboard() {
           risco_score: nc.risco_score || 0
         };
       });
-
       setNonConformities(processedNonConformities);
     }
   };
@@ -398,7 +295,6 @@ export function ComplianceDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -413,28 +309,16 @@ export function ComplianceDashboard() {
                 <DialogHeader>
                   <DialogTitle>Bem-vindo ao Dashboard de Compliance</DialogTitle>
                   <DialogDescription className="space-y-4 pt-4 text-left">
-                    <p>
-                      <strong>Objetivo:</strong> Esta é sua "Torre de Controle". Aqui você vê se sua empresa está seguindo as regras (Leis, Normas ou Políticas Internas).
-                    </p>
-
+                    <p><strong>Objetivo:</strong> Esta é sua "Torre de Controle". Aqui você vê se sua empresa está seguindo as regras (Leis, Normas ou Políticas Internas).</p>
                     <div className="bg-muted p-4 rounded-lg">
                       <p className="font-semibold mb-2">Por onde começar?</p>
                       <ol className="list-decimal pl-5 space-y-2 text-sm">
-                        <li>
-                          <strong>Escolha a Lei (Frameworks):</strong> Diga ao sistema o que você precisa seguir (ex: LGPD, ISO 27001).
-                        </li>
-                        <li>
-                          <strong>Avalie (Avaliações):</strong> Faça check-ups para ver se está cumprindo.
-                        </li>
-                        <li>
-                          <strong>Corrija (Não Conformidades):</strong> Trate o que estiver errado.
-                        </li>
+                        <li><strong>Escolha a Lei (Frameworks):</strong> Diga ao sistema o que você precisa seguir (ex: LGPD, ISO 27001).</li>
+                        <li><strong>Avalie (Avaliações):</strong> Faça check-ups para ver se está cumprindo.</li>
+                        <li><strong>Corrija (Não Conformidades):</strong> Trate o que estiver errado.</li>
                       </ol>
                     </div>
-
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Dica:</strong> Uma "Taxa de Conformidade" acima de 80% é considerada excelente para a maioria das auditorias.
-                    </p>
+                    <p className="text-sm text-muted-foreground"><strong>Dica:</strong> Uma "Taxa de Conformidade" acima de 80% é considerada excelente para a maioria das auditorias.</p>
                   </DialogDescription>
                 </DialogHeader>
               </DialogContent>
@@ -450,7 +334,6 @@ export function ComplianceDashboard() {
         </div>
       </div>
 
-      {/* Métricas Principais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardContent className="p-6">
@@ -459,11 +342,7 @@ export function ComplianceDashboard() {
                 <p className="text-sm text-muted-foreground">Taxa de Conformidade</p>
                 <p className="text-2xl font-bold text-green-600">{metrics.conformityRate}%</p>
                 <p className="text-xs text-muted-foreground flex items-center mt-1">
-                  {metrics.monthlyTrend >= 0 ? (
-                    <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 mr-1 text-red-600" />
-                  )}
+                  {metrics.monthlyTrend >= 0 ? <TrendingUp className="h-3 w-3 mr-1 text-green-600" /> : <TrendingDown className="h-3 w-3 mr-1 text-red-600" />}
                   {Math.abs(metrics.monthlyTrend).toFixed(1)}% vs mês anterior
                 </p>
               </div>
@@ -471,7 +350,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -483,7 +361,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -495,7 +372,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -507,7 +383,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -519,7 +394,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -531,7 +405,6 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -543,18 +416,13 @@ export function ComplianceDashboard() {
             </div>
           </CardContent>
         </Card>
-
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Planos Ativos</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {activePlans}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.overduePlans > 0 ? `${metrics.overduePlans} em atraso` : 'Todos no prazo'}
-                </p>
+                <p className="text-2xl font-bold text-indigo-600">{activePlans}</p>
+                <p className="text-xs text-muted-foreground">{metrics.overduePlans > 0 ? `${metrics.overduePlans} em atraso` : 'Todos no prazo'}</p>
               </div>
               <CheckCircle className="h-10 w-10 text-indigo-600" />
             </div>
@@ -562,10 +430,8 @@ export function ComplianceDashboard() {
         </Card>
       </div>
 
-      {/* Módulos de Compliance */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden"
-          onClick={() => setSelectedTab('frameworks')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('frameworks')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <Shield className="h-8 w-8 text-blue-600" />
@@ -574,12 +440,9 @@ export function ComplianceDashboard() {
             <h3 className="font-semibold text-lg mb-2">Frameworks</h3>
             <p className="text-muted-foreground text-sm">Gestão de frameworks regulatórios e normativos</p>
           </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden"
-          onClick={() => setSelectedTab('assessments')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('assessments')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -588,12 +451,9 @@ export function ComplianceDashboard() {
             <h3 className="font-semibold text-lg mb-2">Avaliações</h3>
             <p className="text-muted-foreground text-sm">Avaliações periódicas de conformidade</p>
           </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden"
-          onClick={() => setSelectedTab('nonconformities')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('nonconformities')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -602,13 +462,9 @@ export function ComplianceDashboard() {
             <h3 className="font-semibold text-lg mb-2">Não Conformidades</h3>
             <p className="text-muted-foreground text-sm">Gestão de gaps e planos de ação</p>
           </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden"
-          onClick={() => setSelectedTab('reports')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('reports')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-8 w-8 text-purple-600" />
@@ -617,12 +473,10 @@ export function ComplianceDashboard() {
             <h3 className="font-semibold text-lg mb-2">Relatórios</h3>
             <p className="text-muted-foreground text-sm">Dashboards e relatórios executivos</p>
           </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
       </div>
 
-      {/* Conteúdo Principal */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="flex flex-wrap w-full h-auto gap-2 bg-muted/50 p-1">
           <TabsTrigger value="overview" className="flex-1 min-w-[120px]">Visão Geral</TabsTrigger>
@@ -630,6 +484,7 @@ export function ComplianceDashboard() {
           <TabsTrigger value="mappings" className="flex-1 min-w-[120px]">Conectividade</TabsTrigger>
           <TabsTrigger value="assessments" className="flex-1 min-w-[120px]">Avaliações</TabsTrigger>
           <TabsTrigger value="nonconformities" className="flex-1 min-w-[120px]">Não Conformidades</TabsTrigger>
+          <TabsTrigger value="action-plans" className="flex-1 min-w-[120px]">Planos de Ação</TabsTrigger>
           <TabsTrigger value="monitoring" className="flex-1 min-w-[120px]">Monitoramento</TabsTrigger>
           <TabsTrigger value="reports" className="flex-1 min-w-[120px]">Relatórios</TabsTrigger>
           <TabsTrigger value="processos" className="flex-1 min-w-[120px]">Processos</TabsTrigger>
@@ -638,11 +493,8 @@ export function ComplianceDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Navegação por Categorias */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-            <Card className="border-orange-200 dark:border-orange-800 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedTab('frameworks')}>
+            <Card className="border-orange-200 dark:border-orange-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('frameworks')}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
@@ -651,22 +503,15 @@ export function ComplianceDashboard() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg mb-1">Frameworks Regulatórios</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  SOX, LGPD, BACEN e outros requisitos obrigatórios
-                </p>
+                <p className="text-sm text-muted-foreground mb-2">SOX, LGPD, BACEN e outros requisitos obrigatórios</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {frameworks.filter(f => f.tipo === 'regulatorio').length} frameworks ativos
-                  </span>
-                  <Badge variant="destructive" className="text-xs">
-                    Crítico
-                  </Badge>
+                  <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'regulatorio').length} frameworks ativos</span>
+                  <Badge variant="destructive" className="text-xs">Crítico</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedTab('frameworks')}>
+            <Card className="border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('frameworks')}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -675,22 +520,15 @@ export function ComplianceDashboard() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg mb-1">Padrões Normativos</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  ISO 27001, NIST, COBIT e boas práticas
-                </p>
+                <p className="text-sm text-muted-foreground mb-2">ISO 27001, NIST, COBIT e boas práticas</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {frameworks.filter(f => f.tipo === 'normativo').length} frameworks ativos
-                  </span>
-                  <Badge className="bg-blue-100 text-blue-800 text-xs">
-                    Estratégico
-                  </Badge>
+                  <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'normativo').length} frameworks ativos</span>
+                  <Badge className="bg-blue-100 text-blue-800 text-xs">Estratégico</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-green-200 dark:border-green-800 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedTab('nonconformities')}>
+            <Card className="border-green-200 dark:border-green-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('action-plans')}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
@@ -699,32 +537,20 @@ export function ComplianceDashboard() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-lg mb-1">Planos de Ação</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Não conformidades e melhorias em andamento
-                </p>
+                <p className="text-sm text-muted-foreground mb-2">Não conformidades e melhorias em andamento</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {activePlans} planos ativos
-                  </span>
-                  <Badge className="bg-green-100 text-green-800 text-xs">
-                    {metrics.overduePlans} atrasados
-                  </Badge>
+                  <span className="text-xs text-muted-foreground">{activePlans} planos ativos</span>
+                  <Badge className="bg-green-100 text-green-800 text-xs">{metrics.overduePlans} atrasados</Badge>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Status dos Frameworks */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Status dos Frameworks
-                </CardTitle>
-                <CardDescription>
-                  Níveis de conformidade por framework
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Status dos Frameworks</CardTitle>
+                <CardDescription>Níveis de conformidade por framework</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -733,9 +559,7 @@ export function ComplianceDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <p className="font-medium">{framework.nome}</p>
-                          <span className={`text-sm font-bold ${getConformityColor(framework.conformityScore)}`}>
-                            {framework.conformityScore}%
-                          </span>
+                          <span className={`text-sm font-bold ${getConformityColor(framework.conformityScore)}`}>{framework.conformityScore}%</span>
                         </div>
                         <Progress value={framework.conformityScore} className="h-2 mb-2" />
                         <div className="flex justify-between text-sm text-muted-foreground">
@@ -749,16 +573,10 @@ export function ComplianceDashboard() {
               </CardContent>
             </Card>
 
-            {/* Não Conformidades Críticas */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5" />
-                  Não Conformidades Prioritárias
-                </CardTitle>
-                <CardDescription>
-                  Gaps que requerem atenção imediata
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" />Não Conformidades Prioritárias</CardTitle>
+                <CardDescription>Gaps que requerem atenção imediata</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -767,16 +585,12 @@ export function ComplianceDashboard() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium text-sm">{nc.titulo}</p>
-                          <Badge className={getCriticalityColor(nc.criticidade)}>
-                            {nc.criticidade}
-                          </Badge>
+                          <Badge className={getCriticalityColor(nc.criticidade)}>{nc.criticidade}</Badge>
                         </div>
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>{nc.responsavel}</span>
                           <span className={nc.diasVencimento < 0 ? 'text-red-600' : nc.diasVencimento < 7 ? 'text-orange-600' : ''}>
-                            {nc.diasVencimento < 0 ? `${Math.abs(nc.diasVencimento)} dias atrasado` :
-                              nc.diasVencimento === 0 ? 'Vence hoje' :
-                                `${nc.diasVencimento} dias restantes`}
+                            {nc.diasVencimento < 0 ? `${Math.abs(nc.diasVencimento)} dias atrasado` : nc.diasVencimento === 0 ? 'Vence hoje' : `${nc.diasVencimento} dias restantes`}
                           </span>
                         </div>
                       </div>
@@ -787,8 +601,6 @@ export function ComplianceDashboard() {
             </Card>
           </div>
         </TabsContent>
-
-
 
         <TabsContent value="frameworks">
           <FrameworksManagement />
@@ -806,13 +618,14 @@ export function ComplianceDashboard() {
           <NonConformitiesManagement />
         </TabsContent>
 
-        <TabsContent value="sox-library">
-          <SOXControlsLibrary />
+        <TabsContent value="action-plans">
+          <ActionPlansManagement />
         </TabsContent>
 
         <TabsContent value="monitoring">
           <MonitoramentoManagement />
         </TabsContent>
+
         <TabsContent value="reports">
           <ComplianceReports />
         </TabsContent>
@@ -824,18 +637,15 @@ export function ComplianceDashboard() {
         <TabsContent value="sistemas">
           <SystemsManagement />
         </TabsContent>
+
+        <TabsContent value="sox-library">
+          <SOXControlsLibrary />
+        </TabsContent>
       </Tabs>
 
-      <NewAssessmentWizard
-        open={isAssessmentWizardOpen}
-        onOpenChange={setIsAssessmentWizardOpen}
-        onSuccess={() => {
-          loadComplianceData();
-          setSelectedTab('assessments');
-        }}
-      />
+      {isAssessmentWizardOpen && (
+        <NewAssessmentWizard open={isAssessmentWizardOpen} onOpenChange={setIsAssessmentWizardOpen} onSuccess={() => { setIsAssessmentWizardOpen(false); loadComplianceData(); }} />
+      )}
     </div>
   );
 }
-
-export default ComplianceDashboard;

@@ -63,20 +63,17 @@ export const useActionPlansIntegration = ({
   const loadDashboardMetrics = async () => {
     try {
       let query = supabase
-        .from('vw_action_plans_unified')
-        .select('id, status, priority, due_date, percentual_conclusao')
+        .from('action_plans')
+        .select('id, status, prioridade, data_fim_planejada, percentual_conclusao, modulo_origem, entidade_origem_id, tenant_id')
         .eq('tenant_id', effectiveTenantId);
 
       if (moduleType) {
-        query = query.eq('module', moduleType);
+        query = query.eq('modulo_origem', moduleType);
       }
 
       if (originId) {
-        query = query.eq('origin_id', originId);
+        query = query.eq('entidade_origem_id', originId);
       }
-
-      // We do NOT apply transient filters (search, status, priority) to metrics
-      // to maintain a global view of the context.
 
       const { data, error } = await query;
 
@@ -88,27 +85,27 @@ export const useActionPlansIntegration = ({
       const allPlans = data || [];
       const total = allPlans.length;
 
-      const completed = allPlans.filter(p => p.status === 'completed' || p.status === 'concluido').length;
-      const inProgress = allPlans.filter(p => p.status === 'in_progress' || p.status === 'em_execucao').length;
+      const completed = allPlans.filter(p => ['concluido', 'completed', 'verified'].includes(p.status)).length;
+      const inProgress = allPlans.filter(p => ['em_execucao', 'in_progress', 'em_andamento'].includes(p.status)).length;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       const overdue = allPlans.filter(p => {
-        if (!p.due_date) return false;
-        const due = new Date(p.due_date);
-        return due < today && (p.status !== 'completed' && p.status !== 'concluido');
+        if (!p.data_fim_planejada) return false;
+        const due = new Date(p.data_fim_planejada);
+        return due < today && !['concluido', 'completed', 'verified'].includes(p.status);
       }).length;
 
       const nearDeadline = allPlans.filter(p => {
-        if (!p.due_date) return false;
-        const due = new Date(p.due_date);
+        if (!p.data_fim_planejada) return false;
+        const due = new Date(p.data_fim_planejada);
         const diffTime = due.getTime() - today.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays <= 7 && (p.status !== 'completed' && p.status !== 'concluido');
+        return diffDays >= 0 && diffDays <= 7 && !['concluido', 'completed', 'verified'].includes(p.status);
       }).length;
 
-      const critical = allPlans.filter(p => p.priority === 'critical' || p.priority === 'critica').length;
+      const critical = allPlans.filter(p => p.prioridade === 'critica' || p.prioridade === 'critical').length;
 
       const avgProgress = total > 0
         ? allPlans.reduce((sum, p) => sum + (p.percentual_conclusao || 0), 0) / total
@@ -136,45 +133,66 @@ export const useActionPlansIntegration = ({
       setError(null);
 
       let query = supabase
-        .from('vw_action_plans_unified')
-        .select('*', { count: 'exact' })
+        .from('action_plans')
+        .select(`
+          *,
+          responsavel_profile:profiles!action_plans_responsavel_plano_fkey(full_name, avatar_url),
+          action_plan_activities(
+            id,
+            titulo,
+            descricao,
+            status,
+            prioridade,
+            data_fim_planejada,
+            data_fim_real,
+            percentual_conclusao,
+            responsavel_execucao,
+            created_at,
+            updated_at
+          )
+        `, { count: 'exact' })
         .eq('tenant_id', effectiveTenantId);
 
       if (moduleType) {
-        query = query.eq('module', moduleType);
+        query = query.eq('modulo_origem', moduleType);
       }
 
       if (originId) {
-        query = query.eq('origin_id', originId);
+        query = query.eq('entidade_origem_id', originId);
       }
 
       if (searchTerm) {
-        query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        query = query.or(`titulo.ilike.%${searchTerm}%,descricao.ilike.%${searchTerm}%`);
       }
 
       if (statusFilter && statusFilter !== 'all') {
-        // Map frontend status to backend status if needed, or assume view matches
-        const backendStatus = statusFilter === 'em_execucao' ? 'in_progress' :
-          statusFilter === 'concluido' ? 'completed' :
-            statusFilter === 'atrasado' ? 'overdue' : // View might not have 'overdue' status column directly usually calculated? Check view
-              statusFilter;
-        // if status is 'atrasado', we might need special logic or rely on view having it. 
-        // For now let's assume standard statuses: pending, in_progress, completed, cancelled
-        if (backendStatus !== 'overdue') {
-          query = query.eq('status', backendStatus);
-        } else {
-          // For overdue, ideally we check due_date < now. Supabase filter:
+        const dbStatus = statusFilter === 'em_execucao' ? 'em_execucao' : // Standardize if needed, assuming DB match
+          statusFilter === 'concluido' ? 'concluido' :
+            statusFilter;
+
+        if (statusFilter === 'atrasado') {
           const today = new Date().toISOString().split('T')[0];
-          query = query.lt('due_date', today).neq('status', 'completed');
+          query = query.lt('data_fim_planejada', today).not('status', 'in', '("concluido","completed","verified")');
+        } else {
+          // Handle legacy 'completed' vs 'concluido' mix if necessary, or just query exact
+          // Assuming DB normalized to Portuguese 'concluido' mostly, but let's be safe if mixed
+          if (statusFilter === 'concluido') {
+            query = query.in('status', ['concluido', 'completed', 'verified']);
+          } else if (statusFilter === 'em_execucao') {
+            query = query.in('status', ['em_execucao', 'in_progress', 'em_andamento']);
+          } else {
+            query = query.eq('status', dbStatus);
+          }
         }
       }
 
       if (priorityFilter && priorityFilter !== 'all') {
-        const backendPriority = priorityFilter === 'alta' ? 'high' :
-          priorityFilter === 'critica' ? 'critical' :
-            priorityFilter === 'media' ? 'medium' :
-              priorityFilter === 'baixa' ? 'low' : priorityFilter;
-        query = query.eq('priority', backendPriority);
+        // Normalized DB priority
+        if (priorityFilter === 'critica') query = query.in('prioridade', ['critica', 'critical']);
+        else if (priorityFilter === 'alta') query = query.in('prioridade', ['alta', 'high']);
+        else if (priorityFilter === 'media') query = query.in('prioridade', ['media', 'medium']);
+        else if (priorityFilter === 'baixa') query = query.in('prioridade', ['baixa', 'low']);
+        else query = query.eq('prioridade', priorityFilter);
       }
 
       // Pagination
@@ -183,8 +201,8 @@ export const useActionPlansIntegration = ({
 
       // Map frontend sort keys to database columns
       let dbSortColumn = 'created_at';
-      if (sortBy === 'title') dbSortColumn = 'title';
-      if (sortBy === 'origin_name') dbSortColumn = 'origin_name';
+      if (sortBy === 'title') dbSortColumn = 'titulo';
+      if (sortBy === 'origin_name') dbSortColumn = 'modulo_origem'; // Approximate
 
       const { data, error, count } = await query
         .order(dbSortColumn, { ascending: sortOrder === 'asc' })
@@ -194,53 +212,62 @@ export const useActionPlansIntegration = ({
 
       setTotalItems(count || 0);
 
-      // Map view data to ActionPlan interface expected by components
-      // Note: The view returns normalized English, mapping back to PT for frontend compatibility
       const mappedPlans = (data || []).map((plan: any) => {
-        const daysToDeadline = plan.due_date ? Math.ceil((new Date(plan.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        const daysToDeadline = plan.data_fim_planejada ? Math.ceil((new Date(plan.data_fim_planejada).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-        let status = 'planejado';
-        if (plan.status === 'in_progress') status = 'em_execucao';
-        else if (plan.status === 'completed') status = 'concluido';
-        else if (plan.status === 'cancelled') status = 'cancelado';
+        let status = plan.status; // Assume DB status is relatively clean or display raw
+        // Normalization for display
+        if (['in_progress', 'em_andamento'].includes(plan.status)) status = 'em_execucao';
+        else if (['completed', 'verified'].includes(plan.status)) status = 'concluido';
         else if (plan.status === 'pending') status = 'planejado';
 
-        let prioridade = 'media';
-        if (plan.priority === 'high') prioridade = 'alta';
-        else if (plan.priority === 'critical') prioridade = 'critica';
-        else if (plan.priority === 'low') prioridade = 'baixa';
+        let prioridade = plan.prioridade;
+        if (plan.prioridade === 'high') prioridade = 'alta';
+        else if (plan.prioridade === 'critical') prioridade = 'critica';
+        else if (plan.prioridade === 'low') prioridade = 'baixa';
+        else if (plan.prioridade === 'medium') prioridade = 'media';
 
-        const responsibleId = plan.responsible_id || 'unassigned';
+        const responsibleId = plan.responsavel_plano || 'unassigned';
+        const responsibleName = plan.responsavel_profile?.full_name || 'N/A';
+        const responsibleAvatar = plan.responsavel_profile?.avatar_url;
 
         return {
           ...plan,
-          modulo_origem: plan.module,
-          nome_origem: plan.origin_name,
-          origem_id: plan.origin_id,
+          modulo_origem: plan.modulo_origem || 'geral',
+          nome_origem: plan.modulo_origem, // Use module as name if origin_name missing
+          origem_id: plan.entidade_origem_id,
           dias_para_vencimento: daysToDeadline,
-          data_fim_planejada: plan.due_date,
-          titulo: plan.title,
-          descricao: plan.description,
+          data_fim_planejada: plan.data_fim_planejada,
+          titulo: plan.titulo,
+          descricao: plan.descricao,
           status,
           prioridade,
           responsavel_id: responsibleId,
           responsavel: {
             id: responsibleId,
-            nome: plan.responsible_name || 'N/A',
-            email: plan.responsible_email || '',
-            avatar_url: plan.responsible_avatar
+            nome: responsibleName,
+            email: '',
+            avatar_url: responsibleAvatar
           },
-          // Defaults for fields missing in view but required by interface
           categoria: 'Geral',
-          gut_score: 0,
-          orcamento_planejado: 0,
-          created_by: 'system',
-          updated_at: plan.created_at, // Fallback since view might not expose updated_at
+          gut_score: plan.gut_score || 0,
+          orcamento_planejado: plan.orcamento_planejado || 0,
+          created_by: plan.created_by,
+          updated_at: plan.updated_at,
           tenant_id: plan.tenant_id,
           created_at: plan.created_at,
-
-          // Populate arrays with empty defaults via cast since they aren't in view
-          atividades: [],
+          atividades: Array.isArray(plan.action_plan_activities) ? plan.action_plan_activities.map((a: any) => ({
+            id: a.id,
+            action_plan_id: plan.id,
+            titulo: a.titulo,
+            descricao: a.descricao,
+            status: a.status, // We can add normalization here if necessary
+            data_fim_planejada: a.data_fim_planejada,
+            data_fim_real: a.data_fim_real,
+            responsavel_id: a.responsavel_execucao,
+            percentual_conclusao: a.percentual_conclusao,
+            created_at: a.created_at
+          })) : [],
           evidencias: [],
           comentarios: []
         };
