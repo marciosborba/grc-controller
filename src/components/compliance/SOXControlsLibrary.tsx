@@ -57,7 +57,18 @@ interface SOXControl {
   tenant_id?: string;
   is_global?: boolean;
   created_by?: string;
+  assercoes_financeiras?: string[];
+  dono_controle?: string;
 }
+
+const FIN_ASSERTIONS = [
+  'Existência / Ocorrência',
+  'Integridade',
+  'Precisão / Exatidão',
+  'Avaliação / Alocação',
+  'Direitos e Obrigações',
+  'Apresentação e Divulgação'
+];
 
 const controlSchema = z.object({
   codigo: z.string().min(1, "Código é obrigatório"),
@@ -74,7 +85,9 @@ const controlSchema = z.object({
   criticidade: z.string().min(1, "Criticidade é obrigatória"),
   risco_processo: z.string().optional(),
   evidencias_funcionamento: z.string().min(1, "Evidências são obrigatórias"),
-  sistemas_aplicaveis: z.string().optional()
+  sistemas_aplicaveis: z.string().optional(),
+  assercoes_financeiras: z.array(z.string()).optional(),
+  dono_controle: z.string().optional()
 });
 
 const SOXControlsLibrary: React.FC = () => {
@@ -89,6 +102,7 @@ const SOXControlsLibrary: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingControl, setEditingControl] = useState<SOXControl | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const controlForm = useForm<z.infer<typeof controlSchema>>({
     resolver: zodResolver(controlSchema),
@@ -107,7 +121,9 @@ const SOXControlsLibrary: React.FC = () => {
       criticidade: 'alta',
       risco_processo: '',
       evidencias_funcionamento: '',
-      sistemas_aplicaveis: ''
+      sistemas_aplicaveis: '',
+      assercoes_financeiras: [],
+      dono_controle: ''
     }
   });
 
@@ -164,6 +180,35 @@ const SOXControlsLibrary: React.FC = () => {
     }
 
     setFilteredControls(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  // Pagination Logic
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(filteredControls.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedControls = filteredControls.slice(startIndex, endIndex);
+
+  const scrollToTop = () => {
+    const element = document.getElementById('sox-controls-list');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+      scrollToTop();
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+      scrollToTop();
+    }
   };
 
   const getCategoryIcon = (categoria: string) => {
@@ -266,9 +311,37 @@ const SOXControlsLibrary: React.FC = () => {
       criticidade: control.criticidade,
       risco_processo: control.risco_processo || '',
       evidencias_funcionamento: control.evidencias_funcionamento.join('\n'),
-      sistemas_aplicaveis: control.sistemas_aplicaveis.join('\n')
+      sistemas_aplicaveis: control.sistemas_aplicaveis.join('\n'),
+      assercoes_financeiras: control.assercoes_financeiras || [],
+      dono_controle: control.dono_controle || ''
     });
     setIsDialogOpen(true);
+  };
+
+  const handleCloneControl = (control: SOXControl) => {
+    // Pre-fill form with global control data but clear ID and set as new
+    setEditingControl(null); // It's a new creation
+    controlForm.reset({
+      codigo: `${control.codigo}-CUSTOM`,
+      categoria: control.categoria,
+      subcategoria: control.subcategoria || '',
+      titulo: control.titulo,
+      descricao: control.descricao,
+      objetivo_controle: control.objetivo_controle,
+      natureza: control.natureza,
+      nivel: control.nivel,
+      frequencia: control.frequencia,
+      atividades_controle: control.atividades_controle,
+      metodo_teste: control.metodo_teste || '',
+      criticidade: control.criticidade,
+      risco_processo: control.risco_processo || '',
+      evidencias_funcionamento: control.evidencias_funcionamento.join('\n'),
+      sistemas_aplicaveis: control.sistemas_aplicaveis.join('\n'),
+      assercoes_financeiras: control.assercoes_financeiras || [],
+      dono_controle: '' // Clear owner for new adoption
+    });
+    setIsDialogOpen(true);
+    toast.info('Dados copiados. Ajuste conforme necessário e salve para criar seu controle.');
   };
 
   const handleUpdateControl = async (values: z.infer<typeof controlSchema>) => {
@@ -535,8 +608,8 @@ const SOXControlsLibrary: React.FC = () => {
       </div>
 
       {/* Lista de Controles */}
-      <div className="grid gap-3">
-        {filteredControls.map((control) => (
+      <div id="sox-controls-list" className="grid gap-3">
+        {paginatedControls.map((control) => (
           <Card key={control.id} className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -582,6 +655,20 @@ const SOXControlsLibrary: React.FC = () => {
                       Personalizado
                     </Badge>
                   )}
+
+                  {/* Botão de Clonar para Controles Globais */}
+                  {control.is_global && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCloneControl(control)}
+                      className="ml-auto h-6 text-xs bg-primary/10 hover:bg-primary/20 text-primary"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Personalizar
+                    </Button>
+                  )}
+
                   {/* Botões de ação para controles personalizados */}
                   {!control.is_global && control.tenant_id === effectiveTenantId && (
                     <div className="flex gap-1 ml-auto">
@@ -642,6 +729,32 @@ const SOXControlsLibrary: React.FC = () => {
                     <p className="text-sm font-medium text-muted-foreground mb-2">Risco do Processo</p>
                     <p className="text-sm text-muted-foreground">{control.risco_processo}</p>
                   </div>
+
+                  {/* Novos Campos na Visualização */}
+                  <div className="col-span-full mt-4 p-4 bg-muted/30 rounded-lg border">
+                    <h4 className="font-semibold text-sm mb-3">Informações Adicionais (SOX)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Dono do Controle</p>
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-muted-foreground" />
+                          <span>{control.dono_controle || 'Não atribuído'}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Asserções Financeiras</p>
+                        <div className="flex flex-wrap gap-2">
+                          {control.assercoes_financeiras && control.assercoes_financeiras.length > 0 ? (
+                            control.assercoes_financeiras.map((a, i) => (
+                              <Badge key={i} variant="outline" className="text-xs bg-background">{a}</Badge>
+                            ))
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Nenhuma selecionada</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="activities">
@@ -682,6 +795,38 @@ const SOXControlsLibrary: React.FC = () => {
           </Card>
         ))}
       </div>
+
+      {/* Paginação */}
+      {filteredControls.length > 0 && (
+        <div className="flex items-center justify-between py-4">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {startIndex + 1} a {Math.min(endIndex, filteredControls.length)} de {filteredControls.length} controles
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+            >
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1">
+              <span className="text-sm px-2">
+                Página {currentPage} de {totalPages}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
 
       {filteredControls.length === 0 && (
         <Card>
@@ -963,6 +1108,68 @@ const SOXControlsLibrary: React.FC = () => {
                   )}
                 />
               </div>
+
+              <FormField
+                control={controlForm.control}
+                name="assercoes_financeiras"
+                render={() => (
+                  <FormItem className="col-span-full">
+                    <FormLabel>Asserções Financeiras (SOX) *</FormLabel>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                      {FIN_ASSERTIONS.map((assertion) => (
+                        <FormField
+                          key={assertion}
+                          control={controlForm.control}
+                          name="assercoes_financeiras"
+                          render={({ field }) => {
+                            return (
+                              <FormItem
+                                key={assertion}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                              >
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                    checked={field.value?.includes(assertion)}
+                                    onChange={(e) => {
+                                      return e.target.checked
+                                        ? field.onChange([...(field.value || []), assertion])
+                                        : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== assertion
+                                          )
+                                        )
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal cursor-pointer text-sm">
+                                  {assertion}
+                                </FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={controlForm.control}
+                name="dono_controle"
+                render={({ field }) => (
+                  <FormItem className="col-span-full">
+                    <FormLabel>Dono do Controle (Área/Cargo) *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Gerente Financeiro / CFO" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={controlForm.control}
