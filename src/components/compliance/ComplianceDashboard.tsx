@@ -139,8 +139,22 @@ export default function ComplianceDashboard() {
     const { data: frameworksData } = await supabase.from('frameworks_compliance').select('id').eq('tenant_id', effectiveTenantId).eq('status', 'ativo');
     const { data: requirementsData } = await supabase.from('requisitos_compliance').select('id, framework_id').eq('tenant_id', effectiveTenantId).eq('status', 'ativo');
     const { data: nonConformitiesData } = await supabase.from('nao_conformidades').select('id, criticidade, status').eq('tenant_id', effectiveTenantId).in('status', ['aberta', 'em_tratamento']);
-    const { data: overduePlansData } = await supabase.from('planos_acao_conformidade').select('id').eq('tenant_id', effectiveTenantId).lt('data_fim_planejada', new Date().toISOString().split('T')[0]).in('status', ['planejada', 'aprovada', 'em_execucao']);
-    const { data: activePlansData } = await supabase.from('planos_acao_conformidade').select('id').eq('tenant_id', effectiveTenantId).in('status', ['planejada', 'aprovada', 'em_execucao']);
+
+    // Updated to use unified 'action_plans' table
+    const { data: overduePlansData } = await supabase
+      .from('action_plans')
+      .select('id')
+      .eq('tenant_id', effectiveTenantId)
+      .eq('modulo_origem', 'compliance')
+      .lt('data_fim_planejada', new Date().toISOString().split('T')[0])
+      .in('status', ['planejado', 'em_andamento']);
+
+    const { data: activePlansData } = await supabase
+      .from('action_plans')
+      .select('id')
+      .eq('tenant_id', effectiveTenantId)
+      .eq('modulo_origem', 'compliance')
+      .in('status', ['planejado', 'em_andamento']);
 
     const today = new Date().toISOString().split('T')[0];
     const thirtyDaysFromNow = new Date();

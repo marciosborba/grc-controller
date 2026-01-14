@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Calendar, CheckCircle, AlertTriangle, Clock, Edit, Trash2, User } from 'lucide-react';
+import { Plus, Calendar, CheckCircle, AlertTriangle, Clock, Edit, Trash2, User, FileText, Search } from 'lucide-react';
 import { useComplianceActionPlans, ActionPlan, ActionPlanActivity } from '@/hooks/useComplianceActionPlans';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,10 +86,14 @@ export function ActionPlansManagement() {
   };
 
   const loadProfiles = async () => {
-    // Basic profile fetch - could be optimized to filter by roles if needed
+    if (!effectiveTenantId) return;
+
+    // Fetch profiles associated with this tenant
     const { data } = await supabase
       .from('profiles')
-      .select('id, full_name, email');
+      .select('id, full_name, email')
+      .eq('tenant_id', effectiveTenantId);
+
     setProfiles(data || []);
   };
 
@@ -120,8 +124,10 @@ export function ActionPlansManagement() {
       priority: editPlanForm.priority as any,
       due_date: editPlanForm.dueDate,
       status: editPlanForm.status as any,
+      status: editPlanForm.status as any,
       objetivo: editPlanForm.objetivo,
-      causa_raiz: editPlanForm.causa_raiz
+      causa_raiz: editPlanForm.causa_raiz,
+      responsavel_id: editPlanForm.responsavel_id
     });
 
     setShowEditPlanDialog(false);
@@ -137,7 +143,7 @@ export function ActionPlansManagement() {
       status: plan.status,
       objetivo: plan.objetivo || '',
       causa_raiz: plan.causa_raiz || '',
-      responsavel_id: '' // Not easily available in plan object without extra profile join mapping in hook, keeping simple
+      responsavel_id: plan.responsavel_id || ''
     });
     setShowEditPlanDialog(true);
   };
@@ -445,60 +451,146 @@ export function ActionPlansManagement() {
 
       {/* Edit Plan Dialog */}
       <Dialog open={showEditPlanDialog} onOpenChange={setShowEditPlanDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Plano de Ação</DialogTitle>
-            <DialogDescription>Atualize as informações do plano.</DialogDescription>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4 mb-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <Edit className="h-5 w-5 text-primary" />
+              </div>
+              Editar Plano de Ação
+            </DialogTitle>
+            <DialogDescription>
+              Atualize as informações, diagnóstico e planejamento do plano de ação.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>Título do Plano</Label>
-              <Input value={editPlanForm.title} onChange={e => setEditPlanForm({ ...editPlanForm, title: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Descrição</Label>
-              <Textarea value={editPlanForm.description} onChange={e => setEditPlanForm({ ...editPlanForm, description: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Objetivo</Label>
-              <Textarea value={editPlanForm.objetivo} onChange={e => setEditPlanForm({ ...editPlanForm, objetivo: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Causa Raiz</Label>
-              <Textarea value={editPlanForm.causa_raiz} onChange={e => setEditPlanForm({ ...editPlanForm, causa_raiz: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Prioridade</Label>
-                <Select value={editPlanForm.priority} onValueChange={val => setEditPlanForm({ ...editPlanForm, priority: val })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="critical">Crítica</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>Prazo</Label>
-                <Input type="date" value={editPlanForm.dueDate} onChange={e => setEditPlanForm({ ...editPlanForm, dueDate: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label>Status</Label>
-                <Select value={editPlanForm.status} onValueChange={val => setEditPlanForm({ ...editPlanForm, status: val })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="open">Planejado</SelectItem>
-                    <SelectItem value="in_progress">Em Andamento</SelectItem>
-                    <SelectItem value="completed">Concluído</SelectItem>
-                    <SelectItem value="verified">Verificado</SelectItem>
-                  </SelectContent>
-                </Select>
+
+          <div className="space-y-6 py-2">
+
+            {/* Seção: Informações Gerais */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground border-b pb-2">
+                <FileText className="h-4 w-4" /> Informações Gerais
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2 col-span-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Título do Plano</Label>
+                  <Input
+                    value={editPlanForm.title}
+                    onChange={e => setEditPlanForm({ ...editPlanForm, title: e.target.value })}
+                    className="font-medium"
+                  />
+                </div>
+                <div className="grid gap-2 col-span-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Descrição Detalhada</Label>
+                  <Textarea
+                    value={editPlanForm.description}
+                    onChange={e => setEditPlanForm({ ...editPlanForm, description: e.target.value })}
+                    className="min-h-[80px]"
+                    placeholder="Descreva o contexto e a necessidade deste plano..."
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Seção: Diagnóstico */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground border-b pb-2">
+                <Search className="h-4 w-4" /> Diagnóstico
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Objetivo</Label>
+                  <Textarea
+                    value={editPlanForm.objetivo}
+                    onChange={e => setEditPlanForm({ ...editPlanForm, objetivo: e.target.value })}
+                    className="min-h-[80px]"
+                    placeholder="O que se espera alcançar?"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Causa Raiz</Label>
+                  <Textarea
+                    value={editPlanForm.causa_raiz}
+                    onChange={e => setEditPlanForm({ ...editPlanForm, causa_raiz: e.target.value })}
+                    className="min-h-[80px]"
+                    placeholder="Qual a origem do problema?"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Seção: Planejamento */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground border-b pb-2">
+                <Calendar className="h-4 w-4" /> Planejamento
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Prioridade</Label>
+                  <Select value={editPlanForm.priority} onValueChange={val => setEditPlanForm({ ...editPlanForm, priority: val })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">
+                        <span className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-green-500" /> Baixa</span>
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        <span className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-yellow-500" /> Média</span>
+                      </SelectItem>
+                      <SelectItem value="high">
+                        <span className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-orange-500" /> Alta</span>
+                      </SelectItem>
+                      <SelectItem value="critical">
+                        <span className="flex items-center gap-2"><div className="h-2 w-2 rounded-full bg-red-500" /> Crítica</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Prazo Limite</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="date"
+                      value={editPlanForm.dueDate}
+                      onChange={e => setEditPlanForm({ ...editPlanForm, dueDate: e.target.value })}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Responsável</Label>
+                  <Select value={editPlanForm.responsavel_id} onValueChange={val => setEditPlanForm({ ...editPlanForm, responsavel_id: val })}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {profiles.map(profile => (
+                        <SelectItem key={profile.id} value={profile.id}>{profile.full_name || profile.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">Status Atual</Label>
+                  <Select value={editPlanForm.status} onValueChange={val => setEditPlanForm({ ...editPlanForm, status: val })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Planejado</SelectItem>
+                      <SelectItem value="in_progress">Em Andamento</SelectItem>
+                      <SelectItem value="completed">Concluído</SelectItem>
+                      <SelectItem value="verified">Verificado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="border-t pt-4 mt-4">
+            <Button variant="outline" onClick={() => setShowEditPlanDialog(false)}>Cancelar</Button>
             <Button onClick={handleUpdatePlan}>Salvar Alterações</Button>
           </DialogFooter>
         </DialogContent>

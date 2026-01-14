@@ -24,6 +24,7 @@ export interface ActionPlan {
 
     // Display helpers
     responsavel_nome?: string;
+    responsavel_id?: string;
     nao_conformidade_titulo?: string;
 }
 
@@ -144,8 +145,10 @@ export const useComplianceActionPlans = () => {
                         nao_conformidade_id: plan.entidade_origem_id, // assuming linked to NC ID
                         causa_raiz: plan.metadados?.causa_raiz,
                         objetivo: plan.objetivo,
+                        objetivo: plan.objetivo,
                         category: '', // category logic can be added later
-                        responsavel_nome: plan.responsavel_profile?.full_name
+                        responsavel_nome: plan.responsavel_profile?.full_name,
+                        responsavel_id: plan.responsavel_plano
                     };
                 }));
                 setPlans(mappedPlans);
@@ -242,7 +245,9 @@ export const useComplianceActionPlans = () => {
             if (data.priority) updates.prioridade = mapPriorityToDB(data.priority);
             if (data.due_date) updates.data_fim_planejada = data.due_date;
             if (data.status) updates.status = mapStatusToDB(data.status);
+            if (data.status) updates.status = mapStatusToDB(data.status);
             if (data.objetivo) updates.objetivo = data.objetivo;
+            if (data.responsavel_id) updates.responsavel_plano = data.responsavel_id;
             // Handle metadata updates selectively to avoid overwriting
             if (data.causa_raiz) {
                 // ideally verify existing metadata first, for now we assume simple structure
