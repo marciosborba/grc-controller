@@ -39,7 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { toast } from 'sonner';
-import SOXControlsLibrary from './SOXControlsLibrary';
+import InternalControlsManagement from './InternalControlsManagement';
 import NonConformitiesManagement from './NonConformitiesManagement';
 import AssessmentsManagement from './AssessmentsManagement';
 import MonitoramentoManagement from './MonitoramentoManagement';
@@ -554,7 +554,7 @@ export default function ComplianceDashboard() {
           <TabsTrigger value="reports" className="flex-1 min-w-[120px]">Relatórios</TabsTrigger>
           <TabsTrigger value="processos" className="flex-1 min-w-[120px]">Processos</TabsTrigger>
           <TabsTrigger value="sistemas" className="flex-1 min-w-[120px]">Sistemas</TabsTrigger>
-          <TabsTrigger value="sox-library" className="flex-1 min-w-[120px]">Biblioteca SOX</TabsTrigger>
+          <TabsTrigger value="internal-controls" className="flex-1 min-w-[120px]">Controles Internos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -703,8 +703,8 @@ export default function ComplianceDashboard() {
           <SystemsManagement />
         </TabsContent>
 
-        <TabsContent value="sox-library">
-          <SOXControlsLibrary />
+        <TabsContent value="internal-controls">
+          <InternalControlsManagement />
         </TabsContent>
       </Tabs>
 

@@ -15,7 +15,8 @@ import {
     Radar,
     PolarGrid,
     PolarAngleAxis,
-    PolarRadiusAxis
+    PolarRadiusAxis,
+    Cell
 } from "recharts";
 import { TrendingUp, BarChart3 } from "lucide-react";
 
