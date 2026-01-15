@@ -154,7 +154,7 @@ export function ComplianceCharts({ trendData, frameworkData }: ComplianceChartsP
                                     <Bar dataKey="score" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20}>
                                         {
                                             sortedFrameworks.map((entry, index) => (
-                                                <cell key={`cell-${index}`} fill={entry.score >= 90 ? '#10b981' : entry.score >= 70 ? '#f59e0b' : '#ef4444'} />
+                                                <Cell key={`cell-${index}`} fill={entry.score >= 90 ? '#10b981' : entry.score >= 70 ? '#f59e0b' : '#ef4444'} />
                                             ))
                                         }
                                     </Bar>

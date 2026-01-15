@@ -13,12 +13,12 @@ import EvidenceManager from './evidence/EvidenceManager';
 import CorrectiveActionManager from './corrective-actions/CorrectiveActionManager';
 import RegulatoryNotificationManager from './regulatory/RegulatoryNotificationManager';
 import { EthicsClassificationEngine, type CaseData } from '@/utils/ethicsClassification';
-import { 
-  ChevronDown, 
-  ChevronUp, 
-  User, 
-  UserX, 
-  Clock, 
+import {
+  ChevronDown,
+  ChevronUp,
+  User,
+  UserX,
+  Clock,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -146,42 +146,52 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
         business_unit_affected: report.business_unit_affected,
         financial_exposure: report.financial_impact_estimate
       };
-      
+
       const classificationResult = EthicsClassificationEngine.classifyCase(caseData);
       setClassification(classificationResult);
-      
+
       // Update database with classification if significantly different
       updateClassificationIfNeeded(classificationResult);
     }
   }, [isExpanded, report]);
 
   const updateClassificationIfNeeded = async (classificationResult: any) => {
+    // Check if report has changed significantly or if we need to persist the calculated values
+    if (!report) return;
+
     try {
       const updates: any = {};
-      
+      let hasChanges = false;
+
       if (report.risk_score !== classificationResult.risk_score) {
         updates.risk_score = classificationResult.risk_score;
+        hasChanges = true;
       }
       if (report.compliance_impact !== classificationResult.compliance_impact) {
         updates.compliance_impact = classificationResult.compliance_impact;
+        hasChanges = true;
       }
       if (report.regulatory_risk !== classificationResult.regulatory_risk) {
         updates.regulatory_risk = classificationResult.regulatory_risk;
+        hasChanges = true;
       }
       if (report.reputational_risk !== classificationResult.reputational_risk) {
         updates.reputational_risk = classificationResult.reputational_risk;
+        hasChanges = true;
       }
-      
-      if (Object.keys(updates).length > 0) {
+
+      if (hasChanges) {
+        console.log('Persisting updated classification:', updates);
         updates.updated_at = new Date().toISOString();
-        
+
         const { error } = await supabase
           .from('ethics_reports')
           .update(updates)
           .eq('id', report.id);
-          
+
         if (error) {
           console.error('Error updating classification:', error);
+          // Don't toast error to avoid spamming the user if schema isn't ready
         }
       }
     } catch (error) {
@@ -282,11 +292,11 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
               {getStatusIcon(report.status)}
               <span className="ml-1">
                 {report.status === 'open' ? 'Aberto' :
-                 report.status === 'investigating' ? 'Investigando' :
-                 report.status === 'in_review' ? 'Em Revisão' :
-                 report.status === 'resolved' ? 'Resolvido' :
-                 report.status === 'closed' ? 'Fechado' :
-                 report.status.replace('_', ' ')}
+                  report.status === 'investigating' ? 'Investigando' :
+                    report.status === 'in_review' ? 'Em Revisão' :
+                      report.status === 'resolved' ? 'Resolvido' :
+                        report.status === 'closed' ? 'Fechado' :
+                          report.status.replace('_', ' ')}
               </span>
             </Badge>
           </div>
@@ -314,7 +324,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
             </Button>
           </div>
         </div>
-        
+
         <div className="mt-2">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="outline" className="text-xs">
@@ -323,10 +333,10 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
             <Badge className={`text-xs px-2 py-0.5 ${getSeverityColor(report.severity)}`}>
               <AlertTriangle className="h-3 w-3 mr-1" />
               {report.severity === 'low' ? 'BAIXA' :
-               report.severity === 'medium' ? 'MÉDIA' :
-               report.severity === 'high' ? 'ALTA' :
-               report.severity === 'critical' ? 'CRÍTICA' :
-               report.severity.toUpperCase()}
+                report.severity === 'medium' ? 'MÉDIA' :
+                  report.severity === 'high' ? 'ALTA' :
+                    report.severity === 'critical' ? 'CRÍTICA' :
+                      report.severity.toUpperCase()}
             </Badge>
           </div>
           <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">{report.title}</CardTitle>
@@ -374,66 +384,62 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                       Score: {classification.risk_score}/100
                     </Badge>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-1">Compliance</div>
-                      <Badge className={`text-xs px-2 py-0.5 ${
-                        classification.compliance_impact === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                      <Badge className={`text-xs px-2 py-0.5 ${classification.compliance_impact === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
                         classification.compliance_impact === 'high' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300' :
-                        classification.compliance_impact === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
-                        'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                      }`}>
+                          classification.compliance_impact === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                            'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
+                        }`}>
                         {classification.compliance_impact === 'critical' ? 'Crítico' :
-                         classification.compliance_impact === 'high' ? 'Alto' :
-                         classification.compliance_impact === 'medium' ? 'Médio' : 'Baixo'}
+                          classification.compliance_impact === 'high' ? 'Alto' :
+                            classification.compliance_impact === 'medium' ? 'Médio' : 'Baixo'}
                       </Badge>
                     </div>
-                    
+
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-1">Regulatório</div>
-                      <Badge className={`text-xs px-2 py-0.5 ${
-                        classification.regulatory_risk === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                      <Badge className={`text-xs px-2 py-0.5 ${classification.regulatory_risk === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
                         classification.regulatory_risk === 'high' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300' :
-                        classification.regulatory_risk === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
-                        'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                      }`}>
+                          classification.regulatory_risk === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                            'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
+                        }`}>
                         {classification.regulatory_risk === 'critical' ? 'Crítico' :
-                         classification.regulatory_risk === 'high' ? 'Alto' :
-                         classification.regulatory_risk === 'medium' ? 'Médio' : 'Baixo'}
+                          classification.regulatory_risk === 'high' ? 'Alto' :
+                            classification.regulatory_risk === 'medium' ? 'Médio' : 'Baixo'}
                       </Badge>
                     </div>
-                    
+
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-1">Reputacional</div>
-                      <Badge className={`text-xs px-2 py-0.5 ${
-                        classification.reputational_risk === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                      <Badge className={`text-xs px-2 py-0.5 ${classification.reputational_risk === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
                         classification.reputational_risk === 'high' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300' :
-                        classification.reputational_risk === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
-                        'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                      }`}>
+                          classification.reputational_risk === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                            'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
+                        }`}>
                         {classification.reputational_risk === 'critical' ? 'Crítico' :
-                         classification.reputational_risk === 'high' ? 'Alto' :
-                         classification.reputational_risk === 'medium' ? 'Médio' : 'Baixo'}
+                          classification.reputational_risk === 'high' ? 'Alto' :
+                            classification.reputational_risk === 'medium' ? 'Médio' : 'Baixo'}
                       </Badge>
                     </div>
-                    
+
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-1">Prioridade</div>
-                      <Badge className={`text-xs px-2 py-0.5 ${
-                        classification.recommended_priority === 'urgent' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                      <Badge className={`text-xs px-2 py-0.5 ${classification.recommended_priority === 'urgent' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
                         classification.recommended_priority === 'critical' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300' :
-                        classification.recommended_priority === 'high' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
-                        'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                      }`}>
+                          classification.recommended_priority === 'high' ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300' :
+                            'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
+                        }`}>
                         {classification.recommended_priority === 'urgent' ? 'Urgente' :
-                         classification.recommended_priority === 'critical' ? 'Crítica' :
-                         classification.recommended_priority === 'high' ? 'Alta' :
-                         classification.recommended_priority === 'medium' ? 'Média' : 'Baixa'}
+                          classification.recommended_priority === 'critical' ? 'Crítica' :
+                            classification.recommended_priority === 'high' ? 'Alta' :
+                              classification.recommended_priority === 'medium' ? 'Média' : 'Baixa'}
                       </Badge>
                     </div>
                   </div>
-                  
+
                   {classification.regulatory_notifications_required.length > 0 && (
                     <div className="text-xs text-amber-600 dark:text-amber-400">
                       <Bell className="h-3 w-3 inline mr-1" />
@@ -450,7 +456,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                     {report.description || 'Sem descrição disponível'}
                   </div>
                 </div>
-                
+
                 <div className="space-y-3">
                   <div>
                     <Label className="text-sm font-medium">Informações do Denunciante</Label>
@@ -495,7 +501,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
                   {isEditing ? (
-                    <Select value={editData.status} onValueChange={(value) => setEditData({...editData, status: value})}>
+                    <Select value={editData.status} onValueChange={(value) => setEditData({ ...editData, status: value })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -511,11 +517,11 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                     <div className="mt-1">
                       <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(report.status)}`}>
                         {report.status === 'open' ? 'ABERTO' :
-                         report.status === 'investigating' ? 'INVESTIGANDO' :
-                         report.status === 'in_review' ? 'EM REVISÃO' :
-                         report.status === 'resolved' ? 'RESOLVIDO' :
-                         report.status === 'closed' ? 'FECHADO' :
-                         report.status.replace('_', ' ').toUpperCase()}
+                          report.status === 'investigating' ? 'INVESTIGANDO' :
+                            report.status === 'in_review' ? 'EM REVISÃO' :
+                              report.status === 'resolved' ? 'RESOLVIDO' :
+                                report.status === 'closed' ? 'FECHADO' :
+                                  report.status.replace('_', ' ').toUpperCase()}
                       </Badge>
                     </div>
                   )}
@@ -524,7 +530,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                 <div>
                   <Label className="text-sm font-medium">Severidade</Label>
                   {isEditing ? (
-                    <Select value={editData.severity} onValueChange={(value) => setEditData({...editData, severity: value})}>
+                    <Select value={editData.severity} onValueChange={(value) => setEditData({ ...editData, severity: value })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -539,10 +545,10 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                     <div className="mt-1">
                       <Badge className={`text-xs px-2 py-0.5 ${getSeverityColor(report.severity)}`}>
                         {report.severity === 'low' ? 'BAIXA' :
-                         report.severity === 'medium' ? 'MÉDIA' :
-                         report.severity === 'high' ? 'ALTA' :
-                         report.severity === 'critical' ? 'CRÍTICA' :
-                         report.severity.toUpperCase()}
+                          report.severity === 'medium' ? 'MÉDIA' :
+                            report.severity === 'high' ? 'ALTA' :
+                              report.severity === 'critical' ? 'CRÍTICA' :
+                                report.severity.toUpperCase()}
                       </Badge>
                     </div>
                   )}
@@ -551,7 +557,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                 <div>
                   <Label className="text-sm font-medium">Prioridade</Label>
                   {isEditing ? (
-                    <Select value={editData.priority} onValueChange={(value) => setEditData({...editData, priority: value})}>
+                    <Select value={editData.priority} onValueChange={(value) => setEditData({ ...editData, priority: value })}>
                       <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
@@ -565,10 +571,10 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                   ) : (
                     <div className="mt-1 text-sm">
                       {report.priority === 'low' ? 'BAIXA' :
-                       report.priority === 'medium' ? 'MÉDIA' :
-                       report.priority === 'high' ? 'ALTA' :
-                       report.priority === 'urgent' ? 'URGENTE' :
-                       report.priority ? report.priority.toUpperCase() : 'MÉDIA'}
+                        report.priority === 'medium' ? 'MÉDIA' :
+                          report.priority === 'high' ? 'ALTA' :
+                            report.priority === 'urgent' ? 'URGENTE' :
+                              report.priority ? report.priority.toUpperCase() : 'MÉDIA'}
                     </div>
                   )}
                 </div>
@@ -578,7 +584,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                   {isEditing ? (
                     <Input
                       value={editData.assigned_to}
-                      onChange={(e) => setEditData({...editData, assigned_to: e.target.value})}
+                      onChange={(e) => setEditData({ ...editData, assigned_to: e.target.value })}
                       placeholder="Nome do responsável"
                       className="mt-1"
                     />
@@ -595,7 +601,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                 {isEditing ? (
                   <Textarea
                     value={editData.investigation_summary}
-                    onChange={(e) => setEditData({...editData, investigation_summary: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, investigation_summary: e.target.value })}
                     placeholder="Descreva o progresso da investigação..."
                     rows={4}
                     className="mt-1"
@@ -610,33 +616,33 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
 
             {/* Investigation Plans Tab */}
             <TabsContent value="investigation" className="space-y-4">
-              <InvestigationPlanManager 
-                reportId={report.id} 
-                onUpdate={() => onUpdate()} 
+              <InvestigationPlanManager
+                reportId={report.id}
+                onUpdate={() => onUpdate()}
               />
             </TabsContent>
 
             {/* Evidence Management Tab */}
             <TabsContent value="evidence" className="space-y-4">
-              <EvidenceManager 
-                reportId={report.id} 
-                onUpdate={() => onUpdate()} 
+              <EvidenceManager
+                reportId={report.id}
+                onUpdate={() => onUpdate()}
               />
             </TabsContent>
 
             {/* Corrective Actions Tab */}
             <TabsContent value="actions" className="space-y-4">
-              <CorrectiveActionManager 
-                reportId={report.id} 
-                onUpdate={() => onUpdate()} 
+              <CorrectiveActionManager
+                reportId={report.id}
+                onUpdate={() => onUpdate()}
               />
             </TabsContent>
 
             {/* Regulatory Notifications Tab */}
             <TabsContent value="regulatory" className="space-y-4">
-              <RegulatoryNotificationManager 
-                reportId={report.id} 
-                onUpdate={() => onUpdate()} 
+              <RegulatoryNotificationManager
+                reportId={report.id}
+                onUpdate={() => onUpdate()}
               />
             </TabsContent>
 
@@ -646,7 +652,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                 {isEditing ? (
                   <Textarea
                     value={editData.resolution}
-                    onChange={(e) => setEditData({...editData, resolution: e.target.value})}
+                    onChange={(e) => setEditData({ ...editData, resolution: e.target.value })}
                     placeholder="Descreva a resolução final do caso..."
                     rows={4}
                     className="mt-1"
@@ -752,7 +758,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                         <div>
                           <span className="font-medium text-gray-700 dark:text-gray-300">Timestamp Submissão:</span>
                           <p className="text-gray-600 dark:text-gray-400 font-mono text-xs">
-                            {report.submission_timestamp 
+                            {report.submission_timestamp
                               ? format(new Date(report.submission_timestamp), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })
                               : 'Não disponível'
                             }
@@ -818,14 +824,13 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                       <div>
                         <span className="font-medium text-gray-700 dark:text-gray-300">Nível de Confidencialidade:</span>
                         <div className="mt-1">
-                          <Badge className={`text-xs px-2 py-0.5 ${
-                            report.confidentiality_level === 'maximum' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
+                          <Badge className={`text-xs px-2 py-0.5 ${report.confidentiality_level === 'maximum' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :
                             report.confidentiality_level === 'high' ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300' :
-                            'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
-                          }`}>
+                              'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300'
+                            }`}>
                             <Lock className="h-3 w-3 mr-1" />
                             {report.confidentiality_level === 'maximum' ? 'MÁXIMO' :
-                             report.confidentiality_level === 'high' ? 'ALTO' : 'PADRÃO'}
+                              report.confidentiality_level === 'high' ? 'ALTO' : 'PADRÃO'}
                           </Badge>
                         </div>
                       </div>
@@ -836,7 +841,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                       <div>
                         <span className="font-medium text-gray-700 dark:text-gray-300">Metadados Coletados:</span>
                         <p className="text-gray-600 dark:text-gray-400 text-xs">
-                          {report.metadata_collected_at 
+                          {report.metadata_collected_at
                             ? format(new Date(report.metadata_collected_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                             : 'Não disponível'
                           }

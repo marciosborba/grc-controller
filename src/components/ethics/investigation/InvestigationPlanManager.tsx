@@ -9,10 +9,20 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  FileText, 
-  Users, 
-  Search, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  FileText,
+  Users,
+  Search,
   Calendar,
   DollarSign,
   AlertTriangle,
@@ -26,7 +36,8 @@ import {
   Scale,
   Eye,
   Target,
-  BookOpen
+  BookOpen,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -75,6 +86,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<InvestigationPlan | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<InvestigationPlan>>({
     investigation_type: 'preliminary',
     status: 'planning'
@@ -91,18 +103,18 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
       setIsLoading(false);
       return;
     }
-    
+
     try {
       let query = supabase
         .from('ethics_investigation_plans')
         .select('*, ethics_reports(title, protocol_number)');
-      
+
       if (reportId) {
         query = query.eq('ethics_report_id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
-      
+
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -135,14 +147,14 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
           .from('ethics_investigation_plans')
           .update(planData)
           .eq('id', editingPlan.id);
-        
+
         if (error) throw error;
         toast.success('Plano de investigação atualizado com sucesso');
       } else {
         const { error } = await supabase
           .from('ethics_investigation_plans')
           .insert(planData);
-        
+
         if (error) throw error;
         toast.success('Plano de investigação criado com sucesso');
       }
@@ -155,6 +167,28 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
     } catch (error) {
       console.error('Error saving investigation plan:', error);
       toast.error('Erro ao salvar plano de investigação');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('ethics_investigation_plans')
+        .delete()
+        .eq('id', itemToDelete);
+
+      if (error) throw error;
+
+      toast.success('Plano de investigação excluído com sucesso');
+      fetchInvestigationPlans();
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error deleting investigation plan:', error);
+      toast.error('Erro ao excluir plano de investigação');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -210,7 +244,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                 {editingPlan ? 'Editar Plano de Investigação' : 'Novo Plano de Investigação'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
@@ -223,9 +257,9 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="investigation_type">Tipo de Investigação</Label>
-                    <Select 
-                      value={formData.investigation_type} 
-                      onValueChange={(value) => setFormData({...formData, investigation_type: value})}
+                    <Select
+                      value={formData.investigation_type}
+                      onValueChange={(value) => setFormData({ ...formData, investigation_type: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -241,9 +275,9 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
 
                   <div>
                     <Label htmlFor="status">Status</Label>
-                    <Select 
-                      value={formData.status} 
-                      onValueChange={(value) => setFormData({...formData, status: value})}
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => setFormData({ ...formData, status: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -265,7 +299,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                       id="planned_start_date"
                       type="date"
                       value={formData.planned_start_date}
-                      onChange={(e) => setFormData({...formData, planned_start_date: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, planned_start_date: e.target.value })}
                     />
                   </div>
 
@@ -275,7 +309,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                       id="estimated_duration_days"
                       type="number"
                       value={formData.estimated_duration_days}
-                      onChange={(e) => setFormData({...formData, estimated_duration_days: parseInt(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, estimated_duration_days: parseInt(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -285,7 +319,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="investigation_scope"
                     value={formData.investigation_scope}
-                    onChange={(e) => setFormData({...formData, investigation_scope: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, investigation_scope: e.target.value })}
                     rows={3}
                     placeholder="Descreva o escopo detalhado da investigação..."
                   />
@@ -296,7 +330,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="investigation_objectives"
                     value={formData.investigation_objectives}
-                    onChange={(e) => setFormData({...formData, investigation_objectives: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, investigation_objectives: e.target.value })}
                     rows={3}
                     placeholder="Defina os objetivos claros e mensuráveis..."
                   />
@@ -309,7 +343,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="investigation_methodology"
                     value={formData.investigation_methodology}
-                    onChange={(e) => setFormData({...formData, investigation_methodology: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, investigation_methodology: e.target.value })}
                     rows={4}
                     placeholder="Descreva a metodologia e abordagem da investigação..."
                   />
@@ -320,7 +354,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="evidence_preservation_plan"
                     value={formData.evidence_preservation_plan}
-                    onChange={(e) => setFormData({...formData, evidence_preservation_plan: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, evidence_preservation_plan: e.target.value })}
                     rows={3}
                     placeholder="Como as evidências serão preservadas e documentadas..."
                   />
@@ -331,7 +365,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="witness_interview_plan"
                     value={formData.witness_interview_plan}
-                    onChange={(e) => setFormData({...formData, witness_interview_plan: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, witness_interview_plan: e.target.value })}
                     rows={3}
                     placeholder="Estratégia para identificação e entrevista de testemunhas..."
                   />
@@ -342,7 +376,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="document_review_plan"
                     value={formData.document_review_plan}
-                    onChange={(e) => setFormData({...formData, document_review_plan: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, document_review_plan: e.target.value })}
                     rows={3}
                     placeholder="Como documentos relevantes serão identificados e analisados..."
                   />
@@ -358,7 +392,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                       type="number"
                       step="0.01"
                       value={formData.budget_allocated}
-                      onChange={(e) => setFormData({...formData, budget_allocated: parseFloat(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, budget_allocated: parseFloat(e.target.value) })}
                     />
                   </div>
 
@@ -369,7 +403,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                       type="number"
                       step="0.01"
                       value={formData.budget_consumed}
-                      onChange={(e) => setFormData({...formData, budget_consumed: parseFloat(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, budget_consumed: parseFloat(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -379,7 +413,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Input
                     id="external_investigator_firm"
                     value={formData.external_investigator_firm}
-                    onChange={(e) => setFormData({...formData, external_investigator_firm: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, external_investigator_firm: e.target.value })}
                     placeholder="Nome da empresa contratada (se aplicável)"
                   />
                 </div>
@@ -389,7 +423,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Input
                     id="external_investigator_contact"
                     value={formData.external_investigator_contact}
-                    onChange={(e) => setFormData({...formData, external_investigator_contact: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, external_investigator_contact: e.target.value })}
                     placeholder="Informações de contato"
                   />
                 </div>
@@ -399,7 +433,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="expert_consultation_plan"
                     value={formData.expert_consultation_plan}
-                    onChange={(e) => setFormData({...formData, expert_consultation_plan: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, expert_consultation_plan: e.target.value })}
                     rows={3}
                     placeholder="Especialistas ou consultores necessários..."
                   />
@@ -412,7 +446,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="legal_considerations"
                     value={formData.legal_considerations}
-                    onChange={(e) => setFormData({...formData, legal_considerations: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, legal_considerations: e.target.value })}
                     rows={3}
                     placeholder="Questões legais relevantes e considerações..."
                   />
@@ -423,7 +457,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="regulatory_implications"
                     value={formData.regulatory_implications}
-                    onChange={(e) => setFormData({...formData, regulatory_implications: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, regulatory_implications: e.target.value })}
                     rows={3}
                     placeholder="Requisitos regulatórios e possíveis implicações..."
                   />
@@ -434,7 +468,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="confidentiality_requirements"
                     value={formData.confidentiality_requirements}
-                    onChange={(e) => setFormData({...formData, confidentiality_requirements: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, confidentiality_requirements: e.target.value })}
                     rows={3}
                     placeholder="Medidas de confidencialidade e proteção de dados..."
                   />
@@ -445,7 +479,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <Textarea
                     id="risk_assessment"
                     value={formData.risk_assessment}
-                    onChange={(e) => setFormData({...formData, risk_assessment: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, risk_assessment: e.target.value })}
                     rows={3}
                     placeholder="Riscos identificados e estratégias de mitigação..."
                   />
@@ -486,10 +520,10 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                     <div>
                       <CardTitle className="text-lg">
                         {plan.investigation_type === 'preliminary' ? 'Investigação Preliminar' :
-                         plan.investigation_type === 'full' ? 'Investigação Completa' :
-                         plan.investigation_type === 'external' ? 'Investigação Externa' :
-                         plan.investigation_type === 'legal' ? 'Investigação Legal' :
-                         plan.investigation_type}
+                          plan.investigation_type === 'full' ? 'Investigação Completa' :
+                            plan.investigation_type === 'external' ? 'Investigação Externa' :
+                              plan.investigation_type === 'legal' ? 'Investigação Legal' :
+                                plan.investigation_type}
                       </CardTitle>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Criado em {format(new Date(plan.created_at), 'dd/MM/yyyy', { locale: ptBR })}
@@ -499,15 +533,18 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <div className="flex items-center gap-2">
                     <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(plan.status)}`}>
                       {plan.status === 'planning' ? 'Planejamento' :
-                       plan.status === 'approved' ? 'Aprovado' :
-                       plan.status === 'active' ? 'Ativo' :
-                       plan.status === 'suspended' ? 'Suspenso' :
-                       plan.status === 'completed' ? 'Concluído' :
-                       plan.status === 'cancelled' ? 'Cancelado' :
-                       plan.status}
+                        plan.status === 'approved' ? 'Aprovado' :
+                          plan.status === 'active' ? 'Ativo' :
+                            plan.status === 'suspended' ? 'Suspenso' :
+                              plan.status === 'completed' ? 'Concluído' :
+                                plan.status === 'cancelled' ? 'Cancelado' :
+                                  plan.status}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)}>
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(plan.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -517,7 +554,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-gray-500" />
                     <span className="text-sm">
-                      {plan.planned_start_date ? 
+                      {plan.planned_start_date ?
                         format(new Date(plan.planned_start_date), 'dd/MM/yyyy', { locale: ptBR }) :
                         'Não definida'
                       }
@@ -567,6 +604,23 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este plano de investigação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

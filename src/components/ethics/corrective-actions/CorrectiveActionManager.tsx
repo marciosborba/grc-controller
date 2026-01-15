@@ -10,7 +10,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CheckCircle,
   AlertCircle,
   Clock,
@@ -27,7 +37,8 @@ import {
   Settings,
   Users,
   Shield,
-  Award
+  Award,
+  Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -78,15 +89,16 @@ interface CorrectiveActionManagerProps {
   onUpdate?: () => void;
 }
 
-const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({ 
+const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
   reportId,
-  onUpdate 
+  onUpdate
 }) => {
   const { user } = useAuth();
   const [actions, setActions] = useState<CorrectiveAction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingAction, setEditingAction] = useState<CorrectiveAction | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<CorrectiveAction>>({
     action_type: 'corrective',
     action_category: 'corrective',
@@ -108,18 +120,18 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
       setIsLoading(false);
       return;
     }
-    
+
     try {
       let query = supabase
         .from('ethics_corrective_actions')
         .select('*, ethics_reports(title, protocol_number)');
-      
+
       if (reportId) {
         query = query.eq('ethics_report_id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
-      
+
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -142,7 +154,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
       const actionData = {
         ...formData,
         ethics_report_id: reportId,
-        tenant_id: user?.tenant_id,
+        tenant_id: user?.tenantId,
         responsible_party_id: formData.responsible_party_id || user?.id,
         updated_at: new Date().toISOString()
       };
@@ -152,14 +164,14 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
           .from('ethics_corrective_actions')
           .update(actionData)
           .eq('id', editingAction.id);
-        
+
         if (error) throw error;
         toast.success('Ação corretiva atualizada com sucesso');
       } else {
         const { error } = await supabase
           .from('ethics_corrective_actions')
           .insert(actionData);
-        
+
         if (error) throw error;
         toast.success('Ação corretiva criada com sucesso');
       }
@@ -180,6 +192,28 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
     } catch (error) {
       console.error('Error saving corrective action:', error);
       toast.error('Erro ao salvar ação corretiva');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('ethics_corrective_actions')
+        .delete()
+        .eq('id', itemToDelete);
+
+      if (error) throw error;
+
+      toast.success('Ação corretiva excluída com sucesso');
+      fetchCorrectiveActions();
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error deleting corrective action:', error);
+      toast.error('Erro ao excluir ação corretiva');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -210,7 +244,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
         .eq('id', actionId);
 
       if (error) throw error;
-      
+
       toast.success('Status da ação atualizado');
       fetchCorrectiveActions();
     } catch (error) {
@@ -292,7 +326,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                   {editingAction ? 'Editar Ação Corretiva' : 'Nova Ação Corretiva'}
                 </DialogTitle>
               </DialogHeader>
-              
+
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="basic">Básico</TabsTrigger>
@@ -305,9 +339,9 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="action_type">Tipo de Ação</Label>
-                      <Select 
-                        value={formData.action_type} 
-                        onValueChange={(value) => setFormData({...formData, action_type: value})}
+                      <Select
+                        value={formData.action_type}
+                        onValueChange={(value) => setFormData({ ...formData, action_type: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -324,9 +358,9 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
 
                     <div>
                       <Label htmlFor="action_category">Categoria</Label>
-                      <Select 
-                        value={formData.action_category} 
-                        onValueChange={(value) => setFormData({...formData, action_category: value})}
+                      <Select
+                        value={formData.action_category}
+                        onValueChange={(value) => setFormData({ ...formData, action_category: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -342,9 +376,9 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
 
                     <div>
                       <Label htmlFor="priority">Prioridade</Label>
-                      <Select 
-                        value={formData.priority} 
-                        onValueChange={(value) => setFormData({...formData, priority: value})}
+                      <Select
+                        value={formData.priority}
+                        onValueChange={(value) => setFormData({ ...formData, priority: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -360,9 +394,9 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
 
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <Select 
-                        value={formData.status} 
-                        onValueChange={(value) => setFormData({...formData, status: value})}
+                      <Select
+                        value={formData.status}
+                        onValueChange={(value) => setFormData({ ...formData, status: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -383,7 +417,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Input
                       id="action_title"
                       value={formData.action_title}
-                      onChange={(e) => setFormData({...formData, action_title: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, action_title: e.target.value })}
                       placeholder="Título conciso da ação corretiva"
                     />
                   </div>
@@ -393,7 +427,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="action_description"
                       value={formData.action_description}
-                      onChange={(e) => setFormData({...formData, action_description: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, action_description: e.target.value })}
                       rows={4}
                       placeholder="Descrição detalhada da ação a ser implementada..."
                     />
@@ -405,7 +439,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       <Input
                         id="target_individual"
                         value={formData.target_individual}
-                        onChange={(e) => setFormData({...formData, target_individual: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, target_individual: e.target.value })}
                         placeholder="Nome da pessoa (se aplicável)"
                       />
                     </div>
@@ -415,7 +449,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       <Input
                         id="target_department"
                         value={formData.target_department}
-                        onChange={(e) => setFormData({...formData, target_department: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, target_department: e.target.value })}
                         placeholder="Departamento afetado"
                       />
                     </div>
@@ -425,7 +459,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       <Input
                         id="target_process"
                         value={formData.target_process}
-                        onChange={(e) => setFormData({...formData, target_process: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, target_process: e.target.value })}
                         placeholder="Processo a ser alterado"
                       />
                     </div>
@@ -440,7 +474,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         id="due_date"
                         type="date"
                         value={formData.due_date}
-                        onChange={(e) => setFormData({...formData, due_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                       />
                     </div>
 
@@ -448,7 +482,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       <Checkbox
                         id="approval_required"
                         checked={formData.approval_required}
-                        onCheckedChange={(checked) => setFormData({...formData, approval_required: checked as boolean})}
+                        onCheckedChange={(checked) => setFormData({ ...formData, approval_required: checked as boolean })}
                       />
                       <Label htmlFor="approval_required">Requer Aprovação</Label>
                     </div>
@@ -462,7 +496,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         type="number"
                         step="0.01"
                         value={formData.estimated_cost}
-                        onChange={(e) => setFormData({...formData, estimated_cost: parseFloat(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, estimated_cost: parseFloat(e.target.value) })}
                       />
                     </div>
 
@@ -473,7 +507,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         type="number"
                         step="0.01"
                         value={formData.actual_cost}
-                        onChange={(e) => setFormData({...formData, actual_cost: parseFloat(e.target.value)})}
+                        onChange={(e) => setFormData({ ...formData, actual_cost: parseFloat(e.target.value) })}
                       />
                     </div>
                   </div>
@@ -483,7 +517,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="communication_plan"
                       value={formData.communication_plan}
-                      onChange={(e) => setFormData({...formData, communication_plan: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, communication_plan: e.target.value })}
                       rows={3}
                       placeholder="Como a ação será comunicada aos stakeholders..."
                     />
@@ -494,7 +528,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="monitoring_plan"
                       value={formData.monitoring_plan}
-                      onChange={(e) => setFormData({...formData, monitoring_plan: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, monitoring_plan: e.target.value })}
                       rows={3}
                       placeholder="Como o progresso será monitorado..."
                     />
@@ -509,7 +543,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         id="started_date"
                         type="date"
                         value={formData.started_date}
-                        onChange={(e) => setFormData({...formData, started_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, started_date: e.target.value })}
                       />
                     </div>
 
@@ -519,7 +553,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         id="completed_date"
                         type="date"
                         value={formData.completed_date}
-                        onChange={(e) => setFormData({...formData, completed_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, completed_date: e.target.value })}
                       />
                     </div>
                   </div>
@@ -529,7 +563,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="success_criteria"
                       value={formData.success_criteria}
-                      onChange={(e) => setFormData({...formData, success_criteria: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, success_criteria: e.target.value })}
                       rows={3}
                       placeholder="Como será medido o sucesso desta ação..."
                     />
@@ -540,7 +574,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="effectiveness_measure"
                       value={formData.effectiveness_measure}
-                      onChange={(e) => setFormData({...formData, effectiveness_measure: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, effectiveness_measure: e.target.value })}
                       rows={3}
                       placeholder="Métricas para avaliar a eficácia da ação..."
                     />
@@ -555,15 +589,15 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         id="verification_date"
                         type="date"
                         value={formData.verification_date}
-                        onChange={(e) => setFormData({...formData, verification_date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, verification_date: e.target.value })}
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="effectiveness_rating">Classificação de Eficácia (1-5)</Label>
-                      <Select 
-                        value={formData.effectiveness_rating?.toString()} 
-                        onValueChange={(value) => setFormData({...formData, effectiveness_rating: parseInt(value)})}
+                      <Select
+                        value={formData.effectiveness_rating?.toString()}
+                        onValueChange={(value) => setFormData({ ...formData, effectiveness_rating: parseInt(value) })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -584,7 +618,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="verification_method"
                       value={formData.verification_method}
-                      onChange={(e) => setFormData({...formData, verification_method: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, verification_method: e.target.value })}
                       rows={3}
                       placeholder="Como a eficácia será verificada..."
                     />
@@ -595,7 +629,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="lessons_learned"
                       value={formData.lessons_learned}
-                      onChange={(e) => setFormData({...formData, lessons_learned: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, lessons_learned: e.target.value })}
                       rows={3}
                       placeholder="O que foi aprendido durante a implementação..."
                     />
@@ -606,7 +640,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     <Textarea
                       id="recommendations"
                       value={formData.recommendations}
-                      onChange={(e) => setFormData({...formData, recommendations: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, recommendations: e.target.value })}
                       rows={3}
                       placeholder="Recomendações para ações futuras..."
                     />
@@ -649,30 +683,33 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       <CardTitle className="text-lg">{action.action_title}</CardTitle>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {action.action_type === 'disciplinary' ? 'Ação Disciplinar' :
-                         action.action_type === 'training' ? 'Treinamento' :
-                         action.action_type === 'policy_change' ? 'Mudança de Política' :
-                         action.action_type === 'process_improvement' ? 'Melhoria de Processo' :
-                         action.action_type === 'system_change' ? 'Mudança de Sistema' :
-                         action.action_type}
+                          action.action_type === 'training' ? 'Treinamento' :
+                            action.action_type === 'policy_change' ? 'Mudança de Política' :
+                              action.action_type === 'process_improvement' ? 'Melhoria de Processo' :
+                                action.action_type === 'system_change' ? 'Mudança de Sistema' :
+                                  action.action_type}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div 
+                    <div
                       className={`w-3 h-3 rounded-full ${getPriorityColor(action.priority)}`}
                       title={`Prioridade ${action.priority}`}
                     />
                     <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(action.status)}`}>
                       {action.status === 'planned' ? 'Planejada' :
-                       action.status === 'approved' ? 'Aprovada' :
-                       action.status === 'in_progress' ? 'Em Andamento' :
-                       action.status === 'completed' ? 'Concluída' :
-                       action.status === 'cancelled' ? 'Cancelada' :
-                       action.status === 'overdue' ? 'Atrasada' :
-                       action.status}
+                        action.status === 'approved' ? 'Aprovada' :
+                          action.status === 'in_progress' ? 'Em Andamento' :
+                            action.status === 'completed' ? 'Concluída' :
+                              action.status === 'cancelled' ? 'Cancelada' :
+                                action.status === 'overdue' ? 'Atrasada' :
+                                  action.status}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(action)}>
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(action.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -713,8 +750,8 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                   {action.status !== 'completed' && action.status !== 'cancelled' && (
                     <div className="flex gap-2 pt-2 border-t">
                       {action.status === 'planned' && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => updateActionStatus(action.id, 'approved')}
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
@@ -722,8 +759,8 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         </Button>
                       )}
                       {(action.status === 'approved' || action.status === 'planned') && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => updateActionStatus(action.id, 'in_progress')}
                         >
@@ -732,8 +769,8 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         </Button>
                       )}
                       {action.status === 'in_progress' && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => updateActionStatus(action.id, 'completed')}
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
@@ -748,6 +785,23 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta ação corretiva? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

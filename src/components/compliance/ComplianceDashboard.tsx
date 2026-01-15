@@ -50,6 +50,7 @@ import ProcessesManagement from './ProcessesManagement';
 import SystemsManagement from './SystemsManagement';
 import { NewAssessmentWizard } from './NewAssessmentWizard';
 import { ActionPlansManagement } from './ActionPlansManagement';
+import { ComplianceCharts } from './ComplianceCharts';
 
 interface ComplianceMetrics {
   totalFrameworks: number;
@@ -104,6 +105,8 @@ export default function ComplianceDashboard() {
     upcomingAssessments: 0,
     monthlyTrend: 0
   });
+
+  const [trendData, setTrendData] = useState<{ month: string; score: number; assessments: number }[]>([]);
 
   const [activePlans, setActivePlans] = useState(0);
 
@@ -173,12 +176,57 @@ export default function ComplianceDashboard() {
       monthlyTrend = 100;
     }
 
+    // Trend Analysis (Last 6 Months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    const { data: historyData } = await supabase
+      .from('avaliacoes_conformidade')
+      .select('score_conformidade, updated_at, data_conclusao')
+      .eq('tenant_id', effectiveTenantId)
+      .eq('status', 'concluida')
+      .gte('updated_at', sixMonthsAgo.toISOString());
+
+    // Calculate Conformity Rate
     const { data: conformityData } = await supabase.from('avaliacoes_conformidade').select('score_conformidade').eq('tenant_id', effectiveTenantId).eq('status', 'concluida');
     let conformityRate = 0;
     if (conformityData && conformityData.length > 0) {
       const total = conformityData.reduce((acc, curr) => acc + (curr.score_conformidade || 0), 0);
       conformityRate = Math.round(total / conformityData.length);
     }
+
+    // Process Trend Data
+    const computedTrendData: Record<string, { total: number; count: number }> = {};
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const key = d.toLocaleString('pt-BR', { month: 'short' });
+      computedTrendData[key] = { total: 0, count: 0 };
+    }
+
+    if (historyData) {
+      historyData.forEach(item => {
+        const date = new Date(item.data_conclusao || item.updated_at);
+        const key = date.toLocaleString('pt-BR', { month: 'short' });
+        if (computedTrendData[key]) {
+          computedTrendData[key].total += (item.score_conformidade || 0);
+          computedTrendData[key].count += 1;
+        }
+      });
+    }
+
+    const finalTrendData = Object.entries(computedTrendData).map(([month, data]) => ({
+      month: month.charAt(0).toUpperCase() + month.slice(1),
+      score: data.count > 0 ? Math.round(data.total / data.count) : 0,
+      assessments: data.count
+    }));
+
+    // Smoothing: fill zeros with previous value
+    for (let i = 1; i < finalTrendData.length; i++) {
+      if (finalTrendData[i].score === 0 && finalTrendData[i - 1].score > 0) {
+        finalTrendData[i].score = finalTrendData[i - 1].score;
+      }
+    }
+    setTrendData(finalTrendData);
 
     setMetrics({
       totalFrameworks: frameworksData?.length || 0,
@@ -192,6 +240,7 @@ export default function ComplianceDashboard() {
     });
     setActivePlans(activePlansData?.length || 0);
   };
+
 
   const loadFrameworks = async () => {
     const { data: frameworksData } = await supabase
@@ -443,6 +492,8 @@ export default function ComplianceDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <ComplianceCharts trendData={trendData} frameworkData={frameworks.map(f => ({ name: f.nome, score: f.conformityScore, total: f.totalRequirements }))} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('frameworks')}>

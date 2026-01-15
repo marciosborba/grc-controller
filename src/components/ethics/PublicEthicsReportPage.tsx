@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +10,12 @@ import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Shield, 
-  Eye, 
-  EyeOff, 
-  Upload, 
-  CheckCircle, 
+import {
+  Shield,
+  Eye,
+  EyeOff,
+  Upload,
+  CheckCircle,
   AlertTriangle,
   FileText,
   Lock,
@@ -77,6 +78,15 @@ const PublicEthicsReportPage: React.FC = () => {
   } | null>(null);
   const [step, setStep] = useState<'form' | 'success' | 'status-check'>('form');
   const [lookupProtocol, setLookupProtocol] = useState('');
+  const [searchParams] = useSearchParams();
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tenantParam = searchParams.get('tenant');
+    if (tenantParam) {
+      setTenantId(tenantParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     loadPublicData();
@@ -146,7 +156,7 @@ const PublicEthicsReportPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!settings?.public_submissions_enabled) {
       toast.error('O canal de denúncias está temporariamente indisponível');
       return;
@@ -160,19 +170,24 @@ const PublicEthicsReportPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Usar tenant padrão para denúncias públicas (primeiro tenant encontrado)
-      const { data: tenantData } = await supabase
-        .from('tenants')
-        .select('id')
-        .limit(1)
-        .single();
+      let targetTenantId = tenantId;
 
-      if (!tenantData) {
-        throw new Error('Sistema temporariamente indisponível');
+      if (!targetTenantId) {
+        // Usar tenant padrão para denúncias públicas (primeiro tenant encontrado)
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('id')
+          .limit(1)
+          .single();
+
+        if (!tenantData) {
+          throw new Error('Sistema temporariamente indisponível');
+        }
+        targetTenantId = tenantData.id;
       }
 
       const reportData = {
-        tenant_id: tenantData.id,
+        tenant_id: targetTenantId,
         title: formData.title,
         description: formData.description,
         category: formData.category,
@@ -200,7 +215,7 @@ const PublicEthicsReportPage: React.FC = () => {
       await supabase
         .from('ethics_activities')
         .insert([{
-          tenant_id: tenantData.id,
+          tenant_id: targetTenantId,
           report_id: data.id,
           activity_type: 'created',
           description: 'Denúncia criada via canal público',
@@ -303,7 +318,7 @@ const PublicEthicsReportPage: React.FC = () => {
           <CardContent className="pt-6 text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-6" />
             <h2 className="text-2xl font-bold mb-4">Denúncia Enviada com Sucesso!</h2>
-            
+
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 mb-6">
               <div className="text-sm text-muted-foreground mb-2">Seu Protocolo de Acompanhamento:</div>
               <div className="text-3xl font-mono font-bold text-green-700 dark:text-green-400 mb-4">
@@ -392,7 +407,7 @@ const PublicEthicsReportPage: React.FC = () => {
                 className="font-mono"
               />
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-2">
               <Button onClick={handleStatusLookup} className="flex-1">
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -425,7 +440,7 @@ const PublicEthicsReportPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Canal de Ética</h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Nosso canal confidencial para denúncias de questões éticas. 
+            Nosso canal confidencial para denúncias de questões éticas.
             Sua contribuição é fundamental para manter um ambiente íntegro e respeitoso.
           </p>
         </div>
@@ -441,7 +456,7 @@ const PublicEthicsReportPage: React.FC = () => {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <Clock className="h-8 w-8 text-blue-500 mx-auto mb-3" />
@@ -451,7 +466,7 @@ const PublicEthicsReportPage: React.FC = () => {
               </p>
             </CardContent>
           </Card>
-          
+
           <Card className="text-center">
             <CardContent className="pt-6">
               <MessageSquare className="h-8 w-8 text-purple-500 mx-auto mb-3" />
@@ -500,8 +515,8 @@ const PublicEthicsReportPage: React.FC = () => {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {formData.is_anonymous 
-                      ? 'Sua identidade será mantida em sigilo absoluto. Você receberá um protocolo para acompanhamento.' 
+                    {formData.is_anonymous
+                      ? 'Sua identidade será mantida em sigilo absoluto. Você receberá um protocolo para acompanhamento.'
                       : 'Suas informações serão utilizadas apenas para comunicação sobre o caso e mantidas confidenciais.'}
                   </p>
                 </div>
@@ -537,8 +552,8 @@ const PublicEthicsReportPage: React.FC = () => {
                           {categories.map((category) => (
                             <SelectItem key={category.code} value={category.code}>
                               <div className="flex items-center">
-                                <div 
-                                  className="w-3 h-3 rounded-full mr-2" 
+                                <div
+                                  className="w-3 h-3 rounded-full mr-2"
                                   style={{ backgroundColor: category.color }}
                                 />
                                 {category.name}
@@ -657,7 +672,7 @@ const PublicEthicsReportPage: React.FC = () => {
                         </p>
                       </div>
                     </Label>
-                    
+
                     {formData.evidence_files && formData.evidence_files.length > 0 && (
                       <div className="mt-4 space-y-2">
                         {formData.evidence_files.map((file, index) => (

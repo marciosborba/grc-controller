@@ -9,9 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  FileText, 
-  Upload, 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  FileText,
+  Upload,
   Download,
   Trash2,
   Eye,
@@ -69,16 +79,17 @@ interface EvidenceManagerProps {
   onUpdate?: () => void;
 }
 
-const EvidenceManager: React.FC<EvidenceManagerProps> = ({ 
-  reportId, 
+const EvidenceManager: React.FC<EvidenceManagerProps> = ({
+  reportId,
   investigationPlanId,
-  onUpdate 
+  onUpdate
 }) => {
   const { user } = useAuth();
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEvidence, setEditingEvidence] = useState<Evidence | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Evidence>>({
     evidence_type: 'document',
     evidence_source: 'investigation',
@@ -100,18 +111,18 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
       setIsLoading(false);
       return;
     }
-    
+
     try {
       let query = supabase
         .from('ethics_evidence')
         .select('*');
-      
+
       if (reportId) {
         query = query.eq('ethics_report_id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
-      
+
       if (investigationPlanId) {
         query = query.eq('investigation_plan_id', investigationPlanId);
       }
@@ -139,7 +150,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
         ...formData,
         ethics_report_id: reportId,
         investigation_plan_id: investigationPlanId,
-        tenant_id: user?.tenant_id,
+        tenant_id: user?.tenantId,
         collected_by: user?.id,
         updated_at: new Date().toISOString(),
         chain_of_custody: formData.chain_of_custody || []
@@ -150,14 +161,14 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
           .from('ethics_evidence')
           .update(evidenceData)
           .eq('id', editingEvidence.id);
-        
+
         if (error) throw error;
         toast.success('Evidência atualizada com sucesso');
       } else {
         const { error } = await supabase
           .from('ethics_evidence')
           .insert(evidenceData);
-        
+
         if (error) throw error;
         toast.success('Evidência registrada com sucesso');
       }
@@ -178,6 +189,28 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
     } catch (error) {
       console.error('Error saving evidence:', error);
       toast.error('Erro ao salvar evidência');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('ethics_evidence')
+        .delete()
+        .eq('id', itemToDelete);
+
+      if (error) throw error;
+
+      toast.success('Evidência excluída com sucesso');
+      fetchEvidence();
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error deleting evidence:', error);
+      toast.error('Erro ao excluir evidência');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -204,14 +237,14 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
 
       const { error } = await supabase
         .from('ethics_evidence')
-        .update({ 
+        .update({
           chain_of_custody: updatedChain,
           updated_at: new Date().toISOString()
         })
         .eq('id', evidenceId);
 
       if (error) throw error;
-      
+
       toast.success('Cadeia de custódia atualizada');
       fetchEvidence();
     } catch (error) {
@@ -266,7 +299,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                 {editingEvidence ? 'Editar Evidência' : 'Registrar Nova Evidência'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
@@ -279,9 +312,9 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="evidence_type">Tipo de Evidência</Label>
-                    <Select 
-                      value={formData.evidence_type} 
-                      onValueChange={(value) => setFormData({...formData, evidence_type: value})}
+                    <Select
+                      value={formData.evidence_type}
+                      onValueChange={(value) => setFormData({ ...formData, evidence_type: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -299,9 +332,9 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
 
                   <div>
                     <Label htmlFor="evidence_source">Fonte da Evidência</Label>
-                    <Select 
-                      value={formData.evidence_source} 
-                      onValueChange={(value) => setFormData({...formData, evidence_source: value})}
+                    <Select
+                      value={formData.evidence_source}
+                      onValueChange={(value) => setFormData({ ...formData, evidence_source: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -323,7 +356,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       id="collected_date"
                       type="datetime-local"
                       value={formData.collected_date?.substring(0, 16)}
-                      onChange={(e) => setFormData({...formData, collected_date: e.target.value + ':00.000Z'})}
+                      onChange={(e) => setFormData({ ...formData, collected_date: e.target.value + ':00.000Z' })}
                     />
                   </div>
 
@@ -332,7 +365,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <Input
                       id="evidence_location"
                       value={formData.evidence_location}
-                      onChange={(e) => setFormData({...formData, evidence_location: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, evidence_location: e.target.value })}
                       placeholder="Onde a evidência está armazenada"
                     />
                   </div>
@@ -343,7 +376,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                   <Textarea
                     id="evidence_description"
                     value={formData.evidence_description}
-                    onChange={(e) => setFormData({...formData, evidence_description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, evidence_description: e.target.value })}
                     rows={4}
                     placeholder="Descrição detalhada da evidência..."
                   />
@@ -355,7 +388,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <Input
                       id="file_hash"
                       value={formData.file_hash}
-                      onChange={(e) => setFormData({...formData, file_hash: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, file_hash: e.target.value })}
                       placeholder="SHA-256 hash para verificação de integridade"
                     />
                   </div>
@@ -366,7 +399,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       id="file_size"
                       type="number"
                       value={formData.file_size}
-                      onChange={(e) => setFormData({...formData, file_size: parseInt(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, file_size: parseInt(e.target.value) })}
                     />
                   </div>
                 </div>
@@ -376,9 +409,9 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="preservation_status">Status de Preservação</Label>
-                    <Select 
-                      value={formData.preservation_status} 
-                      onValueChange={(value) => setFormData({...formData, preservation_status: value})}
+                    <Select
+                      value={formData.preservation_status}
+                      onValueChange={(value) => setFormData({ ...formData, preservation_status: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -398,7 +431,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       id="retention_period_months"
                       type="number"
                       value={formData.retention_period_months}
-                      onChange={(e) => setFormData({...formData, retention_period_months: parseInt(e.target.value)})}
+                      onChange={(e) => setFormData({ ...formData, retention_period_months: parseInt(e.target.value) })}
                     />
                   </div>
 
@@ -408,7 +441,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       id="destruction_date"
                       type="date"
                       value={formData.destruction_date}
-                      onChange={(e) => setFormData({...formData, destruction_date: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, destruction_date: e.target.value })}
                     />
                   </div>
                 </div>
@@ -418,7 +451,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <Checkbox
                       id="legal_hold"
                       checked={formData.legal_hold}
-                      onCheckedChange={(checked) => setFormData({...formData, legal_hold: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, legal_hold: checked as boolean })}
                     />
                     <Label htmlFor="legal_hold">Legal Hold (Retenção Legal)</Label>
                   </div>
@@ -429,7 +462,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       <Textarea
                         id="legal_hold_reason"
                         value={formData.legal_hold_reason}
-                        onChange={(e) => setFormData({...formData, legal_hold_reason: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, legal_hold_reason: e.target.value })}
                         rows={2}
                         placeholder="Explicar por que a evidência está em legal hold..."
                       />
@@ -444,7 +477,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <Checkbox
                       id="privileged"
                       checked={formData.privileged}
-                      onCheckedChange={(checked) => setFormData({...formData, privileged: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, privileged: checked as boolean })}
                     />
                     <Label htmlFor="privileged">Informação Privilegiada</Label>
                   </div>
@@ -452,9 +485,9 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                   {formData.privileged && (
                     <div>
                       <Label htmlFor="privilege_type">Tipo de Privilégio</Label>
-                      <Select 
-                        value={formData.privilege_type} 
-                        onValueChange={(value) => setFormData({...formData, privilege_type: value})}
+                      <Select
+                        value={formData.privilege_type}
+                        onValueChange={(value) => setFormData({ ...formData, privilege_type: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -472,7 +505,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <Checkbox
                       id="access_restricted"
                       checked={formData.access_restricted}
-                      onCheckedChange={(checked) => setFormData({...formData, access_restricted: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, access_restricted: checked as boolean })}
                     />
                     <Label htmlFor="access_restricted">Acesso Restrito</Label>
                   </div>
@@ -483,7 +516,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                       <Textarea
                         id="access_reason"
                         value={formData.access_reason}
-                        onChange={(e) => setFormData({...formData, access_reason: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, access_reason: e.target.value })}
                         rows={2}
                         placeholder="Por que o acesso é restrito..."
                       />
@@ -556,12 +589,12 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     <div>
                       <CardTitle className="text-lg">
                         {item.evidence_type === 'document' ? 'Documento' :
-                         item.evidence_type === 'digital' ? 'Evidência Digital' :
-                         item.evidence_type === 'physical' ? 'Evidência Física' :
-                         item.evidence_type === 'testimony' ? 'Testemunho' :
-                         item.evidence_type === 'electronic' ? 'Eletrônico' :
-                         item.evidence_type === 'financial' ? 'Financeiro' :
-                         item.evidence_type}
+                          item.evidence_type === 'digital' ? 'Evidência Digital' :
+                            item.evidence_type === 'physical' ? 'Evidência Física' :
+                              item.evidence_type === 'testimony' ? 'Testemunho' :
+                                item.evidence_type === 'electronic' ? 'Eletrônico' :
+                                  item.evidence_type === 'financial' ? 'Financeiro' :
+                                    item.evidence_type}
                       </CardTitle>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Coletado em {format(new Date(item.collected_date), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
@@ -583,13 +616,16 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     )}
                     <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(item.preservation_status)}`}>
                       {item.preservation_status === 'active' ? 'Ativo' :
-                       item.preservation_status === 'archived' ? 'Arquivado' :
-                       item.preservation_status === 'destroyed' ? 'Destruído' :
-                       item.preservation_status === 'transferred' ? 'Transferido' :
-                       item.preservation_status}
+                        item.preservation_status === 'archived' ? 'Arquivado' :
+                          item.preservation_status === 'destroyed' ? 'Destruído' :
+                            item.preservation_status === 'transferred' ? 'Transferido' :
+                              item.preservation_status}
                     </Badge>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -670,6 +706,23 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta evidência? Esta ação é irreversível e será registrada para fins de auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

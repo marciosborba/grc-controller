@@ -10,7 +10,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Bell,
   AlertTriangle,
   CheckCircle,
@@ -27,7 +37,8 @@ import {
   ExternalLink,
   Download,
   Eye,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { format, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -116,15 +127,16 @@ const REGULATORY_BODIES = {
   }
 };
 
-const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps> = ({ 
+const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps> = ({
   reportId,
-  onUpdate 
+  onUpdate
 }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<RegulatoryNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingNotification, setEditingNotification] = useState<RegulatoryNotification | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<RegulatoryNotification>>({
     regulatory_body: 'SEC',
     notification_type: 'mandatory',
@@ -147,18 +159,18 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
       setIsLoading(false);
       return;
     }
-    
+
     try {
       let query = supabase
         .from('ethics_regulatory_notifications')
         .select('*');
-      
+
       if (reportId) {
         query = query.eq('ethics_report_id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
-      
+
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -190,7 +202,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
       const notificationData = {
         ...formData,
         ethics_report_id: reportId,
-        tenant_id: user?.tenant_id,
+        tenant_id: user?.tenantId,
         created_by: user?.id,
         updated_at: new Date().toISOString()
       };
@@ -200,14 +212,14 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
           .from('ethics_regulatory_notifications')
           .update(notificationData)
           .eq('id', editingNotification.id);
-        
+
         if (error) throw error;
         toast.success('Notificação regulatória atualizada com sucesso');
       } else {
         const { error } = await supabase
           .from('ethics_regulatory_notifications')
           .insert(notificationData);
-        
+
         if (error) throw error;
         toast.success('Notificação regulatória criada com sucesso');
       }
@@ -229,6 +241,28 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
     } catch (error) {
       console.error('Error saving regulatory notification:', error);
       toast.error('Erro ao salvar notificação regulatória');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('ethics_regulatory_notifications')
+        .delete()
+        .eq('id', itemToDelete);
+
+      if (error) throw error;
+
+      toast.success('Notificação regulatória excluída com sucesso');
+      fetchRegulatoryNotifications();
+      onUpdate?.();
+    } catch (error) {
+      console.error('Error deleting regulatory notification:', error);
+      toast.error('Erro ao excluir notificação regulatória');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -255,7 +289,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
         .eq('id', notificationId);
 
       if (error) throw error;
-      
+
       toast.success('Status da notificação atualizado');
       fetchRegulatoryNotifications();
     } catch (error) {
@@ -325,7 +359,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                 {editingNotification ? 'Editar Notificação Regulatória' : 'Nova Notificação Regulatória'}
               </DialogTitle>
             </DialogHeader>
-            
+
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
@@ -338,9 +372,9 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="regulatory_body">Órgão Regulador</Label>
-                    <Select 
-                      value={formData.regulatory_body} 
-                      onValueChange={(value) => setFormData({...formData, regulatory_body: value})}
+                    <Select
+                      value={formData.regulatory_body}
+                      onValueChange={(value) => setFormData({ ...formData, regulatory_body: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -349,7 +383,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         {Object.entries(REGULATORY_BODIES).map(([key, body]) => (
                           <SelectItem key={key} value={key}>
                             <div className="flex items-center gap-2">
-                              <div 
+                              <div
                                 className={`w-2 h-2 rounded-full ${getUrgencyColor(body.urgency)}`}
                               />
                               {body.name}
@@ -367,9 +401,9 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
                   <div>
                     <Label htmlFor="notification_type">Tipo de Notificação</Label>
-                    <Select 
-                      value={formData.notification_type} 
-                      onValueChange={(value) => setFormData({...formData, notification_type: value})}
+                    <Select
+                      value={formData.notification_type}
+                      onValueChange={(value) => setFormData({ ...formData, notification_type: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -385,9 +419,9 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
                   <div>
                     <Label htmlFor="notification_status">Status</Label>
-                    <Select 
-                      value={formData.notification_status} 
-                      onValueChange={(value) => setFormData({...formData, notification_status: value})}
+                    <Select
+                      value={formData.notification_status}
+                      onValueChange={(value) => setFormData({ ...formData, notification_status: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -408,7 +442,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                       id="notification_deadline"
                       type="date"
                       value={formData.notification_deadline}
-                      onChange={(e) => setFormData({...formData, notification_deadline: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, notification_deadline: e.target.value })}
                     />
                   </div>
                 </div>
@@ -418,7 +452,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                   <Input
                     id="notification_trigger"
                     value={formData.notification_trigger}
-                    onChange={(e) => setFormData({...formData, notification_trigger: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, notification_trigger: e.target.value })}
                     placeholder="Evento ou circunstância que requer a notificação"
                   />
                 </div>
@@ -428,7 +462,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                   <Textarea
                     id="notification_content"
                     value={formData.notification_content}
-                    onChange={(e) => setFormData({...formData, notification_content: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, notification_content: e.target.value })}
                     rows={4}
                     placeholder="Conteúdo detalhado da notificação..."
                   />
@@ -439,9 +473,9 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="submission_method">Método de Submissão</Label>
-                    <Select 
-                      value={formData.submission_method} 
-                      onValueChange={(value) => setFormData({...formData, submission_method: value})}
+                    <Select
+                      value={formData.submission_method}
+                      onValueChange={(value) => setFormData({ ...formData, submission_method: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -462,7 +496,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                       id="submission_date"
                       type="datetime-local"
                       value={formData.submission_date?.substring(0, 16)}
-                      onChange={(e) => setFormData({...formData, submission_date: e.target.value + ':00.000Z'})}
+                      onChange={(e) => setFormData({ ...formData, submission_date: e.target.value + ':00.000Z' })}
                     />
                   </div>
 
@@ -471,7 +505,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                     <Input
                       id="submission_reference"
                       value={formData.submission_reference}
-                      onChange={(e) => setFormData({...formData, submission_reference: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, submission_reference: e.target.value })}
                       placeholder="Número de protocolo ou referência"
                     />
                   </div>
@@ -482,7 +516,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                       id="response_date"
                       type="datetime-local"
                       value={formData.response_date?.substring(0, 16)}
-                      onChange={(e) => setFormData({...formData, response_date: e.target.value + ':00.000Z'})}
+                      onChange={(e) => setFormData({ ...formData, response_date: e.target.value + ':00.000Z' })}
                     />
                   </div>
                 </div>
@@ -492,7 +526,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                   <Textarea
                     id="regulator_response"
                     value={formData.regulator_response}
-                    onChange={(e) => setFormData({...formData, regulator_response: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, regulator_response: e.target.value })}
                     rows={4}
                     placeholder="Resposta recebida do órgão regulador..."
                   />
@@ -503,7 +537,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                     <Checkbox
                       id="follow_up_required"
                       checked={formData.follow_up_required}
-                      onCheckedChange={(checked) => setFormData({...formData, follow_up_required: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, follow_up_required: checked as boolean })}
                     />
                     <Label htmlFor="follow_up_required">Follow-up Necessário</Label>
                   </div>
@@ -515,7 +549,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         id="follow_up_deadline"
                         type="date"
                         value={formData.follow_up_deadline}
-                        onChange={(e) => setFormData({...formData, follow_up_deadline: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, follow_up_deadline: e.target.value })}
                       />
                     </div>
                   )}
@@ -528,7 +562,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                     <Checkbox
                       id="legal_counsel_involved"
                       checked={formData.legal_counsel_involved}
-                      onCheckedChange={(checked) => setFormData({...formData, legal_counsel_involved: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, legal_counsel_involved: checked as boolean })}
                     />
                     <Label htmlFor="legal_counsel_involved">Advogado Envolvido</Label>
                   </div>
@@ -537,7 +571,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                     <Checkbox
                       id="privilege_concerns"
                       checked={formData.privilege_concerns}
-                      onCheckedChange={(checked) => setFormData({...formData, privilege_concerns: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, privilege_concerns: checked as boolean })}
                     />
                     <Label htmlFor="privilege_concerns">Preocupações com Privilégio Legal</Label>
                   </div>
@@ -546,7 +580,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                     <Checkbox
                       id="confidentiality_requested"
                       checked={formData.confidentiality_requested}
-                      onCheckedChange={(checked) => setFormData({...formData, confidentiality_requested: checked as boolean})}
+                      onCheckedChange={(checked) => setFormData({ ...formData, confidentiality_requested: checked as boolean })}
                     />
                     <Label htmlFor="confidentiality_requested">Confidencialidade Solicitada</Label>
                   </div>
@@ -557,7 +591,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                   <Textarea
                     id="communication_restrictions"
                     value={formData.communication_restrictions}
-                    onChange={(e) => setFormData({...formData, communication_restrictions: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, communication_restrictions: e.target.value })}
                     rows={3}
                     placeholder="Quaisquer restrições na comunicação com o regulador..."
                   />
@@ -567,9 +601,9 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               <TabsContent value="impact" className="space-y-4">
                 <div>
                   <Label htmlFor="public_disclosure_risk">Risco de Divulgação Pública</Label>
-                  <Select 
-                    value={formData.public_disclosure_risk} 
-                    onValueChange={(value) => setFormData({...formData, public_disclosure_risk: value})}
+                  <Select
+                    value={formData.public_disclosure_risk}
+                    onValueChange={(value) => setFormData({ ...formData, public_disclosure_risk: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -589,7 +623,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                   <Textarea
                     id="business_impact_assessment"
                     value={formData.business_impact_assessment}
-                    onChange={(e) => setFormData({...formData, business_impact_assessment: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, business_impact_assessment: e.target.value })}
                     rows={4}
                     placeholder="Análise do potencial impacto nos negócios..."
                   />
@@ -634,7 +668,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
           {notifications.map((notification) => {
             const regulatoryBody = REGULATORY_BODIES[notification.regulatory_body as keyof typeof REGULATORY_BODIES];
             const overdue = isOverdue(notification.notification_deadline);
-            
+
             return (
               <Card key={notification.id} className={`hover:shadow-md transition-shadow ${overdue ? 'border-red-200' : ''}`}>
                 <CardHeader>
@@ -647,10 +681,10 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         </CardTitle>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           {notification.notification_type === 'mandatory' ? 'Obrigatória' :
-                           notification.notification_type === 'voluntary' ? 'Voluntária' :
-                           notification.notification_type === 'whistleblower' ? 'Whistleblower' :
-                           notification.notification_type === 'cooperation' ? 'Cooperação' :
-                           notification.notification_type}
+                            notification.notification_type === 'voluntary' ? 'Voluntária' :
+                              notification.notification_type === 'whistleblower' ? 'Whistleblower' :
+                                notification.notification_type === 'cooperation' ? 'Cooperação' :
+                                  notification.notification_type}
                         </p>
                       </div>
                     </div>
@@ -669,14 +703,17 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                       )}
                       <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(notification.notification_status)}`}>
                         {notification.notification_status === 'pending' ? 'Pendente' :
-                         notification.notification_status === 'prepared' ? 'Preparada' :
-                         notification.notification_status === 'submitted' ? 'Submetida' :
-                         notification.notification_status === 'acknowledged' ? 'Reconhecida' :
-                         notification.notification_status === 'closed' ? 'Fechada' :
-                         notification.notification_status}
+                          notification.notification_status === 'prepared' ? 'Preparada' :
+                            notification.notification_status === 'submitted' ? 'Submetida' :
+                              notification.notification_status === 'acknowledged' ? 'Reconhecida' :
+                                notification.notification_status === 'closed' ? 'Fechada' :
+                                  notification.notification_status}
                       </Badge>
                       <Button variant="ghost" size="sm" onClick={() => handleEdit(notification)}>
                         <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setItemToDelete(notification.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -710,16 +747,16 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         <span>Risco: </span>
                         <Badge className={`text-xs px-1 py-0.5 ${getRiskColor(notification.public_disclosure_risk)}`}>
                           {notification.public_disclosure_risk === 'none' ? 'Nenhum' :
-                           notification.public_disclosure_risk === 'low' ? 'Baixo' :
-                           notification.public_disclosure_risk === 'medium' ? 'Médio' :
-                           notification.public_disclosure_risk === 'high' ? 'Alto' :
-                           notification.public_disclosure_risk === 'certain' ? 'Certo' :
-                           notification.public_disclosure_risk}
+                            notification.public_disclosure_risk === 'low' ? 'Baixo' :
+                              notification.public_disclosure_risk === 'medium' ? 'Médio' :
+                                notification.public_disclosure_risk === 'high' ? 'Alto' :
+                                  notification.public_disclosure_risk === 'certain' ? 'Certo' :
+                                    notification.public_disclosure_risk}
                         </Badge>
                       </div>
                       {regulatoryBody && (
                         <div className="flex items-center gap-2">
-                          <div 
+                          <div
                             className={`w-3 h-3 rounded-full ${getUrgencyColor(regulatoryBody.urgency)}`}
                           />
                           <span>Urgência: {regulatoryBody.urgency}</span>
@@ -738,8 +775,8 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
                     <div className="flex gap-2 pt-2 border-t">
                       {notification.notification_status === 'pending' && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => updateStatus(notification.id, 'prepared')}
                         >
                           <FileText className="h-4 w-4 mr-1" />
@@ -747,8 +784,8 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         </Button>
                       )}
                       {notification.notification_status === 'prepared' && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => updateStatus(notification.id, 'submitted')}
                         >
                           <Send className="h-4 w-4 mr-1" />
@@ -756,8 +793,8 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         </Button>
                       )}
                       {notification.notification_status === 'submitted' && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => updateStatus(notification.id, 'acknowledged')}
                         >
@@ -779,6 +816,23 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
           })}
         </div>
       )}
+
+      <AlertDialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta notificação regulatória? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
