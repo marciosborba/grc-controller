@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 // Select components removidos - não mais necessários
-import { 
-  Settings, 
-  Users, 
-  Shield, 
-  Key, 
-  Mail, 
-  Globe, 
-  Activity, 
-  Database, 
-  Download, 
+import {
+  Settings,
+  Users,
+  Shield,
+  Key,
+  Mail,
+  Globe,
+  Activity,
+  Database,
+  Download,
   Lock,
   AlertTriangle,
   CheckCircle,
@@ -50,6 +50,8 @@ import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 // import { DataExportSection } from './sections/DataExportSection';
 // import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
 // import { CryptoKeysSection } from './sections/CryptoKeysSection';
+import { AISettingsTab } from './tabs/AISettingsTab';
+
 
 // Componentes compartilhados removidos temporariamente
 
@@ -83,35 +85,35 @@ interface SettingsMetrics {
 // Interface movida para TenantSelectorContext
 
 const TenantSettingsPage: React.FC = () => {
-  const { user, tenant } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [metrics, setMetrics] = useState<SettingsMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Estados do Enhanced Modal removidos junto com o módulo Assessment
   // const [showEnhancedModal, setShowEnhancedModal] = useState(false);
   // const [enhancedModalMode, setEnhancedModalMode] = useState<'create' | 'edit'>('create');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
+
   // Usar contexto global de seleção de tenant
-  const { 
-    selectedTenantId, 
-    isGlobalTenantSelection 
+  const {
+    selectedTenantId,
+    isGlobalTenantSelection
   } = useTenantSelector();
 
   // Verificar permissões
   const isPlatformAdmin = user?.isPlatformAdmin || user?.roles?.includes('platform_admin');
-  const isTenantAdmin = user?.role === 'tenant_admin' || user?.role === 'admin';
+  const isTenantAdmin = user?.roles?.includes('tenant_admin') || user?.roles?.includes('admin');
   const hasAccess = isPlatformAdmin || isTenantAdmin;
-  
+
   // Debug de permissões removido para evitar erros
-  
+
   // O contexto já gerencia isso automaticamente
   const currentTenantId = selectedTenantId;
 
   // O contexto global já carrega os tenants automaticamente
-  
+
   useEffect(() => {
     if (currentTenantId) {
       loadTenantInfo(currentTenantId);
@@ -120,30 +122,30 @@ const TenantSettingsPage: React.FC = () => {
   }, [currentTenantId]);
 
   // Função removida - agora gerenciada pelo TenantSelectorContext
-  
+
   const loadTenantInfo = async (tenantId: string) => {
     if (!tenantId) return;
-    
+
     try {
       setIsLoading(true);
-      
+
       // Buscar informações reais da tenant no banco
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('id, name, slug, subscription_plan, max_users, current_users_count, created_at, settings')
         .eq('id', tenantId)
         .single();
-        
+
       if (tenantError) {
         toast.error('Erro ao carregar informações da organização');
         return;
       }
-      
+
       if (!tenantData) {
         toast.error('Tenant não encontrada');
         return;
       }
-      
+
       // Montar informações da tenant com dados reais
       const realTenantInfo: TenantInfo = {
         id: tenantData.id,
@@ -159,7 +161,7 @@ const TenantSettingsPage: React.FC = () => {
           compliance_frameworks: Array.isArray(tenantData.settings?.compliance_frameworks) ? tenantData.settings.compliance_frameworks : []
         }
       };
-      
+
 
       setTenantInfo(realTenantInfo);
     } catch (error) {
@@ -171,10 +173,10 @@ const TenantSettingsPage: React.FC = () => {
 
   const loadMetrics = async (tenantId: string) => {
     if (!tenantId) return;
-    
+
     try {
-      
-      
+
+
       // Carregar dados reais do banco de dados
       const promises = [
         // 1. Contar usuários totais e ativos
@@ -182,7 +184,7 @@ const TenantSettingsPage: React.FC = () => {
           .from('profiles')
           .select('id, user_id, created_at')
           .eq('tenant_id', tenantId),
-          
+
         // 2. Contar atividades suspeitas (activity_logs com ações de segurança)
         supabase
           .from('activity_logs')
@@ -190,7 +192,7 @@ const TenantSettingsPage: React.FC = () => {
           .eq('tenant_id', tenantId)
           .in('action', ['failed_login', 'suspicious_activity', 'security_violation'])
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-          
+
         // 3. Buscar último backup (activity_logs com ação de backup)
         supabase
           .from('activity_logs')
@@ -199,14 +201,14 @@ const TenantSettingsPage: React.FC = () => {
           .eq('action', 'backup_created')
           .order('created_at', { ascending: false })
           .limit(1),
-          
+
         // 4. Contar frameworks de compliance
         supabase
           .from('compliance_frameworks')
           .select('id')
           .eq('tenant_id', tenantId)
           .eq('is_active', true),
-          
+
         // 5. Contar sessões ativas (activity_logs de login nas últimas 24h)
         supabase
           .from('activity_logs')
@@ -215,7 +217,7 @@ const TenantSettingsPage: React.FC = () => {
           .eq('action', 'login')
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       ];
-      
+
       const [
         usersResult,
         suspiciousResult,
@@ -223,7 +225,7 @@ const TenantSettingsPage: React.FC = () => {
         frameworksResult,
         sessionsResult
       ] = await Promise.all(promises);
-      
+
       // Processar resultados
       // Contar apenas usuários ativos (excluir inativos do total)
       const { data: activeProfilesData } = await supabase
@@ -231,20 +233,20 @@ const TenantSettingsPage: React.FC = () => {
         .select('id')
         .eq('tenant_id', tenantId)
         .eq('is_active', true);
-        
+
       const totalUsers = activeProfilesData?.length || 0;
       const activeUsers = activeProfilesData?.length || 0;
-      
+
       // Métricas: total = usuários ativos, activeUsers = usuários ativos (mesmo valor)
-      
+
       const suspiciousActivities = suspiciousResult.data?.length || 0;
-      const lastBackup = backupResult.data?.[0]?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const lastBackup = (backupResult.data?.[0] as any)?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const frameworksCount = frameworksResult.data?.length || 0;
-      
+
       // Contar sessões únicas (por user_id)
       const uniqueUserSessions = new Set(sessionsResult.data?.map(s => s.user_id) || []);
       const activeSessions = uniqueUserSessions.size;
-      
+
       // Calcular score de segurança baseado em dados reais
       let securityScore = 50; // Base
       if (frameworksCount > 0) securityScore += 20; // +20 por ter frameworks
@@ -252,7 +254,7 @@ const TenantSettingsPage: React.FC = () => {
       if (totalUsers > 0) securityScore += 10; // +10 por ter usuários
       if (activeSessions > 0) securityScore += 5; // +5 por ter sessões ativas
       securityScore = Math.min(securityScore, 100); // Máximo 100
-      
+
       const realMetrics: SettingsMetrics = {
         totalUsers,
         activeUsers,
@@ -264,10 +266,10 @@ const TenantSettingsPage: React.FC = () => {
         activeSessions,
         suspiciousActivities
       };
-      
+
 
       setMetrics(realMetrics);
-      
+
       // Atualizar também o current_users no tenantInfo para manter consistência
       if (tenantInfo) {
         setTenantInfo(prev => prev ? {
@@ -276,7 +278,7 @@ const TenantSettingsPage: React.FC = () => {
         } : prev);
       }
     } catch (error) {
-      
+
       // Fallback com dados mínimos em caso de erro
       const fallbackMetrics: SettingsMetrics = {
         totalUsers: 0,
@@ -289,7 +291,7 @@ const TenantSettingsPage: React.FC = () => {
         activeSessions: 0,
         suspiciousActivities: 0
       };
-      
+
       setMetrics(fallbackMetrics);
     }
   };
@@ -328,17 +330,17 @@ const TenantSettingsPage: React.FC = () => {
             <Settings className="h-8 w-8 text-primary" />
             <span>Configurações da Organização</span>
             {isPlatformAdmin && (
-              <Crown className="h-6 w-6 text-orange-500" title="Super Administrador" />
+              <Crown className="h-6 w-6 text-orange-500" />
             )}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            {isPlatformAdmin 
+            {isPlatformAdmin
               ? 'Gerencie configurações de todas as organizações da plataforma'
               : 'Gerencie todas as configurações e políticas da sua organização'
             }
           </p>
-          
-          
+
+
           {/* Info da Tenant */}
           {tenantInfo && (
             <div className="flex items-center space-x-4 text-sm mt-2">
@@ -346,8 +348,8 @@ const TenantSettingsPage: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                 <span className="text-green-600 font-medium">{tenantInfo.name}</span>
               </div>
-              <Badge 
-                variant="secondary" 
+              <Badge
+                variant="secondary"
                 className="text-xs bg-muted text-muted-foreground border-muted-foreground/20"
               >
                 {tenantInfo.subscription_plan}
@@ -364,7 +366,7 @@ const TenantSettingsPage: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* Botão "Salvar Alterações" removido - não tinha funcionalidade */}
       </div>
 
@@ -385,7 +387,7 @@ const TenantSettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -397,7 +399,7 @@ const TenantSettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -409,7 +411,7 @@ const TenantSettingsPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -439,7 +441,7 @@ const TenantSettingsPage: React.FC = () => {
 
       {/* Tabs de Configuração */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
           <TabsTrigger value="overview" className="flex items-center space-x-1">
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -472,6 +474,10 @@ const TenantSettingsPage: React.FC = () => {
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Logs</span>
           </TabsTrigger>
+          <TabsTrigger value="ai-config" className="flex items-center space-x-1">
+            <Zap className="h-4 w-4" />
+            <span className="hidden sm:inline">IA</span>
+          </TabsTrigger>
           {/* Aba Enhanced Designer removida junto com o módulo Assessment */}
         </TabsList>
 
@@ -488,8 +494,8 @@ const TenantSettingsPage: React.FC = () => {
                   <div>
                     <h3 className="font-semibold">Gerenciar Usuários</h3>
                     <p className="text-sm text-muted-foreground">Adicionar, editar e remover usuários</p>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="mt-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
                     >
                       {String(metrics?.totalUsers || 0)} usuários
@@ -509,8 +515,8 @@ const TenantSettingsPage: React.FC = () => {
                   <div>
                     <h3 className="font-semibold">Configurar Segurança</h3>
                     <p className="text-sm text-muted-foreground">Políticas e controles de acesso</p>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="mt-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-200 dark:border-green-700"
                     >
                       Score: {String(metrics?.securityScore || 0)}%
@@ -530,8 +536,8 @@ const TenantSettingsPage: React.FC = () => {
                   <div>
                     <h3 className="font-semibold">Backup e Dados</h3>
                     <p className="text-sm text-muted-foreground">Backup e exportação de dados</p>
-                    <Badge 
-                      variant="secondary" 
+                    <Badge
+                      variant="secondary"
                       className="mt-1 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
                     >
                       {String(metrics?.storageUsed || 0)}GB usado
@@ -577,8 +583,8 @@ const TenantSettingsPage: React.FC = () => {
         {/* Placeholder para outras tabs - COMENTADOS PARA DEBUG */}
         {/* Gerenciamento de Usuários */}
         <TabsContent value="users">
-          <UserManagementSection 
-            tenantId={currentTenantId} 
+          <UserManagementSection
+            tenantId={currentTenantId}
             onMetricsUpdate={(userMetrics) => {
               if (metrics) {
                 setMetrics(prev => prev ? {
@@ -587,7 +593,7 @@ const TenantSettingsPage: React.FC = () => {
                   activeUsers: userMetrics.activeUsers
                 } : prev);
               }
-              
+
               // Atualizar também o tenantInfo para manter consistência
               if (tenantInfo) {
                 setTenantInfo(prev => prev ? {
@@ -607,13 +613,13 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="risk-matrix">
-          {console.log('🎯 RENDERIZANDO ABA MATRIZ DE RISCO NO TENANT SETTINGS!')}
-          <RiskMatrixConfigSection 
-            tenantId={currentTenantId} 
+          {/* console.log('🎯 RENDERIZANDO ABA MATRIZ DE RISCO NO TENANT SETTINGS!') */}
+          <RiskMatrixConfigSection
+            tenantId={currentTenantId}
             onSettingsChange={() => {
               console.log('🎯 Configurações da matriz de risco alteradas');
               setHasUnsavedChanges(true);
-            }} 
+            }}
           />
         </TabsContent>
 
@@ -645,9 +651,13 @@ const TenantSettingsPage: React.FC = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="ai-config">
+          <AISettingsTab tenantId={currentTenantId} />
+        </TabsContent>
+
         {/* Aba Enhanced Designer removida junto com o módulo Assessment */}
       </Tabs>
-      
+
       {/* Modal do Enhanced Designer removido junto com o módulo Assessment */}
     </div>
   );

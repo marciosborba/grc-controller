@@ -4,7 +4,7 @@ import { LayoutDashboard, Shield, AlertTriangle, FileCheck, Users, ClipboardList
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -267,7 +267,7 @@ const navigationItems = [{
     title: 'IA Manager',
     url: '/ai-manager',
     icon: Brain,
-    permissions: ['platform_admin'],
+    permissions: ['platform_admin', 'tenant_admin', 'admin'],
     description: 'Configuração e gestão de assistentes de IA'
   }, {
     title: 'Global Settings ',
@@ -332,7 +332,7 @@ const TEST_ROLES = [
 
 export function AppSidebar() {
   console.log('🚀 [SIDEBAR] AppSidebar iniciando...');
-  
+
   const {
     state
   } = useSidebar();
@@ -341,7 +341,7 @@ export function AppSidebar() {
   const {
     user
   } = useAuth();
-  
+
   console.log('👤 [SIDEBAR] User no sidebar:', {
     userExists: !!user,
     email: user?.email,
@@ -358,7 +358,7 @@ export function AppSidebar() {
 
   const collapsed = state === "collapsed";
   const currentPath = location.pathname;
-  
+
   // Carregar roles do banco de dados
   useEffect(() => {
     if (user?.isPlatformAdmin || user?.roles?.includes('super_admin')) {
@@ -379,17 +379,17 @@ export function AppSidebar() {
     return () => window.removeEventListener('rolesUpdated', handleRolesUpdated);
   }, [user]);
 
-  
+
   const loadDatabaseRoles = async () => {
     try {
       setLoadingRoles(true);
       console.log('💾 [ROLES] Carregando roles do banco de dados...');
-      
+
       // Timeout para evitar travamento
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout ao carregar roles')), 5000)
       );
-      
+
       const queryPromise = supabase
         .from('custom_roles')
         .select('*')
@@ -409,7 +409,7 @@ export function AppSidebar() {
 
       console.log(`✅ [SIDEBAR] ${roles?.length || 0} roles carregadas do banco`);
       setDatabaseRoles(roles || []);
-      
+
       // Se não há roles no banco, usar apenas Super Admin
       if (!roles || roles.length === 0) {
         console.log('📝 [SIDEBAR] Nenhuma role encontrada no banco, usando apenas Super Admin');
@@ -417,23 +417,23 @@ export function AppSidebar() {
         setAvailableTestRoles(superAdminOnly);
         return;
       }
-      
+
       // Converter roles do banco para formato de teste
       const convertedRoles = convertDatabaseRolesToTestRoles(roles);
-      
+
       // Sempre incluir Super Admin (role real do usuário) + roles do banco
       const superAdmin = TEST_ROLES.find(r => r.id === '1' || r.name === 'super_admin');
       const allRoles = superAdmin ? [superAdmin, ...convertedRoles] : convertedRoles;
-      
+
       setAvailableTestRoles(allRoles);
       console.log(`🧪 [SIDEBAR] ${allRoles.length} roles disponíveis para teste (1 sistema + ${convertedRoles.length} banco)`);
-      
+
       // Garantir que a role atual seja válida
       const updatedSuperAdmin = allRoles.find(r => r.id === '1' || r.name === 'super_admin');
       if (updatedSuperAdmin && !isTestingRole) {
         setCurrentTestRole(updatedSuperAdmin);
       }
-      
+
     } catch (error) {
       console.error('❌ Erro inesperado ao carregar roles:', error);
       // Em caso de erro, usar apenas Super Admin (role real do usuário)
@@ -477,23 +477,23 @@ export function AppSidebar() {
     };
     return iconMap[iconName] || Users;
   };
-  
+
   // Funções para teste de roles
   const handleRoleChange = (roleId: string) => {
     if (!user?.isPlatformAdmin && !user?.roles?.includes('super_admin')) return;
-    
+
     const role = availableTestRoles.find(r => r.id === roleId);
     if (!role) return;
-    
+
     const wasTestingBefore = isTestingRole;
     // Mostrar como teste quando seleciona qualquer role diferente da role original do usuário
     // Apenas Super Admin (ID '1') é a role original, todas as outras são teste
     const isOriginalRole = roleId === '1'; // '1' é o ID do Super Admin (role original)
     const isTestingNow = !isOriginalRole;
-    
+
     setCurrentTestRole(role);
     setIsTestingRole(isTestingNow);
-    
+
     console.log(`🧪 [ROLE TESTING] Role changed:`, {
       from: currentTestRole?.displayName,
       to: role.displayName,
@@ -503,27 +503,27 @@ export function AppSidebar() {
       roleId,
       permissions: role.permissions
     });
-    
-      // Debug específico para role Auditor
-      if (role.name === 'auditor' || role.name === 'Auditor') {
-        console.log('👁️ [AUDITOR SELECTED] Role Auditor selecionada:', {
-          roleId: role.id,
-          roleName: role.name,
-          displayName: role.displayName,
-          permissions: role.permissions,
-          isTestingNow,
-          expectedModules: ['Relatórios', 'Gestão'],
-          permissionAnalysis: {
-            'audit.read': role.permissions.includes('audit.read'),
-            'assessment.read': role.permissions.includes('assessment.read'),
-            'report.read': role.permissions.includes('report.read'),
-            // 'compliance.read': removido - módulo excluído
-            'all': role.permissions.includes('all'),
-            '*': role.permissions.includes('*')
-          }
-        });
-      }
-    
+
+    // Debug específico para role Auditor
+    if (role.name === 'auditor' || role.name === 'Auditor') {
+      console.log('👁️ [AUDITOR SELECTED] Role Auditor selecionada:', {
+        roleId: role.id,
+        roleName: role.name,
+        displayName: role.displayName,
+        permissions: role.permissions,
+        isTestingNow,
+        expectedModules: ['Relatórios', 'Gestão'],
+        permissionAnalysis: {
+          'audit.read': role.permissions.includes('audit.read'),
+          'assessment.read': role.permissions.includes('assessment.read'),
+          'report.read': role.permissions.includes('report.read'),
+          // 'compliance.read': removido - módulo excluído
+          'all': role.permissions.includes('all'),
+          '*': role.permissions.includes('*')
+        }
+      });
+    }
+
     // Forçar re-render do sidebar
     setTimeout(() => {
       console.log(`🔄 [ROLE TESTING] State updated:`, {
@@ -531,33 +531,33 @@ export function AppSidebar() {
         isTestingRole: isTestingNow,
         permissions: role.permissions
       });
-      
+
       // Teste direto de permissões para role Auditor
       if ((role.name === 'auditor' || role.name === 'Auditor') && isTestingNow) {
         console.log('🧪 [AUDITOR TEST] Testando permissões diretamente:');
-        
+
         const moduleTests = [
           { name: 'Gestão de Auditoria', permissions: ['audit.read', 'all'] },
           { name: 'Assessments', permissions: ['assessment.read', 'all'] },
           { name: 'Relatórios', permissions: ['report.read', 'all'] },
           // { name: 'Conformidade', permissions: ['compliance.read', 'all'] } - removido
         ];
-        
+
         moduleTests.forEach(test => {
-          const hasAccess = test.permissions.some(p => 
-            role.permissions.includes(p) || 
-            role.permissions.includes('*') || 
+          const hasAccess = test.permissions.some(p =>
+            role.permissions.includes(p) ||
+            role.permissions.includes('*') ||
             role.permissions.includes('all')
           );
-          console.log(`- ${test.name}:`, { 
-            required: test.permissions, 
+          console.log(`- ${test.name}:`, {
+            required: test.permissions,
             hasAccess,
             matchingPermissions: test.permissions.filter(p => role.permissions.includes(p))
           });
         });
       }
     }, 100);
-    
+
     // Mostrar toast informativo
     if (roleId === '1') { // Super Admin - role original
       toast.success('👑 Usando sua role original: Super Administrador');
@@ -573,7 +573,7 @@ export function AppSidebar() {
       console.log('❌ [PERMISSION] No user found');
       return false;
     }
-    
+
     // Debug específico para assessment.read
     const isAssessmentCheck = permissions.includes('assessment.read');
     if (isAssessmentCheck) {
@@ -586,20 +586,20 @@ export function AppSidebar() {
         currentTestRole: currentTestRole?.name
       });
     }
-    
+
     // Identificar o módulo para debug
     const moduleTitle = permissions.includes('audit.read') ? 'Gestão de Auditoria' :
-                       permissions.includes('assessment.read') ? 'Assessments' :
-                       permissions.includes('report.read') ? 'Relatórios' :
-                       permissions.includes('compliance.read') ? 'Conformidade' :
-                       permissions.includes('risk.read') ? 'Gestão de Riscos' :
-                       permissions.includes('incident.read') ? 'Incidentes' :
-                       permissions.includes('privacy.read') ? 'Privacidade' :
-                       permissions.includes('vendor.read') ? 'Vendor Risk' :
-                       permissions.includes('platform_admin') ? 'Platform Admin' :
-                       permissions.includes('action_plans.read') ? 'Planos de Ação' :
-                       permissions.includes('all') ? 'Módulo Público' : 'Desconhecido';
-    
+      permissions.includes('assessment.read') ? 'Assessments' :
+        permissions.includes('report.read') ? 'Relatórios' :
+          permissions.includes('compliance.read') ? 'Conformidade' :
+            permissions.includes('risk.read') ? 'Gestão de Riscos' :
+              permissions.includes('incident.read') ? 'Incidentes' :
+                permissions.includes('privacy.read') ? 'Privacidade' :
+                  permissions.includes('vendor.read') ? 'Vendor Risk' :
+                    permissions.includes('platform_admin') ? 'Platform Admin' :
+                      permissions.includes('action_plans.read') ? 'Planos de Ação' :
+                        permissions.includes('all') ? 'Módulo Público' : 'Desconhecido';
+
     // MODO DE TESTE DE ROLE
     if (isTestingRole && currentTestRole) {
       console.log(`🧪 [ROLE TEST] Verificando ${moduleTitle} para role de teste:`, {
@@ -608,25 +608,25 @@ export function AppSidebar() {
         requiredPermissions: permissions,
         testRolePermissions: currentTestRole.permissions
       });
-      
+
       // Permitir acesso ao dropdown de teste mesmo em modo de teste
       if (permissions.includes('platform_admin')) {
         const hasAccess = user.isPlatformAdmin;
         console.log(`🔧 [PLATFORM ADMIN] Acesso ao dropdown de teste: ${hasAccess}`);
         return hasAccess;
       }
-      
+
       // Verificar permissões da role de teste
       const hasTestPermission = permissions.some(permission => {
         // Verificar permissão específica
         const hasSpecific = currentTestRole.permissions.includes(permission);
-        
+
         // Verificar se role tem permissão '*' (acesso total - apenas para super admins)
         const hasSuperAccess = currentTestRole.permissions.includes('*');
-        
+
         return hasSpecific || hasSuperAccess;
       });
-      
+
       // Debug detalhado para role Auditor
       if (currentTestRole.name === 'auditor' || currentTestRole.name === 'Auditor') {
         console.log(`👁️ [AUDITOR DEBUG] Verificação detalhada para ${moduleTitle}:`, {
@@ -640,58 +640,58 @@ export function AppSidebar() {
           finalResult: hasTestPermission
         });
       }
-      
+
       console.log(`🧪 [${hasTestPermission ? '✅' : '❌'}] ${moduleTitle} - Role: ${currentTestRole.displayName}`, {
         hasAccess: hasTestPermission,
-        matchingPermissions: permissions.filter(p => 
-          currentTestRole.permissions.includes(p) || 
-          currentTestRole.permissions.includes('*') || 
+        matchingPermissions: permissions.filter(p =>
+          currentTestRole.permissions.includes(p) ||
+          currentTestRole.permissions.includes('*') ||
           currentTestRole.permissions.includes('all')
         )
       });
-      
+
       return hasTestPermission;
     }
-    
+
     // MODO NORMAL (sem teste de role)
-    
+
     // Platform Admin sempre tem acesso (exceto quando testando)
     if (user.isPlatformAdmin) {
       console.log(`👑 [PLATFORM ADMIN] Acesso total para ${moduleTitle}`);
       return true;
     }
-    
+
     // Verificar permissão 'all' (acesso público)
     if (permissions.includes('all')) {
       console.log(`🌐 [PUBLIC ACCESS] Módulo público: ${moduleTitle}`);
       return true;
     }
-    
+
     // Verificar permissões específicas do usuário
     const userPermissions = user.permissions || [];
     const hasDirectPermission = permissions.some(permission => {
       // Verificar permissão específica
       const hasSpecific = userPermissions.includes(permission);
-      
+
       // Verificar se usuário tem permissão 'all' ou '*'
       const hasAllAccess = userPermissions.includes('all') || userPermissions.includes('*');
-      
+
       return hasSpecific || hasAllAccess;
     });
-    
+
     // Debug para usuários normais
     console.log(`👤 [USER PERMISSION] ${moduleTitle} - Usuário: ${user.name}`, {
       hasAccess: hasDirectPermission,
       userPermissions,
       requiredPermissions: permissions,
       userRoles: user.roles,
-      matchingPermissions: permissions.filter(p => 
-        userPermissions.includes(p) || 
-        userPermissions.includes('all') || 
+      matchingPermissions: permissions.filter(p =>
+        userPermissions.includes(p) ||
+        userPermissions.includes('all') ||
         userPermissions.includes('*')
       )
     });
-    
+
     return hasDirectPermission;
   };
   const isActive = (path: string) => {
@@ -734,181 +734,130 @@ export function AppSidebar() {
       method: 'NavLink click'
     });
     console.log('🧠 [AI MANAGER DEBUG] === FIM DEBUG CLIQUE ===');
-    
+
     // Não prevenir o comportamento padrão - deixar o NavLink funcionar normalmente
   };
   return <Sidebar className="border-r border-border" collapsible="icon">
-      {/* Header - Responsivo */}
-      <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
-        {!collapsed && <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GRC Controller</h1>
-              <div className="flex items-center gap-1">
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{getTenantDisplayName(user?.tenant)}</p>
-                {isTestingRole && currentTestRole && (
-                  <span className="text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-1 py-0.5 rounded text-nowrap">
-                    TESTE: {currentTestRole.name.toUpperCase()}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>}
-        <SidebarTrigger className="hover:bg-muted/50 p-1.5 sm:p-2 rounded-md" />
-      </div>
+    {/* Header - Responsivo */}
+    <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
+      {!collapsed && <div className="flex items-center space-x-2 min-w-0 flex-1">
+        <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GRC Controller</h1>
+          <div className="flex items-center gap-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{getTenantDisplayName(user?.tenant)}</p>
+            {isTestingRole && currentTestRole && (
+              <span className="text-[9px] sm:text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 px-1 py-0.5 rounded text-nowrap">
+                TESTE: {currentTestRole.name.toUpperCase()}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>}
+      <SidebarTrigger className="hover:bg-muted/50 p-1.5 sm:p-2 rounded-md" />
+    </div>
 
 
 
-      <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
-        {/* Log simples para debug */}
-        {console.log('🎯 [SIDEBAR RENDER] Estado atual:', {
-          userExists: !!user,
-          userEmail: user?.email,
-          userPermissions: user?.permissions,
-          userRoles: user?.roles,
-          isPlatformAdmin: user?.isPlatformAdmin,
-          collapsed
-        })}
-        
-        {navigationItems.map((group, groupIndex) => {
-          const filteredItems = group.items.filter(item => {
-    const hasAccess = hasPermission(item.permissions);
-    
-    // Debug específico para Assessments
-    if (item.title === 'Assessments') {
-      console.log('🎯 [ASSESSMENTS DEBUG] Verificando acesso ao módulo Assessments:', {
-        title: item.title,
-        requiredPermissions: item.permissions,
-        hasAccess,
+    <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
+      {/* Log simples para debug */}
+      {console.log('🎯 [SIDEBAR RENDER] Estado atual:', {
+        userExists: !!user,
+        userEmail: user?.email,
         userPermissions: user?.permissions,
         userRoles: user?.roles,
         isPlatformAdmin: user?.isPlatformAdmin,
-        isTestingRole,
-        currentTestRole: currentTestRole?.name
-      });
-    }
-    
-    // Debug específico para Planos de Ação
-    if (item.title === 'Planos de Ação') {
-      console.log('🎯 [ACTION PLANS DEBUG] Verificando acesso ao módulo Planos de Ação:', {
-        title: item.title,
-        requiredPermissions: item.permissions,
-        hasAccess,
-        userPermissions: user?.permissions,
-        userRoles: user?.roles,
-        isPlatformAdmin: user?.isPlatformAdmin,
-        isTestingRole,
-        currentTestRole: currentTestRole?.name
-      });
-    }
-    
-    return hasAccess;
-  });
-          
-          // Debug: mostrar itens filtrados
-          if (isTestingRole && currentTestRole) {
-            console.log(`📊 [FILTERED ITEMS] Grupo "${group.label}":`, {
-              totalItems: group.items.length,
-              filteredItems: filteredItems.length,
-              visibleModules: filteredItems.map(item => item.title),
-              testRole: currentTestRole.name
+        collapsed
+      })}
+
+      {navigationItems.map((group, groupIndex) => {
+        const filteredItems = group.items.filter(item => {
+          const hasAccess = hasPermission(item.permissions);
+
+          // Debug específico para Assessments
+          if (item.title === 'Assessments') {
+            console.log('🎯 [ASSESSMENTS DEBUG] Verificando acesso ao módulo Assessments:', {
+              title: item.title,
+              requiredPermissions: item.permissions,
+              hasAccess,
+              userPermissions: user?.permissions,
+              userRoles: user?.roles,
+              isPlatformAdmin: user?.isPlatformAdmin,
+              isTestingRole,
+              currentTestRole: currentTestRole?.name
             });
           }
-          
-          // Não exibe o grupo se não há itens visíveis
-          if (filteredItems.length === 0) return null;
-          
-          return (
-            <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
-              {!collapsed && group.label !== 'Módulos' && (
-                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${
-                  group.label === 'Plataform Adm' 
-                    ? 'text-orange-600 dark:text-orange-400' 
-                    : 'text-muted-foreground'
+
+          // Debug específico para Planos de Ação
+          if (item.title === 'Planos de Ação') {
+            console.log('🎯 [ACTION PLANS DEBUG] Verificando acesso ao módulo Planos de Ação:', {
+              title: item.title,
+              requiredPermissions: item.permissions,
+              hasAccess,
+              userPermissions: user?.permissions,
+              userRoles: user?.roles,
+              isPlatformAdmin: user?.isPlatformAdmin,
+              isTestingRole,
+              currentTestRole: currentTestRole?.name
+            });
+          }
+
+          return hasAccess;
+        });
+
+        // Debug: mostrar itens filtrados
+        if (isTestingRole && currentTestRole) {
+          console.log(`📊 [FILTERED ITEMS] Grupo "${group.label}":`, {
+            totalItems: group.items.length,
+            filteredItems: filteredItems.length,
+            visibleModules: filteredItems.map(item => item.title),
+            testRole: currentTestRole.name
+          });
+        }
+
+        // Não exibe o grupo se não há itens visíveis
+        if (filteredItems.length === 0) return null;
+
+        return (
+          <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
+            {!collapsed && group.label !== 'Módulos' && (
+              <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Plataform Adm'
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-muted-foreground'
                 }`}>
-                  {group.label}
-                </SidebarGroupLabel>
-              )}
-              
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredItems.map(item => (
-                    <SidebarMenuItem key={item.title}>
-                      {/* Se o item tem submenu, renderizar diferente */}
-                      {item.submenu ? (
-                        <div className="space-y-1">
-                          {/* Item principal - navega para o primeiro item do submenu */}
-                          <SidebarMenuButton asChild>
-                            <NavLink
-                              to={item.submenu[0].url} // Navega para o primeiro item do submenu (Alex Assessment Engine)
-                              className={`${getNavCls(isActive(item.url) || item.submenu.some(sub => isActive(sub.url)))} flex items-center w-full px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 group mb-1`}
-                              title={item.title}
-                              onClick={() => {
-                                console.log(`🔗 [SIDEBAR DEBUG] Clicando em ${item.title}, navegando para:`, item.submenu[0].url);
-                                console.log(`🔐 [PERMISSION CHECK] Permissões do usuário:`, {
-                                  isPlatformAdmin: user?.isPlatformAdmin,
-                                  permissions: user?.permissions,
-                                  roles: user?.roles,
-                                  requiredForAssessment: ['assessment.read']
-                                });
-                              }}
-                            >
-                              <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                              {!collapsed && (
-                                <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
-                                    <ChevronRight className="h-3 w-3 transition-transform group-hover:rotate-90 flex-shrink-0" />
-                                  </div>
-                                  <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
-                                    {item.description}
-                                  </p>
-                                </div>
-                              )}
-                            </NavLink>
-                          </SidebarMenuButton>
-                          
-                          {/* Submenu items - sempre visível para Assessment */}
-                          {!collapsed && item.submenu.map(subItem => (
-                            <SidebarMenuButton asChild key={subItem.title}>
-                              <NavLink
-                                to={subItem.url}
-                                className={`${getNavCls(isActive(subItem.url))} flex items-center w-full px-4 sm:px-6 py-2 sm:py-3 ml-2 rounded-lg transition-all duration-200 group text-sm`}
-                                title={subItem.title}
-                              >
-                                <subItem.icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                <div className="ml-2 flex-1 min-w-0">
-                                  <span className="text-xs sm:text-sm font-medium truncate">{subItem.title}</span>
-                                  {subItem.title === 'Alex Assessment Engine' && (
-                                    <div className="flex items-center gap-1 mt-0.5">
-                                      <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200">
-                                        IA
-                                      </Badge>
-                                      <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
-                                        NOVO
-                                      </Badge>
-                                    </div>
-                                  )}
-                                </div>
-                              </NavLink>
-                            </SidebarMenuButton>
-                          ))}
-                        </div>
-                      ) : (
-                        /* Item normal sem submenu */
+                {group.label}
+              </SidebarGroupLabel>
+            )}
+
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredItems.map(item => (
+                  <SidebarMenuItem key={item.title}>
+                    {/* Se o item tem submenu, renderizar diferente */}
+                    {item.submenu ? (
+                      <div className="space-y-1">
+                        {/* Item principal - navega para o primeiro item do submenu */}
                         <SidebarMenuButton asChild>
-                          <NavLink 
-                            to={item.url} 
-                            className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
-                            title={collapsed ? item.title : ''}
-                            onClick={item.title === 'IA Manager' ? (e) => handleAIManagerClick(item, e) : undefined}
+                          <NavLink
+                            to={item.submenu[0].url} // Navega para o primeiro item do submenu (Alex Assessment Engine)
+                            className={`${getNavCls(isActive(item.url) || item.submenu.some(sub => isActive(sub.url)))} flex items-center w-full px-2 sm:px-3 py-3 sm:py-4 rounded-lg transition-all duration-200 group mb-1`}
+                            title={item.title}
+                            onClick={() => {
+                              console.log(`🔗 [SIDEBAR DEBUG] Clicando em ${item.title}, navegando para:`, item.submenu[0].url);
+                              console.log(`🔐 [PERMISSION CHECK] Permissões do usuário:`, {
+                                isPlatformAdmin: user?.isPlatformAdmin,
+                                permissions: user?.permissions,
+                                roles: user?.roles,
+                                requiredForAssessment: ['assessment.read']
+                              });
+                            }}
                           >
                             <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                             {!collapsed && (
                               <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
-                                  <ChevronRight className="h-2 w-2 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                  <ChevronRight className="h-3 w-3 transition-transform group-hover:rotate-90 flex-shrink-0" />
                                 </div>
                                 <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
                                   {item.description}
@@ -917,105 +866,154 @@ export function AppSidebar() {
                             )}
                           </NavLink>
                         </SidebarMenuButton>
-                      )}
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          );
-        })}
-        
-        {/* Role Testing Dropdown - No final do sidebar */}
-        {(user?.isPlatformAdmin || user?.roles?.includes('super_admin')) && (
-          <div className="mt-auto p-3 border-t border-border">
-            {!collapsed && (
-              <div className="mb-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <TestTube className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-                  <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
-                    Teste de Roles
+
+                        {/* Submenu items - sempre visível para Assessment */}
+                        {!collapsed && item.submenu.map(subItem => (
+                          <SidebarMenuButton asChild key={subItem.title}>
+                            <NavLink
+                              to={subItem.url}
+                              className={`${getNavCls(isActive(subItem.url))} flex items-center w-full px-4 sm:px-6 py-2 sm:py-3 ml-2 rounded-lg transition-all duration-200 group text-sm`}
+                              title={subItem.title}
+                            >
+                              <subItem.icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                              <div className="ml-2 flex-1 min-w-0">
+                                <span className="text-xs sm:text-sm font-medium truncate">{subItem.title}</span>
+                                {subItem.title === 'Alex Assessment Engine' && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200">
+                                      IA
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-[9px] px-1 py-0 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200">
+                                      NOVO
+                                    </Badge>
+                                  </div>
+                                )}
+                              </div>
+                            </NavLink>
+                          </SidebarMenuButton>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Item normal sem submenu */
+                      <SidebarMenuButton asChild>
+                        <NavLink
+                          to={item.url}
+                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`}
+                          title={collapsed ? item.title : ''}
+                          onClick={item.title === 'IA Manager' ? (e) => handleAIManagerClick(item, e) : undefined}
+                        >
+                          <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                          {!collapsed && (
+                            <div className="ml-2 sm:ml-3 flex-1 min-w-0 py-[1px] sm:py-[2px]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs sm:text-sm font-medium truncate">{item.title}</span>
+                                <ChevronRight className="h-2 w-2 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                              </div>
+                              <p className="text-[10px] sm:text-xs opacity-75 mt-0 sm:mt-0.5 truncate leading-tight">
+                                {item.description}
+                              </p>
+                            </div>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    )}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        );
+      })}
+
+      {/* Role Testing Dropdown - No final do sidebar */}
+      {(user?.isPlatformAdmin || user?.roles?.includes('super_admin')) && (
+        <div className="mt-auto p-3 border-t border-border">
+          {!collapsed && (
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <TestTube className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                  Teste de Roles
+                </span>
+              </div>
+              {isTestingRole && (
+                <div className="flex items-center gap-1 mb-2">
+                  <AlertTriangle className="h-3 w-3 text-amber-500" />
+                  <span className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                    Modo de teste ativo
                   </span>
                 </div>
-                {isTestingRole && (
-                  <div className="flex items-center gap-1 mb-2">
-                    <AlertTriangle className="h-3 w-3 text-amber-500" />
-                    <span className="text-[9px] sm:text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                      Modo de teste ativo
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            <Select value={currentTestRole.id} onValueChange={handleRoleChange}>
-              <SelectTrigger 
-                className={`${
-                  collapsed 
-                    ? 'w-10 h-10 p-0 justify-center' 
-                    : 'w-full h-auto py-2 px-3'
+              )}
+            </div>
+          )}
+
+          <Select value={currentTestRole.id} onValueChange={handleRoleChange}>
+            <SelectTrigger
+              className={`${collapsed
+                  ? 'w-10 h-10 p-0 justify-center'
+                  : 'w-full h-auto py-2 px-3'
                 } border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/50 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors`}
-                title={collapsed ? currentTestRole.displayName : ''}
-              >
-                {collapsed ? (
-                  <currentTestRole.icon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                ) : (
-                  <SelectValue>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <currentTestRole.icon className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-xs sm:text-sm font-medium text-orange-800 dark:text-orange-200 truncate">
-                          {currentTestRole.displayName}
-                        </span>
-                        {isTestingRole && (
-                          <Badge 
-                            variant="outline" 
-                            className="text-[9px] px-1 py-0 h-4 bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700"
-                          >
-                            TESTE
-                          </Badge>
-                        )}
-                      </div>
+              title={collapsed ? currentTestRole.displayName : ''}
+            >
+              {collapsed ? (
+                <currentTestRole.icon className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              ) : (
+                <SelectValue>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <currentTestRole.icon className="h-4 w-4 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs sm:text-sm font-medium text-orange-800 dark:text-orange-200 truncate">
+                        {currentTestRole.displayName}
+                      </span>
+                      {isTestingRole && (
+                        <Badge
+                          variant="outline"
+                          className="text-[9px] px-1 py-0 h-4 bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700"
+                        >
+                          TESTE
+                        </Badge>
+                      )}
                     </div>
-                  </SelectValue>
-                )}
-              </SelectTrigger>
-              
-              <SelectContent className="w-64">
-                {loadingRoles ? (
-                  <div className="flex items-center justify-center py-4">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
-                    <span className="text-sm text-muted-foreground">Carregando roles...</span>
                   </div>
-                ) : (
-                  availableTestRoles.map((role) => {
-                    const isCurrentRole = role.id === currentTestRole.id;
-                    const isDatabaseRole = databaseRoles.some(dbRole => dbRole.id === role.id);
-                    
-                    return (
-                      <SelectItem 
-                        key={role.id} 
-                        value={role.id}
-                        className="cursor-pointer py-2 px-3"
-                      >
-                        <div className="flex items-center gap-3 w-full">
-                          <role.icon className="h-4 w-4 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm">
-                              {role.displayName}
-                            </span>
-                          </div>
+                </SelectValue>
+              )}
+            </SelectTrigger>
+
+            <SelectContent className="w-64">
+              {loadingRoles ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                  <span className="text-sm text-muted-foreground">Carregando roles...</span>
+                </div>
+              ) : (
+                availableTestRoles.map((role) => {
+                  const isCurrentRole = role.id === currentTestRole.id;
+                  const isDatabaseRole = databaseRoles.some(dbRole => dbRole.id === role.id);
+
+                  return (
+                    <SelectItem
+                      key={role.id}
+                      value={role.id}
+                      className="cursor-pointer py-2 px-3"
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <role.icon className="h-4 w-4 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm">
+                            {role.displayName}
+                          </span>
                         </div>
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </SidebarContent>
+                      </div>
+                    </SelectItem>
+                  );
+                })
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </SidebarContent>
 
 
-    </Sidebar>
+  </Sidebar>
 }

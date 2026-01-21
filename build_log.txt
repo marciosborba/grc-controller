@@ -1,0 +1,29 @@
+
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+vite v5.4.19 building for production...
+transforming...
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 4688 modules transformed.
+x Build failed in 19.49s
+error during build:
+src/components/auditorias/RelatoriosAuditoria.tsx (3:9): "default" is not exported by "src/components/auditorias/RelatoriosAuditoriaSecure.tsx", imported by "src/components/auditorias/RelatoriosAuditoria.tsx".
+file: /home/marciosb/grc/grc-controller/src/components/auditorias/RelatoriosAuditoria.tsx:3:9
+
+1: // Re-export do componente seguro para manter compatibilidade com as rotas
+2: export { RelatoriosAuditoriaSecure as RelatoriosAuditoria } from './RelatoriosAuditoriaSecure';
+3: export { default } from './RelatoriosAuditoriaSecure';
+            ^
+
+    at getRollupError (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at error (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/parseAst.js:397:42)
+    at Module.error (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:16875:16)
+    at Module.getVariableForExportName (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:17039:29)
+    at Module.includeAllExports (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:17123:37)
+    at Module.includeDynamicImport (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:17619:28)
+    at ImportExpression.includeNode (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:13174:28)
+    at ImportExpression.includePath (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:13179:18)
+    at ArrowFunctionExpression.includeNode (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:11457:19)
+    at ArrowFunctionExpression.includePath (file:///home/marciosb/grc/grc-controller/node_modules/rollup/dist/es/shared/node-entry.js:2265:18)

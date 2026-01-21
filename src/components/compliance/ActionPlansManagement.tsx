@@ -124,7 +124,6 @@ export function ActionPlansManagement() {
       priority: editPlanForm.priority as any,
       due_date: editPlanForm.dueDate,
       status: editPlanForm.status as any,
-      status: editPlanForm.status as any,
       objetivo: editPlanForm.objetivo,
       causa_raiz: editPlanForm.causa_raiz,
       responsavel_id: editPlanForm.responsavel_id
