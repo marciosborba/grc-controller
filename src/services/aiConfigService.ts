@@ -21,6 +21,8 @@ export interface AIUsageStats {
     requests_by_day: { date: string; count: number }[];
 }
 
+export const PLATFORM_TENANT_ID = '46b1c048-85a1-423b-96fc-776007c8de1f';
+
 export const aiConfigService = {
     /**
      * Fetch all AI providers configured for a tenant
@@ -101,7 +103,7 @@ export const aiConfigService = {
     },
 
     /**
-     * Get basic usage stats
+     * Get usage stats
      */
     getUsageStats: async (tenantId: string): Promise<AIUsageStats> => {
         // This aggregates from ai_usage_logs
@@ -137,5 +139,154 @@ export const aiConfigService = {
         });
 
         return stats;
+    },
+
+    /**
+     * Get the effective provider (Tenant Override > Platform Default)
+     */
+    getEffectiveProvider: async (tenantId: string, platformTenantId: string = PLATFORM_TENANT_ID): Promise<AIProvider | null> => {
+        // 1. Try to find a primary provider for the specific tenant
+        const { data: localProvider, error: localError } = await supabase
+            .from('ai_grc_providers')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .eq('is_primary', true)
+            .eq('is_active', true)
+            .single();
+
+        if (!localError && localProvider) {
+            return localProvider;
+        }
+
+        // 2. If no local provider, check platform master logic
+        // We use the platformTenantId (defaulting to the known GRC Controller ID) to find the fallback
+        if (platformTenantId && tenantId !== platformTenantId) {
+            const { data: masterProvider, error: masterError } = await supabase
+                .from('ai_grc_providers')
+                .select('*')
+                .eq('tenant_id', platformTenantId)
+                .eq('is_primary', true)
+                .eq('is_active', true)
+                .single();
+
+            if (!masterError && masterProvider) {
+                // Return master provider but indicate it is a fallback if needed by the caller
+                // For now, we return it as is, the caller typically just needs a working provider.
+                return { ...masterProvider, is_primary: false };
+            }
+        }
+
+        return null;
+    },
+
+    /**
+     * --- PROMPTS MANAGEMENT ---
+     */
+    getPrompts: async (tenantId: string): Promise<AIPromptTemplate[]> => {
+        const { data, error } = await supabase
+            .from('ai_grc_prompt_templates')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    upsertPrompt: async (prompt: Partial<AIPromptTemplate>) => {
+        const { data, error } = await supabase
+            .from('ai_grc_prompt_templates')
+            .upsert({
+                id: prompt.id,
+                tenant_id: prompt.tenant_id,
+                name: prompt.name,
+                title: prompt.title || prompt.name, // Auto-fill title if missing
+                category: prompt.category,
+                description: prompt.description,
+                template_content: prompt.template_content,
+                use_case: prompt.use_case || prompt.description, // Auto-fill use_case if missing
+                is_active: prompt.is_active,
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    deletePrompt: async (id: string) => {
+        const { error } = await supabase
+            .from('ai_grc_prompt_templates')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    /**
+     * --- WORKFLOWS MANAGEMENT ---
+     */
+    getWorkflows: async (tenantId: string): Promise<AIWorkflow[]> => {
+        const { data, error } = await supabase
+            .from('ai_workflows')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    upsertWorkflow: async (workflow: Partial<AIWorkflow>) => {
+        const { data, error } = await supabase
+            .from('ai_workflows')
+            .upsert({
+                id: workflow.id,
+                tenant_id: workflow.tenant_id,
+                name: workflow.name,
+                is_active: workflow.is_active,
+                status: workflow.status,
+                // Add other fields as necessary if schema expands
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    deleteWorkflow: async (id: string) => {
+        const { error } = await supabase
+            .from('ai_workflows')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     }
 };
+
+// --- Additional Interfaces ---
+
+export interface AIPromptTemplate {
+    id: string;
+    tenant_id: string;
+    name: string;
+    title?: string;
+    is_active: boolean;
+    category: string;
+    description?: string;
+    template_content?: string;
+    use_case?: string;
+    created_at?: string;
+}
+
+export interface AIWorkflow {
+    id: string;
+    tenant_id: string;
+    name: string;
+    is_active: boolean;
+    status: string;
+    created_at?: string;
+}
