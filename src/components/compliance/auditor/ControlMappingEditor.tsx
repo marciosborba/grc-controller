@@ -85,7 +85,8 @@ export const ControlMappingEditor: React.FC<ControlMappingEditorProps> = ({ matc
                                 onValueChange={(val) => setAdequacyScore(val[0])}
                                 max={100}
                                 step={5}
-                                className="py-2"
+                                disabled={status === 'non_compliant'}
+                                className={`py-2 ${status === 'non_compliant' ? 'opacity-50 cursor-not-allowed' : ''}`}
                             />
                             <p className="text-xs text-muted-foreground">O quanto este controle atende ao requisito do framework.</p>
                         </div>
@@ -98,17 +99,26 @@ export const ControlMappingEditor: React.FC<ControlMappingEditorProps> = ({ matc
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Initial">Inicial (Ad-hoc)</SelectItem>
-                                        <SelectItem value="Managed">Gerenciado</SelectItem>
-                                        <SelectItem value="Defined">Definido</SelectItem>
-                                        <SelectItem value="Quantitatively Managed">Gerenciado Quantitativamente</SelectItem>
-                                        <SelectItem value="Optimizing">Em Otimização</SelectItem>
+                                        <SelectItem value="Initial">Inicial (Ad-hoc) {status === 'non_compliant' && '(Obrigatório)'}</SelectItem>
+                                        <SelectItem value="Managed" disabled={status === 'non_compliant'}>Gerenciado</SelectItem>
+                                        <SelectItem value="Defined" disabled={status === 'non_compliant'}>Definido</SelectItem>
+                                        <SelectItem value="Quantitatively Managed" disabled={status === 'non_compliant'}>Gerenciado Quantitativamente</SelectItem>
+                                        <SelectItem value="Optimizing" disabled={status === 'non_compliant'}>Em Otimização</SelectItem>
+                                        <SelectItem value="Not Assessed" disabled={status === 'non_compliant'}>Definir (Manual)</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label>Status</Label>
-                                <Select value={status} onValueChange={setStatus}>
+                                <Select value={status} onValueChange={(val) => {
+                                    setStatus(val);
+                                    // FORCE RESET Logic
+                                    if (val === 'non_compliant') {
+                                        setAdequacyScore(0);
+                                        setMaturityLevel('Initial');
+                                        toast.info('Controles Não Conformes reiniciados para 0% e Maturidade Inicial.');
+                                    }
+                                }}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>

@@ -80,7 +80,7 @@ export class GLMService {
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('Testando conexão GLM com API key:', this.apiKey.substring(0, 8) + '...');
-      
+
       const response = await this.chatCompletion({
         model: 'glm-4',
         messages: [
@@ -101,10 +101,10 @@ export class GLMService {
       }
     } catch (error: any) {
       console.error('Erro no teste de conexão GLM:', error);
-      
+
       // Tratamento de erros mais específico
       let errorMessage = 'Erro desconhecido na conexão';
-      
+
       if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
         errorMessage = 'Erro de rede ou CORS: Não foi possível conectar ao servidor GLM. Isso pode ser devido a políticas CORS do navegador. A API key parece válida.';
       } else if (error.message.includes('401')) {
@@ -120,9 +120,9 @@ export class GLMService {
       } else {
         errorMessage = error.message;
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         error: errorMessage
       };
     }
@@ -133,10 +133,10 @@ export class GLMService {
    */
   async chatCompletion(request: GLMChatRequest): Promise<GLMChatResponse> {
     try {
-      console.log('GLM Request:', {
+      console.log('🚀 [GLM Service] Sending Request:', {
         url: this.baseUrl,
         model: request.model,
-        messages: request.messages.length,
+        messagesCount: request.messages.length,
         temperature: request.temperature
       });
 
@@ -144,11 +144,14 @@ export class GLMService {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(request),
+      }).catch(fetchError => {
+        console.error('💥 [GLM Service] Network/Fetch Error:', fetchError);
+        throw new Error(`Network Error (CORS?): ${fetchError.message}`);
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('GLM API Error:', {
+        console.error('❌ [GLM Service] API Error Response:', {
           status: response.status,
           statusText: response.statusText,
           body: errorText
@@ -157,7 +160,7 @@ export class GLMService {
       }
 
       const data = await response.json();
-      console.log('GLM Response:', {
+      console.log('✅ [GLM Service] Response Received:', {
         id: data.id,
         model: data.model,
         usage: data.usage
@@ -165,8 +168,8 @@ export class GLMService {
 
       return data;
     } catch (error: any) {
-      console.error('Erro na chamada GLM:', error);
-      throw new Error(`Falha na comunicação com GLM: ${error.message}`);
+      console.error('🔥 [GLM Service] Method Exception:', error);
+      throw error;
     }
   }
 
@@ -206,7 +209,7 @@ Analise o risco apresentado e forneça:
 
 Seja objetivo e técnico na sua análise.`;
 
-    const userPrompt = context 
+    const userPrompt = context
       ? `Contexto: ${context}\n\nRisco a analisar: ${riskDescription}`
       : `Risco a analisar: ${riskDescription}`;
 

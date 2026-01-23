@@ -32,6 +32,9 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { AIPromptsTab } from './tabs/AIPromptsTab';
 import { AIWorkflowsTab } from './tabs/AIWorkflowsTab';
+import { AIFunctionMappingTab } from './tabs/AIFunctionMappingTab';
+
+
 import { AIUsageTab } from './tabs/AIUsageTab';
 import { AISettingsTabContent } from './tabs/AISettingsTabContent';
 import { AIPromptTemplate, AIWorkflow, aiConfigService } from '@/services/aiConfigService';
@@ -100,12 +103,38 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
         try {
             console.log(`🔄 [AI MANAGER CORE] Carregando dados para tenant: ${tenantId} (Modo: ${mode})`);
 
-            // 1. Providers
-            const { data: provData } = await supabase
-                .from('ai_grc_providers')
-                .select('*')
-                .eq('tenant_id', tenantId)
-                .order('created_at', { ascending: false });
+            // 1. Providers Logic (Local + Global Fallback)
+            let finalProviders: any[] = [];
+
+            if (mode === 'platform') {
+                // Platform Admin: Sees only Global Providers
+                const { data } = await supabase
+                    .from('ai_grc_providers')
+                    .select('*')
+                    .is('tenant_id', null)
+                    .order('created_at', { ascending: false });
+                finalProviders = data || [];
+            } else {
+                // Tenant: Sees Local Providers + Global Providers (Read-only)
+                const { data: localData } = await supabase
+                    .from('ai_grc_providers')
+                    .select('*')
+                    .eq('tenant_id', tenantId)
+                    .order('created_at', { ascending: false });
+
+                const { data: globalData } = await supabase
+                    .from('ai_grc_providers')
+                    .select('*')
+                    .is('tenant_id', null)
+                    .eq('is_active', true); // Tenant only sees ACTIVE global providers
+
+                finalProviders = [
+                    ...(localData || []),
+                    ...(globalData || [])
+                ];
+            }
+
+            const provData = finalProviders;
 
             setProviders((provData || []).map(p => ({
                 ...p,
@@ -235,6 +264,14 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
             count: totalRequests
         },
         {
+            title: 'Mapeamento de Funções',
+            description: 'Definir prompts por função (Auditoria, Risco, etc)',
+            icon: Brain,
+            color: 'pink',
+            action: () => setActiveTab('mappings'),
+            count: 0
+        },
+        {
             title: 'Configurações IA',
             description: 'Configurações gerais do sistema',
             icon: Settings,
@@ -328,6 +365,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                             { id: 'providers', label: 'Provedores', icon: Cpu },
                             { id: 'prompts', label: 'Prompts', icon: MessageSquare },
                             { id: 'workflows', label: 'Workflows', icon: Workflow },
+                            { id: 'mappings', label: 'Mapeamento', icon: Brain },
                             { id: 'usage', label: 'Uso', icon: Zap },
                             { id: 'settings', label: 'Configurações', icon: Settings },
                         ].map(tab => (
@@ -554,6 +592,14 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                                 <CardContent>
                                     <div className="space-y-3 text-sm mt-2">
                                         <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Origem:</span>
+                                            {provider.tenant_id ? (
+                                                <Badge variant="outline" className="text-xs">Local</Badge>
+                                            ) : (
+                                                <Badge className="bg-purple-500/10 text-purple-600 border-purple-200 text-xs hover:bg-purple-500/20">Global (Fallback)</Badge>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between">
                                             <span className="text-muted-foreground">Tipo:</span>
                                             <span className="uppercase font-mono text-xs bg-muted px-2 py-0.5 rounded">{provider.provider_type}</span>
                                         </div>
@@ -569,12 +615,25 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                                     {!readonly && (
                                         <div className="mt-4 pt-4 border-t flex gap-2">
                                             <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => toast.info('Teste de conexão simulado')}>Testar</Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => { setSelectedProvider(provider); setShowProviderModal(true); }}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => setProviderToDelete(provider.id)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+
+                                            {/* Only show Edit/Delete if it's a Local provider OR if we are in Platform mode */}
+                                            {(provider.tenant_id || mode === 'platform') && (
+                                                <>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => { setSelectedProvider(provider); setShowProviderModal(true); }}>
+                                                        <Pencil className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => setProviderToDelete(provider.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Read-only info for Global providers in Tenant mode */}
+                                            {!provider.tenant_id && mode !== 'platform' && (
+                                                <div className="ml-auto">
+                                                    <Lock className="h-4 w-4 text-muted-foreground opacity-50" />
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </CardContent>
@@ -608,6 +667,10 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
 
                 <TabsContent value="workflows">
                     <AIWorkflowsTab tenantId={tenantId} readonly={readonly} />
+                </TabsContent>
+
+                <TabsContent value="mappings">
+                    <AIFunctionMappingTab tenantId={tenantId} readonly={readonly} />
                 </TabsContent>
 
                 <TabsContent value="usage">

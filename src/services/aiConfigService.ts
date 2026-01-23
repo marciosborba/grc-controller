@@ -158,22 +158,18 @@ export const aiConfigService = {
             return localProvider;
         }
 
-        // 2. If no local provider, check platform master logic
-        // We use the platformTenantId (defaulting to the known GRC Controller ID) to find the fallback
-        if (platformTenantId && tenantId !== platformTenantId) {
-            const { data: masterProvider, error: masterError } = await supabase
-                .from('ai_grc_providers')
-                .select('*')
-                .eq('tenant_id', platformTenantId)
-                .eq('is_primary', true)
-                .eq('is_active', true)
-                .single();
+        // 2. If no local provider, check Global Fallback (tenant_id IS NULL)
+        const { data: globalProvider, error: globalError } = await supabase
+            .from('ai_grc_providers')
+            .select('*')
+            .is('tenant_id', null)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
 
-            if (!masterError && masterProvider) {
-                // Return master provider but indicate it is a fallback if needed by the caller
-                // For now, we return it as is, the caller typically just needs a working provider.
-                return { ...masterProvider, is_primary: false };
-            }
+        if (!globalError && globalProvider) {
+            // Return global provider with is_primary false to indicate it's a fallback
+            return { ...globalProvider, is_primary: false };
         }
 
         return null;
@@ -264,10 +260,73 @@ export const aiConfigService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    /**
+     * --- FUNCTION MAPPINGS ---
+     */
+    getFunctionMappings: async (tenantId: string): Promise<AIFunctionMapping[]> => {
+        const { data, error } = await supabase
+            .from('ai_function_mappings')
+            .select(`
+                *,
+                prompt_template:ai_grc_prompt_templates(id, name)
+            `)
+            .eq('tenant_id', tenantId);
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    upsertFunctionMapping: async (mapping: Partial<AIFunctionMapping>) => {
+        const { data, error } = await supabase
+            .from('ai_function_mappings')
+            .upsert({
+                id: mapping.id,
+                tenant_id: mapping.tenant_id,
+                function_key: mapping.function_key,
+                prompt_template_id: mapping.prompt_template_id,
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    getPromptForFunction: async (tenantId: string, functionKey: string): Promise<AIPromptTemplate | null> => {
+        // 1. Check explicit mapping
+        const { data: mapping } = await supabase
+            .from('ai_function_mappings')
+            .select('prompt_template_id')
+            .eq('tenant_id', tenantId)
+            .eq('function_key', functionKey)
+            .single();
+
+        if (mapping && mapping.prompt_template_id) {
+            const { data: template } = await supabase
+                .from('ai_grc_prompt_templates')
+                .select('*')
+                .eq('id', mapping.prompt_template_id)
+                .single();
+            return template;
+        }
+        return null;
     }
 };
 
 // --- Additional Interfaces ---
+
+export interface AIFunctionMapping {
+    id: string;
+    tenant_id: string;
+    function_key: string;
+    prompt_template_id: string;
+    prompt_template?: { id: string, name: string };
+    created_at?: string;
+    updated_at?: string;
+}
 
 export interface AIPromptTemplate {
     id: string;

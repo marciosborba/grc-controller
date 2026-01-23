@@ -18,67 +18,45 @@ interface GLMChatRequest {
   max_tokens?: number;
 }
 
-interface GLMChatResponse {
-  choices: {
-    message: {
-      content: string;
-    };
-  }[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { prompt, type = 'general', context } = await req.json();
-    console.log('Request received:', { prompt: prompt?.substring(0, 50), type, hasContext: !!context });
-    
-    // Obter token de autorização
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header missing');
-    }
-    console.log('Authorization header found');
+    const { prompt, type = 'general', context, system_prompt: overrideSystemPrompt } = await req.json();
+    console.log('Request received:', {
+      promptLength: prompt?.length,
+      type,
+      hasContext: !!context,
+      hasSystemPrompt: !!overrideSystemPrompt
+    });
 
-    // Inicializar cliente Supabase
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('Authorization header missing');
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
+      global: { headers: { Authorization: authHeader } },
     });
 
-    // Obter usuário atual
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      console.error('User authentication failed:', userError);
-      throw new Error('User not authenticated');
-    }
-    console.log('User authenticated:', user.id);
+    if (userError || !user) throw new Error('User not authenticated');
 
-    // Obter tenant do usuário
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('tenant_id')
       .eq('user_id', user.id)
       .single();
 
-    if (profileError || !profile) {
-      console.error('Profile lookup failed:', profileError);
-      throw new Error('User profile not found');
-    }
-    console.log('Profile found, tenant_id:', profile.tenant_id);
+    if (!profile) throw new Error('User profile not found');
+    console.log('Tenant Context:', profile.tenant_id);
 
-    // Buscar provedor GLM ativo
-    const { data: providers, error: providerError } = await supabase
+    // 1. Try Local GLM Provider
+    let providers: any[] = [];
+
+    const { data: localProviders } = await supabase
       .from('ai_grc_providers')
       .select('*')
       .eq('tenant_id', profile.tenant_id)
@@ -87,164 +65,193 @@ serve(async (req) => {
       .order('priority', { ascending: true })
       .limit(1);
 
-    if (providerError || !providers || providers.length === 0) {
-      console.error('Provider lookup failed:', providerError, 'Found providers:', providers?.length || 0);
-      throw new Error('No active GLM provider found');
+    if (localProviders && localProviders.length > 0) {
+      providers = localProviders;
+      console.log('Found Local Provider:', providers[0].name);
     }
-    console.log('GLM provider found:', providers[0].name);
+
+    // 2. Global Fallback
+    if (!providers || providers.length === 0) {
+      console.log('Checking Global Fallback...');
+
+      // Fetch ALL active providers this user can see via RLS
+      const { data: allActive, error: searchError } = await supabase
+        .from('ai_grc_providers')
+        .select('*')
+        .eq('is_active', true);
+
+      if (searchError) {
+        console.error('Provider Search Error:', searchError);
+      }
+
+      console.log('Visible Providers:', allActive?.length || 0);
+
+      // Filter for Global (tenant_id is null) in memory to be safe
+      const globalProviders = (allActive || []).filter(p => !p.tenant_id);
+
+      if (globalProviders.length > 0) {
+        // Sort by priority if multiple
+        globalProviders.sort((a, b) => (a.priority || 999) - (b.priority || 999));
+        providers = [globalProviders[0]];
+        console.log('Found Global Provider:', providers[0].name);
+      }
+    }
+
+    if (!providers || providers.length === 0) {
+      console.error('CRITICAL: No active provider found for user', user.id);
+      throw new Error(`No active AI provider found. visible=${providers?.length}`);
+    }
 
     const provider = providers[0];
+    console.log(`Using Provider: ${provider.name} (${provider.provider_type}) Model: ${provider.model_name}`);
 
-    // Buscar prompt específico do banco de dados baseado no tipo/módulo
+    // Fetch System Prompt
     let systemPrompt = '';
-    
-    // Mapear tipos de chat para prompts ALEX específicos
-    const typeToPromptName = {
-      risk: 'ALEX RISK - Especialista em Gestão de Riscos Corporativos',
-      compliance: 'ALEX COMPLIANCE - Especialista em Conformidade Regulatória',
-      audit: 'ALEX AUDIT - Especialista em Auditoria Big Four e IA',
-      policy: 'ALEX POLICY - Especialista em Políticas e Procedimentos Corporativos',
-      assessment: 'ALEX ASSESSMENT - Especialista em Assessments e Avaliações de Maturidade',
-      privacy: 'ALEX PRIVACY - Especialista em Privacidade de Dados e LGPD',
-      incident: 'ALEX INCIDENT - Especialista em Gestão de Incidentes',
-      vendor: 'ALEX VENDOR - Especialista em Riscos de Fornecedores e IA',
-      ethics: 'ALEX ETHICS - Especialista em Ética e Ouvidoria Corporativa',
-      general: 'ALEX RISK - Especialista em Gestão de Riscos Corporativos' // fallback para ALEX RISK
-    };
-    
-    const promptName = typeToPromptName[type] || typeToPromptName.general;
-    
-    console.log(`Looking for prompt: ${promptName} for type: ${type}`);
-    
-    // Buscar prompt template específico pelo nome
-    const { data: promptTemplates, error: promptError } = await supabase
-      .from('ai_grc_prompt_templates')
-      .select('template_content, name, id')
-      .eq('name', promptName)
-      .eq('is_active', true)
-      .limit(1);
-    
-    console.log('Prompt lookup result:', { 
-      promptError, 
-      foundTemplates: promptTemplates?.length || 0,
-      searchedName: promptName 
-    });
-    
-    if (promptTemplates && promptTemplates.length > 0) {
-      systemPrompt = promptTemplates[0].template_content;
-      console.log(`Using prompt template: ${promptTemplates[0].name}`);
+
+    if (overrideSystemPrompt) {
+      // Use user-provided prompt (e.g. from frontend service)
+      systemPrompt = overrideSystemPrompt;
+      console.log('Using Provided System Prompt Override');
     } else {
-      // Fallback para mensagens básicas se não encontrar template
-      const fallbackMessages = {
-        general: 'Você é um assistente especializado em GRC (Governança, Riscos e Compliance). Responda de forma clara, objetiva e profissional em português brasileiro.',
-        assessment: 'Você é ALEX ASSESSMENT - um especialista em assessments e avaliações de maturidade em GRC. Responda de forma clara, objetiva e profissional em português brasileiro, focando em metodologias de avaliação, frameworks de maturidade e boas práticas.',
-        risk: 'Você é ALEX RISK - um especialista em gestão de riscos corporativos. Responda de forma clara, objetiva e profissional em português brasileiro, focando em identificação, análise, avaliação e mitigação de riscos.',
-        audit: 'Você é ALEX AUDIT - um especialista em auditoria interna e externa. Responda de forma clara, objetiva e profissional em português brasileiro, focando em procedimentos de auditoria, controles internos e relatórios.',
-        policy: 'Você é ALEX POLICY - um especialista em políticas e procedimentos corporativos. Responda de forma clara, objetiva e profissional em português brasileiro, focando na criação e revisão de políticas organizacionais.',
-        compliance: 'Você é ALEX COMPLIANCE - um especialista em conformidade regulatória. Responda de forma clara, objetiva e profissional em português brasileiro, focando em frameworks regulatórios, controles de compliance e gestão de conformidade.'
+      // Fallback to Type-Based Database Lookup (Legacy)
+      const typeToPromptName: Record<string, string> = {
+        risk: 'ALEX RISK - Especialista em Gestão de Riscos Corporativos',
+        compliance: 'ALEX COMPLIANCE - Especialista em Conformidade Regulatória',
+        audit: 'ALEX AUDIT - Especialista em Auditoria Big Four e IA',
+        policy: 'ALEX POLICY - Especialista em Políticas e Procedimentos Corporativos',
+        assessment: 'ALEX ASSESSMENT - Especialista em Assessments e Avaliações de Maturidade',
+        privacy: 'ALEX PRIVACY - Especialista em Privacidade de Dados e LGPD',
+        incident: 'ALEX INCIDENT - Especialista em Gestão de Incidentes',
+        vendor: 'ALEX VENDOR - Especialista em Riscos de Fornecedores e IA',
+        ethics: 'ALEX ETHICS - Especialista em Ética e Ouvidoria Corporativa',
+        general: 'ALEX RISK - Especialista em Gestão de Riscos Corporativos'
       };
-      systemPrompt = fallbackMessages[type] || fallbackMessages.general;
-      console.log(`Using fallback prompt for type: ${type}`);
-    }
 
-    // Preparar mensagens para GLM
-    const messages: GLMMessage[] = [
-      {
-        role: 'system',
-        content: systemPrompt
-      },
-      {
-        role: 'user',
-        content: prompt
+      const promptName = typeToPromptName[type] || typeToPromptName.general;
+
+      const { data: promptTemplates } = await supabase
+        .from('ai_grc_prompt_templates')
+        .select('template_content')
+        .eq('name', promptName)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (promptTemplates && promptTemplates.length > 0) {
+        systemPrompt = promptTemplates[0].template_content;
+      } else {
+        systemPrompt = 'Você é um especialista em GRC. Responda em português brasileiro.';
       }
-    ];
-
-    // Adicionar contexto se fornecido
-    if (context) {
-      messages[0].content += `\n\nContexto adicional: ${JSON.stringify(context)}`;
     }
 
-    // Fazer chamada para GLM
-    const glmRequest: GLMChatRequest = {
-      model: provider.model_name,
-      messages,
-      temperature: provider.temperature || 0.7,
-      max_tokens: provider.max_output_tokens || 2000
-    };
+    let responseText = '';
+    let usageData: any = {};
 
-    console.log('Sending request to GLM:', {
-      model: glmRequest.model,
-      messagesCount: glmRequest.messages.length,
-      temperature: glmRequest.temperature
-    });
+    // --- GEMINI LOGIC ---
+    if (provider.provider_type === 'gemini') {
+      const geminiUrl = `${provider.endpoint_url}?key=${provider.api_key_encrypted}`;
 
-    const glmResponse = await fetch(provider.endpoint_url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${provider.api_key_encrypted}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(glmRequest),
-    });
+      const combinedPrompt = `${systemPrompt}\n\nCONTEXTO DO USUÁRIO:\n${JSON.stringify(context || {})}\n\nINSTRUÇÃO:\n${prompt}`;
 
-    if (!glmResponse.ok) {
-      const errorText = await glmResponse.text();
-      console.error(`GLM API error: ${glmResponse.status} - ${errorText}`);
-      throw new Error(`GLM API error: ${glmResponse.status} - ${errorText}`);
+      const payload = {
+        contents: [{
+          parts: [{ text: combinedPrompt }]
+        }],
+        generationConfig: {
+          temperature: Number(provider.temperature) || 0.7,
+          maxOutputTokens: Number(provider.max_output_tokens) || 8192
+        }
+      };
+
+      console.log('Sending to Gemini...');
+      const res = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Gemini API Error: ${res.status} - ${errText}`);
+      }
+
+      const data = await res.json();
+      if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+        responseText = data.candidates[0].content.parts[0].text;
+        usageData = data.usageMetadata || {};
+      } else {
+        throw new Error('Empty response from Gemini');
+      }
+
+    }
+    // --- LEGACY GLM LOGIC ---
+    else if (provider.provider_type === 'glm') {
+      const messages: GLMMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ];
+      if (context) messages[0].content += `\n\nContexto: ${JSON.stringify(context)}`;
+
+      const glmRequest: GLMChatRequest = {
+        model: provider.model_name,
+        messages,
+        temperature: Number(provider.temperature) || 0.7,
+        max_tokens: Number(provider.max_output_tokens) || 2000
+      };
+
+      const res = await fetch(provider.endpoint_url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${provider.api_key_encrypted}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(glmRequest),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`GLM API error: ${res.status} - ${errText}`);
+      }
+
+      const data = await res.json();
+      if (!data.choices || data.choices.length === 0) throw new Error('No response from GLM');
+      responseText = data.choices[0].message.content;
+      usageData = data.usage;
+
+    } else {
+      throw new Error(`Provider type ${provider.provider_type} not supported.`);
     }
 
-    const glmData: GLMChatResponse = await glmResponse.json();
-    console.log('GLM response received:', {
-      hasChoices: !!glmData.choices,
-      choicesLength: glmData.choices?.length || 0,
-      usage: glmData.usage
-    });
-
-    if (!glmData.choices || glmData.choices.length === 0) {
-      throw new Error('No response from GLM');
-    }
-
-    const responseText = glmData.choices[0].message.content;
-
-    // Log da requisição no banco
+    // Log Usage
     try {
-      const logData: any = {
-        request_id: crypto.randomUUID(),
+      await supabase.from('ai_usage_logs').insert({
         user_id: user.id,
         module_name: 'ai-chat',
         operation_type: 'prompt-execution',
         provider_id: provider.id,
         input_prompt_encrypted: prompt,
         output_response_encrypted: responseText,
-        tokens_input: glmData.usage?.prompt_tokens || 0,
-        tokens_output: glmData.usage?.completion_tokens || 0,
-        cost_usd: 0, // Calcular custo se necessário
+        tokens_input: usageData.promptTokenCount || usageData.prompt_tokens || 0,
+        tokens_output: usageData.candidatesTokenCount || usageData.completion_tokens || 0,
         tenant_id: profile.tenant_id
-      };
-      
-      // Adicionar template_id se um template foi usado
-      if (promptTemplates && promptTemplates.length > 0) {
-        logData.template_id = promptTemplates[0].id;
-      }
-      
-      await supabase.from('ai_usage_logs').insert(logData);
-    } catch (logError) {
-      console.warn('Failed to log usage:', logError);
+      });
+    } catch (e) {
+      console.warn('Logging failed', e);
     }
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       response: responseText,
-      usage: glmData.usage
+      usage: usageData
     }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
-  } catch (error) {
-    console.error('Error in ai-chat-glm function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message
+  } catch (error: any) {
+    console.error('Error in ai-chat-glm:', error);
+    return new Response(JSON.stringify({
+      error: error.message || String(error)
     }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
