@@ -39,6 +39,7 @@ import { AIUsageTab } from './tabs/AIUsageTab';
 import { AISettingsTabContent } from './tabs/AISettingsTabContent';
 import { AIPromptTemplate, AIWorkflow, aiConfigService } from '@/services/aiConfigService';
 import { AIProviderModal } from './modals/AIProviderModal';
+import { AIMetricsCards } from './AIMetricsCards';
 import { Pencil, Trash2 } from 'lucide-react';
 import {
     AlertDialog,
@@ -163,11 +164,19 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
 
             // 4. Usage Logs (Today)
             const today = new Date().toISOString().split('T')[0];
-            const { data: usageData } = await supabase
+
+            let logsQuery = supabase
                 .from('ai_usage_logs')
                 .select('id, created_at, tokens_input, tokens_output, cost_usd')
-                .eq('tenant_id', tenantId)
                 .gte('created_at', today);
+
+            // If Platform Admin, fetch ALL logs (Global View)
+            // If Tenant, fetch only their logs
+            if (mode !== 'platform') {
+                logsQuery = logsQuery.eq('tenant_id', tenantId);
+            }
+
+            const { data: usageData } = await logsQuery;
             setUsageLogs(usageData || []);
 
         } catch (error) {
@@ -385,67 +394,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                 <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                     {/* Metrics Grid */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card>
-                            <CardContent className="p-4 h-full">
-                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
-                                    <div className="flex justify-center mb-1 sm:mb-2">
-                                        <Cpu className="h-5 w-5 text-blue-500" />
-                                    </div>
-                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Provedores Ativos</p>
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        <p className="text-2xl font-bold text-foreground mb-1">{activeProviders.length}</p>
-                                        <p className="text-xs text-muted-foreground">{getProviderNames()}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4 h-full">
-                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
-                                    <div className="flex justify-center mb-1 sm:mb-2">
-                                        <MessageSquare className="h-5 w-5 text-purple-500" />
-                                    </div>
-                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Prompts Ativos</p>
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        <p className="text-2xl font-bold text-foreground mb-1">{activePrompts.length}</p>
-                                        <p className="text-xs text-muted-foreground">{prompts.length} total configurados</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4 h-full">
-                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
-                                    <div className="flex justify-center mb-1 sm:mb-2">
-                                        <Workflow className="h-5 w-5 text-green-500" />
-                                    </div>
-                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Workflows Ativos</p>
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        <p className="text-2xl font-bold text-foreground mb-1">{activeWorkflows.length}</p>
-                                        <p className="text-xs text-muted-foreground">{workflows.length} total | {activeWorkflows.length} executando</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card>
-                            <CardContent className="p-4 h-full">
-                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
-                                    <div className="flex justify-center mb-1 sm:mb-2">
-                                        <BarChart3 className="h-5 w-5 text-orange-500" />
-                                    </div>
-                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Requisições Hoje</p>
-                                    <div className="flex-1 flex flex-col justify-center">
-                                        <p className="text-2xl font-bold text-foreground mb-1">{totalRequests}</p>
-                                        <p className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens | ${totalCost.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <AIMetricsCards tenantId={tenantId} mode={mode} />
 
                     {/* Quick Actions Grid */}
                     <div>

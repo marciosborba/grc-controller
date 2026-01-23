@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface AIProvider {
     id: string;
@@ -313,6 +314,53 @@ export const aiConfigService = {
             return template;
         }
         return null;
+    },
+
+    /**
+     * Log AI Usage
+     */
+    logUsage: async (tenantId: string, providerId: string, model: string, usage: { prompt_tokens: number, completion_tokens: number, total_tokens: number }, type: string) => {
+        // Simple cost estimation (can be improved with a pricing table)
+        // Default to approx $0.0000005 per token (very rough avg for basic models) or 0 if unknown
+        // Real implementation should fetch price from provider/model table
+        let cost = 0;
+
+        // Example pricing (placeholder)
+        // Gemini Flash: ~$0.0001 / 1k input, ~$0.0004 / 1k output
+        if (model.includes('flash')) {
+            cost = (usage.prompt_tokens * 0.0000001) + (usage.completion_tokens * 0.0000004);
+        } else if (model.includes('pro')) {
+            cost = (usage.prompt_tokens * 0.00000125) + (usage.completion_tokens * 0.00000375);
+        }
+
+        // Simple UUID v4 generator
+        const uuidv4 = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        const { error } = await supabase
+            .from('ai_usage_logs')
+            .insert({
+                tenant_id: tenantId,
+                request_id: uuidv4(),
+                user_id: user?.id,
+                provider_id: providerId,
+                tokens_input: usage.prompt_tokens,
+                tokens_output: usage.completion_tokens,
+                cost_usd: cost,
+                operation_type: type, // 'prompt-execution'
+                module_name: 'Policy Auditor'
+            });
+
+        if (error) {
+            console.error('Failed to log AI usage:', error);
+            toast.error(`Erro ao salvar logs de uso: ${error.message}`);
+        }
     }
 };
 

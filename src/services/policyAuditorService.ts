@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { createGLMService } from './glmService';
 import { toast } from 'sonner';
+import { aiConfigService } from '@/services/aiConfigService';
 
 // Helper for parsing JSON from AI response
 const parseAIJSONResponse = (aiContent: string | null | undefined): any[] => {
@@ -150,8 +151,6 @@ export const policyAuditorService = {
             // 0. Fetch (or Create) Prompt Template
             let systemPromptTemplate = "";
             try {
-                const { aiConfigService } = await import('@/services/aiConfigService');
-
                 // 1. Try Function Mapping (Priority 1)
                 const mappedTemplate = await aiConfigService.getPromptForFunction(policy.tenant_id, 'audit');
                 if (mappedTemplate && mappedTemplate.template_content) {
@@ -257,6 +256,23 @@ ${policyText}
             const aiContent = funcData.response;
             console.log("[PolicyAuditor] Raw AI Response (Edge):", aiContent);
             matches = parseAIJSONResponse(aiContent);
+
+            // Log Usage
+            if (provider && aiConfigService) {
+                const usage = funcData.usage || {
+                    prompt_tokens: Math.ceil(userPrompt.length / 4),
+                    completion_tokens: Math.ceil(aiContent.length / 4),
+                    total_tokens: Math.ceil((userPrompt.length + aiContent.length) / 4)
+                };
+
+                await aiConfigService.logUsage(
+                    policy.tenant_id,
+                    provider.id,
+                    provider.model_name,
+                    usage,
+                    'prompt-execution' // Corrected: Must match check constraint
+                );
+            }
 
             // 3. Save Remediation/Matches
             let totalAdequacy = 0;

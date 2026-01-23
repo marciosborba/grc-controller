@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 
 export interface Tenant {
@@ -115,7 +115,7 @@ export const useTenantManagement = () => {
         inactive_tenants: tenants.filter(t => !t.is_active).length,
         total_users_across_tenants: tenants.reduce((sum, t) => sum + t.current_users_count, 0),
         tenants_by_plan: {},
-        tenants_near_user_limit: tenants.filter(t => 
+        tenants_near_user_limit: tenants.filter(t =>
           t.current_users_count >= t.max_users * 0.9 && t.is_active
         )
       };
@@ -324,33 +324,96 @@ export const useTenantManagement = () => {
     return report;
   };
 
+  // --- MODULE MANAGEMENT ---
+
+  // Obter todos os módulos do sistema
+  const getSystemModules = async () => {
+    if (!hasPermission()) return [];
+
+    const { data, error } = await supabase
+      .from('modules')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  // Obter módulos habilitados para um tenant
+  const getTenantModules = async (tenantId: string) => {
+    if (!hasPermission()) return [];
+
+    const { data, error } = await supabase
+      .from('tenant_modules')
+      .select(`
+        module_key,
+        is_enabled,
+        configuration,
+        modules (name, description, category)
+      `)
+      .eq('tenant_id', tenantId);
+
+    if (error) throw error;
+    return data || [];
+  };
+
+  // Alternar módulo para tenant
+  const toggleTenantModuleMutation = useMutation({
+    mutationFn: async ({ tenantId, moduleKey, isEnabled }: { tenantId: string; moduleKey: string; isEnabled: boolean }) => {
+      if (!hasPermission()) throw new Error('Sem permissão');
+
+      const { data, error } = await supabase
+        .from('tenant_modules')
+        .upsert({
+          tenant_id: tenantId,
+          module_key: moduleKey,
+          is_enabled: isEnabled,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'tenant_id, module_key' })
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Módulo atualizado com sucesso');
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao atualizar módulo: ${error.message}`);
+    }
+  });
+
   return {
     // Data
     tenants,
     stats,
-    
+
     // Loading states
     isLoadingTenants,
     isLoadingStats,
-    
+
     // Errors
     tenantsError,
-    
+
     // Actions
     createTenant: createTenantMutation.mutate,
     updateTenant: updateTenantMutation.mutate,
     deleteTenant: deleteTenantMutation.mutate,
     toggleTenantStatus: toggleTenantStatusMutation.mutate,
-    
+    toggleTenantModule: toggleTenantModuleMutation.mutateAsync,
+
     // Loading states for mutations
     isCreatingTenant: createTenantMutation.isPending,
     isUpdatingTenant: updateTenantMutation.isPending,
     isDeletingTenant: deleteTenantMutation.isPending,
     isTogglingStatus: toggleTenantStatusMutation.isPending,
-    
+
     // Utility functions
     getTenant,
     getTenantUsers,
+    getSystemModules,
+    getTenantModules,
     checkSlugAvailability,
     generateUsageReport,
     hasPermission

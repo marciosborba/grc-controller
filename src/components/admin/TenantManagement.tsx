@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useTenantManagement } from '@/hooks/useTenantManagement';
 import { toast } from 'sonner';
 import {
@@ -28,9 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Plus, 
-  Building2, 
+import {
+  Plus,
+  Building2,
   Search,
   Users2
 } from 'lucide-react';
@@ -55,6 +55,7 @@ import {
   restrictToParentElement,
 } from '@dnd-kit/modifiers';
 import type { Tenant, CreateTenantRequest } from '@/hooks/useTenantManagement';
+import TenantDetailView from './TenantDetailView';
 
 const TenantManagement: React.FC = () => {
   const { user } = useAuth();
@@ -67,10 +68,12 @@ const TenantManagement: React.FC = () => {
     isCreatingTenant,
     isDeletingTenant
   } = useTenantManagement();
-  
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [orderedTenants, setOrderedTenants] = useState<Tenant[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState<CreateTenantRequest>({
     name: '',
     slug: '',
@@ -92,8 +95,8 @@ const TenantManagement: React.FC = () => {
   const hasPermission = user?.isPlatformAdmin || false;
 
   // Filter tenants based on search term
-  const filteredTenants = tenants.filter(tenant => 
-    !searchTerm || 
+  const filteredTenants = tenants.filter(tenant =>
+    !searchTerm ||
     tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tenant.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
     tenant.contact_email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -116,10 +119,10 @@ const TenantManagement: React.FC = () => {
         const newIndex = items.findIndex((item) => item.id === over.id);
 
         const newOrder = arrayMove(items, oldIndex, newIndex);
-        
+
         // Save order to localStorage
         localStorage.setItem('tenantCardsOrder', JSON.stringify(newOrder.map(t => t.id)));
-        
+
         return newOrder;
       });
     }
@@ -162,6 +165,11 @@ const TenantManagement: React.FC = () => {
     resetForm();
   };
 
+  const handleTenantClick = (tenantId: string) => {
+    setSelectedTenantId(tenantId);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Verificar permissão
   if (!hasPermission) {
     return (
@@ -199,6 +207,20 @@ const TenantManagement: React.FC = () => {
     );
   }
 
+  // --- DETAIL VIEW ---
+  if (selectedTenantId) {
+    const tenant = tenants.find(t => t.id === selectedTenantId);
+    if (!tenant) return <div>Tenant não encontrado</div>;
+
+    return (
+      <TenantDetailView
+        tenantId={selectedTenantId}
+        tenantName={tenant.name}
+        onBack={() => setSelectedTenantId(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -210,7 +232,7 @@ const TenantManagement: React.FC = () => {
                 Gerenciamento de Tenants
               </CardTitle>
               <CardDescription>
-                Gerencie organizações e configure limites de usuários
+                Gerencie organizações, módulos e limites de usuários
               </CardDescription>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -365,12 +387,16 @@ const TenantManagement: React.FC = () => {
               >
                 <div className="space-y-4">
                   {orderedTenants.map((tenant) => (
-                    <SortableTenantCard
-                      key={tenant.id}
-                      tenant={tenant}
-                      onDelete={(tenantId) => deleteTenant(tenantId)}
-                      isDeleting={isDeletingTenant}
-                    />
+                    <div key={tenant.id} onClick={() => handleTenantClick(tenant.id)} className="cursor-pointer">
+                      <SortableTenantCard
+                        tenant={tenant}
+                        onDelete={(tenantId) => {
+                          // Stop propagation to avoid clicking the card when deleting
+                          deleteTenant(tenantId);
+                        }}
+                        isDeleting={isDeletingTenant}
+                      />
+                    </div>
                   ))}
                 </div>
               </SortableContext>
