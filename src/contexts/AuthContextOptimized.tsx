@@ -39,6 +39,7 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isPlatformAdmin: boolean;
+  enabledModules: string[]; // List of enabled module keys
 }
 
 interface AuthContextType {
@@ -50,6 +51,7 @@ interface AuthContextType {
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
   refreshUserData: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  checkModuleAccess: (moduleKey: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,15 +101,15 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
     auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
     user: ['read', 'all']
   };
-  
+
   const allPermissions = new Set<string>();
-  
+
   // Adicionar permissões das roles básicas
   roles.forEach(role => {
     const rolePermissions = permissionMap[role] || ['read'];
     rolePermissions.forEach(permission => allPermissions.add(permission));
   });
-  
+
   return Array.from(allPermissions);
 };
 
@@ -132,7 +134,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Função simplificada para carregar dados do usuário
   const loadUserData = useCallback(async (supabaseUser: User): Promise<AuthUser | null> => {
     console.log('👤 [AUTH] Loading user data for:', supabaseUser.id);
-    
+
     try {
       // Verificar cache primeiro
       const cachedUser = getCachedUser(supabaseUser.id);
@@ -149,13 +151,14 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         tenantId: 'default',
         roles: ['user'],
         permissions: getPermissionsForRoles(['user'], false),
-        isPlatformAdmin: false
+        isPlatformAdmin: false,
+        enabledModules: []
       };
 
       // Tentar carregar dados adicionais de forma assíncrona
       try {
         console.log('📊 [AUTH] Fetching profile, roles and platform admin status...');
-        
+
         const [profileResult, rolesResult, platformAdminResult] = await Promise.all([
           supabase.from('profiles').select('*').eq('user_id', supabaseUser.id).maybeSingle(),
           supabase.from('user_roles').select('role').eq('user_id', supabaseUser.id),
@@ -165,9 +168,22 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         const profile = profileResult?.data;
         const roles = rolesResult?.data || [];
         const platformAdmin = platformAdminResult?.data;
-        
-        console.log('📊 [AUTH] Profile, roles and platform admin loaded:', { 
-          hasProfile: !!profile, 
+
+        // Fetch Tenant Modules
+        let enabledModules: string[] = [];
+        if (profile?.tenant_id) {
+          const { data: modData } = await supabase
+            .from('tenant_modules')
+            .select('module_key')
+            .eq('tenant_id', profile.tenant_id)
+            .eq('is_enabled', true);
+
+          enabledModules = modData?.map(m => m.module_key) || [];
+          console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
+        }
+
+        console.log('📊 [AUTH] Profile, roles and platform admin loaded:', {
+          hasProfile: !!profile,
           rolesCount: roles.length,
           isPlatformAdminTable: !!platformAdmin
         });
@@ -176,7 +192,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         // Fallback para roles apenas se platform_admins não existir (compatibilidade)
         let isPlatformAdmin = false;
         let adminSource = 'none';
-        
+
         if (platformAdmin) {
           // Fonte primária: tabela platform_admins (mais segura)
           isPlatformAdmin = true;
@@ -196,7 +212,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             });
           }
         }
-        
+
         console.log('🔐 [AUTH] Platform Admin verification (SECURE):', {
           isPlatformAdmin,
           adminSource,
@@ -209,7 +225,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         // Atualizar com dados completos
         const userRoles = roles.length > 0 ? roles.map((r: any) => r.role) : ['user'];
         const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
-        
+
         console.log('🎯 [AUTH DEBUG] Usuário carregado com permissões:', {
           userId: supabaseUser.id,
           email: supabaseUser.email,
@@ -218,7 +234,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           isPlatformAdmin,
           hasAssessmentRead: userPermissions.includes('assessment.read')
         });
-        
+
         const userData: AuthUser = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -227,9 +243,10 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           tenantId: profile?.tenant_id || 'default',
           roles: userRoles,
           permissions: userPermissions,
-          isPlatformAdmin
+          isPlatformAdmin,
+          enabledModules
         };
-        
+
         console.log('🔍 [AUTH] Final userData created:', {
           id: userData.id,
           email: userData.email,
@@ -241,7 +258,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         // Cache o resultado
         setCachedUser(supabaseUser.id, userData);
         return userData;
-        
+
       } catch (dbError) {
         console.warn('⚠️ [AUTH] Erro ao carregar dados do banco, usando dados básicos:', dbError);
         return basicUser;
@@ -249,7 +266,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     } catch (error) {
       console.error('❌ [AUTH] Erro inesperado ao carregar dados do usuário:', error);
-      
+
       // Retornar usuário básico em caso de erro
       return {
         id: supabaseUser.id,
@@ -258,7 +275,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         tenantId: 'default',
         roles: ['user'],
         permissions: getPermissionsForRoles(['user'], false),
-        isPlatformAdmin: false
+        isPlatformAdmin: false,
+        enabledModules: []
       };
     }
   }, [getCachedUser, setCachedUser]);
@@ -266,7 +284,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Handler otimizado para mudanças de auth
   const handleAuthChange = useCallback(async (event: string, session: Session | null) => {
     console.log('🔄 [AUTH] Auth state changed:', { event, hasSession: !!session, userId: session?.user?.id });
-    
+
     setSession(session);
 
     if (event === 'SIGNED_OUT' || !session) {
@@ -280,15 +298,15 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       console.log('✅ [AUTH] User signed in, loading user data...');
       try {
         setIsLoading(true);
-        
+
         // Timeout para carregamento de dados do usuário
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), USER_DATA_TIMEOUT);
         });
-        
+
         const userDataPromise = loadUserData(session.user);
         const userData = await Promise.race([userDataPromise, timeoutPromise]);
-        
+
         console.log('👤 [AUTH] User data loaded:', { id: userData?.id, name: userData?.name });
         setUser(userData);
       } catch (error) {
@@ -314,12 +332,12 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   useEffect(() => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
-    
+
     // Verificar sessão existente
     const initializeAuth = async () => {
       try {
         console.log('🚀 [AUTH] Inicializando autenticação...');
-        
+
         // Timeout para inicialização
         timeoutId = setTimeout(() => {
           if (mounted) {
@@ -327,19 +345,19 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             setIsLoading(false);
           }
         }, STARTUP_TIMEOUT);
-        
+
         const sessionPromise = supabase.auth.getSession();
         const { data: { session: currentSession }, error } = await Promise.race([
           sessionPromise,
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), STARTUP_TIMEOUT - 1000)
           )
         ]);
-        
+
         if (timeoutId) clearTimeout(timeoutId);
-        
+
         if (!mounted) return;
-        
+
         if (error) {
           console.warn('⚠️ [AUTH] Erro ao recuperar sessão:', error);
           setIsLoading(false);
@@ -378,16 +396,16 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Heartbeat para verificar sessão periodicamente
   useEffect(() => {
     if (!user) return;
-    
+
     const heartbeatInterval = setInterval(async () => {
       try {
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.warn('⚠️ [AUTH HEARTBEAT] Erro ao verificar sessão:', error.message);
           return;
         }
-        
+
         if (!currentSession && user) {
           console.warn('⚠️ [AUTH HEARTBEAT] Sessão perdida, fazendo logout limpo');
           setUser(null);
@@ -397,14 +415,14 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         console.warn('⚠️ [AUTH HEARTBEAT] Erro inesperado:', error);
       }
     }, 60000); // A cada minuto
-    
+
     return () => clearInterval(heartbeatInterval);
   }, [user]);
 
   // Login otimizado
   const login = useCallback(async (email: string, password: string) => {
     console.log('🔐 [AUTH] Iniciando login para:', email);
-    
+
     const cleanEmail = sanitizeInput(email);
     const cleanPassword = sanitizeInput(password);
 
@@ -420,27 +438,27 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     try {
       console.log('🔐 [AUTH] Chamando supabase.auth.signInWithPassword...');
-      
+
       // Timeout para autenticação
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout na autenticação. Verifique sua conexão.')), AUTH_TIMEOUT);
       });
-      
+
       const loginPromise = supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       });
-      
+
       const result = await Promise.race([loginPromise, timeoutPromise]);
       const { data, error } = result;
-      
+
       console.log('🔐 [AUTH] Resposta do Supabase:', { data: !!data, error: error?.message });
 
       if (error) {
         console.error('❌ [AUTH] Erro do Supabase:', error);
         throw new Error(error.message);
       }
-      
+
       console.log('✅ [AUTH] Login bem-sucedido!');
     } catch (error: any) {
       console.error('❌ [AUTH] Erro inesperado no login:', error);
@@ -452,7 +470,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   const logout = useCallback(async () => {
     // Limpar cache
     authCache.clear();
-    
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Erro no logout:', error);
@@ -500,11 +518,11 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     if (!session?.user) {
       return;
     }
-    
+
     try {
       // Limpar cache para forçar recarregamento
       authCache.delete(session.user.id);
-      
+
       // Recarregar dados
       const userData = await loadUserData(session.user);
       setUser(userData);
@@ -516,6 +534,18 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Alias para compatibilidade
   const refreshUser = refreshUserData;
 
+  // Check module access
+  const checkModuleAccess = useCallback((moduleKey: string) => {
+    if (!user) return false;
+    // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
+    // if (user.isPlatformAdmin) return true; 
+
+    // Public modules or basic ones
+    if (['dashboard', 'help', 'notifications', 'settings', 'admin'].includes(moduleKey)) return true; // Ensure 'admin' module is always accessible for admins
+
+    return user.enabledModules?.includes(moduleKey) || false;
+  }, [user]);
+
   const contextValue: AuthContextType = {
     user,
     session,
@@ -525,6 +555,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     signup,
     refreshUserData,
     refreshUser,
+    checkModuleAccess
   };
 
   return (

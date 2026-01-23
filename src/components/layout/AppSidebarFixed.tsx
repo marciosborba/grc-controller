@@ -172,23 +172,23 @@ const navigationItems = [{
     },
     {
       title: 'Tenants',
-    url: '/admin/tenants',
-    icon: Building2,
-    permissions: ['platform_admin'],
-    description: 'Gestão de organizações'
-  }, {
-    title: 'IA Manager',
-    icon: Brain,
-    url: '/ai-management',
-    permissions: ['platform_admin'],
-    description: 'Gestão de IA e Automação'
-  }, {
-    title: 'Global Settings ',
-    url: '/settings/general',
-    icon: Plug,
-    permissions: ['platform_admin'],
-    description: 'Integrações e configurações avançadas'
-  }]
+      url: '/admin/tenants',
+      icon: Building2,
+      permissions: ['platform_admin'],
+      description: 'Gestão de organizações'
+    }, {
+      title: 'IA Manager',
+      icon: Brain,
+      url: '/ai-management',
+      permissions: ['platform_admin'],
+      description: 'Gestão de IA e Automação'
+    }, {
+      title: 'Global Settings ',
+      url: '/settings/general',
+      icon: Plug,
+      permissions: ['platform_admin'],
+      description: 'Integrações e configurações avançadas'
+    }]
 }];
 
 // Roles de teste baseadas nas roles reais do sistema (Regras Globais)
@@ -248,7 +248,7 @@ export function AppSidebarFixed() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, checkModuleAccess } = useAuth();
 
   // Estado para teste de roles - iniciar com Super Admin (role original do usuário)
   const [currentTestRole, setCurrentTestRole] = useState(TEST_ROLES.find(r => r.id === '1') || TEST_ROLES[0]);
@@ -260,26 +260,26 @@ export function AppSidebarFixed() {
 
   const collapsed = state === "collapsed";
   const currentPath = location.pathname;
-  
+
   // CORRIGIDO: Memoizar valores para evitar re-renders
-  const userIsPlatformAdmin = useMemo(() => 
-    user?.isPlatformAdmin || user?.roles?.includes('super_admin'), 
+  const userIsPlatformAdmin = useMemo(() =>
+    user?.isPlatformAdmin || user?.roles?.includes('super_admin'),
     [user?.isPlatformAdmin, user?.roles]
   );
 
   // CORRIGIDO: useCallback para loadDatabaseRoles
   const loadDatabaseRoles = useCallback(async () => {
     if (!userIsPlatformAdmin || rolesLoaded) return; // NOVO: evitar carregamento duplo
-    
+
     try {
       setLoadingRoles(true);
       // Carregando roles do banco de dados
-      
+
       // Timeout para evitar travamento
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout ao carregar roles')), 5000)
       );
-      
+
       const queryPromise = supabase
         .from('custom_roles')
         .select('*')
@@ -299,7 +299,7 @@ export function AppSidebarFixed() {
 
       // Roles carregadas do banco: ${roles?.length || 0}
       setDatabaseRoles(roles || []);
-      
+
       if (!roles || roles.length === 0) {
         // Nenhuma role encontrada no banco, usando apenas Super Admin
         const superAdminOnly = TEST_ROLES.filter(r => r.id === '1' || r.name === 'super_admin');
@@ -307,25 +307,25 @@ export function AppSidebarFixed() {
         setRolesLoaded(true); // NOVO: marcar como carregado
         return;
       }
-      
+
       // Converter roles do banco para formato de teste
       const convertedRoles = convertDatabaseRolesToTestRoles(roles);
-      
+
       // Sempre incluir Super Admin (role real do usuário) + roles do banco
       const superAdmin = TEST_ROLES.find(r => r.id === '1' || r.name === 'super_admin');
       const allRoles = superAdmin ? [superAdmin, ...convertedRoles] : convertedRoles;
-      
+
       setAvailableTestRoles(allRoles);
       // Roles disponíveis para teste: ${allRoles.length} (1 sistema + ${convertedRoles.length} banco)
-      
+
       // Garantir que a role atual seja válida
       const updatedSuperAdmin = allRoles.find(r => r.id === '1' || r.name === 'super_admin');
       if (updatedSuperAdmin && !isTestingRole) {
         setCurrentTestRole(updatedSuperAdmin);
       }
-      
+
       setRolesLoaded(true); // NOVO: marcar como carregado com sucesso
-      
+
     } catch (error) {
       console.error('❌ Erro inesperado ao carregar roles:', error);
       const superAdminOnly = TEST_ROLES.filter(r => r.id === '1' || r.name === 'super_admin');
@@ -341,7 +341,7 @@ export function AppSidebarFixed() {
   useEffect(() => {
     let isMounted = true;
     let timeoutId: NodeJS.Timeout;
-    
+
     if (userIsPlatformAdmin && !rolesLoaded && isMounted) {
       // Debounce para evitar múltiplas chamadas
       timeoutId = setTimeout(() => {
@@ -350,7 +350,7 @@ export function AppSidebarFixed() {
         }
       }, 100);
     }
-    
+
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
@@ -360,7 +360,7 @@ export function AppSidebarFixed() {
   // CORRIGIDO: Listener para atualizações de roles com controle
   useEffect(() => {
     let isMounted = true;
-    
+
     const handleRolesUpdated = () => {
       if (isMounted && userIsPlatformAdmin) {
         console.log('🔄 [ROLES] Evento de atualização recebido, recarregando roles...');
@@ -407,21 +407,21 @@ export function AppSidebarFixed() {
     };
     return iconMap[iconName] || Users;
   }, []);
-  
+
   // Funções para teste de roles
   const handleRoleChange = useCallback((roleId: string) => {
     if (!userIsPlatformAdmin) return;
-    
+
     const role = availableTestRoles.find(r => r.id === roleId);
     if (!role) return;
-    
+
     const wasTestingBefore = isTestingRole;
     const isOriginalRole = roleId === '1';
     const isTestingNow = !isOriginalRole;
-    
+
     setCurrentTestRole(role);
     setIsTestingRole(isTestingNow);
-    
+
     console.log(`🧪 [ROLE TESTING] Role changed:`, {
       from: currentTestRole?.displayName,
       to: role.displayName,
@@ -431,7 +431,7 @@ export function AppSidebarFixed() {
       roleId,
       permissions: role.permissions
     });
-    
+
     // Mostrar toast informativo
     if (roleId === '1') {
       toast.success('👑 Usando sua role original: Super Administrador');
@@ -446,36 +446,36 @@ export function AppSidebarFixed() {
     if (!user) {
       return false;
     }
-    
+
     // MODO DE TESTE DE ROLE (apenas quando explicitamente ativado)
     if (isTestingRole && currentTestRole && currentTestRole.id !== '1') {
       // Permitir acesso ao dropdown de teste mesmo em modo de teste
       if (permissions.includes('platform_admin')) {
         return user.isPlatformAdmin;
       }
-      
+
       // Verificar permissões da role de teste
       const hasTestPermission = permissions.some(permission => {
         const hasSpecific = currentTestRole.permissions.includes(permission);
         const hasSuperAccess = currentTestRole.permissions.includes('*') || currentTestRole.permissions.includes('all');
         return hasSpecific || hasSuperAccess;
       });
-      
+
       return hasTestPermission;
     }
-    
+
     // MODO NORMAL (role original do usuário)
-    
+
     // Platform Admin sempre tem acesso total
     if (user.isPlatformAdmin) {
       return true;
     }
-    
+
     // Verificar permissão 'all' (acesso público)
     if (permissions.includes('all')) {
       return true;
     }
-    
+
     // Verificar permissões específicas do usuário
     const userPermissions = user.permissions || [];
     const hasDirectPermission = permissions.some(permission => {
@@ -483,7 +483,7 @@ export function AppSidebarFixed() {
       const hasAllAccess = userPermissions.includes('all') || userPermissions.includes('*');
       return hasSpecific || hasAllAccess;
     });
-    
+
     return hasDirectPermission;
   }, [user, isTestingRole, currentTestRole]);
 
@@ -497,9 +497,9 @@ export function AppSidebarFixed() {
     return currentPath === path || currentPath.startsWith(path + '/');
   }, [currentPath]);
 
-  const getNavCls = useCallback((isActiveItem: boolean) => 
+  const getNavCls = useCallback((isActiveItem: boolean) =>
     isActiveItem ? "text-primary font-medium" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-  , []);
+    , []);
 
   const handleProfileClick = useCallback(() => {
     navigate('/profile');
@@ -530,31 +530,72 @@ export function AppSidebarFixed() {
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
         {navigationItems.map((group, groupIndex) => {
-          const filteredItems = group.items.filter(item => hasPermission(item.permissions));
-          
+          // Helper to map titles to keys
+          const getModuleKey = (title: string): string => {
+            const map: Record<string, string> = {
+              'Auditoria': 'audit',
+              'Planejamento Estratégico': 'strategic_planning',
+              'Assessments': 'assessments',
+              'Conformidade': 'compliance',
+              'Ética': 'ethics',
+              'Riscos': 'risk_management',
+              'Planos de Ação': 'action_plans',
+              'Incidentes': 'incidents',
+              'Políticas': 'policy_management',
+              'Privacidade': 'privacy',
+              'TPRM': 'tprm',
+              'Relatórios': 'reports',
+              'Vulnerabilidades': 'vulnerabilities',
+              'Configurações': 'admin', // Settings usually enabled or controlled by role
+              'Usuários': 'admin',
+              'Dashboard': 'dashboard',
+              'Notificações': 'notifications',
+              'Ajuda': 'help',
+              // Admin area items
+              'Diagnóstico do Sistema': 'admin',
+              'Migração Platform Admin': 'admin',
+              'Tenants': 'admin',
+              'IA Manager': 'admin',
+              'Global Settings ': 'admin'
+            };
+            return map[title] || '';
+          };
+
+          const filteredItems = group.items.filter(item => {
+            // 1. Check Permissions (User Role)
+            const hasPerm = hasPermission(item.permissions);
+
+            // 2. Check Module Enablement (Tenant Config)
+            const moduleKey = getModuleKey(item.title);
+            // If key is mapped, check access. If not mapped or mapped to empty, assume enabled (or strictly disable?)
+            // Assuming enabled for unmapped items to avoid hiding system things inadvertently
+            const isModuleEnabled = moduleKey ? checkModuleAccess(moduleKey) : true;
+
+            return hasPerm && isModuleEnabled;
+          });
+
           // Não exibe o grupo se não há itens visíveis
           if (filteredItems.length === 0) return null;
-          
+
           return (
             <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
               {!collapsed && group.label !== 'Módulos' && (
-                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${
-                  group.label === 'Plataform Adm' 
-                    ? 'text-orange-600 dark:text-orange-400' 
-                    : 'text-muted-foreground'
-                }`}>
+                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Plataform Adm'
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-muted-foreground'
+                  }`}>
                   {group.label}
                 </SidebarGroupLabel>
               )}
-              
+
               <SidebarGroupContent>
                 <SidebarMenu>
                   {filteredItems.map(item => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <NavLink 
-                          to={item.url} 
-                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
+                        <NavLink
+                          to={item.url}
+                          className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`}
                           title={collapsed ? item.title : ''}
                           onClick={() => {
                             console.log('🔗 [SIDEBAR CLICK] Clique detectado:', {
@@ -562,7 +603,7 @@ export function AppSidebarFixed() {
                               url: item.url,
                               timestamp: new Date().toISOString()
                             });
-                            
+
                             if (item.title === 'IA Manager') {
                               console.log('🤖 [IA MANAGER CLICK] Clique no IA Manager detectado!');
                               console.log('🌐 [IA MANAGER CLICK] Navegando para:', item.url);
@@ -582,7 +623,7 @@ export function AppSidebarFixed() {
                                 targetPath: item.url,
                                 willNavigate: true
                               });
-                              
+
                               // Teste adicional: navegação manual para debug
                               setTimeout(() => {
                                 console.log('🔄 [IA MANAGER CLICK] Verificando se navegação aconteceu...');
@@ -617,7 +658,7 @@ export function AppSidebarFixed() {
             </SidebarGroup>
           );
         })}
-        
+
         {/* Role Testing Dropdown - No final do sidebar */}
         {userIsPlatformAdmin && (
           <div className="mt-auto p-3 border-t border-border">
@@ -639,14 +680,13 @@ export function AppSidebarFixed() {
                 )}
               </div>
             )}
-            
+
             <Select value={currentTestRole.id} onValueChange={handleRoleChange}>
-              <SelectTrigger 
-                className={`${
-                  collapsed 
-                    ? 'w-10 h-10 p-0 justify-center' 
-                    : 'w-full h-auto py-2 px-3'
-                } border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/50 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors`}
+              <SelectTrigger
+                className={`${collapsed
+                  ? 'w-10 h-10 p-0 justify-center'
+                  : 'w-full h-auto py-2 px-3'
+                  } border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/50 hover:bg-orange-100 dark:hover:bg-orange-900/50 transition-colors`}
                 title={collapsed ? currentTestRole.displayName : ''}
               >
                 {collapsed ? (
@@ -660,8 +700,8 @@ export function AppSidebarFixed() {
                           {currentTestRole.displayName}
                         </span>
                         {isTestingRole && (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className="text-[9px] px-1 py-0 h-4 bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700"
                           >
                             TESTE
@@ -672,7 +712,7 @@ export function AppSidebarFixed() {
                   </SelectValue>
                 )}
               </SelectTrigger>
-              
+
               <SelectContent className="w-64">
                 {loadingRoles ? (
                   <div className="flex items-center justify-center py-4">
@@ -683,10 +723,10 @@ export function AppSidebarFixed() {
                   availableTestRoles.map((role) => {
                     const isCurrentRole = role.id === currentTestRole.id;
                     const isDatabaseRole = databaseRoles.some(dbRole => dbRole.id === role.id);
-                    
+
                     return (
-                      <SelectItem 
-                        key={role.id} 
+                      <SelectItem
+                        key={role.id}
                         value={role.id}
                         className="cursor-pointer py-2 px-3"
                       >

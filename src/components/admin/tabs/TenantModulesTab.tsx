@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useTenantManagement } from '@/hooks/useTenantManagement';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Box, Code2, ShieldAlert, FileKey2 } from 'lucide-react';
 
 interface TenantModulesTabProps {
@@ -12,6 +13,7 @@ interface TenantModulesTabProps {
 
 export const TenantModulesTab: React.FC<TenantModulesTabProps> = ({ tenantId }) => {
     const { getSystemModules, getTenantModules, toggleTenantModule } = useTenantManagement();
+    const { refreshUser, user } = useAuth(); // Add user to check if we need to refresh (only if modifying own tenant)
 
     const [modules, setModules] = useState<any[]>([]);
     const [enabledModules, setEnabledModules] = useState<Record<string, boolean>>({});
@@ -53,6 +55,12 @@ export const TenantModulesTab: React.FC<TenantModulesTabProps> = ({ tenantId }) 
                 moduleKey,
                 isEnabled: checked
             });
+
+            // If the user is modifying their own tenant, refresh the session to update sidebar immediately
+            if (user?.tenantId === tenantId) {
+                console.log('🔄 [MODULES] Refreshing user data after module toggle...');
+                await refreshUser();
+            }
         } catch (e) {
             // Revert on error
             setEnabledModules(prev => ({ ...prev, [moduleKey]: !checked }));
