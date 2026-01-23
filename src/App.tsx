@@ -775,7 +775,7 @@ const App = () => (
                       <Route path="ai-management" element={
                         <PlatformAdminRoute>
                           <Suspense fallback={<PageLoader />}>
-                            <AIManagerDashboard />
+                            <AIManagementPageDirect />
                           </Suspense>
                         </PlatformAdminRoute>
                       } />

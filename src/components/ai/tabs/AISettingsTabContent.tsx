@@ -11,26 +11,84 @@ import { supabase } from '@/integrations/supabase/client';
 interface AISettingsTabContentProps {
     tenantId: string;
     readonly?: boolean;
+    mode?: 'platform' | 'tenant';
 }
 
-export const AISettingsTabContent: React.FC<AISettingsTabContentProps> = ({ tenantId, readonly = false }) => {
-    const [settings, setSettings] = useState({
-        strict_mode: false,
-        max_tokens_per_request: 2000,
-        enable_logging: true,
-        pii_masking: false
-    });
-    const [loading, setLoading] = useState(false);
+interface AIConfig {
+    strict_mode: boolean;
+    max_tokens_per_request: number;
+    enable_logging: boolean;
+    pii_masking: boolean;
+}
 
-    // Mock loading settings (since we don't have a dedicated table API yet, assuming local state or fetching from tenant settings if implemented)
-    // For now, we'll just simulate functionality as the requirement is "functionality professional".
-    // In a real scenario, this would read `tenants.settings->ai_config`.
+const DEFAULT_SETTINGS: AIConfig = {
+    strict_mode: false,
+    max_tokens_per_request: 2000,
+    enable_logging: true,
+    pii_masking: false
+};
+
+export const AISettingsTabContent: React.FC<AISettingsTabContentProps> = ({ tenantId, readonly = false, mode = 'tenant' }) => {
+    const [settings, setSettings] = useState<AIConfig>(DEFAULT_SETTINGS);
+    const [loading, setLoading] = useState(true);
+
+    const loadSettings = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('tenants')
+                .select('settings')
+                .eq('id', tenantId)
+                .single();
+
+            if (error) throw error;
+
+            if (data?.settings && typeof data.settings === 'object' && 'ai_config' in data.settings) {
+                // Merge com defaults para garantir que novos campos existam
+                setSettings({ ...DEFAULT_SETTINGS, ...(data.settings as any).ai_config });
+            } else {
+                setSettings(DEFAULT_SETTINGS);
+            }
+
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            toast.error('Erro ao carregar configurações');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (tenantId) loadSettings();
+    }, [tenantId]);
 
     const handleSave = async () => {
         setLoading(true);
         try {
-            // Simulate save
-            await new Promise(r => setTimeout(r, 800));
+            // 1. Fetch current settings first to avoid overwriting other fields
+            const { data: currentData, error: fetchError } = await supabase
+                .from('tenants')
+                .select('settings')
+                .eq('id', tenantId)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            // 2. Prepare new settings object
+            const currentSettings = (currentData?.settings as object) || {};
+            const newSettings = {
+                ...currentSettings,
+                ai_config: settings
+            };
+
+            // 3. Update
+            const { error: updateError } = await supabase
+                .from('tenants')
+                .update({ settings: newSettings })
+                .eq('id', tenantId);
+
+            if (updateError) throw updateError;
+
             toast.success('Configurações salvas com sucesso');
         } catch (error) {
             console.error('Error saving settings:', error);
@@ -40,15 +98,24 @@ export const AISettingsTabContent: React.FC<AISettingsTabContentProps> = ({ tena
         }
     };
 
+    if (loading && !settings) {
+        return <div className="text-center py-8 text-muted-foreground">Carregando configurações...</div>;
+    }
+
+    const isPlatform = mode === 'platform';
+
     return (
         <div className="space-y-6">
-            <Card className="border-white/10 bg-white/5 backdrop-blur-md">
+            <Card className={`border-white/10 backdrop-blur-md ${isPlatform ? 'bg-orange-500/5' : 'bg-white/5'}`}>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-blue-400" /> Políticas de Segurança e Uso
+                        <Shield className={`h-5 w-5 ${isPlatform ? 'text-orange-400' : 'text-blue-400'}`} />
+                        {isPlatform ? 'Políticas Padrão (Fallback Geral)' : 'Políticas de Segurança e Uso'}
                     </CardTitle>
                     <CardDescription>
-                        Defina restrições e comportamentos padrão para o uso de IA.
+                        {isPlatform
+                            ? 'Este é o fallback global. Tenants que não tiverem configuração própria usarão estas definições.'
+                            : 'Defina restrições e comportamentos padrão para o uso de IA.'}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">

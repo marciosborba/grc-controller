@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import {
     Brain,
@@ -13,12 +15,18 @@ import {
     BarChart3,
     Plus,
     Zap,
-    Shield as ShieldIcon,
+    Shield,
     Activity,
     ArrowUpRight,
     BookOpen,
     Bot,
-    Lock
+    Lock,
+    TrendingUp,
+    CheckCircle,
+    Info,
+    ChevronRight,
+    RefreshCw,
+    Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -40,8 +48,6 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// ... (Interfaces)
-
 interface AIProvider {
     id: string;
     name: string;
@@ -55,8 +61,6 @@ interface AIProvider {
     tokens_used_today: number;
     cost_usd_today: number;
 }
-// Note: We use local interface for display props but map to service interface in Modal
-// Ideally should unify them.
 
 interface AIUsageLog {
     id: string;
@@ -84,7 +88,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
     const [showProviderModal, setShowProviderModal] = useState(false);
     const [showPromptModal, setShowPromptModal] = useState(false);
     const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-    const [selectedProvider, setSelectedProvider] = useState<any | null>(null); // Type 'any' used to bridge local vs service type mismatch if any
+    const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
 
     // --- Delete State ---
     const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
@@ -123,7 +127,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
             // 3. Workflows
             const { data: wfData } = await supabase
                 .from('ai_workflows')
-                .select('id, name, is_active, status, tenant_id') // Added tenant_id
+                .select('id, name, is_active, status, tenant_id')
                 .eq('tenant_id', tenantId)
                 .order('created_at', { ascending: false });
             setWorkflows(wfData || []);
@@ -161,115 +165,164 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
         loadAIData();
     }, [tenantId]);
 
-
     // --- Stats Calculation ---
     const activeProviders = providers.filter(p => p.is_active);
     const activePrompts = prompts.filter(p => p.is_active);
     const activeWorkflows = workflows.filter(w => w.is_active);
     const totalRequests = usageLogs.length;
+    const totalTokens = usageLogs.reduce((acc, log) => acc + (log.tokens_input || 0) + (log.tokens_output || 0), 0);
+    const totalCost = usageLogs.reduce((acc, log) => acc + (log.cost_usd || 0), 0);
 
-    // --- Render Helpers ---
+    const getProviderNames = () => {
+        if (activeProviders.length === 0) return 'Nenhum ativo';
+        if (activeProviders.length <= 3) {
+            return activeProviders.map(p => {
+                const type = p.provider_type?.toLowerCase() || '';
+                if (type.includes('glm')) return 'GLM';
+                if (type.includes('claude')) return 'Claude';
+                if (type.includes('openai')) return 'OpenAI';
+                if (type.includes('azure')) return 'Azure';
+                return p.name || type;
+            }).join(', ');
+        }
+        return `${activeProviders.length} provedores`;
+    };
 
-    const QuickActionCard = ({ title, desc, icon: Icon, onClick }: any) => (
-        <motion.div
-            whileHover={{ scale: 1.02, translateY: -5 }}
-            whileTap={{ scale: 0.98 }}
-            className="cursor-pointer group"
-            onClick={!readonly ? onClick : undefined}
-        >
-            <div className={`relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition-all ${!readonly ? 'hover:bg-white/10 hover:shadow-primary/20 hover:border-primary/50' : 'opacity-80'}`}>
-                <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-primary/20 blur-2xl group-hover:bg-primary/30 transition-all" />
+    // Calculate Score
+    const calculateComplianceScore = () => {
+        let score = 0;
+        if (activeProviders.length > 0) score += 30;
+        if (activePrompts.length > 0) score += 20;
+        if (activeWorkflows.length > 0) score += 20;
+        if (totalRequests > 0) score += 15;
+        if (usageLogs.length > 0) score += 15;
+        return score;
+    };
+    const complianceScore = calculateComplianceScore();
 
-                <div className="flex items-start justify-between">
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-gray-800 to-black border border-white/10 shadow-inner group-hover:from-primary/20 group-hover:to-primary/5 transition-all">
-                        <Icon className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
-                    </div>
-                    {!readonly && <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />}
+    // Quick Actions
+    const quickActions = [
+        {
+            title: 'Configurar Provedores',
+            description: 'Gerenciar Claude, OpenAI e outros provedores',
+            icon: Cpu,
+            color: 'blue',
+            action: () => { setActiveTab('providers'); setShowProviderModal(true); },
+            count: providers.length
+        },
+        {
+            title: 'Templates de Prompts',
+            description: 'Criar prompts especializados para GRC',
+            icon: MessageSquare,
+            color: 'purple',
+            action: () => { setActiveTab('prompts'); },
+            count: prompts.length
+        },
+        {
+            title: 'Workflows de Automação',
+            description: 'Automatizar análises e relatórios',
+            icon: Workflow,
+            color: 'green',
+            action: () => setActiveTab('workflows'),
+            count: workflows.length
+        },
+        {
+            title: 'Estatísticas de Uso',
+            description: 'Monitorar custos e performance',
+            icon: BarChart3,
+            color: 'orange',
+            action: () => setActiveTab('usage'),
+            count: totalRequests
+        },
+        {
+            title: 'Configurações IA',
+            description: 'Configurações gerais do sistema',
+            icon: Settings,
+            color: 'gray',
+            action: () => setActiveTab('settings'),
+            count: 0
+        },
+        {
+            title: 'Auditoria e Logs',
+            description: 'Histórico de atividades da IA',
+            icon: Shield,
+            color: 'red',
+            action: () => setActiveTab('usage'), // Mapping Audit to Usage or separate tab if exists
+            count: usageLogs.length
+        }
+    ];
+
+    if (loading && providers.length === 0) {
+        return (
+            <div className="container mx-auto py-6">
+                <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-muted-foreground">Carregando módulo de IA...</p>
                 </div>
-
-                <h3 className="mt-4 font-semibold text-lg text-white group-hover:text-primary transition-colors">{title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
             </div>
-        </motion.div>
-    );
-
-    const StatCard = ({ title, value, sub, icon: Icon, color, index }: any) => (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-gray-900/50 to-black/50 p-6 shadow-lg backdrop-blur-md"
-        >
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-white">{value}</span>
-                        <span className="text-xs text-muted-foreground">{sub}</span>
-                    </div>
-                </div>
-                <div className={`p-3 rounded-xl bg-${color}-500/10 border border-${color}-500/20`}>
-                    <Icon className={`h-6 w-6 text-${color}-500`} />
-                </div>
-            </div>
-        </motion.div>
-    );
+        );
+    }
 
     return (
-        <div className={`font-sans selection:bg-primary/30 p-6 space-y-8 ${mode === 'platform' ? 'min-h-screen bg-black text-foreground' : ''}`}>
+        <div className="font-sans selection:bg-primary/30 space-y-8">
 
             {/* --- HEADER --- */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg border backdrop-blur-md ${mode === 'platform' ? 'bg-primary/20 border-primary/30' : 'bg-white/10 border-white/20'}`}>
-                            <Brain className={`h-8 w-8 ${mode === 'platform' ? 'text-primary animate-pulse-slow' : 'text-white'}`} />
+                        <div className="p-2 rounded-lg border bg-card border-border shadow-sm">
+                            <Brain className="h-8 w-8 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
-                                {mode === 'platform' ? 'Gestão Mestre de IA' : 'Configuração de IA'}
+                            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                                Gestão de IA
                             </h1>
                             <p className="text-muted-foreground flex items-center gap-2 text-sm">
                                 {mode === 'platform'
-                                    ? 'Configuração global da IA da plataforma (Fallback)'
-                                    : 'Configuração específica desta organização (Override)'}
+                                    ? 'Configuração e gerenciamento de assistentes IA da plataforma (Global)'
+                                    : 'Configuração e gerenciamento de assistentes IA para esta organização'}
                             </p>
                         </div>
                     </div>
-                    <div className="mt-4 flex gap-2">
-                        {mode === 'platform' ? (
-                            <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/20 px-3 py-1">
-                                <ShieldIcon className="w-3 h-3 mr-1" />
-                                Mestre / Platform
-                            </Badge>
-                        ) : (
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-3 py-1">
-                                <ShieldIcon className="w-3 h-3 mr-1" />
-                                Tenant: {tenantId}
-                            </Badge>
-                        )}
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1">
-                            <Activity className="w-3 h-3 mr-1" /> Sistema Ativo
-                        </Badge>
-                    </div>
                 </div>
 
-                <div className="flex gap-3">
-                    <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white backdrop-blur-md">
-                        <BookOpen className="mr-2 h-4 w-4" /> Documentação
-                    </Button>
-                    {!readonly && (
-                        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
-                            <Plus className="mr-2 h-4 w-4" /> Novo Recurso
-                        </Button>
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
+                    {mode === 'platform' && (
+                        <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500/20 px-3 py-1">
+                            <Shield className="w-3 h-3 mr-1" />
+                            Platform Admin
+                        </Badge>
                     )}
+                    {mode === 'tenant' && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-3 py-1">
+                            <Globe className="w-3 h-3 mr-1" />
+                            Tenant
+                        </Badge>
+                    )}
+                    <Badge variant="secondary" className="px-3 py-1 flex items-center gap-2">
+                        <TrendingUp className="w-3 h-3" />
+                        Score: {complianceScore}%
+                    </Badge>
+                    <Button size="sm" variant="outline" onClick={loadAIData} disabled={loading} className="gap-2">
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                        Atualizar
+                    </Button>
                 </div>
             </div>
 
+            {/* --- ALERT INFO --- */}
+            <Alert className="border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400">
+                <Info className="h-4 w-4 text-blue-500" />
+                <AlertTitle>Centro de Gestão de IA</AlertTitle>
+                <AlertDescription>
+                    Configure e monitore todos os assistentes IA da plataforma GRC. Gerencie provedores, prompts personalizados e workflows automatizados.
+                </AlertDescription>
+            </Alert>
+
             {/* --- TABS --- */}
             <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-xl border-b border-white/10 pb-4 pt-2 -mx-6 px-6">
-                    <TabsList className="bg-white/5 border border-white/10 p-1 w-full justify-start overflow-x-auto h-auto rounded-lg">
+                <div className="border-b border-border pb-4 w-full">
+                    <TabsList className="w-full justify-start overflow-x-auto h-auto rounded-lg bg-muted/50 p-1">
                         {[
                             { id: 'overview', label: 'Visão Geral', icon: BarChart3 },
                             { id: 'providers', label: 'Provedores', icon: Cpu },
@@ -281,7 +334,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                             <TabsTrigger
                                 key={tab.id}
                                 value={tab.id}
-                                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg flex gap-2 px-6 py-2.5 transition-all"
+                                className="flex gap-2 px-4 py-2"
                             >
                                 <tab.icon className="h-4 w-4" />
                                 {tab.label}
@@ -294,130 +347,182 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                 <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                     {/* Metrics Grid */}
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                        <StatCard
-                            title="Provedores Ativos"
-                            value={activeProviders.length}
-                            sub={providers.length > 0 ? providers[0].provider_type.toUpperCase() : 'N/A'}
-                            icon={Cpu}
-                            color="blue"
-                            index={0}
-                        />
-                        <StatCard
-                            title="Prompts"
-                            value={activePrompts.length}
-                            sub={`${prompts.length} total`}
-                            icon={MessageSquare}
-                            color="purple"
-                            index={1}
-                        />
-                        <StatCard
-                            title="Workflows"
-                            value={activeWorkflows.length}
-                            sub={`${activeWorkflows.filter(w => w.status === 'running').length} em execução`}
-                            icon={Workflow}
-                            color="emerald"
-                            index={2}
-                        />
-                        <StatCard
-                            title="Requisições Hoje"
-                            value={totalRequests}
-                            sub={`$${usageLogs.reduce((acc, log) => acc + (log.cost_usd || 0), 0).toFixed(2)}`}
-                            icon={BarChart3}
-                            color="orange"
-                            index={3}
-                        />
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardContent className="p-4 h-full">
+                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+                                    <div className="flex justify-center mb-1 sm:mb-2">
+                                        <Cpu className="h-5 w-5 text-blue-500" />
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Provedores Ativos</p>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <p className="text-2xl font-bold text-foreground mb-1">{activeProviders.length}</p>
+                                        <p className="text-xs text-muted-foreground">{getProviderNames()}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4 h-full">
+                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+                                    <div className="flex justify-center mb-1 sm:mb-2">
+                                        <MessageSquare className="h-5 w-5 text-purple-500" />
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Prompts Ativos</p>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <p className="text-2xl font-bold text-foreground mb-1">{activePrompts.length}</p>
+                                        <p className="text-xs text-muted-foreground">{prompts.length} total configurados</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4 h-full">
+                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+                                    <div className="flex justify-center mb-1 sm:mb-2">
+                                        <Workflow className="h-5 w-5 text-green-500" />
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Workflows Ativos</p>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <p className="text-2xl font-bold text-foreground mb-1">{activeWorkflows.length}</p>
+                                        <p className="text-xs text-muted-foreground">{workflows.length} total | {activeWorkflows.length} executando</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="p-4 h-full">
+                                <div className="flex flex-col h-full min-h-[100px] sm:min-h-[120px] text-center">
+                                    <div className="flex justify-center mb-1 sm:mb-2">
+                                        <BarChart3 className="h-5 w-5 text-orange-500" />
+                                    </div>
+                                    <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Requisições Hoje</p>
+                                    <div className="flex-1 flex flex-col justify-center">
+                                        <p className="text-2xl font-bold text-foreground mb-1">{totalRequests}</p>
+                                        <p className="text-xs text-muted-foreground">{totalTokens.toLocaleString()} tokens | ${totalCost.toFixed(2)}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
 
-                    {/* Quick Actions */}
+                    {/* Quick Actions Grid */}
                     <div>
-                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-yellow-400" /> Ações Rápidas
-                        </h2>
-                        <div className="grid gap-6 md:grid-cols-2">
-                            <QuickActionCard
-                                title="Configurar Novo Provedor"
-                                desc="Adicionar Claude, OpenAI, ou provedor customizado"
-                                icon={Plus}
-                                onClick={() => { setActiveTab('providers'); setShowProviderModal(true); }}
-                            />
-                            <QuickActionCard
-                                title="Criar Template de Prompt"
-                                desc="Criar prompt especializado para módulos GRC"
-                                icon={MessageSquare}
-                                onClick={() => { setActiveTab('prompts'); setShowPromptModal(true); }}
-                            />
-                            <QuickActionCard
-                                title="Configurar Workflow"
-                                desc="Automatizar análises e relatórios com IA"
-                                icon={Workflow}
-                                onClick={() => setActiveTab('workflows')}
-                            />
-                            <QuickActionCard
-                                title="Ver Estatísticas"
-                                desc="Monitorar uso, custos e performance"
-                                icon={BarChart3}
-                                onClick={() => setActiveTab('usage')}
-                            />
+                        <h2 className="text-lg font-semibold mb-4 text-foreground">Funcionalidades</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {quickActions.map((action, index) => (
+                                <Card key={index} className="cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-lg group relative overflow-hidden" onClick={action.action}>
+                                    <CardHeader className="p-4 md:p-6">
+                                        <div className="flex items-center justify-between">
+                                            <div className={`p-2 rounded-lg bg-${action.color}-500/10`}>
+                                                <action.icon className={`w-5 h-5 text-${action.color}-500`} />
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                {action.count > 0 && (
+                                                    <Badge variant="secondary" className="text-xs px-2 py-0.5">{action.count}</Badge>
+                                                )}
+                                                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                            </div>
+                                        </div>
+                                        <CardTitle className="text-base mt-3 mb-1 group-hover:text-primary transition-colors">{action.title}</CardTitle>
+                                        <CardDescription className="text-xs">{action.description}</CardDescription>
+                                    </CardHeader>
+                                </Card>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {/* Status Section */}
-                        <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                    {/* Score & System Status */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Cpu className="h-5 w-5 text-blue-400" /> Status dos Provedores</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <TrendingUp className="w-5 h-5" />
+                                    Score de Configuração IA
+                                </CardTitle>
+                                <CardDescription>
+                                    Avaliação do estado de configuração dos sistemas de IA
+                                </CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {providers.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground text-center py-4">Nenhum provedor configurado.</p>
-                                    ) : (
-                                        providers.slice(0, 3).map(p => (
-                                            <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-black/20 border border-white/5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-2 h-2 rounded-full ${p.is_active ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} />
-                                                    <div>
-                                                        <p className="font-medium text-sm">{p.name || p.model_name}</p>
-                                                        <p className="text-xs text-muted-foreground">{p.provider_type}</p>
-                                                    </div>
-                                                </div>
-                                                {p.is_active && <Badge className="bg-green-500/20 text-green-400 border-none">Ativo</Badge>}
-                                            </div>
-                                        ))
-                                    )}
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span>Configuração Geral</span>
+                                        <span>{complianceScore}%</span>
+                                    </div>
+                                    <Progress value={complianceScore} className="h-2" />
+                                </div>
+
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle className="w-4 h-4 text-green-500" />
+                                            <span>Provedores Configurados</span>
+                                        </div>
+                                        <Badge variant="outline">{providers.length}</Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="w-4 h-4 text-purple-500" />
+                                            <span>Templates de Prompts</span>
+                                        </div>
+                                        <Badge variant="outline">{prompts.length}</Badge>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Workflow className="w-4 h-4 text-green-500" />
+                                            <span>Workflows Ativos</span>
+                                        </div>
+                                        <Badge variant="outline">{activeWorkflows.length}</Badge>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Security Section */}
-                        <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                        <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-emerald-400" /> Segurança e Conformidade</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Shield className="w-5 h-5" />
+                                    Status do Sistema
+                                </CardTitle>
+                                <CardDescription>
+                                    Verificações de segurança e integridade
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium">Criptografia de API Keys</p>
-                                        <p className="text-xs text-muted-foreground">Chaves armazenadas com criptografia</p>
+                                        <span className="text-sm font-medium">Criptografia de Chaves</span>
+                                        <p className="text-xs text-muted-foreground">API keys protegidas</p>
                                     </div>
-                                    <Badge className="bg-emerald-500/20 text-emerald-400">Ativa</Badge>
+                                    <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200">Ativo</Badge>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium">Isolamento por Tenant</p>
-                                        <p className="text-xs text-muted-foreground">RLS ativo para separação de dados</p>
+                                        <span className="text-sm font-medium">Isolamento por Tenant</span>
+                                        <p className="text-xs text-muted-foreground">RLS ativo</p>
                                     </div>
-                                    <Badge className="bg-emerald-500/20 text-emerald-400">Ativa</Badge>
+                                    <Badge variant="secondary" className="bg-green-500/10 text-green-600 border-green-200">Ativo</Badge>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className="text-sm font-medium">Monitoramento</span>
+                                        <p className="text-xs text-muted-foreground">Métricas em tempo real</p>
+                                    </div>
+                                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 border-blue-200">Disponível</Badge>
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
+
                 </TabsContent>
 
                 {/* --- CONTENT: PROVIDERS --- */}
                 <TabsContent value="providers" className="space-y-6">
-                    <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-md">
+                    <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border">
                         <div>
                             <h3 className="text-xl font-bold">Provedores de IA</h3>
                             <p className="text-muted-foreground text-sm">Gerencie as conexões com LLMs para este tenant.</p>
@@ -431,10 +536,10 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
 
                     <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         {providers.map(provider => (
-                            <Card key={provider.id} className="border-white/10 bg-white/5 backdrop-blur-md hover:bg-white/[0.07] transition-all">
+                            <Card key={provider.id} className="hover:shadow-md transition-all">
                                 <CardHeader className="flex flex-row items-start justify-between pb-2">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
                                             {provider.provider_type === 'openai' ? <Bot className="h-6 w-6" /> : <Cpu className="h-6 w-6" />}
                                         </div>
                                         <div>
@@ -442,7 +547,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                                             <CardDescription className="text-xs">{provider.model_name}</CardDescription>
                                         </div>
                                     </div>
-                                    <Badge variant={provider.is_active ? "default" : "secondary"} className={provider.is_active ? "bg-green-600" : ""}>
+                                    <Badge variant={provider.is_active ? "default" : "secondary"}>
                                         {provider.is_active ? "Ativo" : "Inativo"}
                                     </Badge>
                                 </CardHeader>
@@ -450,7 +555,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                                     <div className="space-y-3 text-sm mt-2">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Tipo:</span>
-                                            <span className="uppercase font-mono text-xs bg-white/10 px-2 py-0.5 rounded">{provider.provider_type}</span>
+                                            <span className="uppercase font-mono text-xs bg-muted px-2 py-0.5 rounded">{provider.provider_type}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Requisições:</span>
@@ -462,12 +567,12 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                                         </div>
                                     </div>
                                     {!readonly && (
-                                        <div className="mt-4 pt-4 border-t border-white/10 flex gap-2">
+                                        <div className="mt-4 pt-4 border-t flex gap-2">
                                             <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => toast.info('Teste de conexão simulado')}>Testar</Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={() => { setSelectedProvider(provider); setShowProviderModal(true); }}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => { setSelectedProvider(provider); setShowProviderModal(true); }}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-400" onClick={() => setProviderToDelete(provider.id)}>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500" onClick={() => setProviderToDelete(provider.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -477,8 +582,8 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                         ))}
 
                         {providers.length === 0 && (
-                            <div className="col-span-full py-12 text-center border border-dashed border-white/20 rounded-xl bg-white/5">
-                                <div className="mx-auto w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                            <div className="col-span-full py-12 text-center border border-dashed rounded-xl bg-muted/20">
+                                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                                     <Plus className="h-6 w-6 text-muted-foreground" />
                                 </div>
                                 <h3 className="text-lg font-medium">Nenhum provedor configurado</h3>
@@ -510,7 +615,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                 </TabsContent>
 
                 <TabsContent value="settings">
-                    <AISettingsTabContent tenantId={tenantId} readonly={readonly} />
+                    <AISettingsTabContent tenantId={tenantId} readonly={readonly} mode={mode} />
                 </TabsContent>
 
             </Tabs>
@@ -525,7 +630,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
             />
 
             <AlertDialog open={!!providerToDelete} onOpenChange={(open) => !open && setProviderToDelete(null)}>
-                <AlertDialogContent className="bg-black/90 border-white/10 text-white backdrop-blur-xl">
+                <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -533,7 +638,7 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-white/5 border-white/10 hover:bg-white/10 text-white">Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDeleteProvider}>
                             Excluir
                         </AlertDialogAction>
