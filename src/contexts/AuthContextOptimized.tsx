@@ -447,15 +447,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
       if (error) {
         console.error('❌ [AUTH] Erro do Supabase:', error);
-
-        // Log falha de login no banco
-        await logAuthEvent('login_failed', {
-          email: cleanEmail,
-          error: error.message,
-          error_code: error.status,
-          severity: 'warning'
-        });
-
+        // O log será feito no bloco catch quando o erro for lançado para evitar duplicidade
         throw new Error(error.message);
       }
 

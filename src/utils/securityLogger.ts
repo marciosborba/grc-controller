@@ -7,7 +7,7 @@ export const sanitizeInput = (input: string | undefined | null): string => {
   if (!input || typeof input !== 'string') {
     return '';
   }
-  
+
   return input
     // Remove scripts maliciosos
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -39,7 +39,7 @@ export const sanitizeInput = (input: string | undefined | null): string => {
 // Função para sanitizar objetos completos
 export const sanitizeObject = (obj: Record<string, any>): Record<string, any> => {
   const sanitized: Record<string, any> = {};
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
       sanitized[key] = sanitizeInput(value);
@@ -49,7 +49,7 @@ export const sanitizeObject = (obj: Record<string, any>): Record<string, any> =>
       sanitized[key] = value;
     }
   }
-  
+
   return sanitized;
 };
 
@@ -60,10 +60,10 @@ export const secureLog = (level: 'info' | 'warn' | 'error', message: string, dat
     // Aqui seria enviado para serviço de logging seguro
     return;
   }
-  
+
   // Em desenvolvimento, log limitado
   const sanitizedData = data ? sanitizeObject(data) : undefined;
-  
+
   switch (level) {
     case 'info':
       console.log(`[INFO] ${message}`, sanitizedData);
@@ -111,20 +111,31 @@ export const logAuthEvent = async (
   details: Record<string, any> = {}
 ): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('activity_logs')
-      .insert({
-        user_id: details.user_id || null,
-        action: event,
-        resource_type: 'auth',
-        resource_id: details.user_id || null,
-        details: details,
-        ip_address: details.ip_address || null,
-        user_agent: details.user_agent || null
-      });
-    
+    const { error } = await supabase.rpc('log_activity', {
+      p_action: event,
+      p_resource_type: 'auth',
+      p_details: details,
+      p_user_id: details.user_id || null,
+      p_resource_id: details.user_id || null,
+      p_ip_address: details.ip_address || null
+    });
+
     if (error) {
-      console.error('Erro ao registrar evento de autenticação:', error);
+      console.error('Erro ao registrar evento de autenticação (RPC):', error);
+      // Fallback para insert normal se RPC falhar (ex: versão antiga do BD)
+      const { error: insertError } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: details.user_id || null,
+          action: event,
+          resource_type: 'auth',
+          resource_id: details.user_id || null,
+          details: details,
+          ip_address: details.ip_address || null,
+          user_agent: details.user_agent || null
+        });
+
+      if (insertError) console.error('Erro no fallback de insert:', insertError);
     }
   } catch (error) {
     console.error('Erro ao registrar evento de autenticação:', error);
@@ -136,20 +147,29 @@ export const logSuspiciousActivity = async (
   details: Record<string, any> = {}
 ): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('activity_logs')
-      .insert({
-        user_id: details.user_id || null,
-        action: activity,
-        resource_type: 'security',
-        resource_id: details.resource_id || null,
-        details: { ...details, severity: 'warning' },
-        ip_address: details.ip_address || null,
-        user_agent: details.user_agent || null
-      });
-    
+    const { error } = await supabase.rpc('log_activity', {
+      p_action: activity,
+      p_resource_type: 'security',
+      p_details: { ...details, severity: 'warning' },
+      p_user_id: details.user_id || null,
+      p_resource_id: details.resource_id || null,
+      p_ip_address: details.ip_address || null
+    });
+
     if (error) {
-      console.error('Erro ao registrar atividade suspeita:', error);
+      console.error('Erro ao registrar atividade suspeita (RPC):', error);
+      const { error: insertError } = await supabase
+        .from('activity_logs')
+        .insert({
+          user_id: details.user_id || null,
+          action: activity,
+          resource_type: 'security',
+          resource_id: details.resource_id || null,
+          details: { ...details, severity: 'warning' },
+          ip_address: details.ip_address || null,
+          user_agent: details.user_agent || null
+        });
+      if (insertError) console.error('Erro no fallback:', insertError);
     }
   } catch (error) {
     console.error('Erro ao registrar atividade suspeita:', error);
@@ -167,7 +187,7 @@ export const auditLog = async (
 ): Promise<void> => {
   try {
     const sessionInfo = await captureSessionInfo();
-    
+
     const { error } = await supabase
       .from('audit_logs')
       .insert({
@@ -183,7 +203,7 @@ export const auditLog = async (
         user_agent: sessionInfo.user_agent,
         session_id: metadata.session_id || null
       });
-    
+
     if (error) {
       secureLog('error', 'Erro ao registrar audit log', error);
     }
@@ -210,7 +230,7 @@ export const logActivity = async (
         ip_address: details.ip_address || null,
         user_agent: details.user_agent || null
       });
-    
+
     if (error) {
       secureLog('error', 'Erro ao registrar atividade', error);
     }
@@ -231,13 +251,13 @@ export const logSecurityEvent = async (eventData: {
       .insert({
         action: eventData.event,
         resource_type: 'security',
-        details: { 
+        details: {
           description: eventData.description,
           severity: eventData.severity || 'low',
-          ...eventData.metadata 
+          ...eventData.metadata
         }
       });
-    
+
     if (dbError) {
       console.error('Erro ao registrar evento de segurança:', dbError);
     }
@@ -263,7 +283,7 @@ export const logSecurityFailure = async (
         ip_address: details.ip_address || null,
         user_agent: details.user_agent || null
       });
-    
+
     if (dbError) {
       console.error('Erro ao registrar falha de segurança:', dbError);
     }
@@ -298,7 +318,7 @@ export const getUserIP = async (): Promise<string | null> => {
       'https://ipapi.co/json/',
       'https://ipinfo.io/json'
     ];
-    
+
     for (const service of ipServices) {
       try {
         const response = await fetch(service, {
@@ -308,13 +328,13 @@ export const getUserIP = async (): Promise<string | null> => {
           },
           timeout: 5000 // 5 segundos timeout
         });
-        
+
         if (response.ok) {
           const data = await response.json();
-          
+
           // Diferentes serviços retornam IP em campos diferentes
           const ip = data.ip || data.query || data.ipAddress;
-          
+
           if (ip && isValidIP(ip)) {
             console.log(`IP obtido via ${service}: ${ip}`);
             return ip;
@@ -325,10 +345,10 @@ export const getUserIP = async (): Promise<string | null> => {
         continue; // Tentar próximo serviço
       }
     }
-    
+
     // Se todos os serviços falharem, tentar WebRTC (funciona em alguns casos)
     return await getIPViaWebRTC();
-    
+
   } catch (error) {
     console.error('Erro ao obter IP do usuário:', error);
     return null;
@@ -346,26 +366,26 @@ const isValidIP = (ip: string): boolean => {
 const getIPViaWebRTC = (): Promise<string | null> => {
   return new Promise((resolve) => {
     try {
-      const RTCPeerConnection = window.RTCPeerConnection || 
-                               (window as any).webkitRTCPeerConnection || 
-                               (window as any).mozRTCPeerConnection;
-      
+      const RTCPeerConnection = window.RTCPeerConnection ||
+        (window as any).webkitRTCPeerConnection ||
+        (window as any).mozRTCPeerConnection;
+
       if (!RTCPeerConnection) {
         resolve(null);
         return;
       }
-      
+
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
-      
+
       pc.createDataChannel('');
-      
+
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           const candidate = event.candidate.candidate;
           const ipMatch = candidate.match(/([0-9]{1,3}(\.[0-9]{1,3}){3})/);
-          
+
           if (ipMatch && ipMatch[1] && !ipMatch[1].startsWith('192.168.') && !ipMatch[1].startsWith('10.')) {
             pc.close();
             resolve(ipMatch[1]);
@@ -373,15 +393,15 @@ const getIPViaWebRTC = (): Promise<string | null> => {
           }
         }
       };
-      
+
       pc.createOffer().then(offer => pc.setLocalDescription(offer));
-      
+
       // Timeout após 3 segundos
       setTimeout(() => {
         pc.close();
         resolve(null);
       }, 3000);
-      
+
     } catch (error) {
       console.warn('WebRTC IP detection failed:', error);
       resolve(null);
@@ -395,7 +415,7 @@ export const getLocationFromIP = async (ip: string): Promise<Record<string, any>
     if (!ip || !isValidIP(ip)) {
       return null;
     }
-    
+
     // Usar serviço gratuito para geolocalização
     const response = await fetch(`https://ipapi.co/${ip}/json/`, {
       method: 'GET',
@@ -404,10 +424,10 @@ export const getLocationFromIP = async (ip: string): Promise<Record<string, any>
       },
       timeout: 5000
     });
-    
+
     if (response.ok) {
       const data = await response.json();
-      
+
       return {
         city: data.city,
         region: data.region,
@@ -419,7 +439,7 @@ export const getLocationFromIP = async (ip: string): Promise<Record<string, any>
         isp: data.org
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error('Erro ao obter localização por IP:', error);
@@ -434,12 +454,12 @@ export const captureSessionInfo = async (): Promise<Record<string, any>> => {
       getUserIP(),
       Promise.resolve(getBrowserInfo())
     ]);
-    
+
     let locationInfo = null;
     if (ip) {
       locationInfo = await getLocationFromIP(ip);
     }
-    
+
     return {
       ip_address: ip,
       user_agent: browserInfo.user_agent,
