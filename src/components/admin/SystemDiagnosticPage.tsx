@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Users, 
-  Activity, 
-  Shield, 
-  Database, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Users,
+  Activity,
+  Shield,
+  Database,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
   RefreshCw,
   Monitor,
   HardDrive,
@@ -100,7 +100,7 @@ const SystemDiagnosticPage = () => {
     storageUsed: 0,
     storageTotal: 0
   });
-  
+
   const [securityMetrics, setSecurityMetrics] = useState<SecurityMetrics>({
     criticalRisks: 0,
     pendingAssessments: 0,
@@ -119,113 +119,86 @@ const SystemDiagnosticPage = () => {
   const loadSystemData = async () => {
     setIsLoading(true);
     try {
-      // Carregar dados reais do sistema
-      const [
-        usersData,
-        tenantsData,
-        assessmentsData,
-        risksData,
-        policiesData,
-        activityLogsData
-      ] = await Promise.all([
-        // Total de usuários
-        supabase.from('profiles').select('id, created_at'),
-        
-        // Total de tenants
-        supabase.from('tenants').select('id, is_active'),
-        
-        // Total de assessments
-        supabase.from('assessments').select('id'),
-        
-        // Total de risk assessments (substitui risks que não existe)
-        supabase.from('risk_assessments').select('id'),
-        
-        // Total de políticas
-        supabase.from('policies').select('id'),
-        
-        // Logs de atividade para estatísticas
-        supabase
-          .from('activity_logs')
-          .select('action, created_at')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      ]);
+      console.log('🔄 Loading GLOBAL system metrics via RPC...');
 
-      // Carregar dados reais de autenticação
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const authUsersList = authUsers?.users || [];
+      const { data, error } = await supabase.rpc('admin_get_global_stats');
 
-      // Calcular usuários ativos (perfis ativos no banco) - DADOS REAIS
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('is_active, locked_until')
-        .eq('is_active', true);
-      
-      const now = new Date();
-      const activeUsers = profilesData?.filter(profile => 
-        !profile.locked_until || new Date(profile.locked_until) <= now
-      ).length || 0;
+      if (error) {
+        throw error;
+      }
 
-      // Calcular usuários logados HOJE (data atual, não 24h) - DADOS REAIS
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Início do dia
-      const todayLogins = authUsersList.filter(user => {
-        if (!user.last_sign_in_at) return false;
-        const loginDate = new Date(user.last_sign_in_at);
-        return loginDate >= today;
-      }).length;
+      const stats = data as any;
+      console.log('✅ Global Metrics Loaded:', stats);
 
-      // Calcular tenants ativos
-      const activeTenants = tenantsData.data?.filter(tenant => tenant.is_active).length || 0;
+      // System Stats
+      const system = stats.system;
+      const counts = stats.counts;
+      const security = stats.security;
 
-      // Calcular storage usado (estimativa baseada em dados reais do banco)
-      const totalRecords = (usersData.data?.length || 0) + 
-                          (assessmentsData.data?.length || 0) + 
-                          (risksData.data?.length || 0) + 
-                          (policiesData.data?.length || 0) + 
-                          (activityLogsData.data?.length || 0);
-      
-      // Estimativa mais realista: ~2KB por registro + overhead
-      const estimatedStorageKB = Math.max(100, totalRecords * 2); // Mínimo 100KB
-      const estimatedStorageGB = estimatedStorageKB / (1024 * 1024); // Converter para GB
-      
+      // Calculate Uptime String
+      let uptimeString = '0d 0h 0m';
+      if (system.server_start_time) {
+        const now = new Date();
+        const startTime = new Date(system.server_start_time);
+        const diffMs = now.getTime() - startTime.getTime();
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        uptimeString = `${days}d ${hours}h ${minutes}m`;
+      }
+
+      // Storage
+      const storageUsedGB = (system.db_size_bytes || 0) / (1024 * 1024 * 1024);
+      const storageTotalGB = 1.0; // 1GB Free Tier limit
+
+      // Update System Stats State
       setSystemStats({
-        totalUsers: usersData.data?.length || 0,
-        activeUsers: activeUsers,
-        totalTenants: tenantsData.data?.length || 0,
-        activeTenants: activeTenants,
-        totalAssessments: assessmentsData.data?.length || 0,
-        totalRisks: risksData.data?.length || 0, // risk_assessments
-        totalPolicies: policiesData.data?.length || 0,
-        todayLogins: todayLogins, // Usuários logados HOJE (data atual)
-        lastBackup: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 horas atrás (mais realista)
-        systemUptime: calculateUptime(),
-        dbConnections: Math.min(Math.max(Math.floor(totalRecords / 100) + 2, 3), 15), // Estimativa mais realista
-        storageUsed: parseFloat(estimatedStorageGB.toFixed(3)),
-        storageTotal: 1.0 // 1GB total para Supabase free tier
+        totalUsers: counts.total_users,
+        activeUsers: counts.active_users_24h,
+        totalTenants: counts.total_tenants,
+        activeTenants: counts.active_tenants,
+        totalAssessments: counts.total_assessments,
+        totalRisks: counts.total_risks,
+        totalPolicies: counts.total_policies,
+        todayLogins: counts.active_users_24h,
+        lastBackup: system.last_backup_time || new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        systemUptime: uptimeString,
+        dbConnections: system.active_connections,
+        storageUsed: parseFloat(storageUsedGB.toFixed(3)),
+        storageTotal: storageTotalGB
       });
 
-      // Calcular health status baseado em dados reais
-      const dbHealthy = !usersData.error && !tenantsData.error && !assessmentsData.error;
-      const authHealthy = todayLogins >= 0 && !usersData.error; // Se conseguiu buscar dados de auth
-      const storageWarning = estimatedStorageGB > 0.8; // Alerta se > 80% de 1GB
-      const performanceHealthy = totalRecords < 50000; // Alerta se muitos registros para free tier
+      // Update Security Metrics State
+      setSecurityMetrics({
+        criticalRisks: security.critical_risks,
+        pendingAssessments: security.pending_assessments,
+        securityIncidents: security.security_incidents,
+        complianceScore: security.compliance_score,
+        failedLogins: security.failed_logins_today,
+        suspiciousActivities: security.suspicious_activities_week,
+        vulnerableAssets: security.vulnerabilities,
+        overduePolicies: security.overdue_policies,
+        expiredCertifications: 0,
+        dataBreachAttempts: security.data_breach_attempts
+      });
+
+      // Calculate Health Status
+      const dbHealthy = true;
+      const authHealthy = security.failed_logins_today < 50;
+      const storageWarning = storageUsedGB > (storageTotalGB * 0.8);
 
       setSystemHealth({
         overall: dbHealthy && authHealthy && !storageWarning ? 'healthy' : 'warning',
-        database: dbHealthy ? 'healthy' : 'critical',
+        database: 'healthy',
         auth: authHealthy ? 'healthy' : 'warning',
         storage: storageWarning ? 'warning' : 'healthy',
-        performance: performanceHealthy ? 'healthy' : 'warning'
+        performance: 'healthy'
       });
 
-      // Carregar métricas de segurança críticas
-      await loadSecurityMetrics();
-      
       setLastRefresh(new Date());
+
     } catch (error) {
-      console.error('Erro ao carregar dados do sistema:', error);
-      
-      // Em caso de erro, manter alguns dados básicos
+      console.error('Falha ao carregar métricas:', error);
       setSystemHealth({
         overall: 'critical',
         database: 'critical',
@@ -238,117 +211,9 @@ const SystemDiagnosticPage = () => {
     }
   };
 
-  const calculateUptime = (): string => {
-    // Calcular uptime baseado na data do primeiro usuário ou tenant criado
-    // Usar dados reais do banco quando disponível
-    const startTime = new Date('2025-07-20'); // Data real de criação do projeto
-    const now = new Date();
-    const diffMs = now.getTime() - startTime.getTime();
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${days}d ${hours}h ${minutes}m`;
-  };
-
-  const loadSecurityMetrics = async () => {
-    try {
-      console.log('🔒 Carregando métricas críticas de segurança...');
-      
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
-      // 1. Riscos críticos (nível alto/crítico)
-      const { data: criticalRisksData } = await supabase
-        .from('risks')
-        .select('id')
-        .in('risk_level', ['high', 'critical'])
-        .eq('status', 'open')
-        .then(r => r).catch(() => ({ data: [] }));
-        
-      // 2. Assessments pendentes (não concluídos)
-      const { data: pendingAssessmentsData } = await supabase
-        .from('assessments')
-        .select('id')
-        .in('status', ['in_progress', 'draft', 'pending']);
-        
-      // 3. Incidentes de segurança (últimos 30 dias)
-      const { data: securityIncidentsData } = await supabase
-        .from('activity_logs')
-        .select('id')
-        .eq('resource_type', 'security')
-        .gte('created_at', last30Days.toISOString());
-        
-      // 4. Tentativas de login falharam (hoje)
-      const { data: failedLoginsData } = await supabase
-        .from('activity_logs')
-        .select('id')
-        .ilike('action', '%fail%')
-        .eq('resource_type', 'auth')
-        .gte('created_at', today.toISOString());
-        
-      // 5. Atividades suspeitas (últimos 7 dias)
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const { data: suspiciousData } = await supabase
-        .from('activity_logs')
-        .select('id')
-        .or('action.ilike.%suspicious%,action.ilike.%blocked%,action.ilike.%unauthorized%')
-        .gte('created_at', weekAgo.toISOString());
-        
-      // 6. Políticas vencidas (com data de revisão passada)
-      const { data: overduePoliciesData } = await supabase
-        .from('policies')
-        .select('id, next_review_date')
-        .lt('next_review_date', now.toISOString())
-        .eq('status', 'active')
-        .then(r => r).catch(() => ({ data: [] }));
-        
-      // 7. Tentativas de violação de dados (logs de erro críticos)
-      const { data: dataBreachAttemptsData } = await supabase
-        .from('activity_logs')
-        .select('id')
-        .or('action.ilike.%breach%,action.ilike.%violation%,details->>severity.eq.critical')
-        .gte('created_at', last30Days.toISOString());
-        
-      // 8. Calcular score de compliance (baseado em assessments concluídos)
-      const { data: totalAssessments } = await supabase
-        .from('assessments')
-        .select('id, status');
-        
-      const completedAssessments = totalAssessments?.filter(a => a.status === 'completed').length || 0;
-      const totalAssessmentCount = totalAssessments?.length || 1;
-      const complianceScore = Math.round((completedAssessments / totalAssessmentCount) * 100);
-      
-      // 9. Vulnerabilidades OWASP (estimativa baseada em falhas de controle)
-      const owaspVulnerabilities = Math.floor((criticalRisksData?.length || 0) * 0.8) + 
-                                   Math.floor((securityIncidentsData?.length || 0) * 0.3);
-      
-      // 10. Controles de segurança falhos (baseado em políticas vencidas e incidentes)
-      const failedControls = (overduePoliciesData?.length || 0) + 
-                             Math.floor((securityIncidentsData?.length || 0) * 0.2);
-      
-      const metrics: SecurityMetrics = {
-        criticalRisks: criticalRisksData?.length || 0,
-        pendingAssessments: pendingAssessmentsData?.length || 0,
-        securityIncidents: securityIncidentsData?.length || 0,
-        complianceScore: complianceScore,
-        failedLogins: failedLoginsData?.length || 0,
-        suspiciousActivities: suspiciousData?.length || 0,
-        vulnerableAssets: owaspVulnerabilities,
-        overduePolicies: failedControls,
-        expiredCertifications: 0, // Não usado mais
-        dataBreachAttempts: dataBreachAttemptsData?.length || 0
-      };
-      
-      console.log('✅ Métricas de segurança carregadas:', metrics);
-      setSecurityMetrics(metrics);
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar métricas de segurança:', error);
-      // Manter valores padrão em caso de erro
-    }
-  };
+  // Deprecated: Metrics are now loaded in loadSystemData via RPC
+  const calculateUptime = (): string => '0d 0h 0m';
+  const loadSecurityMetrics = async () => { };
 
   useEffect(() => {
     if (user?.isPlatformAdmin) {
@@ -391,7 +256,7 @@ const SystemDiagnosticPage = () => {
   const storagePercentage = (systemStats.storageUsed / systemStats.storageTotal) * 100;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full h-full space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -404,9 +269,9 @@ const SystemDiagnosticPage = () => {
           <span className="text-sm text-muted-foreground">
             Última atualização: {lastRefresh.toLocaleTimeString('pt-BR')}
           </span>
-          <Button 
-            onClick={loadSystemData} 
-            variant="outline" 
+          <Button
+            onClick={loadSystemData}
+            variant="outline"
             size="sm"
             disabled={isLoading}
           >
@@ -579,7 +444,7 @@ const SystemDiagnosticPage = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Critical Security Indicators */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Card>
@@ -595,7 +460,7 @@ const SystemDiagnosticPage = () => {
                 </p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Vulnerabilidades OWASP</CardTitle>
@@ -606,7 +471,7 @@ const SystemDiagnosticPage = () => {
                 <p className="text-xs text-muted-foreground">detectadas no sistema</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Controles Falhos</CardTitle>
@@ -617,7 +482,7 @@ const SystemDiagnosticPage = () => {
                 <p className="text-xs text-muted-foreground">necessitam correção</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Logs Suspeitos</CardTitle>
@@ -628,7 +493,7 @@ const SystemDiagnosticPage = () => {
                 <p className="text-xs text-muted-foreground">requerem investigação</p>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Acesso Não Autorizado</CardTitle>
@@ -700,7 +565,7 @@ const SystemDiagnosticPage = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -717,12 +582,11 @@ const SystemDiagnosticPage = () => {
                     <span className="text-sm font-medium">Compliance Score:</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full ${
-                            securityMetrics.complianceScore >= 90 ? 'bg-green-500' :
+                        <div
+                          className={`h-2 rounded-full ${securityMetrics.complianceScore >= 90 ? 'bg-green-500' :
                             securityMetrics.complianceScore >= 80 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{width: `${securityMetrics.complianceScore}%`}}
+                            }`}
+                          style={{ width: `${securityMetrics.complianceScore}%` }}
                         />
                       </div>
                       <span className="text-sm font-bold">{securityMetrics.complianceScore}%</span>

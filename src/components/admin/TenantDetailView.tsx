@@ -6,6 +6,8 @@ import { ArrowLeft, LayoutDashboard, Boxes, Users2, BrainCircuit, ShieldAlert, S
 import { TenantOverviewTab } from './tabs/TenantOverviewTab';
 import { TenantModulesTab } from './tabs/TenantModulesTab';
 import { TenantUsersTab } from './tabs/TenantUsersTab';
+import { TenantSettingsTab } from './tabs/TenantSettingsTab';
+import { TenantSecurityTab } from './tabs/TenantSecurityTab';
 
 interface TenantDetailViewProps {
     tenantId: string;
@@ -42,10 +44,10 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ tenantId, tenantNam
                     <TabsTrigger value="ai" className="flex gap-2" disabled>
                         <BrainCircuit className="h-4 w-4" /> <span className="hidden md:inline">IA & Automação</span>
                     </TabsTrigger>
-                    <TabsTrigger value="security" className="flex gap-2" disabled>
+                    <TabsTrigger value="security" className="flex gap-2">
                         <ShieldAlert className="h-4 w-4" /> <span className="hidden md:inline">Segurança</span>
                     </TabsTrigger>
-                    <TabsTrigger value="settings" className="flex gap-2" disabled>
+                    <TabsTrigger value="settings" className="flex gap-2">
                         <Settings className="h-4 w-4" /> <span className="hidden md:inline">Configurações</span>
                     </TabsTrigger>
                 </TabsList>
@@ -64,8 +66,12 @@ const TenantDetailView: React.FC<TenantDetailViewProps> = ({ tenantId, tenantNam
 
                 {/* Placeholders for future implementation */}
                 <TabsContent value="ai"><div className="p-10 text-center text-muted-foreground">Em breve: Configurações de IA Global</div></TabsContent>
-                <TabsContent value="security"><div className="p-10 text-center text-muted-foreground">Em breve: Chaves de Criptografia e Sessão</div></TabsContent>
-                <TabsContent value="settings"><div className="p-10 text-center text-muted-foreground">Em breve: Configurações Avançadas</div></TabsContent>
+                <TabsContent value="security">
+                    <TenantSecurityTab tenantId={tenantId} />
+                </TabsContent>
+                <TabsContent value="settings">
+                    <TenantSettingsTab tenantId={tenantId} />
+                </TabsContent>
             </Tabs>
         </div>
     );

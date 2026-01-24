@@ -277,6 +277,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
 
+// Main App Component
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -287,7 +288,7 @@ const App = () => (
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
-                <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <BrowserRouter>
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={
@@ -765,55 +766,50 @@ const App = () => (
                         </PlatformAdminRoute>
                       } />
                       {/* AI Manager - New modular structure */}
-                      <Route path="ai-manager" element={
+                      {/* AI Manager - New modular structure */}
+                      <Route element={
                         <PlatformAdminRoute>
+                          <ModuleGuard moduleKey="ai_manager">
+                            <Outlet />
+                          </ModuleGuard>
+                        </PlatformAdminRoute>
+                      }>
+                        <Route path="ai-manager" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIManagementPageDirect />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/providers" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/providers" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIProvidersPage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/prompts" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/prompts" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIPromptsPage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/workflows" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/workflows" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIWorkflowsPage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/usage" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/usage" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIUsagePage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/settings" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/settings" element={
                           <Suspense fallback={<PageLoader />}>
                             <AISettingsPage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="ai-manager/audit" element={
-                        <PlatformAdminRoute>
+                        } />
+                        <Route path="ai-manager/audit" element={
                           <Suspense fallback={<PageLoader />}>
                             <AIAuditPage />
                           </Suspense>
-                        </PlatformAdminRoute>
-                      } />
+                        } />
+                      </Route>
 
                       {/* Legacy AI management routes for compatibility */}
                       <Route path="ai-management" element={

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { logAuthEvent } from '@/utils/securityLogger';
 
 interface UserProfile {
   id: string;
@@ -40,6 +41,10 @@ export interface AuthUser {
   permissions: string[];
   isPlatformAdmin: boolean;
   enabledModules: string[]; // List of enabled module keys
+  settings?: {
+    enable_global_ai?: boolean;
+    [key: string]: any;
+  };
 }
 
 interface AuthContextType {
@@ -135,6 +140,18 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   const loadUserData = useCallback(async (supabaseUser: User): Promise<AuthUser | null> => {
     console.log('👤 [AUTH] Loading user data for:', supabaseUser.id);
 
+    // Criar usuário básico primeiro para evitar travamento (Escopo global da função)
+    const basicUser: AuthUser = {
+      id: supabaseUser.id,
+      email: supabaseUser.email || '',
+      name: supabaseUser.email?.split('@')[0] || 'Usuário',
+      tenantId: 'default',
+      roles: ['user'],
+      permissions: getPermissionsForRoles(['user'], false),
+      isPlatformAdmin: false,
+      enabledModules: []
+    };
+
     try {
       // Verificar cache primeiro
       const cachedUser = getCachedUser(supabaseUser.id);
@@ -143,97 +160,67 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         return cachedUser;
       }
 
-      // Criar usuário básico primeiro para evitar travamento
-      const basicUser: AuthUser = {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.email?.split('@')[0] || 'Usuário',
-        tenantId: 'default',
-        roles: ['user'],
-        permissions: getPermissionsForRoles(['user'], false),
-        isPlatformAdmin: false,
-        enabledModules: []
-      };
-
-      // Tentar carregar dados adicionais de forma assíncrona
+      // Tentar carregar via RPC
       try {
-        console.log('📊 [AUTH] Fetching profile, roles and platform admin status...');
+        console.log('📊 [AUTH] Fetching profile via Secure RPC...');
 
-        const [profileResult, rolesResult, platformAdminResult] = await Promise.all([
-          supabase.from('profiles').select('*').eq('user_id', supabaseUser.id).maybeSingle(),
-          supabase.from('user_roles').select('role').eq('user_id', supabaseUser.id),
-          supabase.from('platform_admins').select('user_id, created_at').eq('user_id', supabaseUser.id).maybeSingle()
-        ]);
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_user_complete_profile');
 
-        const profile = profileResult?.data;
-        const roles = rolesResult?.data || [];
-        const platformAdmin = platformAdminResult?.data;
-
-        // Fetch Tenant Modules
-        let enabledModules: string[] = [];
-        if (profile?.tenant_id) {
-          const { data: modData } = await supabase
-            .from('tenant_modules')
-            .select('module_key')
-            .eq('tenant_id', profile.tenant_id)
-            .eq('is_enabled', true);
-
-          enabledModules = modData?.map(m => m.module_key) || [];
-          console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
+        if (rpcError) {
+          console.error('❌ [AUTH] RPC Error:', rpcError);
+          throw rpcError;
         }
 
-        console.log('📊 [AUTH] Profile, roles and platform admin loaded:', {
+        const fullProfile = rpcData as any;
+        console.log('✅ [AUTH] RPC Data received:', JSON.stringify(fullProfile, null, 2));
+
+        if (!fullProfile || !fullProfile.profile) {
+          console.warn('⚠️ [AUTH] Perfil não retornado pelo RPC');
+          throw new Error('Perfil não encontrado');
+        }
+
+        const profile = fullProfile.profile;
+        const tenantData = fullProfile.tenant;
+        const tenantSettings = tenantData?.settings || {};
+        const modulesList = fullProfile.modules || [];
+        const rolesList = fullProfile.roles || [];
+        const platformAdminData = fullProfile.platform_admin;
+
+        // Fetch Tenant Modules from RPC result
+        let enabledModules: string[] = modulesList.map((m: any) => m.module_key);
+        console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
+
+        console.log('📊 [AUTH] Profile loaded via RPC:', {
           hasProfile: !!profile,
-          rolesCount: roles.length,
-          isPlatformAdminTable: !!platformAdmin
+          rolesCount: rolesList.length,
+          isPlatformAdminTable: !!platformAdminData
         });
 
         // 🔒 SEGURANÇA: Usar APENAS tabela platform_admins como fonte autoritativa
-        // Fallback para roles apenas se platform_admins não existir (compatibilidade)
         let isPlatformAdmin = false;
         let adminSource = 'none';
 
-        if (platformAdmin) {
-          // Fonte primária: tabela platform_admins (mais segura)
+        if (platformAdminData) {
           isPlatformAdmin = true;
           adminSource = 'platform_admins_table';
         } else {
-          // Fallback: verificar roles (apenas para compatibilidade)
-          const hasAdminRole = roles.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role));
+          // Fallback para roles apenas se platform_admins não existir (compatibilidade)
+          const hasAdminRole = rolesList.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role));
           if (hasAdminRole) {
             isPlatformAdmin = true;
             adminSource = 'user_roles_fallback';
-            // Log de segurança: usuário admin via roles (menos seguro)
-            console.warn('⚠️ [SECURITY] Platform Admin via roles fallback:', {
-              userId: supabaseUser.id,
-              email: supabaseUser.email,
-              roles: roles.map((r: any) => r.role),
-              timestamp: new Date().toISOString()
-            });
           }
         }
 
         console.log('🔐 [AUTH] Platform Admin verification (SECURE):', {
           isPlatformAdmin,
-          adminSource,
-          platformAdminTable: !!platformAdmin,
-          adminRoles: roles.filter((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role)),
-          allRoles: roles.map((r: any) => r.role),
-          securityNote: adminSource === 'user_roles_fallback' ? 'USING_FALLBACK_METHOD' : 'USING_PRIMARY_METHOD'
+          adminSource
         });
 
         // Atualizar com dados completos
-        const userRoles = roles.length > 0 ? roles.map((r: any) => r.role) : ['user'];
+        const userRoles = rolesList.length > 0 ? rolesList.map((r: any) => r.role) : ['user'];
         const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
-
-        console.log('🎯 [AUTH DEBUG] Usuário carregado com permissões:', {
-          userId: supabaseUser.id,
-          email: supabaseUser.email,
-          roles: userRoles,
-          permissions: userPermissions,
-          isPlatformAdmin,
-          hasAssessmentRead: userPermissions.includes('assessment.read')
-        });
 
         const userData: AuthUser = {
           id: supabaseUser.id,
@@ -244,16 +231,20 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           roles: userRoles,
           permissions: userPermissions,
           isPlatformAdmin,
-          enabledModules
+          enabledModules,
+          settings: tenantSettings,
+          tenant: tenantData ? {
+            id: profile?.tenant_id, // Add ID to satisfy Tenant interface if mostly compatible, or expect errors? AuthUser tenant is Tenant interface.
+            name: tenantData.name,
+            slug: tenantData.slug,
+            // MOCK missing required fields to avoid typescript errors since we only need name/settings mostly
+            contact_email: '',
+            max_users: 0,
+            current_users_count: 0,
+            subscription_plan: 'free',
+            is_active: true
+          } : undefined
         };
-
-        console.log('🔍 [AUTH] Final userData created:', {
-          id: userData.id,
-          email: userData.email,
-          tenantId: userData.tenantId,
-          profileTenantId: profile?.tenant_id,
-          isPlatformAdmin: userData.isPlatformAdmin
-        });
 
         // Cache o resultado
         setCachedUser(supabaseUser.id, userData);
@@ -266,18 +257,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     } catch (error) {
       console.error('❌ [AUTH] Erro inesperado ao carregar dados do usuário:', error);
-
-      // Retornar usuário básico em caso de erro
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        name: supabaseUser.email?.split('@')[0] || 'Usuário',
-        tenantId: 'default',
-        roles: ['user'],
-        permissions: getPermissionsForRoles(['user'], false),
-        isPlatformAdmin: false,
-        enabledModules: []
-      };
+      return basicUser;
     }
   }, [getCachedUser, setCachedUser]);
 
@@ -319,7 +299,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           tenantId: 'default',
           roles: ['user'],
           permissions: getPermissionsForRoles(['user'], false),
-          isPlatformAdmin: false
+          isPlatformAdmin: false,
+          enabledModules: []
         };
         setUser(basicUser);
       } finally {
@@ -428,11 +409,21 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     if (!validateEmailFormat(cleanEmail)) {
       console.error('❌ [AUTH] Formato de email inválido:', cleanEmail);
+      await logAuthEvent('login_failed', {
+        email: cleanEmail,
+        error: 'Invalid email format',
+        severity: 'warning'
+      });
       throw new Error('Formato de email inválido');
     }
 
     if (cleanPassword.length < 6) {
       console.error('❌ [AUTH] Senha muito curta');
+      await logAuthEvent('login_failed', {
+        email: cleanEmail,
+        error: 'Password too short',
+        severity: 'warning'
+      });
       throw new Error('Senha deve ter pelo menos 6 caracteres');
     }
 
@@ -450,18 +441,46 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       });
 
       const result = await Promise.race([loginPromise, timeoutPromise]);
-      const { data, error } = result;
+      const { data, error } = result as any;
 
       console.log('🔐 [AUTH] Resposta do Supabase:', { data: !!data, error: error?.message });
 
       if (error) {
         console.error('❌ [AUTH] Erro do Supabase:', error);
+
+        // Log falha de login no banco
+        await logAuthEvent('login_failed', {
+          email: cleanEmail,
+          error: error.message,
+          error_code: error.status,
+          severity: 'warning'
+        });
+
         throw new Error(error.message);
       }
 
       console.log('✅ [AUTH] Login bem-sucedido!');
+
+      // Log sucesso de login
+      if (data.user) {
+        await logAuthEvent('login_success', {
+          user_id: data.user.id,
+          email: cleanEmail,
+          severity: 'info'
+        });
+      }
+
     } catch (error: any) {
       console.error('❌ [AUTH] Erro inesperado no login:', error);
+
+      if (!error.message?.includes('Invalid email') && !error.message?.includes('Password too short')) {
+        await logAuthEvent('login_failed', {
+          email: cleanEmail,
+          error: error.message || 'Unknown error',
+          severity: 'error'
+        });
+      }
+
       throw error;
     }
   }, []);
@@ -539,6 +558,16 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     if (!user) return false;
     // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
     // if (user.isPlatformAdmin) return true; 
+
+    // AI Modules Check - Enforce Global AI Setting
+    // Exceção: Platform Admin sempre pode acessar o AI Manager (configuração do sistema)
+    if (['ai_manager'].includes(moduleKey) && user.isPlatformAdmin) {
+      return true;
+    }
+
+    if (['ai_manager', 'policy_auditor'].includes(moduleKey)) {
+      if (!user.settings?.enable_global_ai) return false;
+    }
 
     // Public modules or basic ones
     if (['dashboard', 'help', 'notifications', 'settings', 'admin'].includes(moduleKey)) return true; // Ensure 'admin' module is always accessible for admins
