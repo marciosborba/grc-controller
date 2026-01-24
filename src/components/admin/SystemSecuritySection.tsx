@@ -1402,25 +1402,69 @@ export const SystemSecuritySection = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>MFA</strong>: Incentive mais usuários a ativarem a autenticação multi-fator.
-                Atualmente apenas {mfaPercentage.toFixed(0)}% dos usuários têm MFA ativo.
-              </AlertDescription>
-            </Alert>
+            {/* MFA Recommendation */}
+            {(() => {
+              const mfaPct = securityMetrics.mfaTotal > 0 ? (securityMetrics.mfaEnabled / securityMetrics.mfaTotal) * 100 : 0;
+              if (mfaPct < 100) {
+                return (
+                  <Alert variant={mfaPct < 50 ? "destructive" : "default"}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>MFA ({mfaPct.toFixed(0)}%)</strong>:
+                      {mfaPct === 0
+                        ? " Crítico! Nenhum usuário tem MFA habilitado. Aplique políticas de 2FA imediatamente."
+                        : " Incentive mais usuários a ativarem a autenticação multi-fator para atingir 100% de cobertura."}
+                    </AlertDescription>
+                  </Alert>
+                );
+              }
+              return (
+                <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-900">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertDescription className="text-green-800 dark:text-green-300">
+                    <strong>MFA (100%)</strong>: Excelente! Todos os usuários estão protegidos com autenticação de dois fatores.
+                  </AlertDescription>
+                </Alert>
+              );
+            })()}
 
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Monitoramento</strong>: Configure alertas automáticos para tentativas de login falhadas em sequência.
-              </AlertDescription>
-            </Alert>
+            {/* Failed Logins / Brute Force */}
+            {securityMetrics.failedLogins24h > 10 ? (
+              <Alert variant="destructive">
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Alta Taxa de Falhas ({securityMetrics.failedLogins24h})</strong>:
+                  Detectamos um número incomum de falhas de login. Verifique os logs de "Eventos de Segurança" para identificar possíveis ataques de força bruta.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert>
+                <CheckCircle className="h-4 w-4 text-blue-500" />
+                <AlertDescription>
+                  <strong>Monitoramento de Login</strong>: O volume de falhas de login está dentro do normal ({securityMetrics.failedLogins24h} em 24h).
+                </AlertDescription>
+              </Alert>
+            )}
 
+            {/* Account Lockouts */}
+            {securityMetrics.accountLockouts > 0 && (
+              <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-900">
+                <Ban className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                <AlertDescription className="text-orange-800 dark:text-orange-300">
+                  <strong>Usuários Bloqueados</strong>:
+                  {securityMetrics.accountLockouts} usuários foram bloqueados temporariamente por excesso de tentativas. Revise se são legítimos.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Default Policy Recommendation */}
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
-                <strong>Políticas de Senha</strong>: Considere implementar políticas mais rígidas de senhas e rotação automática.
+                <strong>Score de Segurança ({securityMetrics.passwordStrengthScore}/100)</strong>:
+                {securityMetrics.passwordStrengthScore < 80
+                  ? " O índice geral de segurança pode melhorar. Ative MFA e revise permissões."
+                  : " O ambiente apresenta um bom nível de segurança. Mantenha o monitoramento constante."}
               </AlertDescription>
             </Alert>
           </div>

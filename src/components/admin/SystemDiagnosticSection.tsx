@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { OwaspVulnerabilityScanner } from './OwaspVulnerabilityScanner';
 import EthicsDiagnostic from './EthicsDiagnostic';
-import { 
-  Settings, 
-  AlertTriangle, 
+import {
+  Settings,
+  AlertTriangle,
   CheckCircle,
   XCircle,
   Clock,
@@ -81,6 +81,22 @@ export const SystemDiagnosticSection = () => {
         description: 'Testar conectividade e performance do banco de dados',
         status: 'pending',
         severity: 'critical'
+      },
+      {
+        id: 'sys_rls_policies',
+        category: 'security',
+        name: 'Row Level Security (RLS)',
+        description: 'Verificar se RLS está ativo em todas as tabelas públicas',
+        status: 'pending',
+        severity: 'critical'
+      },
+      {
+        id: 'sys_public_buckets',
+        category: 'security',
+        name: 'Buckets Públicos',
+        description: 'Identificar buckets de armazenamento expostos publicamente',
+        status: 'pending',
+        severity: 'high'
       },
       {
         id: 'sys_table_integrity',
@@ -192,7 +208,7 @@ export const SystemDiagnosticSection = () => {
   useEffect(() => {
     const checks = initializeDiagnosticChecks();
     setDiagnosticChecks(checks);
-    
+
     // Carregar último resultado se existir
     loadLastDiagnosticResults();
   }, []);
@@ -213,40 +229,38 @@ export const SystemDiagnosticSection = () => {
   const runFullDiagnostic = async () => {
     setIsScanning(true);
     setScanProgress(0);
-    
+
     const checks = [...diagnosticChecks];
     const total = checks.length;
     const startTime = Date.now();
-    
+
     try {
-      for (let i = 0; i < checks.length; i++) {
-        const check = checks[i];
-        
-        // Marcar como executando
-        check.status = 'running';
+      // Otimização: Paralelismo em batches de 4 para performance sem flood
+      const BATCH_SIZE = 4;
+      for (let i = 0; i < checks.length; i += BATCH_SIZE) {
+        const batch = checks.slice(i, i + BATCH_SIZE);
+
+        batch.forEach(c => c.status = 'running');
         setDiagnosticChecks([...checks]);
-        
-        // Executar check real
-        await runIndividualCheck(check);
-        
-        // Atualizar progresso
-        setScanProgress(((i + 1) / total) * 100);
-        
-        // Pequena pausa para visualização
-        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Executar batch em paralelo
+        await Promise.all(batch.map(check => runIndividualCheck(check)));
+
+        setScanProgress(((Math.min(i + BATCH_SIZE, total)) / total) * 100);
+
+        // Breve pausa para UI respirar
+        await new Promise(r => setTimeout(r, 100));
       }
-      
-      // Calcular resumo
+
       const scanDuration = Date.now() - startTime;
       const summary = calculateDiagnosticSummary(checks, scanDuration);
       setDiagnosticSummary(summary);
-      
-      // Salvar resultados
+
       const results = { checks, summary };
       localStorage.setItem('lastDiagnosticResults', JSON.stringify(results));
-      
-      console.log('✅ Diagnóstico completo finalizado:', summary);
-      
+
+      console.log('✅ Diagnóstico OTIMIZADO finalizado:', summary);
+
     } catch (error) {
       console.error('❌ Erro durante diagnóstico:', error);
     } finally {
@@ -258,59 +272,84 @@ export const SystemDiagnosticSection = () => {
   const runIndividualCheck = async (check: DiagnosticCheck): Promise<void> => {
     try {
       const startTime = Date.now();
-      
+
       switch (check.id) {
-        case 'sys_db_connection':
-          await checkDatabaseConnection(check);
-          break;
-        case 'sys_table_integrity':
-          await checkTableIntegrity(check);
-          break;
-        case 'sys_storage_usage':
-          await checkStorageUsage(check);
-          break;
-        case 'sec_failed_logins':
-          await checkFailedLogins(check);
-          break;
-        case 'sec_inactive_users':
-          await checkInactiveUsers(check);
-          break;
-        case 'sec_locked_accounts':
-          await checkLockedAccounts(check);
-          break;
-        case 'perf_query_time':
-          await checkQueryPerformance(check);
-          break;
-        case 'perf_large_tables':
-          await checkLargeTables(check);
-          break;
-        case 'data_orphaned_records':
-          await checkOrphanedRecords(check);
-          break;
-        case 'data_tenant_consistency':
-          await checkTenantConsistency(check);
-          break;
-        case 'data_user_profiles':
-          await checkUserProfiles(check);
-          break;
-        case 'user_activity_patterns':
-          await checkActivityPatterns(check);
-          break;
-        case 'user_engagement':
-          await checkUserEngagement(check);
-          break;
+        case 'sys_db_connection': await checkDatabaseConnection(check); break;
+        case 'sys_rls_policies': await checkRowLevelSecurity(check); break;
+        case 'sys_public_buckets': await checkPublicBuckets(check); break;
+        case 'sys_table_integrity': await checkTableIntegrity(check); break;
+        case 'sys_storage_usage': await checkStorageUsage(check); break;
+        case 'sec_failed_logins': await checkFailedLogins(check); break;
+        case 'sec_inactive_users': await checkInactiveUsers(check); break;
+        case 'sec_locked_accounts': await checkLockedAccounts(check); break;
+        case 'perf_query_time': await checkQueryPerformance(check); break;
+        case 'perf_large_tables': await checkLargeTables(check); break;
+        case 'data_orphaned_records': await checkOrphanedRecords(check); break;
+        case 'data_tenant_consistency': await checkTenantConsistency(check); break;
+        case 'data_user_profiles': await checkUserProfiles(check); break;
+        case 'user_activity_patterns': await checkActivityPatterns(check); break;
+        case 'user_engagement': await checkUserEngagement(check); break;
         default:
           check.status = 'warning';
           check.result = 'Check não implementado';
       }
-      
+
       check.duration = Date.now() - startTime;
       check.lastRun = new Date().toISOString();
-      
+
     } catch (error) {
       check.status = 'failed';
-      check.result = `Erro durante execução: ${error}`;
-      check.recommendation = 'Verifique os logs do sistema para mais detalhes';
+      check.result = `Erro crítico: ${error}`;
+    }
+  };
+
+  // --- NOVOS CHECKS DE SEGURANÇA (RPC & Storage) ---
+
+  const checkRowLevelSecurity = async (check: DiagnosticCheck) => {
+    try {
+      // Usa a nova RPC para auditoria completa instantânea
+      const { data, error } = await supabase.rpc('get_security_stats');
+      if (error) throw error;
+
+      const stats = data as any;
+      check.realData = stats;
+      const missing = stats.tables_without_rls?.length || 0;
+
+      if (missing > 0) {
+        check.status = 'failed'; // RLS desativado é CRÍTICO
+        check.result = `🚨 ${missing} Tabelas desprotegidas (sem RLS)`;
+        // Mostra as 3 primeiras para o user saber onde atuar
+        const examples = stats.tables_without_rls.slice(0, 3).join(', ');
+        check.recommendation = `ATIVAR RLS IMEDIATAMENTE EM: ${examples}...`;
+      } else {
+        check.status = 'passed';
+        check.result = `🛡️ 100% Seguro: Todas as ${stats.total_tables} tabelas públicas têm RLS ativo.`;
+      }
+    } catch (e) {
+      check.status = 'warning';
+      check.result = 'Falha ao verificar RLS (RPC)';
+    }
+  };
+
+  const checkPublicBuckets = async (check: DiagnosticCheck) => {
+    try {
+      const { data: buckets, error } = await supabase.storage.listBuckets();
+      if (error) throw error;
+
+      const publicBuckets = buckets.filter(b => b.public);
+      check.realData = { total: buckets.length, publicCount: publicBuckets.length };
+
+      if (publicBuckets.length > 0) {
+        check.status = 'warning';
+        check.result = `${publicBuckets.length} Buckets configurados como PÚBLICOS`;
+        check.recommendation = `Verifique se '${publicBuckets[0].name}' deve realmente ser público.`;
+      } else {
+        check.status = 'passed';
+        check.result = 'Todos os buckets de arquivos são Privados.';
+      }
+    } catch (e) {
+      check.status = 'warning';
+      check.result = 'Não foi possível listar buckets.';
     }
   };
 
@@ -318,22 +357,22 @@ export const SystemDiagnosticSection = () => {
   const checkDatabaseConnection = async (check: DiagnosticCheck) => {
     try {
       const startTime = Date.now();
-      
+
       // Testar múltiplas consultas para medir performance
       const results = await Promise.allSettled([
         supabase.from('profiles').select('id').limit(1),
         supabase.from('tenants').select('id').limit(1),
         supabase.from('activity_logs').select('id').limit(1)
       ]);
-      
+
       const endTime = Date.now();
       const responseTime = endTime - startTime;
-      
+
       const successfulQueries = results.filter(r => r.status === 'fulfilled').length;
       const totalQueries = results.length;
-      
+
       check.realData = { responseTime, successfulQueries, totalQueries };
-      
+
       if (successfulQueries === totalQueries && responseTime < 500) {
         check.status = 'passed';
         check.result = `Conexão OK - ${responseTime}ms para ${totalQueries} consultas`;
@@ -358,7 +397,7 @@ export const SystemDiagnosticSection = () => {
       // Usar apenas tabelas que realmente existem no banco
       const requiredTables = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'];
       const tableResults = [];
-      
+
       for (const table of requiredTables) {
         try {
           const { error } = await supabase.from(table).select('id').limit(1);
@@ -367,12 +406,12 @@ export const SystemDiagnosticSection = () => {
           tableResults.push({ table, exists: false, error: err });
         }
       }
-      
+
       const existingTables = tableResults.filter(t => t.exists).length;
       const missingTables = tableResults.filter(t => !t.exists);
-      
+
       check.realData = { tableResults, existingTables, totalTables: requiredTables.length };
-      
+
       if (existingTables === requiredTables.length) {
         check.status = 'passed';
         check.result = `Todas as ${requiredTables.length} tabelas principais existem`;
@@ -398,19 +437,19 @@ export const SystemDiagnosticSection = () => {
         supabase.from('policies').select('id', { count: 'exact', head: true }),
         supabase.from('activity_logs').select('id', { count: 'exact', head: true })
       ]);
-      
+
       const counts = tableCounts.map((result, index) => {
         const tableName = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'][index];
         const count = result.status === 'fulfilled' ? result.value.count || 0 : 0;
         return { table: tableName, count };
       });
-      
+
       const totalRecords = counts.reduce((sum, item) => sum + item.count, 0);
       const estimatedSizeKB = totalRecords * 2; // ~2KB por registro
       const estimatedSizeMB = estimatedSizeKB / 1024;
-      
+
       check.realData = { counts, totalRecords, estimatedSizeMB };
-      
+
       if (estimatedSizeMB < 100) {
         check.status = 'passed';
         check.result = `${totalRecords} registros (~${estimatedSizeMB.toFixed(1)}MB estimado)`;
@@ -432,7 +471,7 @@ export const SystemDiagnosticSection = () => {
   const checkFailedLogins = async (check: DiagnosticCheck) => {
     try {
       const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+
       const { data: failedLogins, error } = await supabase
         .from('activity_logs')
         .select('*')
@@ -442,20 +481,20 @@ export const SystemDiagnosticSection = () => {
       if (error) throw error;
 
       const failedCount = failedLogins?.length || 0;
-      
+
       // Analisar IPs únicos para detectar ataques
       const uniqueIPs = new Set(failedLogins?.map(log => log.ip_address).filter(Boolean));
       const suspiciousIPs = [];
-      
+
       for (const ip of uniqueIPs) {
         const ipFailures = failedLogins?.filter(log => log.ip_address === ip).length || 0;
         if (ipFailures > 5) {
           suspiciousIPs.push({ ip, failures: ipFailures });
         }
       }
-      
+
       check.realData = { failedCount, uniqueIPs: uniqueIPs.size, suspiciousIPs };
-      
+
       if (failedCount > 50 || suspiciousIPs.length > 0) {
         check.status = 'failed';
         check.result = `${failedCount} tentativas falhadas, ${suspiciousIPs.length} IPs suspeitos`;
@@ -477,32 +516,32 @@ export const SystemDiagnosticSection = () => {
   const checkInactiveUsers = async (check: DiagnosticCheck) => {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      
+
       // Buscar usuários de autenticação
       const { data: authUsers } = await supabase.auth.admin.listUsers();
-      
+
       if (!authUsers?.users) {
         check.status = 'warning';
         check.result = 'Não foi possível carregar dados de usuários';
         return;
       }
 
-      const inactiveUsers = authUsers.users.filter(user => 
+      const inactiveUsers = authUsers.users.filter(user =>
         !user.last_sign_in_at || new Date(user.last_sign_in_at) < thirtyDaysAgo
       );
-      
+
       const totalUsers = authUsers.users.length;
       const inactiveCount = inactiveUsers.length;
       const inactivePercentage = totalUsers > 0 ? (inactiveCount / totalUsers) * 100 : 0;
-      
-      check.realData = { 
-        totalUsers, 
-        inactiveCount, 
+
+      check.realData = {
+        totalUsers,
+        inactiveCount,
         inactivePercentage,
-        oldestInactive: inactiveUsers.length > 0 ? 
+        oldestInactive: inactiveUsers.length > 0 ?
           Math.min(...inactiveUsers.map(u => u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : 0)) : null
       };
-      
+
       if (inactivePercentage > 70) {
         check.status = 'failed';
         check.result = `${inactiveCount}/${totalUsers} usuários inativos (${inactivePercentage.toFixed(1)}%)`;
@@ -531,19 +570,19 @@ export const SystemDiagnosticSection = () => {
       if (error) throw error;
 
       const now = new Date();
-      const lockedUsers = profiles?.filter(profile => 
+      const lockedUsers = profiles?.filter(profile =>
         !profile.is_active || (profile.locked_until && new Date(profile.locked_until) > now)
       ) || [];
-      
+
       const temporaryLocks = lockedUsers.filter(u => u.locked_until && new Date(u.locked_until) > now).length;
       const permanentLocks = lockedUsers.filter(u => !u.is_active).length;
-      
-      check.realData = { 
-        totalLocked: lockedUsers.length, 
-        temporaryLocks, 
-        permanentLocks 
+
+      check.realData = {
+        totalLocked: lockedUsers.length,
+        temporaryLocks,
+        permanentLocks
       };
-      
+
       if (lockedUsers.length > 20) {
         check.status = 'warning';
         check.result = `${lockedUsers.length} contas bloqueadas (${temporaryLocks} temporárias, ${permanentLocks} permanentes)`;
@@ -566,9 +605,9 @@ export const SystemDiagnosticSection = () => {
         { name: 'activity_logs', query: () => supabase.from('activity_logs').select('id').limit(50) },
         { name: 'assessments', query: () => supabase.from('assessments').select('id').limit(25) }
       ];
-      
+
       const results = [];
-      
+
       for (const { name, query } of queries) {
         const startTime = Date.now();
         try {
@@ -579,13 +618,13 @@ export const SystemDiagnosticSection = () => {
           results.push({ table: name, duration: Date.now() - startTime, success: false, error });
         }
       }
-      
+
       const avgQueryTime = results.reduce((sum, r) => sum + r.duration, 0) / results.length;
       const slowQueries = results.filter(r => r.duration > 300);
       const failedQueries = results.filter(r => !r.success);
-      
+
       check.realData = { results, avgQueryTime, slowQueries: slowQueries.length, failedQueries: failedQueries.length };
-      
+
       if (failedQueries.length > 0 || avgQueryTime > 500) {
         check.status = 'failed';
         check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms, ${failedQueries.length} falhas, ${slowQueries.length} lentas`;
@@ -609,13 +648,13 @@ export const SystemDiagnosticSection = () => {
       // Usar tabelas reais do banco
       const tables = ['profiles', 'tenants', 'assessments', 'risk_assessments', 'policies', 'activity_logs'];
       const tableSizes = [];
-      
+
       for (const table of tables) {
         try {
           const { count, error } = await supabase
             .from(table)
             .select('id', { count: 'exact', head: true });
-            
+
           if (!error) {
             tableSizes.push({ table, count: count || 0 });
           }
@@ -623,12 +662,12 @@ export const SystemDiagnosticSection = () => {
           tableSizes.push({ table, count: 0, error: err });
         }
       }
-      
+
       const largeTables = tableSizes.filter(t => t.count > 10000);
       const totalRecords = tableSizes.reduce((sum, t) => sum + t.count, 0);
-      
+
       check.realData = { tableSizes, largeTables: largeTables.length, totalRecords };
-      
+
       if (largeTables.length > 3) {
         check.status = 'warning';
         check.result = `${largeTables.length} tabelas grandes (>10k registros), ${totalRecords} total`;
@@ -648,22 +687,22 @@ export const SystemDiagnosticSection = () => {
       // Verificar profiles sem usuário de auth correspondente
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       const { data: profiles } = await supabase.from('profiles').select('user_id');
-      
+
       if (!authUsers?.users || !profiles) {
         check.status = 'warning';
         check.result = 'Não foi possível verificar consistência';
         return;
       }
-      
+
       const authUserIds = new Set(authUsers.users.map(u => u.id));
       const orphanedProfiles = profiles.filter(p => !authUserIds.has(p.user_id));
-      
-      check.realData = { 
-        totalProfiles: profiles.length, 
+
+      check.realData = {
+        totalProfiles: profiles.length,
         totalAuthUsers: authUsers.users.length,
-        orphanedProfiles: orphanedProfiles.length 
+        orphanedProfiles: orphanedProfiles.length
       };
-      
+
       if (orphanedProfiles.length > 0) {
         check.status = 'warning';
         check.result = `${orphanedProfiles.length} perfis órfãos encontrados`;
@@ -682,23 +721,23 @@ export const SystemDiagnosticSection = () => {
     try {
       const { data: tenants } = await supabase.from('tenants').select('id, name, is_active');
       const { data: profiles } = await supabase.from('profiles').select('tenant_id');
-      
+
       if (!tenants || !profiles) {
         check.status = 'warning';
         check.result = 'Não foi possível verificar consistência de tenants';
         return;
       }
-      
+
       const tenantIds = new Set(tenants.map(t => t.id));
       const profilesWithInvalidTenant = profiles.filter(p => p.tenant_id && !tenantIds.has(p.tenant_id));
       const activeTenants = tenants.filter(t => t.is_active).length;
-      
+
       check.realData = {
         totalTenants: tenants.length,
         activeTenants,
         profilesWithInvalidTenant: profilesWithInvalidTenant.length
       };
-      
+
       if (profilesWithInvalidTenant.length > 0) {
         check.status = 'failed';
         check.result = `${profilesWithInvalidTenant.length} perfis com tenant inválido`;
@@ -717,24 +756,24 @@ export const SystemDiagnosticSection = () => {
     try {
       const { data: authUsers } = await supabase.auth.admin.listUsers();
       const { data: profiles } = await supabase.from('profiles').select('user_id, is_active');
-      
+
       if (!authUsers?.users || !profiles) {
         check.status = 'warning';
         check.result = 'Não foi possível verificar perfis';
         return;
       }
-      
+
       const profileUserIds = new Set(profiles.map(p => p.user_id));
       const usersWithoutProfile = authUsers.users.filter(u => !profileUserIds.has(u.id));
       const activeProfiles = profiles.filter(p => p.is_active).length;
-      
+
       check.realData = {
         totalAuthUsers: authUsers.users.length,
         totalProfiles: profiles.length,
         activeProfiles,
         usersWithoutProfile: usersWithoutProfile.length
       };
-      
+
       if (usersWithoutProfile.length > 0) {
         check.status = 'warning';
         check.result = `${usersWithoutProfile.length} usuários sem perfil`;
@@ -752,37 +791,37 @@ export const SystemDiagnosticSection = () => {
   const checkActivityPatterns = async (check: DiagnosticCheck) => {
     try {
       const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      
+
       const { data: recentActivity } = await supabase
         .from('activity_logs')
         .select('action, created_at')
         .gte('created_at', last7Days);
-      
+
       if (!recentActivity) {
         check.status = 'warning';
         check.result = 'Não foi possível analisar padrões de atividade';
         return;
       }
-      
+
       const dailyActivity = {};
       recentActivity.forEach(log => {
         const date = new Date(log.created_at).toDateString();
         dailyActivity[date] = (dailyActivity[date] || 0) + 1;
       });
-      
+
       const avgDailyActivity = Object.values(dailyActivity).reduce((sum: number, count: number) => sum + count, 0) / 7;
       const actionTypes = {};
       recentActivity.forEach(log => {
         actionTypes[log.action] = (actionTypes[log.action] || 0) + 1;
       });
-      
+
       check.realData = {
         totalActivity: recentActivity.length,
         avgDailyActivity: Math.round(avgDailyActivity),
         uniqueActions: Object.keys(actionTypes).length,
-        topActions: Object.entries(actionTypes).sort(([,a], [,b]) => (b as number) - (a as number)).slice(0, 3)
+        topActions: Object.entries(actionTypes).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 3)
       };
-      
+
       if (avgDailyActivity < 10) {
         check.status = 'warning';
         check.result = `Baixa atividade: ${Math.round(avgDailyActivity)} ações/dia em média`;
@@ -800,31 +839,31 @@ export const SystemDiagnosticSection = () => {
   const checkUserEngagement = async (check: DiagnosticCheck) => {
     try {
       const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      
+
       const { data: recentActivity } = await supabase
         .from('activity_logs')
         .select('user_id, created_at')
         .gte('created_at', last30Days);
-      
+
       const { data: authUsers } = await supabase.auth.admin.listUsers();
-      
+
       if (!recentActivity || !authUsers?.users) {
         check.status = 'warning';
         check.result = 'Não foi possível calcular engajamento';
         return;
       }
-      
+
       const activeUserIds = new Set(recentActivity.map(log => log.user_id).filter(Boolean));
       const totalUsers = authUsers.users.length;
       const engagementRate = totalUsers > 0 ? (activeUserIds.size / totalUsers) * 100 : 0;
-      
+
       check.realData = {
         totalUsers,
         activeUsers: activeUserIds.size,
         engagementRate: Math.round(engagementRate * 100) / 100,
         totalActivity: recentActivity.length
       };
-      
+
       if (engagementRate < 30) {
         check.status = 'warning';
         check.result = `Baixo engajamento: ${engagementRate.toFixed(1)}% usuários ativos (${activeUserIds.size}/${totalUsers})`;
@@ -844,9 +883,9 @@ export const SystemDiagnosticSection = () => {
     const warnings = checks.filter(c => c.status === 'warning').length;
     const failed = checks.filter(c => c.status === 'failed').length;
     const critical = checks.filter(c => c.status === 'failed' && c.severity === 'critical').length;
-    
+
     const healthScore = Math.round(((passed + warnings * 0.5) / checks.length) * 100);
-    
+
     return {
       totalChecks: checks.length,
       passed,
@@ -899,7 +938,7 @@ export const SystemDiagnosticSection = () => {
         realData: check.realData // Incluir dados reais no relatório
       }))
     };
-    
+
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -909,8 +948,8 @@ export const SystemDiagnosticSection = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const filteredChecks = selectedCategory === 'all' 
-    ? diagnosticChecks 
+  const filteredChecks = selectedCategory === 'all'
+    ? diagnosticChecks
     : diagnosticChecks.filter(check => check.category === selectedCategory);
 
   return (
@@ -931,274 +970,274 @@ export const SystemDiagnosticSection = () => {
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
-      {/* Diagnostic Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saúde do Sistema</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{diagnosticSummary.systemHealth}%</div>
-            <Progress value={diagnosticSummary.systemHealth} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
-              Score baseado em dados reais
-            </p>
-          </CardContent>
-        </Card>
+        {/* Diagnostic Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saúde do Sistema</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{diagnosticSummary.systemHealth}%</div>
+              <Progress value={diagnosticSummary.systemHealth} className="mt-2" />
+              <p className="text-xs text-muted-foreground mt-1">
+                Score baseado em dados reais
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Checks OK</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{diagnosticSummary.passed}</div>
-            <p className="text-xs text-muted-foreground">de {diagnosticSummary.totalChecks} checks</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Checks OK</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{diagnosticSummary.passed}</div>
+              <p className="text-xs text-muted-foreground">de {diagnosticSummary.totalChecks} checks</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avisos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{diagnosticSummary.warnings}</div>
-            <p className="text-xs text-muted-foreground">requerem atenção</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avisos</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-600">{diagnosticSummary.warnings}</div>
+              <p className="text-xs text-muted-foreground">requerem atenção</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Falhas</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{diagnosticSummary.failed}</div>
-            <p className="text-xs text-muted-foreground">necessitam correção</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Falhas</CardTitle>
+              <XCircle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{diagnosticSummary.failed}</div>
+              <p className="text-xs text-muted-foreground">necessitam correção</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Críticos</CardTitle>
-            <XCircle className="h-4 w-4 text-red-800" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-800">{diagnosticSummary.critical}</div>
-            <p className="text-xs text-muted-foreground">alta prioridade</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Críticos</CardTitle>
+              <XCircle className="h-4 w-4 text-red-800" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-800">{diagnosticSummary.critical}</div>
+              <p className="text-xs text-muted-foreground">alta prioridade</p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Scan Controls */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Search className="h-5 w-5" />
-                <span>Diagnóstico do Sistema - Dados Reais</span>
-              </CardTitle>
-              <CardDescription>
-                Escaneie o sistema usando dados reais do banco de dados para identificar problemas
-              </CardDescription>
-            </div>
-            <div className="flex space-x-2">
-              <Button onClick={exportDiagnosticReport} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Relatório
-              </Button>
-              <Button 
-                onClick={runFullDiagnostic} 
-                disabled={isScanning}
-                size="sm"
-              >
-                {isScanning ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Play className="h-4 w-4 mr-2" />
-                )}
-                {isScanning ? 'Escaneando...' : 'Executar Diagnóstico'}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isScanning && (
-            <div className="mb-4">
-              <div className="flex justify-between text-sm mb-2">
-                <span>Progresso do Scan:</span>
-                <span>{scanProgress.toFixed(1)}%</span>
+        {/* Scan Controls */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <Search className="h-5 w-5" />
+                  <span>Diagnóstico do Sistema - Dados Reais</span>
+                </CardTitle>
+                <CardDescription>
+                  Escaneie o sistema usando dados reais do banco de dados para identificar problemas
+                </CardDescription>
               </div>
-              <Progress value={scanProgress} />
+              <div className="flex space-x-2">
+                <Button onClick={exportDiagnosticReport} variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar Relatório
+                </Button>
+                <Button
+                  onClick={runFullDiagnostic}
+                  disabled={isScanning}
+                  size="sm"
+                >
+                  {isScanning ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  {isScanning ? 'Escaneando...' : 'Executar Diagnóstico'}
+                </Button>
+              </div>
             </div>
-          )}
-
-          {diagnosticSummary.lastFullScan && (
-            <div className="mb-4 text-sm text-muted-foreground">
-              Último scan completo: {new Date(diagnosticSummary.lastFullScan).toLocaleString('pt-BR')} 
-              (duração: {(diagnosticSummary.scanDuration / 1000).toFixed(1)}s)
-            </div>
-          )}
-
-          {/* Category Filter */}
-          <div className="flex space-x-2 mb-4">
-            <Button
-              variant={selectedCategory === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('all')}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={selectedCategory === 'system' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('system')}
-            >
-              <Settings className="h-3 w-3 mr-1" />
-              Sistema
-            </Button>
-            <Button
-              variant={selectedCategory === 'security' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('security')}
-            >
-              <Shield className="h-3 w-3 mr-1" />
-              Segurança
-            </Button>
-            <Button
-              variant={selectedCategory === 'performance' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('performance')}
-            >
-              <Zap className="h-3 w-3 mr-1" />
-              Performance
-            </Button>
-            <Button
-              variant={selectedCategory === 'data' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('data')}
-            >
-              <Database className="h-3 w-3 mr-1" />
-              Dados
-            </Button>
-            <Button
-              variant={selectedCategory === 'user' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedCategory('user')}
-            >
-              <Users className="h-3 w-3 mr-1" />
-              Usuário
-            </Button>
-          </div>
-
-          {/* Diagnostic Checks */}
-          <div className="space-y-3">
-            {filteredChecks.map((check) => (
-              <div key={check.id} className="border rounded-lg p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
-                    <div className="flex items-center space-x-2">
-                      {getCategoryIcon(check.category)}
-                      {getStatusIcon(check.status)}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h4 className="font-medium">{check.name}</h4>
-                        <Badge className={`text-xs ${getStatusColor(check.status)}`}>
-                          {check.status}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {check.severity}
-                        </Badge>
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {check.description}
-                      </p>
-                      
-                      {check.result && (
-                        <div className="mb-2">
-                          <p className="text-sm font-medium">Resultado:</p>
-                          <p className="text-sm">{check.result}</p>
-                        </div>
-                      )}
-                      
-                      {check.recommendation && (
-                        <div className="mb-2">
-                          <p className="text-sm font-medium text-blue-600">Recomendação:</p>
-                          <p className="text-sm text-blue-600">{check.recommendation}</p>
-                        </div>
-                      )}
-                      
-                      {check.realData && (
-                        <div className="mb-2">
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dados Reais:</p>
-                          <pre className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 overflow-x-auto">
-                            {JSON.stringify(check.realData, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                      
-                      {check.lastRun && (
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                          <span>Executado: {new Date(check.lastRun).toLocaleString('pt-BR')}</span>
-                          {check.duration && (
-                            <span>Duração: {check.duration}ms</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => runIndividualCheck(check)}
-                    disabled={check.status === 'running'}
-                  >
-                    {check.status === 'running' ? (
-                      <RefreshCw className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Play className="h-3 w-3" />
-                    )}
-                  </Button>
+          </CardHeader>
+          <CardContent>
+            {isScanning && (
+              <div className="mb-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Progresso do Scan:</span>
+                  <span>{scanProgress.toFixed(1)}%</span>
                 </div>
+                <Progress value={scanProgress} />
               </div>
-            ))}
-          </div>
+            )}
 
-          {filteredChecks.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Bug className="h-8 w-8 mx-auto mb-2" />
-              <p>Nenhum check encontrado para a categoria selecionada</p>
+            {diagnosticSummary.lastFullScan && (
+              <div className="mb-4 text-sm text-muted-foreground">
+                Último scan completo: {new Date(diagnosticSummary.lastFullScan).toLocaleString('pt-BR')}
+                (duração: {(diagnosticSummary.scanDuration / 1000).toFixed(1)}s)
+              </div>
+            )}
+
+            {/* Category Filter */}
+            <div className="flex space-x-2 mb-4">
+              <Button
+                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('all')}
+              >
+                Todos
+              </Button>
+              <Button
+                variant={selectedCategory === 'system' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('system')}
+              >
+                <Settings className="h-3 w-3 mr-1" />
+                Sistema
+              </Button>
+              <Button
+                variant={selectedCategory === 'security' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('security')}
+              >
+                <Shield className="h-3 w-3 mr-1" />
+                Segurança
+              </Button>
+              <Button
+                variant={selectedCategory === 'performance' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('performance')}
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                Performance
+              </Button>
+              <Button
+                variant={selectedCategory === 'data' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('data')}
+              >
+                <Database className="h-3 w-3 mr-1" />
+                Dados
+              </Button>
+              <Button
+                variant={selectedCategory === 'user' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory('user')}
+              >
+                <Users className="h-3 w-3 mr-1" />
+                Usuário
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Real Data Indicator */}
-      <Alert>
-        <CheckCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Dados Reais:</strong> Todos os diagnósticos são baseados em dados reais do banco de dados. 
-          Os resultados refletem o estado atual do sistema e são atualizados em tempo real.
-        </AlertDescription>
-      </Alert>
+            {/* Diagnostic Checks */}
+            <div className="space-y-3">
+              {filteredChecks.map((check) => (
+                <div key={check.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3 flex-1">
+                      <div className="flex items-center space-x-2">
+                        {getCategoryIcon(check.category)}
+                        {getStatusIcon(check.status)}
+                      </div>
 
-      {/* Critical Issues Alert */}
-      {diagnosticSummary.critical > 0 && (
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="font-medium">{check.name}</h4>
+                          <Badge className={`text-xs ${getStatusColor(check.status)}`}>
+                            {check.status}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {check.severity}
+                          </Badge>
+                        </div>
+
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {check.description}
+                        </p>
+
+                        {check.result && (
+                          <div className="mb-2">
+                            <p className="text-sm font-medium">Resultado:</p>
+                            <p className="text-sm">{check.result}</p>
+                          </div>
+                        )}
+
+                        {check.recommendation && (
+                          <div className="mb-2">
+                            <p className="text-sm font-medium text-blue-600">Recomendação:</p>
+                            <p className="text-sm text-blue-600">{check.recommendation}</p>
+                          </div>
+                        )}
+
+                        {check.realData && (
+                          <div className="mb-2">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dados Reais:</p>
+                            <pre className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 overflow-x-auto">
+                              {JSON.stringify(check.realData, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+
+                        {check.lastRun && (
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                            <span>Executado: {new Date(check.lastRun).toLocaleString('pt-BR')}</span>
+                            {check.duration && (
+                              <span>Duração: {check.duration}ms</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => runIndividualCheck(check)}
+                      disabled={check.status === 'running'}
+                    >
+                      {check.status === 'running' ? (
+                        <RefreshCw className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Play className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filteredChecks.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Bug className="h-8 w-8 mx-auto mb-2" />
+                <p>Nenhum check encontrado para a categoria selecionada</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Real Data Indicator */}
         <Alert>
-          <AlertTriangle className="h-4 w-4" />
+          <CheckCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Atenção:</strong> {diagnosticSummary.critical} problema(s) crítico(s) detectado(s). 
-            Esses problemas podem afetar a operação do sistema e devem ser corrigidos imediatamente.
+            <strong>Dados Reais:</strong> Todos os diagnósticos são baseados em dados reais do banco de dados.
+            Os resultados refletem o estado atual do sistema e são atualizados em tempo real.
           </AlertDescription>
         </Alert>
-      )}
+
+        {/* Critical Issues Alert */}
+        {diagnosticSummary.critical > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Atenção:</strong> {diagnosticSummary.critical} problema(s) crítico(s) detectado(s).
+              Esses problemas podem afetar a operação do sistema e devem ser corrigidos imediatamente.
+            </AlertDescription>
+          </Alert>
+        )}
       </TabsContent>
 
       <TabsContent value="vulnerabilities">
