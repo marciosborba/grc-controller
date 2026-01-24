@@ -36,15 +36,27 @@ export const sanitizeInput = (input: string | undefined | null): string => {
     .substring(0, 10000);
 };
 
+const SENSITIVE_KEYS = ['password', 'passwd', 'token', 'authorization', 'bearer', 'secret', 'credit_card', 'cvv', 'pin', 'apikey', 'access_token', 'refresh_token'];
+
 // Função para sanitizar objetos completos
 export const sanitizeObject = (obj: Record<string, any>): Record<string, any> => {
   const sanitized: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(obj)) {
+    // Redaction for sensitive keys
+    if (SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+      sanitized[key] = '[REDACTED]';
+      continue;
+    }
+
     if (typeof value === 'string') {
       sanitized[key] = sanitizeInput(value);
     } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitizeObject(value);
+      if (Array.isArray(value)) {
+        sanitized[key] = value.map(item => (typeof item === 'object' && item !== null ? sanitizeObject(item) : item));
+      } else {
+        sanitized[key] = sanitizeObject(value);
+      }
     } else {
       sanitized[key] = value;
     }
@@ -114,7 +126,7 @@ export const logAuthEvent = async (
     const { error } = await supabase.rpc('log_activity', {
       p_action: event,
       p_resource_type: 'auth',
-      p_details: details,
+      p_details: sanitizeObject(details),
       p_user_id: details.user_id || null,
       p_resource_id: details.user_id || null,
       p_ip_address: details.ip_address || null
@@ -150,7 +162,7 @@ export const logSuspiciousActivity = async (
     const { error } = await supabase.rpc('log_activity', {
       p_action: activity,
       p_resource_type: 'security',
-      p_details: { ...details, severity: 'warning' },
+      p_details: sanitizeObject({ ...details, severity: 'warning' }),
       p_user_id: details.user_id || null,
       p_resource_id: details.resource_id || null,
       p_ip_address: details.ip_address || null

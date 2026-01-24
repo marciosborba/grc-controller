@@ -15,12 +15,12 @@ console.log('🔗 Connecting to Supabase as ANON:', supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function testRpc() {
-    console.log('⚡ Calling log_activity RPC as ANON...');
+    console.log('⚡ Calling log_activity RPC as ANON with Auto-IP capture...');
 
     const { data, error } = await supabase.rpc('log_activity', {
-        p_action: 'test_anon_rpc_call',
+        p_action: 'test_ip_capture',
         p_resource_type: 'auth',
-        p_details: { source: 'test_script', timestamp: new Date().toISOString() },
+        p_details: { source: 'test_script' },
         p_user_id: null,
         p_resource_id: null,
         p_ip_address: null

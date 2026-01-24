@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { SessionActionDialog } from './SessionActionDialog';
-import { 
-  Shield, 
-  Lock, 
-  AlertTriangle, 
+import {
+  Shield,
+  Lock,
+  AlertTriangle,
   CheckCircle,
   XCircle,
   Eye,
@@ -62,6 +62,7 @@ interface SecurityEvent {
 }
 
 interface ActiveSession {
+  id: string;
   user_id: string;
   user_name: string;
   ip_address: string;
@@ -105,13 +106,13 @@ export const SystemSecuritySection = () => {
     try {
       // Carregar métricas de segurança
       await loadSecurityMetrics();
-      
+
       // Carregar eventos de segurança recentes
       await loadSecurityEvents();
-      
+
       // Carregar sessões ativas
       await loadActiveSessions();
-      
+
     } catch (error) {
       console.error('Erro ao carregar dados de segurança:', error);
     } finally {
@@ -121,98 +122,67 @@ export const SystemSecuritySection = () => {
 
   const loadSecurityMetrics = async () => {
     try {
-      console.log('🔒 Carregando métricas de segurança...');
-      
-      // Carregar dados com Promise.allSettled para não falhar se uma API falhar
-      const [
-        usersResult,
-        failedLoginsResult,
-        securityLogsResult,
-        authUsersResult
-      ] = await Promise.allSettled([
-        // Total de usuários para calcular MFA
-        supabase.from('profiles').select('id'),
-        
+      console.log('🔒 Carregando métricas de segurança (Real-Time RPC)...');
+
+      // 1. Carregar métricas de Auth (MFA, Sessões, Total Users) via RPC seguro
+      // Isso resolve o problema de permissão do client-side e garante dados reais
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_security_metrics');
+
+      if (rpcError) {
+        console.error('Erro no RPC de segurança:', rpcError);
+        throw rpcError;
+      }
+
+      // 2. Carregar contagens de logs (Time-series)
+      const [failedLoginsResult, securityLogsResult, userBlocksResult] = await Promise.allSettled([
         // Tentativas de login falhadas nas últimas 24h
         supabase
           .from('activity_logs')
-          .select('*')
-          .in('action', ['login_failed', 'signin_failed', 'authentication_failed'])
+          .select('*', { count: 'exact', head: true })
+          .or('action.eq.login_failed,action.eq.signin_failed,action.eq.authentication_failed,action.eq.multiple_failed_logins')
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
-        
+
         // Eventos de segurança suspeitos
         supabase
           .from('activity_logs')
-          .select('*')
+          .select('*', { count: 'exact', head: true })
           .eq('resource_type', 'security')
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-        
-        // Usuários autenticados para contagem de sessões ativas
-        supabase.auth.admin.listUsers()
+
+        // Bloqueios de usuários recentes (estimativa de lockouts)
+        supabase
+          .from('activity_logs')
+          .select('*', { count: 'exact', head: true })
+          .ilike('action', '%block%')
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
       ]);
-      
-      // Extrair dados dos resultados
-      const usersData = usersResult.status === 'fulfilled' ? usersResult.value : { data: [] };
-      const failedLoginsData = failedLoginsResult.status === 'fulfilled' ? failedLoginsResult.value : { data: [] };
-      const securityLogsData = securityLogsResult.status === 'fulfilled' ? securityLogsResult.value : { data: [] };
-      const authUsersData = authUsersResult.status === 'fulfilled' ? authUsersResult.value : { data: { users: [] } };
-      
-      console.log(`📊 Dados carregados: ${usersData.data?.length || 0} perfis, ${failedLoginsData.data?.length || 0} logins falhados, ${authUsersData.data?.users?.length || 0} auth users`);
 
-      // Se não conseguiu carregar dados, usar fallback baseado em verificação real
-      const totalUsers = usersData.data?.length || 34; // Fallback para dados reais verificados
-      const mfaEnabledCount = 0; // MFA não implementado ainda - sempre 0
+      // Extrair valores
+      const mfaEnabledCount = rpcData?.mfa_count || 0;
+      const totalUsers = rpcData?.total_users || 0;
+      const activeSessions = rpcData?.active_sessions || 0;
 
-      // Contar logins falhados
-      const failedLogins = failedLoginsData.data?.length || 0;
+      const failedLogins = failedLoginsResult.status === 'fulfilled' ? failedLoginsResult.value.count || 0 : 0;
+      const suspiciousActivities = securityLogsResult.status === 'fulfilled' ? securityLogsResult.value.count || 0 : 0;
+      const accountLockouts = userBlocksResult.status === 'fulfilled' ? userBlocksResult.value.count || 0 : 0;
 
-      // Contar atividades suspeitas
-      const suspiciousActivities = securityLogsData.data?.filter(log => 
-        log.action.includes('suspicious') || 
-        log.action.includes('unauthorized') ||
-        log.action.includes('breach')
-      ).length || 0;
+      // Estimar alertas abertos
+      const securityAlertsOpen = suspiciousActivities;
 
-      // Calcular sessões ativas (usuários logados HOJE) - DADOS REAIS
-      const now = new Date();
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Início do dia
-      
-      let activeSessions = 0;
-      if (authUsersData.data?.users && authUsersData.data.users.length > 0) {
-        activeSessions = authUsersData.data.users.filter(user => {
-          if (!user.last_sign_in_at) return false;
-          const loginDate = new Date(user.last_sign_in_at);
-          return loginDate >= today;
-        }).length;
-      } else {
-        // Fallback: contar sessões baseado nos logs de atividade
-        const todayLogins = failedLoginsData.data?.filter(log => {
-          const logDate = new Date(log.created_at);
-          return logDate >= today && log.action.includes('login_success');
-        }).length || 0;
-        activeSessions = Math.min(todayLogins, 5); // Estimativa conservadora
-      }
+      // Calcular Score REAL e PONDERADO
+      // MFA é crítico (40% do score)
+      const mfaScore = totalUsers > 0 ? (mfaEnabledCount / totalUsers) * 40 : 0;
 
-      // Calcular conta de contas bloqueadas
-      const accountLockouts = authUsersData.data?.users.filter(user => 
-        user.banned_until
-      ).length || 0;
+      // Falhas de login impactam 20%
+      const failedLoginsScore = Math.max(0, 20 - (failedLogins * 2));
 
-      // Calcular alertas de segurança abertos (baseado em logs recentes)
-      const securityAlertsOpen = securityLogsData.data?.filter(log => 
-        log.action.includes('alert') || 
-        log.action.includes('warning') ||
-        (log.details as Record<string, unknown>)?.severity === 'warning' ||
-        (log.details as Record<string, unknown>)?.severity === 'error'
-      ).length || 0;
+      // Atividades suspeitas impactam 20%
+      const suspiciousScore = Math.max(0, 20 - (suspiciousActivities * 2));
 
-      // Score de segurança baseado em métricas reais
-      const mfaScore = totalUsers > 0 ? (mfaEnabledCount / totalUsers) * 30 : 0;
-      const failedLoginsScore = Math.max(0, 30 - (failedLogins * 2));
-      const suspiciousScore = Math.max(0, 20 - (suspiciousActivities * 5));
-      const lockoutsScore = Math.max(0, 20 - (accountLockouts * 10));
-      const passwordStrengthScore = Math.floor(mfaScore + failedLoginsScore + suspiciousScore + lockoutsScore);
+      // Bloqueios impactam 20%
+      const lockoutsScore = Math.max(0, 20 - (accountLockouts * 5));
+
+      const passwordStrengthScore = Math.min(100, Math.floor(mfaScore + failedLoginsScore + suspiciousScore + lockoutsScore + (totalUsers > 0 && mfaEnabledCount === 0 ? 10 : 0)));
 
       const metrics: SecurityMetrics = {
         mfaEnabled: mfaEnabledCount,
@@ -225,37 +195,37 @@ export const SystemSecuritySection = () => {
         securityAlertsOpen: securityAlertsOpen
       };
 
+      console.log('✅ Métricas de segurança REAIS processadas:', metrics);
       setSecurityMetrics(metrics);
+
     } catch (error) {
-      console.error('Erro ao carregar métricas de segurança:', error);
-      
-      // Em caso de erro, usar métricas baseadas em dados reais verificados
-      const fallbackMetrics: SecurityMetrics = {
+      console.error('Erro crítico ao carregar métricas:', error);
+
+      // Fallback simplificado em caso de erro no RPC
+      setSecurityMetrics({
         mfaEnabled: 0,
-        mfaTotal: 34, // Verificado no banco
-        failedLogins24h: 0, // Verificado - nenhum login falhado
+        mfaTotal: 1,
+        failedLogins24h: 0,
         suspiciousActivities: 0,
-        activeSessionsCount: 0, // Verificado - nenhum login hoje
-        passwordStrengthScore: 85, // Score baseado em métricas reais
+        activeSessionsCount: 0,
+        passwordStrengthScore: 0,
         accountLockouts: 0,
         securityAlertsOpen: 0
-      };
-      
-      setSecurityMetrics(fallbackMetrics);
+      });
     }
   };
 
   const loadSecurityEvents = async () => {
     try {
       console.log('🔍 Carregando eventos de segurança...');
-      
+
       // Primeiro, carregar todos os perfis para fazer o mapeamento manual
       const { data: allProfiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, email');
-      
+
       console.log(`📊 Perfis carregados: ${allProfiles?.length || 0}`);
-      
+
       // Carregar eventos de segurança dos logs - incluir mais tipos de eventos
       const { data: logsData, error } = await supabase
         .from('activity_logs')
@@ -280,7 +250,7 @@ export const SystemSecuritySection = () => {
 
       if (error) {
         console.warn('Erro ao carregar logs via query complexa:', error.message);
-        
+
         // Fallback: carregar todos os logs recentes e filtrar no cliente
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('activity_logs')
@@ -288,11 +258,11 @@ export const SystemSecuritySection = () => {
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
           .order('created_at', { ascending: false })
           .limit(200);
-        
+
         if (fallbackError) throw fallbackError;
-        
+
         // Filtrar eventos relevantes para segurança
-        const filteredData = fallbackData?.filter(log => 
+        const filteredData = fallbackData?.filter(log =>
           log.resource_type === 'security' ||
           log.action.includes('login') ||
           log.action.includes('auth') ||
@@ -307,9 +277,9 @@ export const SystemSecuritySection = () => {
           log.action.includes('warning') ||
           log.action.includes('alert')
         ) || [];
-        
+
         console.log(`📊 Eventos filtrados: ${filteredData.length} de ${fallbackData?.length || 0} logs`);
-        
+
         const events: SecurityEvent[] = filteredData.slice(0, 50).map(log => ({
           id: log.id,
           event_type: log.action,
@@ -322,13 +292,13 @@ export const SystemSecuritySection = () => {
           created_at: log.created_at,
           resolved: isEventResolved(log.action)
         }));
-        
+
         setSecurityEvents(events);
         return;
       }
 
       console.log(`📊 Eventos carregados: ${logsData?.length || 0}`);
-      
+
       // Debug: verificar alguns logs
       if (logsData && logsData.length > 0) {
         console.log('🔍 Exemplo de log:', {
@@ -337,16 +307,16 @@ export const SystemSecuritySection = () => {
           ip_address: logsData[0].ip_address,
           details: logsData[0].details
         });
-        
+
         // Debug: verificar quantos logs têm IP
         const logsWithIP = logsData.filter(log => log.ip_address).length;
         const logsWithIPInDetails = logsData.filter(log => log.details?.ip_address).length;
         console.log(`📊 IPs nos logs: ${logsWithIP} diretos, ${logsWithIPInDetails} nos detalhes, de ${logsData.length} total`);
       }
-      
+
       const events: SecurityEvent[] = logsData?.map(log => {
         const userName = getUserDisplayName(log, allProfiles);
-        
+
         // Debug para logs com user_id mas nome "Sistema"
         if (log.user_id && userName === 'Sistema') {
           console.warn('⚠️ Log com user_id mas nome Sistema:', {
@@ -356,10 +326,10 @@ export const SystemSecuritySection = () => {
             details: log.details
           });
         }
-        
+
         // Garantir que o IP seja preenchido
         const ipAddress = getEventIPAddress(log, allProfiles);
-        
+
         return {
           id: log.id,
           event_type: log.action,
@@ -377,7 +347,7 @@ export const SystemSecuritySection = () => {
       setSecurityEvents(events);
     } catch (error) {
       console.error('Erro ao carregar eventos de segurança:', error);
-      
+
       // Em caso de erro total, criar alguns eventos de exemplo baseados em dados reais
       const fallbackEvents: SecurityEvent[] = [
         {
@@ -405,7 +375,7 @@ export const SystemSecuritySection = () => {
           resolved: true
         }
       ];
-      
+
       setSecurityEvents(fallbackEvents);
     }
   };
@@ -416,17 +386,17 @@ export const SystemSecuritySection = () => {
     if (log.ip_address) {
       return log.ip_address;
     }
-    
+
     // Tentar IP dos detalhes do log
     if (log.details?.ip_address) {
       return log.details.ip_address;
     }
-    
+
     // Se tem user_id, gerar IP baseado no usuário
     if (log.user_id) {
       return generateRealisticIP(log.user_id);
     }
-    
+
     // Para eventos do sistema, retornar null
     return null;
   };
@@ -443,7 +413,7 @@ export const SystemSecuritySection = () => {
         return profile.email.split('@')[0];
       }
     }
-    
+
     // Tentar dados do join (se funcionou)
     if (log.profiles?.full_name) {
       return log.profiles.full_name;
@@ -451,7 +421,7 @@ export const SystemSecuritySection = () => {
     if (log.profiles?.email) {
       return log.profiles.email.split('@')[0];
     }
-    
+
     // Tentar dados dos detalhes do log
     if (log.details?.user_name) {
       return log.details.user_name;
@@ -459,12 +429,12 @@ export const SystemSecuritySection = () => {
     if (log.details?.email) {
       return log.details.email.split('@')[0];
     }
-    
+
     // Se tem user_id, mostrar ID parcial
     if (log.user_id) {
       return `Usuário ${log.user_id.substring(0, 8)}`;
     }
-    
+
     // Apenas eventos realmente do sistema (sem user_id)
     return 'Sistema';
   };
@@ -473,7 +443,7 @@ export const SystemSecuritySection = () => {
   const getEventDescription = (log: any): string => {
     const action = log.action.toLowerCase();
     const details = log.details || {};
-    
+
     // Eventos de login
     if (action.includes('login_success')) {
       const location = details.location ? ` de ${details.location.city || 'localização desconhecida'}` : '';
@@ -486,7 +456,7 @@ export const SystemSecuritySection = () => {
       const reason = details.reason ? ` (${details.reason})` : '';
       return `Falha no login${reason}`;
     }
-    
+
     // Eventos de sessão
     if (action.includes('session_terminated')) {
       const by = details.terminated_by === 'admin' ? ' pelo administrador' : '';
@@ -495,7 +465,7 @@ export const SystemSecuritySection = () => {
     if (action.includes('session_expired')) {
       return 'Sessão expirada por inatividade';
     }
-    
+
     // Eventos de bloqueio
     if (action.includes('user_blocked')) {
       const reason = details.reason ? ` (${details.reason})` : '';
@@ -504,7 +474,7 @@ export const SystemSecuritySection = () => {
     if (action.includes('user_unblocked')) {
       return 'Usuário desbloqueado';
     }
-    
+
     // Eventos de autenticação
     if (action.includes('signup_success')) {
       return 'Nova conta criada com sucesso';
@@ -515,7 +485,7 @@ export const SystemSecuritySection = () => {
     if (action.includes('password_reset')) {
       return 'Solicitação de redefinição de senha';
     }
-    
+
     // Eventos de segurança
     if (action.includes('suspicious')) {
       return 'Atividade suspeita detectada';
@@ -526,12 +496,12 @@ export const SystemSecuritySection = () => {
     if (action.includes('breach')) {
       return 'Possível violação de segurança';
     }
-    
+
     // Eventos do sistema
     if (action.includes('system')) {
       return 'Evento do sistema';
     }
-    
+
     // Fallback: usar a ação original com formatação
     return log.action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -547,123 +517,33 @@ export const SystemSecuritySection = () => {
       'system_startup',
       'security_scan_completed'
     ];
-    
+
     return resolvedActions.some(resolved => action.includes(resolved));
   };
 
   const loadActiveSessions = async () => {
     try {
-      console.log('🔐 Carregando sessões ativas...');
-      
-      // Tentar carregar dados de autenticação (pode falhar por permissão)
-      let authUsers = null;
-      let recentLogins = null;
-      let profiles = null;
-      
-      // Carregar dados com Promise.allSettled para não falhar se uma API falhar
-      const [authResult, loginsResult, profilesResult] = await Promise.allSettled([
-        supabase.auth.admin.listUsers(),
-        supabase
-          .from('activity_logs')
-          .select('*')
-          .in('action', ['login', 'signin', 'login_success'])
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('profiles')
-          .select('user_id, full_name')
-      ]);
-      
-      // Extrair dados dos resultados
-      authUsers = authResult.status === 'fulfilled' ? authResult.value.data : null;
-      recentLogins = loginsResult.status === 'fulfilled' ? loginsResult.value.data : [];
-      profiles = profilesResult.status === 'fulfilled' ? profilesResult.value.data : [];
-      
-      console.log(`📊 Auth users: ${authUsers?.users?.length || 0}, Logins: ${recentLogins?.length || 0}, Profiles: ${profiles?.length || 0}`);
-      
-      const sessions: ActiveSession[] = [];
-      
-      // Se não conseguiu acessar auth admin, criar sessões baseadas nos logs de atividade
-      if (!authUsers?.users || authUsers.users.length === 0) {
-        console.warn('⚠️ Não foi possível acessar auth admin, usando dados dos logs');
-        
-        // Criar sessões baseadas nos logs de login recentes
-        const uniqueUsers = new Map();
-        
-        recentLogins?.forEach(log => {
-          if (log.user_id && !uniqueUsers.has(log.user_id)) {
-            const profile = profiles?.find(p => p.user_id === log.user_id);
-            
-            // Determinar tipo de dispositivo baseado no user agent
-            const userAgent = log.user_agent || '';
-            let deviceType = 'Desktop';
-            if (userAgent.includes('Mobile') || userAgent.includes('iPhone') || userAgent.includes('Android')) {
-              deviceType = 'Mobile';
-            } else if (userAgent.includes('Tablet') || userAgent.includes('iPad')) {
-              deviceType = 'Tablet';
-            }
-            
-            // Calcular duração da sessão
-            const loginTime = new Date(log.created_at);
-            const now = new Date();
-            const durationMs = now.getTime() - loginTime.getTime();
-            const hours = Math.floor(durationMs / (1000 * 60 * 60));
-            const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-            const sessionDuration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-            
-            // Usar IP real dos logs ou fallback para simulação
-            const actualIP = log.ip_address || generateRealisticIP(log.user_id);
-            
-            // Determinar localização: primeiro tentar dados reais dos logs, depois fallback
-            let location = 'Desconhecido';
-            
-            // Se o log tem informações de localização nos detalhes
-            if (log.details && log.details.location) {
-              const loc = log.details.location;
-              if (loc.city && loc.region) {
-                location = `${loc.city}, ${loc.region}`;
-              } else if (loc.city) {
-                location = loc.city;
-              } else if (loc.region) {
-                location = loc.region;
-              }
-            }
-            
-            // Fallback para detecção baseada em user agent ou IP
-            if (location === 'Desconhecido') {
-              location = getLocationFromUserAgent(userAgent, log.user_id) || getLocationFromIP(actualIP);
-            }
-            
-            uniqueUsers.set(log.user_id, {
-              user_id: log.user_id,
-              user_name: profile?.full_name || 'Usuário',
-              ip_address: actualIP,
-              user_agent: userAgent,
-              device_type: deviceType,
-              location: location,
-              last_activity: log.created_at,
-              session_duration: sessionDuration,
-              is_blocked: false, // Assumir não bloqueado se logou recentemente
-              email: log.details?.email || 'N/A'
-            });
-          }
-        });
-        
-        sessions.push(...Array.from(uniqueUsers.values()));
-        
-      } else {
-        // Usar dados de auth admin se disponível
-        const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const activeUsers = authUsers.users.filter(user => 
-          user.last_sign_in_at && new Date(user.last_sign_in_at) >= last24h
-        );
+      console.log('🔐 Carregando sessões ativas (Via RPC)...');
 
-        activeUsers.forEach(user => {
-          const profile = profiles?.find(p => p.user_id === user.id);
-          const userLogin = recentLogins?.find(log => log.user_id === user.id);
-          
-          // Determinar tipo de dispositivo baseado no user agent
-          const userAgent = userLogin?.user_agent || user.user_metadata?.user_agent || '';
+      const { data: sessionsData, error } = await supabase.rpc('admin_list_active_sessions');
+
+      if (error) {
+        console.error('Erro no RPC de lista de sessões:', error);
+        throw error;
+      }
+
+      if (sessionsData && Array.isArray(sessionsData)) {
+        const sessions: ActiveSession[] = sessionsData.map((s: any) => {
+          // Calcular duração
+          const loginTime = new Date(s.created_at);
+          const now = new Date();
+          const durationMs = now.getTime() - loginTime.getTime();
+          const hours = Math.floor(durationMs / (1000 * 60 * 60));
+          const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+          const sessionDuration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+          // Detectar tipo de dispositivo
+          const userAgent = s.user_agent || '';
           let deviceType = 'Desktop';
           if (userAgent.includes('Mobile') || userAgent.includes('iPhone') || userAgent.includes('Android')) {
             deviceType = 'Mobile';
@@ -671,55 +551,35 @@ export const SystemSecuritySection = () => {
             deviceType = 'Tablet';
           }
 
-          // Calcular duração da sessão
-          const loginTime = new Date(user.last_sign_in_at!);
-          const now = new Date();
-          const durationMs = now.getTime() - loginTime.getTime();
-          const hours = Math.floor(durationMs / (1000 * 60 * 60));
-          const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-          const sessionDuration = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+          // Localização
+          const location = getLocationFromIP(s.ip);
 
-          // Usar IP real dos logs ou fallback para simulação
-          const ipAddress = userLogin?.ip_address || generateRealisticIP(user.id);
-          
-          // Determinar localização: primeiro tentar dados reais dos logs
-          let location = 'Desconhecido';
-          
-          // Se o log de login tem informações de localização
-          if (userLogin?.details && userLogin.details.location) {
-            const loc = userLogin.details.location;
-            if (loc.city && loc.region) {
-              location = `${loc.city}, ${loc.region}`;
-            } else if (loc.city) {
-              location = loc.city;
-            } else if (loc.region) {
-              location = loc.region;
-            }
-          }
-          
-          // Fallback para detecção baseada em user agent ou IP
-          if (location === 'Desconhecido') {
-            location = getLocationFromUserAgent(userAgent, user.id) || getLocationFromIP(ipAddress);
-          }
-          
-          sessions.push({
-            user_id: user.id,
-            user_name: profile?.full_name || user.email?.split('@')[0] || 'Usuário',
-            ip_address: ipAddress,
+          return {
+            id: s.id,
+            user_id: s.user_id,
+            user_name: s.user_name || 'Usuário',
+            ip_address: s.ip || 'N/A',
             user_agent: userAgent,
             device_type: deviceType,
             location: location,
-            last_activity: user.last_sign_in_at!,
+            last_activity: s.created_at,
             session_duration: sessionDuration,
-            is_blocked: !!user.banned_until && new Date(user.banned_until) > new Date(),
-            email: user.email || 'N/A'
-          });
+            is_blocked: false,
+            email: s.email
+          };
         });
+
+        console.log(`✅ Sessões ativas carregadas: ${sessions.length}`);
+        setActiveSessions(sessions);
+
+        setSecurityMetrics(prev => ({
+          ...prev,
+          activeSessionsCount: sessions.length
+        }));
+      } else {
+        setActiveSessions([]);
       }
-      
-      console.log(`✅ Sessões ativas carregadas: ${sessions.length}`);
-      setActiveSessions(sessions);
-      
+
     } catch (error) {
       console.error('Erro ao carregar sessões ativas:', error);
       setActiveSessions([]);
@@ -728,42 +588,42 @@ export const SystemSecuritySection = () => {
 
   const getSeverityFromAction = (action: string): 'low' | 'medium' | 'high' | 'critical' => {
     const actionLower = action.toLowerCase();
-    
+
     // Crítico
-    if (actionLower.includes('breach') || 
-        actionLower.includes('unauthorized') ||
-        actionLower.includes('critical') ||
-        actionLower.includes('attack')) {
+    if (actionLower.includes('breach') ||
+      actionLower.includes('unauthorized') ||
+      actionLower.includes('critical') ||
+      actionLower.includes('attack')) {
       return 'critical';
     }
-    
+
     // Alto
-    if (actionLower.includes('failed') || 
-        actionLower.includes('failure') ||
-        actionLower.includes('suspicious') ||
-        actionLower.includes('blocked') ||
-        actionLower.includes('banned') ||
-        actionLower.includes('error')) {
+    if (actionLower.includes('failed') ||
+      actionLower.includes('failure') ||
+      actionLower.includes('suspicious') ||
+      actionLower.includes('blocked') ||
+      actionLower.includes('banned') ||
+      actionLower.includes('error')) {
       return 'high';
     }
-    
+
     // Médio
-    if (actionLower.includes('warning') || 
-        actionLower.includes('unusual') ||
-        actionLower.includes('terminated') ||
-        actionLower.includes('expired') ||
-        actionLower.includes('reset')) {
+    if (actionLower.includes('warning') ||
+      actionLower.includes('unusual') ||
+      actionLower.includes('terminated') ||
+      actionLower.includes('expired') ||
+      actionLower.includes('reset')) {
       return 'medium';
     }
-    
+
     // Baixo (eventos normais)
     if (actionLower.includes('success') ||
-        actionLower.includes('completed') ||
-        actionLower.includes('startup') ||
-        actionLower.includes('login_attempt')) {
+      actionLower.includes('completed') ||
+      actionLower.includes('startup') ||
+      actionLower.includes('login_attempt')) {
       return 'low';
     }
-    
+
     // Padrão
     return 'low';
   };
@@ -790,11 +650,11 @@ export const SystemSecuritySection = () => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffMinutes < 1) return 'Agora';
     if (diffMinutes < 60) return `${diffMinutes}m atrás`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h atrás`;
-    
+
     return date.toLocaleDateString('pt-BR');
   };
 
@@ -802,13 +662,13 @@ export const SystemSecuritySection = () => {
   const handleTerminateSession = async (userId: string, userName: string) => {
     try {
       setActionLoading(`terminate-${userId}`);
-      
+
       // Tentar encerrar sessão via auth admin
       const { error } = await supabase.auth.admin.signOut(userId, 'global');
-      
+
       if (error) {
         console.warn('Não foi possível encerrar via auth admin:', error.message);
-        
+
         // Fallback: registrar evento de encerramento forçado
         await supabase.from('activity_logs').insert({
           user_id: userId,
@@ -832,21 +692,28 @@ export const SystemSecuritySection = () => {
           }
         });
       }
-      
+
       // Remover sessão da lista local
       setActiveSessions(prev => prev.filter(session => session.user_id !== userId));
-      
+
       // Atualizar métricas
       setSecurityMetrics(prev => ({
         ...prev,
         activeSessionsCount: Math.max(0, prev.activeSessionsCount - 1)
       }));
-      
+
       console.log(`✅ Sessão de ${userName} encerrada com sucesso`);
-      
+
+      // Enviar sinal de Kill Switch via Realtime para desconectar o cliente imediatamente
+      await supabase.channel('security_broadcast').send({
+        type: 'broadcast',
+        event: 'force_logout',
+        payload: { user_id: userId }
+      });
+
     } catch (error) {
       console.error('Erro ao encerrar sessão:', error);
-      
+
       // Registrar erro
       await supabase.from('activity_logs').insert({
         user_id: userId,
@@ -866,18 +733,18 @@ export const SystemSecuritySection = () => {
   const handleToggleUserBlock = async (userId: string, userName: string, isCurrentlyBlocked: boolean) => {
     try {
       setActionLoading(`block-${userId}`);
-      
+
       const action = isCurrentlyBlocked ? 'unblock' : 'block';
       const banUntil = isCurrentlyBlocked ? null : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
-      
+
       // Tentar bloquear/desbloquear via auth admin
       const { error } = await supabase.auth.admin.updateUserById(userId, {
         ban_duration: isCurrentlyBlocked ? 'none' : '24h'
       });
-      
+
       if (error) {
         console.warn(`Não foi possível ${action} via auth admin:`, error.message);
-        
+
         // Fallback: atualizar perfil diretamente
         const { error: profileError } = await supabase
           .from('profiles')
@@ -886,12 +753,12 @@ export const SystemSecuritySection = () => {
             locked_until: banUntil?.toISOString()
           })
           .eq('user_id', userId);
-        
+
         if (profileError) {
           throw new Error(`Erro ao atualizar perfil: ${profileError.message}`);
         }
       }
-      
+
       // Registrar evento
       await supabase.from('activity_logs').insert({
         user_id: userId,
@@ -904,24 +771,24 @@ export const SystemSecuritySection = () => {
           reason: 'manual_admin_action'
         }
       });
-      
+
       // Atualizar sessão local
-      setActiveSessions(prev => prev.map(session => 
-        session.user_id === userId 
+      setActiveSessions(prev => prev.map(session =>
+        session.user_id === userId
           ? { ...session, is_blocked: !isCurrentlyBlocked }
           : session
       ));
-      
+
       // Se bloqueou, também encerrar sessão
       if (!isCurrentlyBlocked) {
         await handleTerminateSession(userId, userName);
       }
-      
+
       console.log(`✅ Usuário ${userName} ${isCurrentlyBlocked ? 'desbloqueado' : 'bloqueado'} com sucesso`);
-      
+
     } catch (error) {
       console.error(`Erro ao ${isCurrentlyBlocked ? 'desbloquear' : 'bloquear'} usuário:`, error);
-      
+
       // Registrar erro
       await supabase.from('activity_logs').insert({
         user_id: userId,
@@ -944,23 +811,23 @@ export const SystemSecuritySection = () => {
       '0c5c1433-2682-460c-992a-f4cce57c0d6d', // ID encontrado nos logs
       // Adicionar outros IDs se necessário
     ];
-    
+
     if (currentUserIds.includes(userId)) {
       // IP real de Itajaí, SC (Unifique)
       return '131.161.19.102';
     }
-    
+
     // Para outros usuários, usar hash para gerar IP consistente
     const hash = userId.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     // Gerar IP baseado no hash
     const ip2 = Math.abs(hash >> 8) % 255 + 1;
     const ip3 = Math.abs(hash >> 16) % 255 + 1;
     const ip4 = Math.abs(hash >> 24) % 254 + 2;
-    
+
     // IPs de diferentes regiões do Brasil
     const regions = [
       `201.${ip2}.${ip3}.${ip4}`, // São Paulo (Vivo)
@@ -970,7 +837,7 @@ export const SystemSecuritySection = () => {
       `192.168.${ip3}.${ip4}`,    // Rede local
       `10.0.${ip3}.${ip4}`        // Rede corporativa
     ];
-    
+
     return regions[Math.abs(hash) % regions.length];
   };
 
@@ -980,7 +847,7 @@ export const SystemSecuritySection = () => {
     const currentUserIds = [
       '0c5c1433-2682-460c-992a-f4cce57c0d6d', // ID encontrado nos logs
     ];
-    
+
     if (userId && currentUserIds.includes(userId)) {
       // Sua localização real em Itajaí, Santa Catarina
       if (userAgent.includes('Mobile') || userAgent.includes('iPhone') || userAgent.includes('Android')) {
@@ -988,9 +855,9 @@ export const SystemSecuritySection = () => {
       }
       return 'Itajaí, SC';
     }
-    
+
     if (!userAgent) return null;
-    
+
     // Para outros usuários, detectar por idioma/região
     if (userAgent.includes('pt-BR') || userAgent.includes('pt_BR')) {
       return 'São Paulo, SP';
@@ -1001,7 +868,7 @@ export const SystemSecuritySection = () => {
     if (userAgent.includes('es-ES') || userAgent.includes('es_ES')) {
       return 'Espanha';
     }
-    
+
     // Detectar por plataforma (menos específico)
     if (userAgent.includes('Windows')) {
       return 'Desktop Windows';
@@ -1018,7 +885,7 @@ export const SystemSecuritySection = () => {
     if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) {
       return 'Mobile iOS';
     }
-    
+
     return null;
   };
 
@@ -1027,12 +894,12 @@ export const SystemSecuritySection = () => {
     if (!ip || ip === 'N/A') {
       return 'Desconhecido';
     }
-    
+
     // IP específico de Itajaí, Santa Catarina (seu IP real)
     if (ip === '131.161.19.102') {
       return 'Itajaí, SC';
     }
-    
+
     // IPs privados
     if (ip.startsWith('192.168.')) {
       return 'Rede Local (WiFi)';
@@ -1043,12 +910,12 @@ export const SystemSecuritySection = () => {
     if (ip.startsWith('172.')) {
       return 'Rede Privada';
     }
-    
+
     // Localhost
     if (ip === '127.0.0.1' || ip === '::1') {
       return 'Localhost';
     }
-    
+
     // IPs públicos brasileiros por região
     if (ip.startsWith('131.161.')) {
       return 'Itajaí, SC'; // Range Unifique SC
@@ -1068,14 +935,14 @@ export const SystemSecuritySection = () => {
     if (ip.startsWith('200.')) {
       return 'Belo Horizonte, MG';
     }
-    
+
     // Outros ranges por região
     if (ip.startsWith('179.')) {
       const cities = ['Curitiba, PR', 'Porto Alegre, RS', 'Joinville, SC', 'Blumenau, SC'];
       const hash = ip.split('.').reduce((a, b) => a + parseInt(b), 0);
       return cities[hash % cities.length];
     }
-    
+
     // Outros IPs públicos
     return 'Localização Externa';
   };
@@ -1084,8 +951,8 @@ export const SystemSecuritySection = () => {
     loadSecurityData();
   }, []);
 
-  const mfaPercentage = securityMetrics.mfaTotal > 0 
-    ? (securityMetrics.mfaEnabled / securityMetrics.mfaTotal) * 100 
+  const mfaPercentage = securityMetrics.mfaTotal > 0
+    ? (securityMetrics.mfaEnabled / securityMetrics.mfaTotal) * 100
     : 0;
 
   return (
@@ -1185,7 +1052,7 @@ export const SystemSecuritySection = () => {
             <CardContent>
               <div className="text-3xl font-bold mb-2">{securityMetrics.passwordStrengthScore}/100</div>
               <Progress value={securityMetrics.passwordStrengthScore} className="mb-4" />
-              
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Autenticação Multi-Fator</span>
@@ -1230,7 +1097,7 @@ export const SystemSecuritySection = () => {
                     </Badge>
                   </div>
                 ))}
-                
+
                 {securityEvents.length === 0 && (
                   <div className="text-center py-4 text-muted-foreground">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
@@ -1304,9 +1171,9 @@ export const SystemSecuritySection = () => {
                               {new Date(event.created_at).toLocaleDateString('pt-BR')}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(event.created_at).toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
+                              {new Date(event.created_at).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit'
                               })}
                             </span>
                           </div>
@@ -1336,8 +1203,8 @@ export const SystemSecuritySection = () => {
                         <TableCell className="max-w-[100px]">
                           <Badge className={`text-xs ${getSeverityColor(event.severity)}`}>
                             {event.severity === 'low' ? 'Baixo' :
-                             event.severity === 'medium' ? 'Médio' :
-                             event.severity === 'high' ? 'Alto' : 'Crítico'}
+                              event.severity === 'medium' ? 'Médio' :
+                                event.severity === 'high' ? 'Alto' : 'Crítico'}
                           </Badge>
                         </TableCell>
                         <TableCell className="max-w-[130px]">
@@ -1346,8 +1213,8 @@ export const SystemSecuritySection = () => {
                           </span>
                         </TableCell>
                         <TableCell className="max-w-[80px]">
-                          <Badge 
-                            variant={event.resolved ? "default" : "destructive"} 
+                          <Badge
+                            variant={event.resolved ? "default" : "destructive"}
                             className="text-xs"
                           >
                             {event.resolved ? 'OK' : 'Aberto'}
@@ -1404,7 +1271,7 @@ export const SystemSecuritySection = () => {
                 </TableHeader>
                 <TableBody>
                   {activeSessions.map((session) => (
-                    <TableRow key={session.user_id}>
+                    <TableRow key={session.id}>
                       <TableCell className="max-w-[200px]">
                         <div className="flex flex-col">
                           <span className="font-medium truncate" title={session.user_name}>
@@ -1444,7 +1311,7 @@ export const SystemSecuritySection = () => {
                         <span className="text-sm">{session.session_duration}</span>
                       </TableCell>
                       <TableCell>
-                        <Badge 
+                        <Badge
                           variant={session.is_blocked ? "destructive" : "default"}
                           className="text-xs"
                         >
@@ -1454,9 +1321,9 @@ export const SystemSecuritySection = () => {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-8 w-8 p-0"
                               disabled={actionLoading === `terminate-${session.user_id}` || actionLoading === `block-${session.user_id}`}
                             >
@@ -1485,9 +1352,9 @@ export const SystemSecuritySection = () => {
                               <UserX className="h-4 w-4 mr-2" />
                               Encerrar Sessão
                             </DropdownMenuItem>
-                            
+
                             <DropdownMenuSeparator />
-                            
+
                             <DropdownMenuItem
                               onClick={() => setDialogState({
                                 isOpen: true,
@@ -1538,18 +1405,18 @@ export const SystemSecuritySection = () => {
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>MFA</strong>: Incentive mais usuários a ativarem a autenticação multi-fator. 
+                <strong>MFA</strong>: Incentive mais usuários a ativarem a autenticação multi-fator.
                 Atualmente apenas {mfaPercentage.toFixed(0)}% dos usuários têm MFA ativo.
               </AlertDescription>
             </Alert>
-            
+
             <Alert>
               <Shield className="h-4 w-4" />
               <AlertDescription>
                 <strong>Monitoramento</strong>: Configure alertas automáticos para tentativas de login falhadas em sequência.
               </AlertDescription>
             </Alert>
-            
+
             <Alert>
               <Lock className="h-4 w-4" />
               <AlertDescription>
@@ -1569,8 +1436,8 @@ export const SystemSecuritySection = () => {
             await handleTerminateSession(dialogState.userId, dialogState.userName);
           } else {
             await handleToggleUserBlock(
-              dialogState.userId, 
-              dialogState.userName, 
+              dialogState.userId,
+              dialogState.userName,
               dialogState.action === 'unblock'
             );
           }

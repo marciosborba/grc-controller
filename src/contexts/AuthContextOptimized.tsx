@@ -393,7 +393,6 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           setSession(null);
         }
       } catch (error) {
-        console.warn('⚠️ [AUTH HEARTBEAT] Erro inesperado:', error);
       }
     }, 60000); // A cada minuto
 
@@ -566,6 +565,26 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
     return user.enabledModules?.includes(moduleKey) || false;
   }, [user]);
+
+  // Listen for security events (Kick User) - REALTIME KILL SWITCH
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase.channel('security_broadcast')
+      .on('broadcast', { event: 'force_logout' }, (payload) => {
+        if (payload.payload?.user_id === user.id) {
+          console.warn('🚨 [AUTH] Sessão encerrada remotamente pelo administrador');
+          logout().then(() => {
+            window.location.reload();
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, logout]);
 
   const contextValue: AuthContextType = {
     user,

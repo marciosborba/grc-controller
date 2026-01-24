@@ -6,9 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Activity, 
-  Search, 
+import {
+  Activity,
+  Search,
   RefreshCw,
   Calendar,
   User,
@@ -67,12 +67,12 @@ export const SystemLogsSection = () => {
     setIsLoading(true);
     try {
       console.log('🔍 Carregando logs REAIS de atividade do sistema...');
-      
+
       // Determinar o filtro de data
       const now = new Date();
       let dateThreshold = new Date();
       let limitRecords = 1000;
-      
+
       switch (dateFilter) {
         case 'today':
           dateThreshold = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -123,7 +123,7 @@ export const SystemLogsSection = () => {
           hint: logsError.hint,
           code: logsError.code
         });
-        
+
         // Não fazer throw, apenas definir dados vazios para mostrar o erro na UI
         console.log('⚠️ Continuando com dados vazios devido ao erro...');
         setLogs([]);
@@ -147,14 +147,14 @@ export const SystemLogsSection = () => {
       });
 
       // 2. Para logs sem profile, buscar informações na tabela auth.users
-      const logsWithoutProfile = logsData?.filter(log => 
+      const logsWithoutProfile = logsData?.filter(log =>
         log.user_id && !log.profiles
       ) || [];
-      
+
       const authUsersMap = new Map();
       if (logsWithoutProfile.length > 0) {
         console.log('🔍 Buscando dados de usuários para', logsWithoutProfile.length, 'logs sem profile');
-        
+
         try {
           const { data: authUsers } = await supabase.auth.admin.listUsers();
           if (authUsers?.users) {
@@ -190,6 +190,13 @@ export const SystemLogsSection = () => {
             userName = authData?.full_name || `User-${log.user_id?.slice(-8) || 'unknown'}`;
             userEmail = authData?.email || '';
           }
+        } else {
+          // Tentar extrair identidade de logs anônimos (ex: falha de login)
+          const detailsObj = (typeof log.details === 'object' ? log.details : {}) as Record<string, any>;
+          if (detailsObj?.email) {
+            userName = 'Visitante (Tentativa)';
+            userEmail = String(detailsObj.email);
+          }
         }
 
         return {
@@ -224,7 +231,7 @@ export const SystemLogsSection = () => {
       const totalLogsCount = count || 0;
       let todayLogsData = processedLogs;
       let weekLogsData = processedLogs;
-      
+
       // Se não for filtro de hoje, carregar dados específicos para estatísticas precisas
       if (dateFilter !== 'today') {
         const { data: todayData } = await supabase
@@ -233,7 +240,7 @@ export const SystemLogsSection = () => {
           .gte('created_at', today.toISOString());
         todayLogsData = todayData || [];
       }
-      
+
       if (dateFilter === 'all' || dateFilter === 'month') {
         const { data: weekData } = await supabase
           .from('activity_logs')
@@ -249,42 +256,42 @@ export const SystemLogsSection = () => {
         errors: processedLogs.filter(log => {
           const details = log.details || {};
           const action = log.action.toLowerCase();
-          return details.severity === 'error' || 
-                 action.includes('error') || 
-                 action.includes('fail') ||
-                 action.includes('failed') ||
-                 action.includes('exception');
+          return details.severity === 'error' ||
+            action.includes('error') ||
+            action.includes('fail') ||
+            action.includes('failed') ||
+            action.includes('exception');
         }).length,
         warnings: processedLogs.filter(log => {
           const details = log.details || {};
           const action = log.action.toLowerCase();
-          return details.severity === 'warning' || 
-                 action.includes('warning') ||
-                 action.includes('suspicious') ||
-                 action.includes('blocked') ||
-                 action.includes('retry');
+          return details.severity === 'warning' ||
+            action.includes('warning') ||
+            action.includes('suspicious') ||
+            action.includes('blocked') ||
+            action.includes('retry');
         }).length,
         securityEvents: processedLogs.filter(log => {
           const action = log.action.toLowerCase();
           const resourceType = log.resource_type.toLowerCase();
-          return resourceType === 'security' || 
-                 action.includes('security') || 
-                 action.includes('suspicious') ||
-                 action.includes('breach') ||
-                 action.includes('unauthorized') ||
-                 action.includes('blocked') ||
-                 action.includes('attempt');
+          return resourceType === 'security' ||
+            action.includes('security') ||
+            action.includes('suspicious') ||
+            action.includes('breach') ||
+            action.includes('unauthorized') ||
+            action.includes('blocked') ||
+            action.includes('attempt');
         }).length,
         authEvents: processedLogs.filter(log => {
           const action = log.action.toLowerCase();
           const resourceType = log.resource_type.toLowerCase();
-          return resourceType === 'auth' || 
-                 action.includes('login') || 
-                 action.includes('logout') ||
-                 action.includes('signin') ||
-                 action.includes('signout') ||
-                 action.includes('authentication') ||
-                 action.includes('session');
+          return resourceType === 'auth' ||
+            action.includes('login') ||
+            action.includes('logout') ||
+            action.includes('signin') ||
+            action.includes('signout') ||
+            action.includes('authentication') ||
+            action.includes('session');
         }).length
       };
 
@@ -293,13 +300,13 @@ export const SystemLogsSection = () => {
 
     } catch (error) {
       console.error('❌ Erro crítico ao carregar logs:', error);
-      
+
       // Log detalhado do erro para debug
       if (error instanceof Error) {
         console.error('🐞 Stack trace:', error.stack);
         console.error('🐞 Mensagem:', error.message);
       }
-      
+
       // Tentar uma consulta mais simples como fallback
       try {
         console.log('🔄 Tentando consulta simplificada...');
@@ -308,7 +315,7 @@ export const SystemLogsSection = () => {
           .select('id, action, resource_type, created_at')
           .order('created_at', { ascending: false })
           .limit(10);
-          
+
         if (simpleError) {
           console.error('❌ Erro na consulta simplificada:', simpleError);
         } else {
@@ -330,7 +337,7 @@ export const SystemLogsSection = () => {
             setLogs(processedSimpleLogs);
             setLogStats({
               total: simpleLogs.length,
-              today: simpleLogs.filter(log => 
+              today: simpleLogs.filter(log =>
                 new Date(log.created_at).toDateString() === new Date().toDateString()
               ).length,
               thisWeek: simpleLogs.length,
@@ -346,7 +353,7 @@ export const SystemLogsSection = () => {
       } catch (fallbackError) {
         console.error('❌ Erro na consulta de fallback:', fallbackError);
       }
-      
+
       // Mostrar dados básicos em caso de erro total
       const fallbackStats = {
         total: 0,
@@ -357,7 +364,7 @@ export const SystemLogsSection = () => {
         securityEvents: 0,
         authEvents: 0
       };
-      
+
       setLogStats(fallbackStats);
       setLogs([]);
     } finally {
@@ -368,14 +375,14 @@ export const SystemLogsSection = () => {
   useEffect(() => {
     loadLogData();
   }, [dateFilter]);
-  
+
   // Auto-refresh a cada 30 segundos se estiver na aba hoje
   useEffect(() => {
     if (dateFilter === 'today') {
       const interval = setInterval(() => {
         loadLogData();
       }, 30000); // 30 segundos
-      
+
       return () => clearInterval(interval);
     }
   }, [dateFilter]);
@@ -388,39 +395,39 @@ export const SystemLogsSection = () => {
     const details = log.details || {};
     const errorMessage = (details.error_message as string)?.toLowerCase() || '';
     const detailsString = JSON.stringify(details).toLowerCase();
-    
-    const matchesSearch = searchTerm === '' || 
-                          action.includes(searchLower) ||
-                          userName.includes(searchLower) ||
-                          resourceType.includes(searchLower) ||
-                          errorMessage.includes(searchLower) ||
-                          detailsString.includes(searchLower) ||
-                          log.ip_address?.includes(searchTerm) ||
-                          log.resource_id?.includes(searchTerm);
-    
+
+    const matchesSearch = searchTerm === '' ||
+      action.includes(searchLower) ||
+      userName.includes(searchLower) ||
+      resourceType.includes(searchLower) ||
+      errorMessage.includes(searchLower) ||
+      detailsString.includes(searchLower) ||
+      log.ip_address?.includes(searchTerm) ||
+      log.resource_id?.includes(searchTerm);
+
     const matchesResource = resourceFilter === 'all' || log.resource_type === resourceFilter;
-    
+
     let matchesSeverity = true;
     if (severityFilter !== 'all') {
       const actionLower = action;
       if (severityFilter === 'error') {
-        matchesSeverity = details.severity === 'error' || 
-                         actionLower.includes('error') || 
-                         actionLower.includes('fail') ||
-                         actionLower.includes('exception') ||
-                         actionLower.includes('critical');
+        matchesSeverity = details.severity === 'error' ||
+          actionLower.includes('error') ||
+          actionLower.includes('fail') ||
+          actionLower.includes('exception') ||
+          actionLower.includes('critical');
       } else if (severityFilter === 'warning') {
-        matchesSeverity = details.severity === 'warning' || 
-                         actionLower.includes('warning') ||
-                         actionLower.includes('suspicious') ||
-                         actionLower.includes('blocked') ||
-                         actionLower.includes('retry');
+        matchesSeverity = details.severity === 'warning' ||
+          actionLower.includes('warning') ||
+          actionLower.includes('suspicious') ||
+          actionLower.includes('blocked') ||
+          actionLower.includes('retry');
       } else if (severityFilter === 'info') {
-        matchesSeverity = !details.severity || 
-                         details.severity === 'info' ||
-                         (!actionLower.includes('error') && 
-                          !actionLower.includes('warning') && 
-                          !actionLower.includes('fail'));
+        matchesSeverity = !details.severity ||
+          details.severity === 'info' ||
+          (!actionLower.includes('error') &&
+            !actionLower.includes('warning') &&
+            !actionLower.includes('fail'));
       }
     }
 
@@ -460,14 +467,14 @@ export const SystemLogsSection = () => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffMinutes < 1) return 'Agora';
     if (diffMinutes < 60) return `${diffMinutes}m`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h`;
-    
-    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+
+    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -584,7 +591,7 @@ export const SystemLogsSection = () => {
                 className="pl-10"
               />
             </div>
-            
+
             <Select value={dateFilter} onValueChange={setDateFilter}>
               <SelectTrigger className="w-full md:w-40">
                 <SelectValue />
@@ -723,9 +730,9 @@ export const SystemLogsSection = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => {
                               const logDetails = {
                                 id: log.id,
