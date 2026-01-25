@@ -84,43 +84,43 @@ interface DashboardMetrics {
   lowRisks: number;
   riskScore: number;
   riskTrend: number;
-  
+
   // Compliance
   complianceScore: number;
   totalAssessments: number;
   completedAssessments: number;
   pendingAssessments: number;
   overdueAssessments: number;
-  
+
   // Privacy (LGPD)
   totalDPIA: number;
   activeDPIA: number;
   privacyIncidents: number;
   dataSubjectRequests: number;
   consentRate: number;
-  
+
   // Vendors
   totalVendors: number;
   activeVendors: number;
   criticalVendors: number;
   vendorAssessments: number;
-  
+
   // Policies
   totalPolicies: number;
   publishedPolicies: number;
   draftPolicies: number;
   expiredPolicies: number;
-  
+
   // Incidents
   totalIncidents: number;
   openIncidents: number;
   resolvedIncidents: number;
   avgResolutionTime: number;
-  
+
   // Ethics
   ethicsReports: number;
   openEthicsReports: number;
-  
+
   // Action Plans
   totalActionPlans: number;
   activeActionPlans: number;
@@ -148,7 +148,7 @@ const IntegratedExecutiveDashboardFixed = () => {
   const { user } = useAuth();
   const { selectedTenantId } = useTenantSelector();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
+
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalRisks: 0, criticalRisks: 0, highRisks: 0, mediumRisks: 0, lowRisks: 0,
@@ -161,15 +161,15 @@ const IntegratedExecutiveDashboardFixed = () => {
     avgResolutionTime: 0, ethicsReports: 0, openEthicsReports: 0,
     totalActionPlans: 0, activeActionPlans: 0, completedActionPlans: 0, overdueActionPlans: 0
   });
-  
+
   const [matrixConfig, setMatrixConfig] = useState<MatrixConfig>({
     type: '5x5',
     impact_labels: ['Muito Baixo', 'Baixo', 'Medio', 'Alto', 'Muito Alto'],
     likelihood_labels: ['Muito Baixo', 'Baixo', 'Medio', 'Alto', 'Muito Alto']
   });
-  
+
   const [activeTab, setActiveTab] = useState('overview');
-  const [hoveredCell, setHoveredCell] = useState<{impact: number, probability: number} | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{ impact: number, probability: number } | null>(null);
   const [cellRisks, setCellRisks] = useState<any[]>([]);
 
   // Dados para graficos
@@ -224,15 +224,18 @@ const IntegratedExecutiveDashboardFixed = () => {
         }
       }
     };
-    
+
     loadMatrixConfig();
   }, [effectiveTenantId]);
 
   // Carregar dados do dashboard
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!effectiveTenantId) return;
-      
+      if (!effectiveTenantId) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const [
@@ -272,20 +275,20 @@ const IntegratedExecutiveDashboardFixed = () => {
         const highRisks = risks.filter(r => r.risk_level === 'Alto').length;
         const mediumRisks = risks.filter(r => r.risk_level === 'Medio').length;
         const lowRisks = risks.filter(r => r.risk_level === 'Baixo' || r.risk_level === 'Muito Baixo').length;
-        
-        const riskScore = risks.length > 0 ? 
+
+        const riskScore = risks.length > 0 ?
           Math.max(0, 5 - ((criticalRisks * 2 + highRisks * 1.5 + mediumRisks * 1) / risks.length) * 2) : 5;
 
         // Calcular score de compliance
-        const completedAssessments = assessments.filter(a => 
+        const completedAssessments = assessments.filter(a =>
           a.status === 'concluido' || a.status === 'completed'
         ).length;
-        const complianceScore = assessments.length > 0 ? 
+        const complianceScore = assessments.length > 0 ?
           Math.round((completedAssessments / assessments.length) * 100) : 0;
 
         // Calcular metricas de privacidade
         const activeDPIA = dpia.filter(d => d.status === 'em_andamento' || d.status === 'active').length;
-        const openIncidents = incidents.filter(i => 
+        const openIncidents = incidents.filter(i =>
           i.status !== 'resolvido' && i.status !== 'fechado' && i.status !== 'resolved'
         ).length;
 
@@ -294,13 +297,13 @@ const IntegratedExecutiveDashboardFixed = () => {
         const criticalVendors = vendors.filter(v => v.risk_level === 'high' || v.risk_level === 'critical').length;
 
         // Calcular metricas de politicas
-        const publishedPolicies = policies.filter(p => 
+        const publishedPolicies = policies.filter(p =>
           p.status === 'published' || p.status === 'approved' || p.status === 'ativo'
         ).length;
         const draftPolicies = policies.filter(p => p.status === 'draft' || p.status === 'rascunho').length;
 
         // Calcular metricas de planos de acao
-        const activeActionPlans = actionPlans.filter(ap => 
+        const activeActionPlans = actionPlans.filter(ap =>
           ap.status === 'em_andamento' || ap.status === 'aprovado'
         ).length;
         const completedActionPlans = actionPlans.filter(ap => ap.status === 'concluido').length;
@@ -350,7 +353,7 @@ const IntegratedExecutiveDashboardFixed = () => {
     };
 
     fetchDashboardData();
-    
+
     // Atualizar a cada 5 minutos
     const interval = setInterval(fetchDashboardData, 5 * 60 * 1000);
     return () => clearInterval(interval);
@@ -365,23 +368,23 @@ const IntegratedExecutiveDashboardFixed = () => {
 
   // Estado para armazenar todos os riscos carregados
   const [allRisks, setAllRisks] = useState<any[]>([]);
-  
+
   // Carregar riscos reais do banco de dados
   useEffect(() => {
     const loadRisks = async () => {
       if (!effectiveTenantId) return;
-      
+
       try {
         const { data: risks, error } = await supabase
           .from('risk_assessments')
           .select('*')
           .eq('tenant_id', effectiveTenantId);
-          
+
         if (error) {
           console.error('Erro ao carregar riscos:', error);
           return;
         }
-        
+
         console.log('Riscos carregados para matriz:', risks?.length || 0);
         if (risks && risks.length > 0) {
           console.log('Exemplo de risco:', risks[0]);
@@ -390,65 +393,65 @@ const IntegratedExecutiveDashboardFixed = () => {
           console.log('- likelihood_score:', risks[0].likelihood_score);
           console.log('- probability:', risks[0].probability);
           console.log('- severity:', risks[0].severity);
-          
+
           // Verificar todos os campos disponíveis
           console.log('Todos os campos do risco:', Object.keys(risks[0]));
         }
-        
+
         setAllRisks(risks || []);
       } catch (error) {
         console.error('Erro ao carregar riscos:', error);
       }
     };
-    
+
     loadRisks();
   }, [effectiveTenantId]);
-  
+
   // Funcao para extrair valor de impacto do risco
   const extractImpactValue = (risk: any) => {
     // Tentar diferentes campos que podem conter o valor de impacto
-    return risk.impact_score || 
-           risk.impact || 
-           risk.severity || 
-           (typeof risk.probability === 'number' ? risk.probability : null) ||
-           1; // fallback
+    return risk.impact_score ||
+      risk.impact ||
+      risk.severity ||
+      (typeof risk.probability === 'number' ? risk.probability : null) ||
+      1; // fallback
   };
-  
+
   // Funcao para extrair valor de probabilidade do risco
   const extractProbabilityValue = (risk: any) => {
     // Tentar diferentes campos que podem conter o valor de probabilidade
-    return risk.likelihood_score || 
-           risk.probability || 
-           risk.likelihood || 
-           1; // fallback
+    return risk.likelihood_score ||
+      risk.probability ||
+      risk.likelihood ||
+      1; // fallback
   };
-  
+
   // Funcao para obter riscos de uma celula especifica
   const getRisksForCell = (impact: number, probability: number) => {
     // Primeiro, tentar filtrar riscos que correspondem exatamente ao quadrante
     let filteredRisks = allRisks.filter(risk => {
       const riskImpact = extractImpactValue(risk);
       const riskProbability = extractProbabilityValue(risk);
-      
+
       return riskImpact === impact && riskProbability === probability;
     });
-    
+
     // Se não encontrou riscos com correspondência exata, distribuir alguns riscos aleatoriamente
     if (filteredRisks.length === 0 && allRisks.length > 0) {
       // Calcular um índice baseado na posição do quadrante para distribuição consistente
       const quadrantIndex = (impact - 1) * 5 + (probability - 1);
       const risksPerQuadrant = Math.ceil(allRisks.length / 25); // Distribuir entre 25 quadrantes (5x5)
-      
+
       const startIndex = (quadrantIndex * risksPerQuadrant) % allRisks.length;
       const endIndex = Math.min(startIndex + risksPerQuadrant, allRisks.length);
-      
+
       filteredRisks = allRisks.slice(startIndex, endIndex);
-      
+
       console.log(`Quadrante [${impact},${probability}]: Distribuição automática - ${filteredRisks.length} riscos`);
     } else {
       console.log(`Quadrante [${impact},${probability}]: ${filteredRisks.length} riscos encontrados por correspondência exata`);
     }
-    
+
     return filteredRisks.map(risk => ({
       id: risk.id,
       title: risk.title,
@@ -466,7 +469,7 @@ const IntegratedExecutiveDashboardFixed = () => {
   // Funcao para renderizar matriz de risco - USANDO CORES DO TENANT
   const renderRiskMatrix = () => {
     const size = matrixConfig.type === '3x3' ? 3 : matrixConfig.type === '4x4' ? 4 : 5;
-    
+
     // Funcao para obter nivel de risco e cor baseado nas configuracoes do tenant
     const getRiskLevelAndColor = (score: number) => {
       // Se ha configuracao customizada de niveis, usar ela
@@ -481,7 +484,7 @@ const IntegratedExecutiveDashboardFixed = () => {
           }
         }
       }
-      
+
       // Fallback para configuracao padrao baseada no tipo da matriz
       if (matrixConfig.type === '5x5') {
         if (score >= 17) return { name: 'Muito Alto', backgroundColor: '#ef4444', textColor: '#ffffff' };
@@ -500,7 +503,7 @@ const IntegratedExecutiveDashboardFixed = () => {
         else return { name: 'Baixo', backgroundColor: '#22c55e', textColor: '#ffffff' };
       }
     };
-    
+
     return (
       <div className="inline-block relative">
         <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}>
@@ -510,15 +513,15 @@ const IntegratedExecutiveDashboardFixed = () => {
               const probability = probIndex + 1; // Da esquerda para direita: 1,2,3,4,5
               const riskScore = impact * probability;
               const riskLevel = getRiskLevelAndColor(riskScore);
-              
+
               const risks = getRisksForCell(impact, probability);
               const isHovered = hoveredCell?.impact === impact && hoveredCell?.probability === probability;
-              
+
               return (
                 <div
                   key={`${impact}-${probability}`}
                   className="relative w-20 h-20 flex items-center justify-center text-base font-bold transition-all duration-300 shadow-sm cursor-pointer group"
-                  style={{ 
+                  style={{
                     backgroundColor: riskLevel.backgroundColor,
                     color: riskLevel.textColor,
                     borderRadius: '6px',
@@ -527,7 +530,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                     zIndex: isHovered ? 50 : 1
                   }}
                   onMouseEnter={() => {
-                    setHoveredCell({impact, probability});
+                    setHoveredCell({ impact, probability });
                     setCellRisks(risks);
                   }}
                   onMouseLeave={() => {
@@ -540,32 +543,32 @@ const IntegratedExecutiveDashboardFixed = () => {
                     {risks.length > 0 && (
                       <span className="text-2xl font-bold">{risks.length}</span>
                     )}
-                    
+
                     {/* Valor do risco - pequeno no canto inferior direito */}
                     <span className="absolute bottom-1 right-1 text-xs font-medium opacity-75">
                       {riskScore}
                     </span>
                   </div>
-                  
+
                   {/* Tooltip com lista de riscos */}
                   {isHovered && risks.length > 0 && (
-                    <div 
+                    <div
                       className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-50 animate-in fade-in-0 zoom-in-95 duration-200"
                       style={{
                         animation: 'fadeInUp 0.3s ease-out'
                       }}
                     >
                       <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-800 border-l border-t border-gray-200 dark:border-gray-700 rotate-45"></div>
-                      
+
                       <div className="mb-3">
                         <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                           Riscos - {riskLevel.name} ({riskScore})
                         </h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Impacto: {matrixConfig.impact_labels[impact-1] || impact} • Probabilidade: {matrixConfig.likelihood_labels[probability-1] || probability}
+                          Impacto: {matrixConfig.impact_labels[impact - 1] || impact} • Probabilidade: {matrixConfig.likelihood_labels[probability - 1] || probability}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-3 max-h-64 overflow-y-auto">
                         {risks.map((risk, index) => (
                           <div key={risk.id} className="border-l-4 border-blue-500 pl-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-r">
@@ -581,7 +584,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                                     {risk.owner}
                                   </span>
-                                  <span 
+                                  <span
                                     className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                                     style={{
                                       backgroundColor: riskLevel.backgroundColor + '20',
@@ -596,12 +599,11 @@ const IntegratedExecutiveDashboardFixed = () => {
                                     </span>
                                   )}
                                   {risk.status && (
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                      risk.status === 'active' ? 'bg-green-100 text-green-700' :
-                                      risk.status === 'mitigated' ? 'bg-yellow-100 text-yellow-700' :
-                                      risk.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
-                                      'bg-gray-100 text-gray-700'
-                                    }`}>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${risk.status === 'active' ? 'bg-green-100 text-green-700' :
+                                        risk.status === 'mitigated' ? 'bg-yellow-100 text-yellow-700' :
+                                          risk.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-gray-100 text-gray-700'
+                                      }`}>
                                       {risk.status}
                                     </span>
                                   )}
@@ -616,22 +618,22 @@ const IntegratedExecutiveDashboardFixed = () => {
                           </div>
                         ))}
                       </div>
-                      
+
                       {risks.length === 0 && (
                         <div className="text-center py-4">
                           <p className="text-gray-500 dark:text-gray-400 text-sm">
-                            {allRisks.length === 0 ? 
-                              'Carregando riscos...' : 
+                            {allRisks.length === 0 ?
+                              'Carregando riscos...' :
                               'Nenhum risco identificado neste quadrante'
                             }
                           </p>
                         </div>
                       )}
-                      
+
                       {risks.length > 0 && (
                         <div className="border-t pt-3 mt-3">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             className="w-full text-xs"
                             onClick={() => navigate('/risks')}
                           >
@@ -693,8 +695,8 @@ const IntegratedExecutiveDashboardFixed = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {/* Risk Score */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-red-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <Shield className="h-8 w-8 text-red-500" />
@@ -704,9 +706,8 @@ const IntegratedExecutiveDashboardFixed = () => {
                 ) : (
                   <TrendingUp className="h-4 w-4 text-red-500" />
                 )}
-                <span className={`text-xs font-medium ${
-                  metrics.riskTrend < 0 ? 'text-green-500' : 'text-red-500'
-                }`}>
+                <span className={`text-xs font-medium ${metrics.riskTrend < 0 ? 'text-green-500' : 'text-red-500'
+                  }`}>
                   {Math.abs(metrics.riskTrend)}%
                 </span>
               </div>
@@ -723,8 +724,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
         {/* Compliance Score */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-blue-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <CheckCircle className="h-8 w-8 text-blue-500" />
@@ -742,8 +743,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
         {/* Privacy Score */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-green-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <Lock className="h-8 w-8 text-green-500" />
@@ -763,8 +764,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
         {/* Vendors */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-purple-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <Users className="h-8 w-8 text-purple-500" />
@@ -784,8 +785,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
         {/* Policies */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-orange-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <FileText className="h-8 w-8 text-orange-500" />
@@ -805,8 +806,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
         {/* Action Plans */}
         <Card className="relative group hover:shadow-lg transition-all duration-300 border-l-4 border-l-teal-500">
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-               style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
           <CardContent className="p-4 relative">
             <div className="flex items-center justify-between mb-2">
               <Target className="h-8 w-8 text-teal-500" />
@@ -852,7 +853,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
@@ -883,7 +884,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="framework" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
@@ -955,7 +956,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                     <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
@@ -1008,7 +1009,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       contentStyle={{
                         backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
@@ -1042,7 +1043,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                   <div className="text-sm font-medium">Probabilidade →</div>
                   <div className="text-sm font-medium">↑ Impacto</div>
                 </div>
-                
+
                 {/* Matriz */}
                 <div className="flex flex-col items-center space-y-4">
                   <div className="flex items-start space-x-4">
@@ -1062,11 +1063,11 @@ const IntegratedExecutiveDashboardFixed = () => {
                         })}
                       </div>
                     </div>
-                    
+
                     {/* Matriz */}
                     <div className="flex flex-col space-y-4">
                       {renderRiskMatrix()}
-                      
+
                       {/* Eixo X (Probabilidade) - Diretamente abaixo da matriz */}
                       <div className="flex flex-col items-center space-y-2">
                         <div className="flex gap-1 text-sm text-center">
@@ -1084,14 +1085,14 @@ const IntegratedExecutiveDashboardFixed = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Legenda Dinamica baseada na configuracao do tenant */}
                 <div className="flex flex-wrap justify-center gap-4" style={{ marginTop: '10px' }}>
                   {(() => {
                     // Obter niveis unicos da matriz
                     const uniqueLevels = new Map();
                     const size = matrixConfig.type === '3x3' ? 3 : matrixConfig.type === '4x4' ? 4 : 5;
-                    
+
                     // Funcao para obter nivel de risco (mesma logica da matriz)
                     const getRiskLevelAndColor = (score: number) => {
                       if (matrixConfig.risk_levels_custom && matrixConfig.risk_levels_custom.length > 0) {
@@ -1101,7 +1102,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                           }
                         }
                       }
-                      
+
                       if (matrixConfig.type === '5x5') {
                         if (score >= 17) return { name: 'Muito Alto', backgroundColor: '#ef4444' };
                         else if (score >= 9) return { name: 'Alto', backgroundColor: '#f97316' };
@@ -1119,7 +1120,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                         else return { name: 'Baixo', backgroundColor: '#22c55e' };
                       }
                     };
-                    
+
                     // Coletar todos os niveis unicos
                     for (let i = 1; i <= size; i++) {
                       for (let j = 1; j <= size; j++) {
@@ -1130,11 +1131,11 @@ const IntegratedExecutiveDashboardFixed = () => {
                         }
                       }
                     }
-                    
+
                     return Array.from(uniqueLevels.values()).map((level) => (
                       <div key={level.name} className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded" 
+                        <div
+                          className="w-4 h-4 rounded"
                           style={{ backgroundColor: level.backgroundColor }}
                         ></div>
                         <span className="text-sm">{level.name}</span>
@@ -1152,8 +1153,8 @@ const IntegratedExecutiveDashboardFixed = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Modulo de Riscos */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/risks')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5 text-red-500" />
@@ -1180,8 +1181,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
             {/* Modulo de Compliance */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/assessments')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-blue-500" />
@@ -1208,8 +1209,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
             {/* Modulo de Privacidade */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/privacy')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <Lock className="h-5 w-5 text-green-500" />
@@ -1236,8 +1237,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
             {/* Modulo de Fornecedores */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/vendors')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-purple-500" />
@@ -1264,8 +1265,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
             {/* Modulo de Politicas */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/policy-management')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-orange-500" />
@@ -1292,8 +1293,8 @@ const IntegratedExecutiveDashboardFixed = () => {
 
             {/* Modulo de Auditoria */}
             <Card className="relative group hover:shadow-lg transition-all duration-300 cursor-pointer" onClick={() => navigate('/auditorias')}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                   style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
               <CardHeader className="relative">
                 <CardTitle className="flex items-center gap-2">
                   <Search className="h-5 w-5 text-teal-500" />
@@ -1346,7 +1347,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                 </div>
               </div>
             )}
-            
+
             {metrics.openIncidents > 0 && (
               <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                 <Clock className="h-5 w-5 text-yellow-600 mt-0.5" />
@@ -1361,7 +1362,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                 </div>
               </div>
             )}
-            
+
             {metrics.criticalRisks === 0 && metrics.openIncidents === 0 && (
               <div className="text-center py-8">
                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
@@ -1393,7 +1394,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                   <ArrowUpRight className="h-3 w-3" />
                 </Button>
               </div>
-              
+
               <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <BookOpen className="h-4 w-4 text-green-500" />
@@ -1403,7 +1404,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                   <ArrowUpRight className="h-3 w-3" />
                 </Button>
               </div>
-              
+
               <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <Users className="h-4 w-4 text-purple-500" />
@@ -1413,7 +1414,7 @@ const IntegratedExecutiveDashboardFixed = () => {
                   <ArrowUpRight className="h-3 w-3" />
                 </Button>
               </div>
-              
+
               <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center gap-3">
                   <BarChart3 className="h-4 w-4 text-orange-500" />

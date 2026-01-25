@@ -1,4 +1,4 @@
-import { Tenant } from '@/contexts/AuthContext';
+import { Tenant } from '@/contexts/AuthContextOptimized';
 
 interface TenantCompanyData {
   corporate_name?: string;
@@ -32,12 +32,12 @@ export const getTenantDisplayName = (tenant?: Tenant): string => {
 
   // Buscar dados da empresa nas configurações da tenant
   const companyData = tenant.settings.company_data as TenantCompanyData;
-  
+
   // Prioridade: Nome fantasia > Razão social > Nome da tenant > Texto padrão
-  return companyData.trading_name?.trim() || 
-         companyData.corporate_name?.trim() || 
-         tenant.name?.trim() || 
-         'Governança • Riscos • Compliance';
+  return companyData.trading_name?.trim() ||
+    companyData.corporate_name?.trim() ||
+    tenant.name?.trim() ||
+    'Governança • Riscos • Compliance';
 };
 
 /**
@@ -47,7 +47,7 @@ export const getTenantDisplayName = (tenant?: Tenant): string => {
  */
 export const getTenantTradingName = (tenant?: Tenant): string | undefined => {
   if (!tenant) return undefined;
-  
+
   const companyData = tenant.settings?.company_data as TenantCompanyData || {};
   return companyData.trading_name?.trim() || undefined;
 };
@@ -59,7 +59,7 @@ export const getTenantTradingName = (tenant?: Tenant): string | undefined => {
  */
 export const getTenantCorporateName = (tenant?: Tenant): string | undefined => {
   if (!tenant) return undefined;
-  
+
   const companyData = tenant.settings?.company_data as TenantCompanyData || {};
   return companyData.corporate_name?.trim() || undefined;
 };
@@ -71,7 +71,7 @@ export const getTenantCorporateName = (tenant?: Tenant): string | undefined => {
  */
 export const hasTenantCompanyData = (tenant?: Tenant): boolean => {
   if (!tenant) return false;
-  
+
   const companyData = tenant.settings?.company_data as TenantCompanyData || {};
   return !!(companyData.trading_name || companyData.corporate_name || companyData.tax_id);
 };
