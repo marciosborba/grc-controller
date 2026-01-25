@@ -6,11 +6,11 @@ import './index.css'
 function showApp() {
   const preloader = document.getElementById('app-preloader');
   const root = document.getElementById('root');
-  
+
   if (root) {
     root.style.opacity = '1';
   }
-  
+
   if (preloader) {
     preloader.style.opacity = '0';
     setTimeout(() => {
