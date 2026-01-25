@@ -13,9 +13,8 @@ import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import { ModuleGuard } from "@/components/auth/ModuleGuard";
 import DashboardPage from "@/components/dashboard/DashboardPage";
-import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
-import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
-import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
+// Debug dashboard pages removed
+
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 // Lazy import for GeneralSettingsPage to reduce initial bundle size
@@ -23,8 +22,7 @@ const GeneralSettingsPage = lazy(() => import("@/components/general-settings/Gen
 
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
-const RiskTestMinimal = lazy(() => import("@/components/risks/RiskTestMinimal"));
-const RiskTestWithHook = lazy(() => import("@/components/risks/RiskTestWithHook"));
+// RiskTestMinimal and RiskTestWithHook removed
 const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHub").then(module => ({ default: module.RiskManagementHub })));
 
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
@@ -68,11 +66,10 @@ const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 const EnhancedAssessmentHub = lazy(() => import("@/components/assessments/EnhancedAssessmentHub"));
 const AssessmentsDashboard = lazy(() => import("@/components/assessments/AssessmentsDashboard"));
 const AssessmentCRUD = lazy(() => import("@/components/assessments/AssessmentCRUD"));
-const AssessmentsDashboardSimple = lazy(() => import("@/components/assessments/views/AssessmentsDashboardSimple"));
 const AssessmentsDashboardConsistent = lazy(() => import("@/components/assessments/views/AssessmentsDashboardConsistent"));
 const FrameworksAssessment = lazy(() => import("@/components/assessments/FrameworksAssessment"));
 const FrameworksManagement = lazy(() => import("@/components/assessments/views/FrameworksManagement"));
-const FrameworksManagementSimple = lazy(() => import("@/components/assessments/views/FrameworksManagementSimple"));
+// FrameworksManagementSimple removed
 const FrameworksManagementFixed = lazy(() => import("@/components/assessments/views/FrameworksManagementFixed"));
 
 const AssessmentExecution = lazy(() => import("@/components/assessments/AssessmentExecution"));
@@ -86,9 +83,7 @@ const ActionPlansManagement = lazy(() => import("@/components/assessments/Action
 const ActionPlansManagementProfessional = lazy(() => import("@/components/assessments/ActionPlansManagementProfessional"));
 const ActionPlansDashboard = lazy(() => import("@/components/action-plans/ActionPlansDashboard"));
 const ActionPlansDebug = lazy(() => import("@/components/action-plans/ActionPlansDebug"));
-const ActionPlansSimpleTest = lazy(() => import("@/components/action-plans/ActionPlansSimpleTest"));
-const ActionPlansMinimalTest = lazy(() => import("@/components/action-plans/ActionPlansMinimalTest"));
-const ActionPlansDebugSimple = lazy(() => import("@/components/assessments/ActionPlansDebugSimple"));
+// ActionPlans debug components removed
 const AssessmentReporting = lazy(() => import("@/components/assessments/AssessmentReporting"));
 
 // Privacy module
@@ -162,11 +157,7 @@ const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssess
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
 const UserDebugInfo = lazy(() => import("@/components/admin/UserDebugInfo"));
-const AuthDebugComponent = lazy(() => import("@/components/debug/AuthDebugComponent"));
-const PlatformAdminDebugRoute = lazy(() => import("@/components/debug/PlatformAdminDebugRoute"));
-const UserPermissionsDebug = lazy(() => import("@/components/debug/UserPermissionsDebug"));
-const AIManagerDirectTest = lazy(() => import("@/components/debug/AIManagerDirectTest"));
-const SimpleAITest = lazy(() => import("@/components/debug/SimpleAITest"));
+// Debug components removed
 
 // Loading component for Suspense
 const PageLoader = () => (
@@ -336,11 +327,7 @@ const App = () => (
                             <AssessmentCRUD />
                           </Suspense>
                         } />
-                        <Route path="assessments/simple" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <AssessmentsDashboardSimple />
-                          </Suspense>
-                        } />
+                        {/* AssessmentsDashboardSimple route removed */}
                         <Route path="assessments/legacy" element={
                           <Suspense fallback={<PageLoader />}>
                             <AssessmentsDashboard />
@@ -351,11 +338,7 @@ const App = () => (
                             <FrameworksManagementFixed />
                           </Suspense>
                         } />
-                        <Route path="assessments/frameworks/simple" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <FrameworksManagementSimple />
-                          </Suspense>
-                        } />
+                        {/* FrameworksManagementSimple route removed */}
                         <Route path="assessments/frameworks/pro" element={
                           <Suspense fallback={<PageLoader />}>
                             <FrameworksManagement />
@@ -448,16 +431,10 @@ const App = () => (
                             <AssessmentReporting />
                           </Suspense>
                         } />
-                        <Route path="assessments/action-plans/debug" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <ActionPlansDebugSimple />
-                          </Suspense>
-                        } />
+                        {/* ActionPlans debug route removed */}
                       </Route>
 
-                      <Route path="dashboard-test-isolated" element={<DashboardPageIsolated />} />
-                      <Route path="dashboard-test-minimal" element={<DashboardPageUltraMinimal />} />
-                      <Route path="dashboard-test-no-queries" element={<DashboardPageNoQueries />} />
+                      {/* Debug dashboard routes removed */}
                       <Route element={<ModuleGuard moduleKey="risk_management"><Outlet /></ModuleGuard>}>
                         <Route path="risks" element={
                           <ModuleGuard moduleKey="risk_management">
@@ -466,16 +443,7 @@ const App = () => (
                             </Suspense>
                           </ModuleGuard>
                         } />
-                        <Route path="risks-test" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <RiskTestMinimal />
-                          </Suspense>
-                        } />
-                        <Route path="risks-hook-test" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <RiskTestWithHook />
-                          </Suspense>
-                        } />
+                        {/* Risk test routes removed */}
                         <Route path="risks-hub" element={
                           <Suspense fallback={<PageLoader />}>
                             <RiskManagementHub />
@@ -829,21 +797,7 @@ const App = () => (
                           <UserDebugInfo />
                         </Suspense>
                       } />
-                      <Route path="auth-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AuthDebugComponent />
-                        </Suspense>
-                      } />
-                      <Route path="permissions-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserPermissionsDebug />
-                        </Suspense>
-                      } />
-                      <Route path="ai-manager-test" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AIManagerDirectTest />
-                        </Suspense>
-                      } />
+                      {/* Debug routes removed */}
                       <Route path="profile" element={
                         <Suspense fallback={<PageLoader />}>
                           <UserProfilePage />
