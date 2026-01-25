@@ -37,6 +37,7 @@ import { SystemLogsSection } from './SystemLogsSection';
 import { SystemSecuritySection } from './SystemSecuritySection';
 import { SystemStorageSection } from './SystemStorageSection';
 import { SystemDiagnosticSection } from './SystemDiagnosticSection';
+import { PrivacyScanner } from '../privacy/scanner/PrivacyScanner';
 
 interface SystemHealth {
   overall: 'healthy' | 'warning' | 'critical';

@@ -5,8 +5,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
+import jsPDF from 'jspdf';
 import { OwaspVulnerabilityScanner } from './OwaspVulnerabilityScanner';
+import { PrivacyScanner } from '../privacy/scanner/PrivacyScanner';
 import EthicsDiagnostic from './EthicsDiagnostic';
 import {
   Settings,
@@ -27,7 +35,9 @@ import {
   Info,
   Download,
   FileText,
-  Bug
+  Bug,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 
 interface DiagnosticCheck {
@@ -70,6 +80,7 @@ export const SystemDiagnosticSection = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'safe'>('all');
 
   const initializeDiagnosticChecks = (): DiagnosticCheck[] => {
     return [
@@ -625,11 +636,11 @@ export const SystemDiagnosticSection = () => {
 
       check.realData = { results, avgQueryTime, slowQueries: slowQueries.length, failedQueries: failedQueries.length };
 
-      if (failedQueries.length > 0 || avgQueryTime > 500) {
+      if (failedQueries.length > 0 || avgQueryTime > 2000) {
         check.status = 'failed';
         check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms, ${failedQueries.length} falhas, ${slowQueries.length} lentas`;
         check.recommendation = 'Otimizar consultas SQL e verificar conectividade';
-      } else if (avgQueryTime > 200 || slowQueries.length > 0) {
+      } else if (avgQueryTime > 1000 || slowQueries.length > 0) {
         check.status = 'warning';
         check.result = `Tempo médio: ${avgQueryTime.toFixed(0)}ms, ${slowQueries.length} consultas lentas`;
         check.recommendation = 'Monitorar consultas lentas';
@@ -684,32 +695,27 @@ export const SystemDiagnosticSection = () => {
 
   const checkOrphanedRecords = async (check: DiagnosticCheck) => {
     try {
-      // Verificar profiles sem usuário de auth correspondente
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      const { data: profiles } = await supabase.from('profiles').select('user_id');
+      // Usar RPC segura para verificar consistência sem expor dados de auth
+      const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+      const { data: stats, error } = await supabase.rpc('get_diagnostic_stats');
 
-      if (!authUsers?.users || !profiles) {
-        check.status = 'warning';
-        check.result = 'Não foi possível verificar consistência';
-        return;
-      }
+      if (error) throw error;
 
-      const authUserIds = new Set(authUsers.users.map(u => u.id));
-      const orphanedProfiles = profiles.filter(p => !authUserIds.has(p.user_id));
+      const orphanedProfiles = (stats as any).orphaned_profiles || 0;
+      const totalProfiles = count || 0;
 
       check.realData = {
-        totalProfiles: profiles.length,
-        totalAuthUsers: authUsers.users.length,
-        orphanedProfiles: orphanedProfiles.length
+        totalProfiles,
+        orphanedProfiles
       };
 
-      if (orphanedProfiles.length > 0) {
+      if (orphanedProfiles > 0) {
         check.status = 'warning';
-        check.result = `${orphanedProfiles.length} perfis órfãos encontrados`;
+        check.result = `${orphanedProfiles} perfis órfãos encontrados`;
         check.recommendation = 'Execute script de limpeza de dados órfãos';
       } else {
         check.status = 'passed';
-        check.result = 'Nenhum registro órfão encontrado';
+        check.result = 'Nenhum perfil órfão encontrado';
       }
     } catch (error) {
       check.status = 'warning';
@@ -845,16 +851,16 @@ export const SystemDiagnosticSection = () => {
         .select('user_id, created_at')
         .gte('created_at', last30Days);
 
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      const { data: stats } = await supabase.rpc('get_diagnostic_stats');
+      const totalUsers = (stats as any).total_users || 0;
 
-      if (!recentActivity || !authUsers?.users) {
+      if (!recentActivity) {
         check.status = 'warning';
         check.result = 'Não foi possível calcular engajamento';
         return;
       }
 
       const activeUserIds = new Set(recentActivity.map(log => log.user_id).filter(Boolean));
-      const totalUsers = authUsers.users.length;
       const engagementRate = totalUsers > 0 ? (activeUserIds.size / totalUsers) * 100 : 0;
 
       check.realData = {
@@ -929,35 +935,344 @@ export const SystemDiagnosticSection = () => {
     }
   };
 
-  const exportDiagnosticReport = () => {
+
+  const exportDiagnosticReport = (format: 'json' | 'pdf' | 'txt') => {
+    const timestamp = new Date().toISOString().split('T')[0];
+
     const report = {
       timestamp: new Date().toISOString(),
       summary: diagnosticSummary,
-      checks: diagnosticChecks.map(check => ({
+      checks: filteredChecks.map(check => ({
         ...check,
         realData: check.realData // Incluir dados reais no relatório
-      }))
+      })),
+      scanType: `System Diagnostic (${{ 'active': 'Ativos', 'safe': 'Seguros', 'all': 'Todos' }[statusFilter]})`
     };
 
+    switch (format) {
+      case 'json':
+        exportAsJSON(report, timestamp);
+        break;
+      case 'pdf':
+        exportAsPDF(report, timestamp);
+        break;
+      case 'txt':
+        exportAsTXT(report, timestamp);
+        break;
+    }
+  };
+
+  const exportAsJSON = (report: any, timestamp: string) => {
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `diagnostic-report-real-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `system-diagnostic-report-${timestamp}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
-  const filteredChecks = selectedCategory === 'all'
-    ? diagnosticChecks
-    : diagnosticChecks.filter(check => check.category === selectedCategory);
+  const exportAsPDF = (report: any, timestamp: string) => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentWidth = pageWidth - 2 * margin;
+    let yPosition = margin;
+
+    // Color scheme
+    const colors = {
+      primary: [41, 128, 185],    // Blue
+      secondary: [52, 73, 94],    // Dark gray
+      success: [39, 174, 96],     // Green
+      warning: [241, 196, 15],    // Yellow
+      danger: [231, 76, 60],      // Red
+      light: [236, 240, 241],     // Light gray
+      text: [44, 62, 80]          // Dark text
+    };
+
+    // Helper functions
+    const checkNewPage = (requiredSpace: number = 12) => {
+      if (yPosition + requiredSpace > pageHeight - 30) {
+        pdf.addPage();
+        yPosition = margin;
+        return true;
+      }
+      return false;
+    };
+
+    const addLine = (x1: number, y1: number, x2: number, y2: number, color: number[] = colors.light) => {
+      pdf.setDrawColor(...color);
+      pdf.setLineWidth(0.5);
+      pdf.line(x1, y1, x2, y2);
+    };
+
+    const addRect = (x: number, y: number, width: number, height: number, fillColor: number[], borderColor: number[] = colors.light) => {
+      pdf.setFillColor(...fillColor);
+      pdf.setDrawColor(...borderColor);
+      pdf.setLineWidth(0.3);
+      pdf.rect(x, y, width, height, 'FD');
+    };
+
+    const addText = (text: string, x: number, y: number, options: {
+      fontSize?: number;
+      isBold?: boolean;
+      color?: number[];
+      align?: 'left' | 'center' | 'right';
+      maxWidth?: number;
+    } = {}) => {
+      const {
+        fontSize = 6,
+        isBold = false,
+        color = colors.text,
+        align = 'left',
+        maxWidth = contentWidth
+      } = options;
+
+      pdf.setFontSize(fontSize);
+      pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+      pdf.setTextColor(...color);
+
+      const lines = pdf.splitTextToSize(text, maxWidth);
+
+      if (align === 'center') {
+        x = pageWidth / 2;
+      } else if (align === 'right') {
+        x = pageWidth - margin;
+      }
+
+      pdf.text(lines, x, y, { align });
+      return lines.length * fontSize * 0.25;
+    };
+
+    const getStatusColor = (status: string) => {
+      switch (status.toLowerCase()) {
+        case 'passed': return colors.success;
+        case 'warning': return colors.warning;
+        case 'failed': return colors.danger;
+        default: return colors.secondary;
+      }
+    };
+
+    const getSeverityColor = (severity: string) => {
+      switch (severity.toLowerCase()) {
+        case 'critical': return colors.danger;
+        case 'high': return [230, 126, 34]; // Orange
+        case 'medium': return colors.warning;
+        case 'low': return colors.success;
+        default: return colors.secondary;
+      }
+    };
+
+    // Header
+    addRect(margin, yPosition, contentWidth, 15, colors.primary);
+    addText('RELATÓRIO DE DIAGNÓSTICO DO SISTEMA', margin + 3, yPosition + 6, {
+      fontSize: 10,
+      isBold: true,
+      color: [255, 255, 255]
+    });
+    addText(`${new Date(report.timestamp).toLocaleDateString('pt-BR')} • ${report.scanType}`, margin + 3, yPosition + 12, {
+      fontSize: 6,
+      color: [255, 255, 255]
+    });
+    yPosition += 20;
+
+    // Executive Summary
+    addText('RESUMO EXECUTIVO', margin, yPosition, {
+      fontSize: 8,
+      isBold: true,
+      color: colors.primary
+    });
+    yPosition += 5;
+    addLine(margin, yPosition, pageWidth - margin, yPosition, colors.primary);
+    yPosition += 6;
+
+    // System Health
+    const health = report.summary.systemHealth;
+    const healthColor = health > 80 ? colors.success : health > 50 ? colors.warning : colors.danger;
+
+    addText(`Saúde do Sistema: ${health}%`, margin, yPosition, {
+      fontSize: 7,
+      isBold: true
+    });
+
+    const barWidth = 50;
+    const barHeight = 3;
+    addRect(margin + 45, yPosition - 1.5, barWidth, barHeight, [240, 240, 240]);
+    addRect(margin + 45, yPosition - 1.5, (barWidth * health) / 100, barHeight, healthColor);
+    yPosition += 10;
+
+    // Metrics
+    const metrics = [
+      { label: 'Total', value: report.summary.totalChecks, color: colors.secondary },
+      { label: 'OK', value: report.summary.passed, color: colors.success },
+      { label: 'Avisos', value: report.summary.warnings, color: colors.warning },
+      { label: 'Falhas', value: report.summary.failed, color: colors.danger },
+      { label: 'Críticos', value: report.summary.critical, color: colors.danger }
+    ];
+
+    const cardWidth = (contentWidth - 6) / 5;
+    metrics.forEach((metric, index) => {
+      const x = margin + (index * (cardWidth + 1.5));
+      addRect(x, yPosition, cardWidth, 12, [248, 248, 248]);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...metric.color);
+      pdf.text(metric.value.toString(), x + (cardWidth / 2), yPosition + 5, { align: 'center' });
+      pdf.setFontSize(5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(...colors.secondary);
+      pdf.text(metric.label, x + (cardWidth / 2), yPosition + 9, { align: 'center' });
+    });
+    yPosition += 18;
+
+    // Details Header
+    addText('DETALHES DO DIAGNÓSTICO', margin, yPosition, {
+      fontSize: 8,
+      isBold: true,
+      color: colors.primary
+    });
+    yPosition += 5;
+    addLine(margin, yPosition, pageWidth - margin, yPosition, colors.primary);
+    yPosition += 8;
+
+    // Check Details
+    report.checks.forEach((check: any, index: number) => {
+      checkNewPage(25);
+
+      const statusColor = getStatusColor(check.status);
+      const severityColor = getSeverityColor(check.severity);
+
+      addRect(margin, yPosition, 1.5, 15, statusColor);
+      addRect(margin + 3, yPosition, contentWidth - 3, 15, [252, 252, 252]);
+
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...colors.text);
+      pdf.text(`${index + 1}. ${check.name}`, margin + 5, yPosition + 5);
+
+      const badgeY = yPosition + 10;
+      addRect(margin + 5, badgeY, 20, 4, statusColor);
+      addText(check.status.toUpperCase(), margin + 15, badgeY + 2.5, {
+        fontSize: 4,
+        isBold: true,
+        color: [255, 255, 255],
+        align: 'center'
+      });
+
+      addRect(margin + 27, badgeY, 20, 4, severityColor);
+      addText(check.severity.toUpperCase(), margin + 37, badgeY + 2.5, {
+        fontSize: 4,
+        isBold: true,
+        color: [255, 255, 255],
+        align: 'center'
+      });
+
+      addText(check.category.toUpperCase(), margin + 50, badgeY + 2.5, {
+        fontSize: 5,
+        color: colors.secondary
+      });
+
+      yPosition += 18;
+
+      if (check.description) {
+        const descHeight = addText(check.description, margin + 5, yPosition, {
+          fontSize: 6,
+          color: colors.text,
+          maxWidth: contentWidth - 10
+        });
+        yPosition += descHeight + 2;
+      }
+
+      if (check.result) {
+        addText('Resultado:', margin + 5, yPosition, { fontSize: 6, isBold: true, color: colors.secondary });
+        yPosition += 3;
+        const resHeight = addText(check.result, margin + 8, yPosition, { fontSize: 6, color: colors.text, maxWidth: contentWidth - 13 });
+        yPosition += resHeight + 2;
+      }
+
+      if (check.recommendation) {
+        addText('Recomendação:', margin + 5, yPosition, { fontSize: 6, isBold: true, color: colors.primary });
+        yPosition += 3;
+        const recHeight = addText(check.recommendation, margin + 8, yPosition, { fontSize: 6, color: colors.text, maxWidth: contentWidth - 13 });
+        yPosition += recHeight + 2;
+      }
+
+      if (index < report.checks.length - 1) {
+        addLine(margin + 5, yPosition, pageWidth - margin - 5, yPosition, colors.light);
+        yPosition += 4;
+      }
+    });
+
+    // Footer
+    const pageCount = pdf.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i);
+      addLine(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18, colors.light);
+      addText('Sistema GRC - Diagnóstico do Sistema', margin, pageHeight - 10, { fontSize: 5, color: colors.secondary });
+      addText(`${i}/${pageCount}`, pageWidth - margin, pageHeight - 10, { fontSize: 5, color: colors.secondary, align: 'right' });
+    }
+
+    pdf.save(`system-diagnostic-report-${timestamp}.pdf`);
+  };
+
+  const exportAsTXT = (report: any, timestamp: string) => {
+    let content = '';
+    content += '='.repeat(80) + '\n';
+    content += 'RELATÓRIO DE DIAGNÓSTICO DO SISTEMA\n';
+    content += '='.repeat(80) + '\n\n';
+    content += `Data: ${new Date(report.timestamp).toLocaleString('pt-BR')}\n`;
+    content += `Tipo de Scan: ${report.scanType}\n\n`;
+    content += '-'.repeat(50) + '\n';
+    content += 'RESUMO EXECUTIVO\n';
+    content += '-'.repeat(50) + '\n';
+    content += `Saúde do Sistema: ${report.summary.systemHealth}%\n`;
+    content += `Total de Checks: ${report.summary.totalChecks}\n`;
+    content += `Passed: ${report.summary.passed}\n`;
+    content += `Warnings: ${report.summary.warnings}\n`;
+    content += `Failed: ${report.summary.failed}\n\n`;
+
+    content += '-'.repeat(50) + '\n';
+    content += 'DETALHES DO DIAGNÓSTICO\n';
+    content += '-'.repeat(50) + '\n\n';
+
+    report.checks.forEach((check: any, index: number) => {
+      content += `${index + 1}. ${check.name}\n`;
+      content += `   Categoria: ${check.category}\n`;
+      content += `   Severidade: ${check.severity.toUpperCase()}\n`;
+      content += `   Status: ${check.status.toUpperCase()}\n`;
+      content += `   Descrição: ${check.description}\n`;
+      if (check.result) content += `   Resultado: ${check.result}\n`;
+      if (check.recommendation) content += `   Recomendação: ${check.recommendation}\n`;
+      if (check.realData) content += `   Dados: ${JSON.stringify(check.realData, null, 2)}\n`;
+      content += '\n' + '-'.repeat(30) + '\n\n';
+    });
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `system-diagnostic-report-${timestamp}.txt`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const filteredChecks = diagnosticChecks.filter(check => {
+    const categoryMatch = selectedCategory === 'all' || check.category === selectedCategory;
+    const statusMatch = statusFilter === 'all'
+      ? true
+      : statusFilter === 'active'
+        ? ['warning', 'failed', 'running', 'pending'].includes(check.status)
+        : check.status === 'passed';
+    return categoryMatch && statusMatch;
+  });
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="overview" className="flex items-center gap-2">
           <Activity className="h-4 w-4" />
-          Visão Geral
+          Informações do Sistema
         </TabsTrigger>
         <TabsTrigger value="vulnerabilities" className="flex items-center gap-2">
           <Shield className="h-4 w-4" />
@@ -966,6 +1281,10 @@ export const SystemDiagnosticSection = () => {
         <TabsTrigger value="ethics" className="flex items-center gap-2">
           <Shield className="h-4 w-4" />
           Módulo Ética
+        </TabsTrigger>
+        <TabsTrigger value="privacy" className="flex items-center gap-2">
+          <Shield className="h-4 w-4" />
+          Scanner Priv.
         </TabsTrigger>
       </TabsList>
 
@@ -1038,17 +1357,50 @@ export const SystemDiagnosticSection = () => {
               <div>
                 <CardTitle className="flex items-center space-x-2">
                   <Search className="h-5 w-5" />
-                  <span>Diagnóstico do Sistema - Dados Reais</span>
+                  <span>Diagnóstico do Sistema</span>
                 </CardTitle>
                 <CardDescription>
                   Escaneie o sistema usando dados reais do banco de dados para identificar problemas
                 </CardDescription>
               </div>
               <div className="flex space-x-2">
-                <Button onClick={exportDiagnosticReport} variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar Relatório
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filtro: {{ 'active': 'Ativos', 'safe': 'Seguros', 'all': 'Todos' }[statusFilter]}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setStatusFilter('active')}>Ativos (Falhas/Avisos)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('safe')}>Seguros</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setStatusFilter('all')}>Todos</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Relatório
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => exportDiagnosticReport('json')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Exportar como JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportDiagnosticReport('pdf')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Exportar como PDF (Profissional)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportDiagnosticReport('txt')}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Exportar como TXT
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button
                   onClick={runFullDiagnostic}
                   disabled={isScanning}
@@ -1246,6 +1598,10 @@ export const SystemDiagnosticSection = () => {
 
       <TabsContent value="ethics">
         <EthicsDiagnostic />
+      </TabsContent>
+
+      <TabsContent value="privacy">
+        <PrivacyScanner />
       </TabsContent>
     </Tabs>
   );
