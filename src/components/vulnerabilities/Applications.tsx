@@ -60,7 +60,7 @@ type Application = {
   technology: string;
   owner: string;
   vulnerabilities: number;
-  last_scan: string;
+  last_scan: string | null;
   risk_level: string;
 };
 
@@ -129,19 +129,49 @@ export default function Applications() {
 
         const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
 
+        // Fetch vulnerabilities to count them per asset
+        const { data: vulnsData, error: vulnsError } = await supabase
+          .from('vulnerabilities')
+          .select('asset_name, created_at, severity')
+          .eq('tenant_id', tenantId);
+
+        if (vulnsError) console.error('Error fetching vulnerabilities:', vulnsError);
+
+        // Map vulnerabilities to assets
+        const vulnStats = new Map<string, { count: number, lastScan: string | null, maxSeverity: string }>();
+
+        (vulnsData || []).forEach(v => {
+          const stats = vulnStats.get(v.asset_name) || { count: 0, lastScan: null, maxSeverity: 'Info' };
+
+          stats.count++;
+
+          // Track latest date as proxy for last activity/scan
+          if (v.created_at) {
+            if (!stats.lastScan || new Date(v.created_at) > new Date(stats.lastScan)) {
+              stats.lastScan = v.created_at;
+            }
+          }
+
+          vulnStats.set(v.asset_name, stats);
+        });
+
         // Transform systems to applications format
-        const transformedApps: Application[] = (systemsData || []).map(sys => ({
-          id: sys.id,
-          name: sys.nome,
-          type: sys.tipo || 'Web Application', // Default or map standard types
-          status: sys.status || 'Ativo',
-          url: sys.documentacao_link || '', // Using doc link as URL proxy for now
-          technology: sys.fornecedor || 'Desconhecida',
-          owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
-          vulnerabilities: 0, // Placeholder as we don't have this table yet
-          last_scan: 'N/A',
-          risk_level: sys.criticidade || 'Baixo'
-        }));
+        const transformedApps: Application[] = (systemsData || []).map(sys => {
+          const stats = vulnStats.get(sys.nome) || { count: 0, lastScan: null };
+
+          return {
+            id: sys.id,
+            name: sys.nome,
+            type: sys.tipo || 'Web Application', // Default or map standard types
+            status: sys.status || 'Ativo',
+            url: sys.documentacao_link || '', // Using doc link as URL proxy for now
+            technology: sys.fornecedor || 'Desconhecida',
+            owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
+            vulnerabilities: stats.count,
+            last_scan: stats.lastScan || null, // Allow null
+            risk_level: sys.criticidade || 'Baixo'
+          };
+        });
 
         setApplications(transformedApps);
       } catch (error) {
@@ -1113,7 +1143,7 @@ export default function Applications() {
                       </TableCell>
                       <TableCell>
                         <span className="text-xs">
-                          {new Date(app.last_scan).toLocaleDateString()}
+                          {app.last_scan ? new Date(app.last_scan).toLocaleDateString() : 'N/A'}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -1764,8 +1794,74 @@ export default function Applications() {
                   </Card>
                 </div>
 
+                {/* Vulnerabilidades Tab */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    Vulnerabilidades Identificadas
+                  </h3>
+
+                  {appVulnerabilitiesLoading ? (
+                    <div className="flex justify-center p-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : appVulnerabilities.length > 0 ? (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Título</TableHead>
+                            <TableHead>Severidade</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Data Identificação</TableHead>
+                            <TableHead className="w-[100px]">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {appVulnerabilities.map((vuln) => (
+                            <TableRow key={vuln.id}>
+                              <TableCell className="font-medium">{vuln.title}</TableCell>
+                              <TableCell>
+                                <Badge className={
+                                  vuln.severity === 'Critical' ? 'bg-red-600' :
+                                    vuln.severity === 'High' ? 'bg-orange-600' :
+                                      vuln.severity === 'Medium' ? 'bg-yellow-600' :
+                                        'bg-green-600'
+                                }>
+                                  {vuln.severity}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{vuln.status}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                {new Date(vuln.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => navigate(`/vulnerabilities/edit/${vuln.id}`)}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="text-center p-8 border rounded-lg bg-muted/20">
+                      <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                      <p className="font-medium">Nenhuma vulnerabilidade encontrada</p>
+                      <p className="text-sm text-muted-foreground">Esta aplicação não possui vulnerabilidades registradas.</p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Ações Rápidas */}
-                <Card className="shadow-sm">
+                <Card className="shadow-sm mt-6">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">Ações Rápidas</CardTitle>
                   </CardHeader>
