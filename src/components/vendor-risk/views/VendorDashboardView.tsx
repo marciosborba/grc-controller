@@ -314,37 +314,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {kpis.map((kpi, index) => (
-          <Card key={index} className="overflow-hidden border-none shadow-md bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-0">
-              <div className="p-4 flex flex-col justify-between h-full">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2 rounded-lg ${kpi.trend === 'up' ? 'bg-green-500/10 text-green-600' :
-                    kpi.trend === 'down' ? 'bg-blue-500/10 text-blue-600' :
-                      'bg-orange-500/10 text-orange-600'
-                    }`}>
-                    <kpi.icon className="w-5 h-5" />
-                  </div>
-                  {/* Badge de variação se tivéssemos histórico real */}
-                  <Badge variant="outline" className={`${kpi.trend === 'down' && kpi.title.includes('Risco') ? 'text-green-600 border-green-200' :
-                    kpi.trend === 'up' && !kpi.title.includes('Risco') ? 'text-green-600 border-green-200' :
-                      'text-muted-foreground'
-                    }`}>
-                    {kpi.change}
-                  </Badge>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold tracking-tight">{kpi.value}</h3>
-                  <p className="text-sm text-muted-foreground font-medium">{kpi.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1 opacity-80">{kpi.description}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

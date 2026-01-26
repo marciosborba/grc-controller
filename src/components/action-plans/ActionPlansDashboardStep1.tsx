@@ -234,197 +234,149 @@ export const ActionPlansDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Métricas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Conclusão</p>
-                <p className="text-2xl font-bold text-green-600">{metrics.completionRate}%</p>
-                <p className="text-xs text-muted-foreground flex items-center mt-1">
-                  <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
-                  Progresso Geral
-                </p>
-              </div>
-              <Target className="h-10 w-10 text-green-600" />
+      {/* Métricas Principais - Premium Storytelling */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Card 1: Panorama Geral */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <Target className="h-24 w-24" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+              Panorama Geral
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-3xl font-bold text-foreground">{metrics.total}</span>
+              <span className="text-sm text-muted-foreground">planos totais</span>
+            </div>
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed mb-4">
+              Taxa de conclusão atual de <span className="text-green-600 font-bold">{metrics.completionRate}%</span>.
+            </p>
+            <Progress value={metrics.completionRate} className="h-2" />
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Status Operacional */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity className="h-24 w-24 text-blue-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+              <Activity className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Em Execução</p>
+              <h3 className="text-3xl font-bold text-foreground">
+                {metrics.inProgress}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                + {metrics.completed} concluídos
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total de Planos</p>
-                <p className="text-2xl font-bold">{metrics.total}</p>
-              </div>
-              <FileText className="h-10 w-10 text-blue-600" />
+        {/* Card 3: Atenção Necessária */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertTriangle className="h-24 w-24 text-red-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
+              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Atrasados</p>
+              <h3 className="text-3xl font-bold text-red-600 dark:text-red-500">
+                {metrics.overdue}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                + {metrics.critical} de prioridade crítica
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Em Execução</p>
-                <p className="text-2xl font-bold">{metrics.inProgress}</p>
-              </div>
-              <Activity className="h-10 w-10 text-green-600" />
+        {/* Card 4: Performance */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <BarChart3 className="h-24 w-24 text-purple-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Progresso Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-blue-600">
+                {metrics.avgProgress}%
+              </span>
+              <span className="text-sm text-muted-foreground">global</span>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Vencidos</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
-              </div>
-              <AlertTriangle className="h-10 w-10 text-red-600" />
+            <p className="text-sm text-muted-foreground mt-2">
+              {metrics.nearDeadline > 0 ? `${metrics.nearDeadline} planos próximos do prazo.` : 'Prazos sob controle.'}
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-blue-500" style={{ width: `${metrics.avgProgress}%` }}></div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Críticos</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.critical}</p>
-              </div>
-              <AlertTriangle className="h-10 w-10 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Próximos do Prazo</p>
-                <p className="text-2xl font-bold text-orange-600">{metrics.nearDeadline}</p>
-              </div>
-              <Clock className="h-10 w-10 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold text-emerald-600">{metrics.completed}</p>
-              </div>
-              <CheckCircle className="h-10 w-10 text-emerald-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Progresso Médio</p>
-                <p className="text-2xl font-bold text-blue-600">{metrics.avgProgress}%</p>
-              </div>
-              <BarChart3 className="h-10 w-10 text-blue-600" />
-            </div>
-            <Progress value={metrics.avgProgress} className="h-1 mt-3" />
           </CardContent>
         </Card>
       </div>
 
       {/* Módulos de Origem */}
       {/* Módulos de Origem */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Shield className="h-8 w-8 text-red-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Riscos</h3>
-            <p className="text-muted-foreground text-sm">Planos de ação de riscos</p>
-            <div className="mt-3">
-              <span className="text-xl font-bold">{getActionPlansByModule('risk_management').length}</span>
-              <span className="text-sm text-muted-foreground ml-1">planos</span>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
+      {/* Módulos de Origem - Premium Navigation */}
+      <h3 className="text-lg font-semibold mt-8 mb-4">Filtrar por Módulo</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        {[
+          { id: 'risk_management', title: 'Riscos', icon: Shield, color: 'red', desc: 'Planos de mitigação' },
+          { id: 'compliance', title: 'Conformidade', icon: FileText, color: 'blue', desc: 'Ações corretivas' },
+          { id: 'assessments', title: 'Avaliações', icon: Clipboard, color: 'green', desc: 'Planos de melhoria' },
+          { id: 'privacy', title: 'Privacidade', icon: Eye, color: 'purple', desc: 'Adequação LGPD' },
+          { id: 'tprm', title: 'TPRM', icon: Target, color: 'orange', desc: 'Gestão de terceiros' }
+        ].map((module) => {
+          const Icon = module.icon;
+          const count = getActionPlansByModule(module.id).length;
 
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <FileText className="h-8 w-8 text-blue-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Conformidade</h3>
-            <p className="text-muted-foreground text-sm">Não conformidades</p>
-            <div className="mt-3">
-              <span className="text-xl font-bold">{getActionPlansByModule('compliance').length}</span>
-              <span className="text-sm text-muted-foreground ml-1">planos</span>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
+          return (
+            <Card
+              key={module.id}
+              className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${module.color}-500`}
+              onClick={() => setSearchTerm(module.title)} /* Filter simply by clicking */
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Icon className={`h-24 w-24 text-${module.color}-500`} />
+              </div>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className={`p-2 rounded-lg bg-${module.color}-100 dark:bg-${module.color}-900/20 group-hover:bg-${module.color}-200 dark:group-hover:bg-${module.color}-900/40 transition-colors`}>
+                    <Icon className={`h-6 w-6 text-${module.color}-600 dark:text-${module.color}-400`} />
+                  </div>
+                  {module.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4 text-xs font-medium uppercase tracking-wider">
+                  {module.desc}
+                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold">{count}</span>
+                    <span className="text-xs text-muted-foreground">planos</span>
+                  </div>
 
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Clipboard className="h-8 w-8 text-green-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Avaliações</h3>
-            <p className="text-muted-foreground text-sm">Melhorias de assessments</p>
-            <div className="mt-3">
-              <span className="text-xl font-bold">{getActionPlansByModule('assessments').length}</span>
-              <span className="text-sm text-muted-foreground ml-1">planos</span>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Eye className="h-8 w-8 text-purple-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Privacidade</h3>
-            <p className="text-muted-foreground text-sm">LGPD e proteção de dados</p>
-            <div className="mt-3">
-              <span className="text-xl font-bold">{getActionPlansByModule('privacy').length}</span>
-              <span className="text-sm text-muted-foreground ml-1">planos</span>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
-
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden">
-          <CardContent className="p-6 relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <Target className="h-8 w-8 text-amber-600" />
-              <ArrowRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-2">TPRM</h3>
-            <p className="text-muted-foreground text-sm">Gestão de Terceiros</p>
-            <div className="mt-3">
-              <span className="text-xl font-bold">{getActionPlansByModule('tprm').length}</span>
-              <span className="text-sm text-muted-foreground ml-1">planos</span>
-            </div>
-          </CardContent>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-            style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
-        </Card>
+                  <div className={`flex items-center text-xs font-medium text-${module.color}-600 group-hover:translate-x-1 transition-transform`}>
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Planos de Ação Recentes */}

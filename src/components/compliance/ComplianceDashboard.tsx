@@ -397,97 +397,87 @@ export default function ComplianceDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Conformidade</p>
-                <p className="text-2xl font-bold text-green-600">{metrics.conformityRate}%</p>
-                <p className="text-xs text-muted-foreground flex items-center mt-1">
-                  {metrics.monthlyTrend >= 0 ? <TrendingUp className="h-3 w-3 mr-1 text-green-600" /> : <TrendingDown className="h-3 w-3 mr-1 text-red-600" />}
-                  {Math.abs(metrics.monthlyTrend).toFixed(1)}% vs mês anterior
-                </p>
-              </div>
-              <Shield className="h-10 w-10 text-green-600" />
+      {/* Premium Storytelling Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        {/* Card 1: Dynamic Narrative Card - Conformity Status */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className={`absolute top-0 right-0 p-3 opacity-10`}>
+            {metrics.conformityRate >= 80 ? <Shield className="h-24 w-24" /> : <AlertTriangle className="h-24 w-24" />}
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${metrics.conformityRate >= 80 ? 'text-emerald-500' : 'text-orange-500'}`}>
+              {metrics.conformityRate >= 80 ? 'Ambiente Conforme' : 'Atenção Necessária'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+              {metrics.conformityRate >= 80
+                ? 'Nível de conformidade excelente. Mantenha as políticas atualizadas.'
+                : 'Índice de conformidade abaixo do ideal. Verifique os planos de ação.'}
+            </p>
+            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.conformityRate >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
+              {metrics.conformityRate}% Conformidade
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Frameworks</p>
-                <p className="text-2xl font-bold">{metrics.totalFrameworks}</p>
-              </div>
-              <FileText className="h-10 w-10 text-blue-600" />
+
+        {/* Card 2: Frameworks (Reliable Data) */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <BookOpen className="h-24 w-24 text-blue-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+              <BookOpen className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Frameworks Ativos</p>
+              <h3 className="text-3xl font-bold text-foreground">{metrics.totalFrameworks}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {metrics.activeRequirements} requisitos monitorados
+              </p>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Requisitos</p>
-                <p className="text-2xl font-bold">{metrics.activeRequirements}</p>
-              </div>
-              <Target className="h-10 w-10 text-purple-600" />
+
+        {/* Card 3: Non Conformities (Alert) */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertTriangle className="h-24 w-24 text-red-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
+              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Não Conformidades</p>
+              <h3 className="text-3xl font-bold text-foreground">{metrics.openNonConformities}</h3>
+              <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium">
+                {metrics.criticalNonConformities} críticas
+              </p>
             </div>
           </CardContent>
         </Card>
-        <Card>
+
+        {/* Card 4: Action Plans (Status) */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity className="h-24 w-24 text-purple-500" />
+          </div>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Não Conformidades</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.openNonConformities}</p>
-              </div>
-              <AlertTriangle className="h-10 w-10 text-red-600" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Planos de Ação</span>
+              <Badge variant={metrics.overduePlans > 0 ? "destructive" : "secondary"} className={metrics.overduePlans > 0 ? "" : "bg-green-100 text-green-800 hover:bg-green-200"}>
+                {metrics.overduePlans > 0 ? `${metrics.overduePlans} atrasados` : "Em dia"}
+              </Badge>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Críticas</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.criticalNonConformities}</p>
-              </div>
-              <Zap className="h-10 w-10 text-red-600" />
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-foreground">{activePlans}</span>
+              <span className="text-sm text-muted-foreground">ativos</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Planos Atrasados</p>
-                <p className="text-2xl font-bold text-orange-600">{metrics.overduePlans}</p>
-              </div>
-              <Clock className="h-10 w-10 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avaliações Próximas</p>
-                <p className="text-2xl font-bold text-blue-600">{metrics.upcomingAssessments}</p>
-              </div>
-              <Calendar className="h-10 w-10 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Planos Ativos</p>
-                <p className="text-2xl font-bold text-indigo-600">{activePlans}</p>
-                <p className="text-xs text-muted-foreground">{metrics.overduePlans > 0 ? `${metrics.overduePlans} em atraso` : 'Todos no prazo'}</p>
-              </div>
-              <CheckCircle className="h-10 w-10 text-indigo-600" />
+            <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden mt-4">
+              <div className="bg-purple-500 h-full rounded-full" style={{ width: '70%' }}></div>
             </div>
           </CardContent>
         </Card>

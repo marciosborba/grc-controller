@@ -447,55 +447,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
       </div>
 
       {/* Estatísticas do ciclo de vida */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{active.length}</div>
-                <div className="text-sm text-muted-foreground">Ativas</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-              <div>
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{needingReview.length}</div>
-                <div className="text-sm text-muted-foreground">Precisam Revisão</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              <div>
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{expiringSoon.length}</div>
-                <div className="text-sm text-muted-foreground">Expirando</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-              <div>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{expired.length}</div>
-                <div className="text-sm text-muted-foreground">Expiradas</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Lista de políticas */}

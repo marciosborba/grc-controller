@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
-  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target, Trash2, Edit, Calendar, AlertCircle, Eye
+  FileText, CheckCircle, Activity, Award, Search, Filter, Plus, Clock, ChevronLeft, ChevronRight, Target, Trash2, Edit, Calendar, AlertCircle, Eye, AlertTriangle
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -153,109 +153,94 @@ export default function AssessmentsDashboard() {
         </Button>
       </div>
 
-      {/* Métricas Principais (Updated) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Assessments</p>
-                <p className="text-2xl font-bold text-slate-700 dark:text-slate-100">{metrics.total}</p>
-                <p className="text-xs text-muted-foreground mt-1">Registrados</p>
-              </div>
-              <FileText className="h-8 w-8 text-slate-500" />
+      {/* Premium Storytelling Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        {/* Card 1: Dynamic Narrative Card */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className={`absolute top-0 right-0 p-3 opacity-10`}>
+            {metrics.overdue > 0 ? <AlertTriangle className="h-24 w-24" /> : <CheckCircle className="h-24 w-24" />}
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${metrics.overdue > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              {metrics.overdue > 0 ? 'Atenção Necessária' : 'Boa Conformidade'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+              {metrics.overdue > 0
+                ? `${metrics.overdue} assessments estão atrasados e requerem ação imediata.`
+                : 'Todos os assessments estão dentro do prazo previsto.'}
+            </p>
+            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.overdue > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+              {metrics.overdue > 0 ? 'Atrasos Detectados' : 'Em Dia'}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Taxa de Conformidade</p>
-                <p className="text-2xl font-bold text-emerald-600">{metrics.complianceRate}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Concluídos vs Total</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-emerald-600" />
+        {/* Card 2: Total Assessments (Reliable Data) */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <FileText className="h-24 w-24 text-blue-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+              <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total de Assessments</p>
+              <h3 className="text-3xl font-bold text-foreground">{metrics.total}</h3>
+              <p className="text-xs text-muted-foreground mt-1">Registrados na base</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Maturidade Média</p>
-                <p className="text-2xl font-bold text-blue-600">{metrics.avgMaturity}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Geral</p>
-              </div>
-              <Activity className="h-8 w-8 text-blue-600" />
+        {/* Card 3: Compliance Rate */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Award className="h-24 w-24 text-emerald-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Taxa de Conclusão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-emerald-600">{metrics.complianceRate}%</span>
+              <span className="text-sm text-muted-foreground">do total</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {metrics.completed} de {metrics.total} assessments finalizados.
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${metrics.complianceRate}%` }}></div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card 4: Active Status Distribution */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity className="h-24 w-24 text-purple-500" />
+          </div>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Aguardando Revisão</p>
-                <p className="text-2xl font-bold text-orange-600">{metrics.reviewPending}</p>
-                <p className="text-xs text-muted-foreground mt-1">Pendências</p>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Em Andamento</span>
+                <span className="font-bold text-purple-600">{metrics.active}</span>
               </div>
-              <Eye className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Second Row - Detailed Status Counts */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Atrasados</p>
-                <p className="text-2xl font-bold text-red-600">{metrics.overdue}</p>
-                <p className="text-xs text-muted-foreground mt-1">Prazo Expirado</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Aguardando Revisão</span>
+                <span className="font-bold text-orange-600">{metrics.reviewPending}</span>
               </div>
-              <Clock className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Em Andamento</p>
-                <p className="text-2xl font-bold text-purple-600">{metrics.active}</p>
-                <p className="text-xs text-muted-foreground mt-1">Em execução</p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Planejados</span>
+                <span className="font-bold text-blue-600">{metrics.pending}</span>
               </div>
-              <Activity className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Concluídos</p>
-                <p className="text-2xl font-bold text-green-600">{metrics.completed}</p>
-                <p className="text-xs text-muted-foreground mt-1">Finalizados</p>
+              <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden mt-2">
+                <div className="bg-purple-500 h-full rounded-full" style={{ width: `${(metrics.active / Math.max(metrics.total, 1)) * 100}%` }}></div>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-2xl font-bold text-blue-500">{metrics.pending}</p>
-                <p className="text-xs text-muted-foreground mt-1">Planejados</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>

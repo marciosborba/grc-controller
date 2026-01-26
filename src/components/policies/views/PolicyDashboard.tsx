@@ -24,11 +24,11 @@ interface PolicyDashboardProps {
   alexConfig?: any;
 }
 
-const PolicyDashboard: React.FC<PolicyDashboardProps> = ({ 
-  policies, 
+const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
+  policies,
   allPolicies = policies,
   onPolicyUpdate,
-  alexConfig 
+  alexConfig
 }) => {
   // Calcular estatísticas
   const stats = useMemo(() => {
@@ -37,7 +37,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
     const review = allPolicies.filter(p => p.status === 'under_review' || p.workflow_stage === 'review').length;
     const approved = allPolicies.filter(p => p.status === 'approved').length;
     const published = allPolicies.filter(p => p.status === 'published').length;
-    
+
     // Políticas por categoria
     const categories = allPolicies.reduce((acc, policy) => {
       acc[policy.category] = (acc[policy.category] || 0) + 1;
@@ -47,7 +47,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
     // Políticas criadas recentemente (últimos 7 dias)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentPolicies = allPolicies.filter(p => 
+    const recentPolicies = allPolicies.filter(p =>
       new Date(p.created_at) >= sevenDaysAgo
     );
 
@@ -85,7 +85,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
   // Atividades recentes simuladas baseadas nos dados reais
   const recentActivities = useMemo(() => {
     const activities = [];
-    
+
     // Adicionar atividades baseadas nas políticas reais
     stats.recentPolicies.forEach(policy => {
       activities.push({
@@ -125,17 +125,17 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
   const getTimeAgo = (date: Date) => {
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return 'Há poucos minutos';
     if (diffInHours < 24) return `Há ${diffInHours} hora${diffInHours > 1 ? 's' : ''}`;
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     return `Há ${diffInDays} dia${diffInDays > 1 ? 's' : ''}`;
   };
 
   const getTopCategories = () => {
     return Object.entries(stats.categories)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
   };
 
@@ -149,7 +149,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
             Visão geral do status e métricas das políticas organizacionais
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20">
             <TrendingUp className="h-3 w-3" />
@@ -158,73 +158,8 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
         </div>
       </div>
 
-      {/* Cards de métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Políticas cadastradas
-            </p>
-          </CardContent>
-        </Card>
+      {/* Cards de métricas principais - REMOVIDOS (Movidos para PolicyManagementHub) */}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Novas</CardTitle>
-            <Edit className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.draft}</div>
-            <p className="text-xs text-muted-foreground">
-              Em elaboração
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Revisão</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.review}</div>
-            <p className="text-xs text-muted-foreground">
-              Sendo revisadas
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aprovadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-            <p className="text-xs text-muted-foreground">
-              Prontas para publicar
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Publicadas</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.published}</div>
-            <p className="text-xs text-muted-foreground">
-              Ativas na organização
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Alertas importantes */}
       {stats.needsAttention > 0 && (
@@ -240,9 +175,9 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                   Políticas expirando ou que precisam de revisão nos próximos 30 dias
                 </p>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="ml-auto border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-200 dark:hover:bg-orange-900/50"
               >
                 Ver Detalhes
@@ -272,14 +207,14 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">{stats.draft}</span>
                   <div className="w-20 bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className="h-2 bg-yellow-500 rounded-full"
                       style={{ width: `${stats.total > 0 ? (stats.draft / stats.total) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -288,14 +223,14 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">{stats.review}</span>
                   <div className="w-20 bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className="h-2 bg-blue-500 rounded-full"
                       style={{ width: `${stats.total > 0 ? (stats.review / stats.total) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -304,14 +239,14 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">{stats.approved}</span>
                   <div className="w-20 bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className="h-2 bg-green-500 rounded-full"
                       style={{ width: `${stats.total > 0 ? (stats.approved / stats.total) * 100 : 0}%` }}
                     ></div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
@@ -320,7 +255,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium">{stats.published}</span>
                   <div className="w-20 bg-muted rounded-full h-2">
-                    <div 
+                    <div
                       className="h-2 bg-purple-500 rounded-full"
                       style={{ width: `${stats.total > 0 ? (stats.published / stats.total) * 100 : 0}%` }}
                     ></div>
@@ -415,19 +350,19 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
                   {stats.total > 0 ? ((stats.published / stats.total) * 100).toFixed(1) : 0}%
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Políticas Ativas</span>
                 <span className="text-sm text-muted-foreground">{stats.published}</span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Em Processo</span>
                 <span className="text-sm text-muted-foreground">
                   {stats.draft + stats.review + stats.approved}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Criadas esta semana</span>
                 <div className="flex items-center space-x-1">

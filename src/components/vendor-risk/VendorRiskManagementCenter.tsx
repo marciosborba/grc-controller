@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import {
   LayoutDashboard,
   Kanban,
-
   Brain,
   Plus,
   Filter,
@@ -20,7 +19,10 @@ import {
   FileCheck,
   MessageSquare,
   BarChart3,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  Shield,
+  Zap
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
@@ -121,13 +123,13 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
   // Inicializar dados
   useEffect(() => {
-    if (user?.tenantId || user?.tenant_id) {
+    if (user?.tenantId) {
       fetchVendors();
       fetchAssessments();
       fetchDashboardMetrics();
       fetchRiskDistribution();
     }
-  }, [user?.tenantId, user?.tenant_id, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution]);
+  }, [user?.tenantId, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution]);
 
   const getQuickActions = (): QuickAction[] => {
     const highRiskVendors = dashboardMetrics?.critical_vendors || 0;
@@ -140,6 +142,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Novo Fornecedor',
         description: 'Iniciar processo de onboarding',
         icon: Plus,
+        color: 'primary',
         action: () => setShowOnboardingWorkflow(true)
       },
       {
@@ -147,6 +150,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Fornecedores',
         description: 'Gerenciar base de fornecedores',
         icon: Building,
+        color: 'blue',
         action: () => {
           setSelectedFilter('all');
           setViewMode('vendors');
@@ -158,6 +162,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Assessments',
         description: 'Gerenciar todas as avaliações',
         icon: FileCheck,
+        color: 'orange',
         action: () => {
           setSelectedFilter('all'); // Changed from 'pending' to 'all' to show all items
           setViewMode('assessments');
@@ -169,6 +174,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Comunicação',
         description: 'Gerenciar notificações e lembretes',
         icon: MessageSquare,
+        color: 'purple',
         action: () => setShowNotificationSystem(true),
         badge: overdueAssessments > 0 ? overdueAssessments : undefined
       },
@@ -177,6 +183,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
         title: 'Gestão Visual',
         description: 'Acompanhar progresso no Kanban',
         icon: BarChart3,
+        color: 'green',
         action: () => {
           setSelectedFilter('all'); // Ensure filter is reset
           setViewMode('kanban');
@@ -238,71 +245,183 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
   return (
     <div className="space-y-6 vendor-risk-management">
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6 quick-actions-grid">
-        {getQuickActions().map((action) => (
-          <Card
-            key={action.id}
-            className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-primary/30 group relative overflow-hidden"
-            style={{
-              backgroundColor: isDarkMode
-                ? 'hsl(215, 8%, 12%)' // Cor do card no dark mode
-                : '#ffffff', // Cor branca no light mode
-              borderColor: isDarkMode
-                ? 'hsl(215, 10%, 22%)' // Cor da borda no dark mode
-                : 'hsl(214, 32%, 91%)', // Cor da borda no light mode
-              color: isDarkMode
-                ? 'hsl(0, 0%, 100%)' // Texto branco no dark mode
-                : 'hsl(225, 71%, 12%)' // Texto escuro no light mode
-            }}
-            onClick={action.action}
-          >
-            <CardContent className="p-4 md:p-6">
-              <div className="flex flex-col items-center text-center space-y-3">
-                {/* Ícone com background */}
-                <div className={`
-                    p-3 rounded-full transition-all duration-300
-                    ${action.id === 'new-vendor' ? 'bg-primary/10 text-primary group-hover:bg-primary/20' :
-                    action.id === 'all-vendors' ? 'bg-blue-500/10 text-blue-600 group-hover:bg-blue-500/20' :
-                      action.id === 'pending-assessments' ? 'bg-orange-500/10 text-orange-600 group-hover:bg-orange-500/20' :
-                        action.id === 'communication-center' ? 'bg-purple-500/10 text-purple-600 group-hover:bg-purple-500/20' :
-                          'bg-green-500/10 text-green-600 group-hover:bg-green-500/20'
-                  }
-                  `}>
-                  <action.icon className="h-6 w-6" />
+      {/* Premium Storytelling Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1: Panorama da Base */}
+        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <Building className="h-32 w-32 text-blue-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-blue-700 dark:text-blue-400">
+              <Building className="h-5 w-5" />
+              Panorama da Base
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">{vendors.length || 0}</span>
+                <span className="text-sm text-muted-foreground">fornecedores totais</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Total de parceiros cadastrados.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <CheckCircle className="h-4 w-4 text-green-500" /> Ativos
+                </span>
+                <span className="font-medium text-green-600">
+                  {vendors.filter(v => v.status === 'active').length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 text-red-500" /> Críticos
+                </span>
+                <Badge variant={dashboardMetrics?.critical_vendors > 0 ? "destructive" : "secondary"} className="text-xs">
+                  {dashboardMetrics?.critical_vendors || 0}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Assessments & Riscos */}
+        <Card className="relative overflow-hidden border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <ClipboardCheck className="h-32 w-32 text-orange-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-700 dark:text-orange-400">
+              <ClipboardCheck className="h-5 w-5" />
+              Assessments & Riscos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">{assessments.length || 0}</span>
+                <span className="text-sm text-muted-foreground">avaliações totais</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Processos de avaliação de risco.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4 text-orange-500" /> Em Andamento
+                </span>
+                <span className="font-bold text-orange-600">
+                  {dashboardMetrics?.pending_assessments || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 text-red-500" /> Em Atraso
+                </span>
+                <Badge variant={dashboardMetrics?.overdue_assessments > 0 ? "destructive" : "secondary"} className="text-xs">
+                  {dashboardMetrics?.overdue_assessments || 0}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Conformidade & Ações */}
+        <Card className="relative overflow-hidden border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <CheckCircle className="h-32 w-32 text-green-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-green-700 dark:text-green-400">
+              <CheckCircle className="h-5 w-5" />
+              Conformidade
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-foreground">
+                  {vendors.length > 0 ? (vendors.filter(v => v.risk_score < 4.0).length / vendors.length * 100).toFixed(0) : 0}%
+                </span>
+                <span className="text-sm text-muted-foreground">em compliance</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Fornecedores dentro do apetite de risco.
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Shield className="h-4 w-4 text-green-500" /> Certificados
+                </span>
+                <span className="font-medium">
+                  {vendors.filter(v => v.security_score > 80).length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <FileCheck className="h-4 w-4" /> Contratos OK
+                </span>
+                <span className="font-medium">
+                  {vendors.length - (dashboardMetrics?.expiring_contracts || 0)}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions Grid - Premium Navigation */}
+      <div>
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+          <Zap className="h-5 w-5 text-primary" />
+          Funcionalidades
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          {getQuickActions().map((action) => (
+            <div
+              key={action.id}
+              onClick={action.action}
+              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+            >
+              {/* Gradient Border Overlay */}
+              <div className={`absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                    <action.icon className="w-6 h-6" />
+                  </div>
+                  {action.badge && (
+                    <Badge variant={action.id === 'pending-assessments' || action.id === 'communication-center' ? 'destructive' : 'secondary'} className="font-mono text-xs">
+                      {action.badge}
+                    </Badge>
+                  )}
                 </div>
 
-                {/* Título e descrição */}
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-sm flex items-center gap-2 group-hover:text-primary transition-colors">
                     {action.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-tight">
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
                     {action.description}
                   </p>
                 </div>
-
-                {/* Badge se existir */}
-                {action.badge && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs px-2 py-1 bg-primary/10 text-primary border-primary/20"
-                  >
-                    {action.badge}
-                  </Badge>
-                )}
               </div>
 
-              {/* Efeito de hover - CSS dinâmico */}
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  background: getHoverGradient().hover
-                }}
-              />
-            </CardContent>
-          </Card>
-        ))}
+              {/* Bottom decorative line */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Error Display */}
@@ -390,6 +509,8 @@ export const VendorRiskManagementCenter: React.FC = () => {
           <div className="py-6">
             <TabsContent value="dashboard" className="mt-0 h-full">
               <VendorDashboardView
+                searchTerm={searchTerm}
+                selectedFilter={selectedFilter}
                 metrics={dashboardMetrics}
                 riskDistribution={riskDistribution}
                 vendors={vendors}
@@ -400,7 +521,6 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
             <TabsContent value="vendors" className="mt-0 h-full">
               <VendorTableView
-                vendors={vendors}
                 searchTerm={searchTerm}
                 selectedFilter={selectedFilter}
                 loading={loading}

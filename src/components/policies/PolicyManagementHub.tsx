@@ -16,9 +16,17 @@ import {
   Filter,
   Plus,
   Brain,
-  Sparkles
+  Sparkles,
+  Target,
+  AlertTriangle,
+  Activity,
+  TrendingUp,
+  Shield,
+  Clock,
+  FileText
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { Progress } from '@/components/ui/progress';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -59,7 +67,7 @@ interface Policy {
 const PolicyManagementHub: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   // Estados principais
   const [activeView, setActiveView] = useState('dashboard');
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -67,7 +75,7 @@ const PolicyManagementHub: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  
+
   // Estados para Alex Policy
   const [alexConfig] = useState({
     enabled: true,
@@ -92,7 +100,7 @@ const PolicyManagementHub: React.FC = () => {
   // Carregar dados iniciais
   useEffect(() => {
     const tenantId = user?.tenant?.id || user?.tenantId;
-    
+
     if (tenantId) {
       loadPolicies();
     }
@@ -101,7 +109,7 @@ const PolicyManagementHub: React.FC = () => {
   const loadPolicies = async () => {
     // Tentar usar tenantId como fallback
     const tenantId = user?.tenant?.id || user?.tenantId;
-    
+
     if (!tenantId) {
       console.log('❌ PolicyManagement: Sem tenant_id disponível');
       return;
@@ -111,7 +119,7 @@ const PolicyManagementHub: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('policies')
-        .select('id, title, description, status, category, document_type, version, created_at, updated_at, effective_date, review_date, expiry_date, created_by, approved_by, approved_at, owner_id, document_url, metadata, priority')
+        .select('id, title, description, status, category, document_type, version, created_at, updated_at, effective_date, review_date, expiry_date, created_by, approved_by, approved_at, owner_id, document_url, metadata, priority, tenant_id')
         .eq('tenant_id', tenantId)
         .order('updated_at', { ascending: false });
 
@@ -139,16 +147,59 @@ const PolicyManagementHub: React.FC = () => {
     }
   };
 
+  // Calcular estatísticas para os cards de topo
+  const stats = React.useMemo(() => {
+    const total = policies.length;
+    const draft = policies.filter(p => p.status === 'draft').length;
+    const review = policies.filter(p => p.status === 'under_review' || p.workflow_stage === 'review').length;
+    const approved = policies.filter(p => p.status === 'approved').length;
+    const published = policies.filter(p => p.status === 'published').length;
+
+    // Políticas criadas recentemente (últimos 7 dias)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentPolicies = policies.filter(p =>
+      new Date(p.created_at) >= sevenDaysAgo
+    );
+
+    // Políticas que precisam de atenção (expirando ou vencidas)
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const needsAttention = policies.filter(p => {
+      if (p.expiry_date) {
+        const expiryDate = new Date(p.expiry_date);
+        if (expiryDate <= thirtyDaysFromNow) return true;
+      }
+      if (p.review_date) { // Check review date too
+        const reviewDate = new Date(p.review_date);
+        if (reviewDate <= today) return true; // Overdue review
+      }
+      return false;
+    });
+
+    return {
+      total,
+      draft,
+      review,
+      approved,
+      published,
+      recentCount: recentPolicies.length,
+      needsAttentionCount: needsAttention.length
+    };
+  }, [policies]);
+
   // Filtrar políticas
   const filteredPolicies = policies.filter(policy => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       policy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       policy.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       policy.category.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || policy.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || policy.category === categoryFilter;
-    
+
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
@@ -240,12 +291,110 @@ const PolicyManagementHub: React.FC = () => {
             Ciclo completo de gestão de políticas com assistência de IA
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
 
-          
+
 
         </div>
+      </div>
+
+
+
+      {/* Métricas Cards - Premium Storytelling (Movidos para o topo) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Card 1: Panorama Geral */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <FileText className="h-24 w-24" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+              Panorama Geral
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-3xl font-bold text-foreground">{stats.total}</span>
+              <span className="text-sm text-muted-foreground">políticas totais</span>
+            </div>
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed mb-4">
+              <span className="text-green-600 font-bold flex items-center gap-1">
+                <TrendingUp className="h-3 w-3" /> +{stats.recentCount}
+              </span>
+              novas políticas nesta semana.
+            </p>
+            <Progress value={stats.total > 0 ? (stats.published / stats.total) * 100 : 0} className="h-2" />
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Em Elaboração/Revisão */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <FileEdit className="h-24 w-24 text-blue-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+              <FileEdit className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Em Processo</p>
+              <h3 className="text-3xl font-bold text-foreground">
+                {stats.draft + stats.review}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center">
+                <span className="font-medium text-blue-600 mr-1">{stats.review}</span> em revisão
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Atenção Necessária */}
+        <Card className={`relative overflow-hidden shadow-sm hover:shadow-md transition-all group ${stats.needsAttentionCount > 0 ? 'border-l-4 border-l-orange-500/50' : ''}`}>
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertTriangle className="h-24 w-24 text-orange-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
+              <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Revisões Pendentes</p>
+              <h3 className={`text-3xl font-bold ${stats.needsAttentionCount > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-foreground'}`}>
+                {stats.needsAttentionCount}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                políticas expirando ou vencidas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Vigentes */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <CheckCircle className="h-24 w-24 text-green-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Vigentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-green-600">
+                {stats.published}
+              </span>
+              <span className="text-sm text-muted-foreground">publicadas</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              <span className="font-medium text-foreground">{stats.approved}</span> aprovadas aguardando.
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-green-500" style={{ width: `${stats.total > 0 ? (stats.published / stats.total) * 100 : 0}%` }}></div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filtros globais */}
@@ -263,7 +412,7 @@ const PolicyManagementHub: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-2">
               <select
                 value={statusFilter}
@@ -274,13 +423,13 @@ const PolicyManagementHub: React.FC = () => {
                 {statuses.map(status => (
                   <option key={status} value={status}>
                     {status === 'draft' ? 'Rascunho' :
-                     status === 'review' ? 'Em Revisão' :
-                     status === 'approved' ? 'Aprovado' :
-                     status === 'published' ? 'Publicado' : status}
+                      status === 'review' ? 'Em Revisão' :
+                        status === 'approved' ? 'Aprovado' :
+                          status === 'published' ? 'Publicado' : status}
                   </option>
                 ))}
               </select>
-              
+
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -291,14 +440,14 @@ const PolicyManagementHub: React.FC = () => {
                   <option key={category} value={category}>{category}</option>
                 ))}
               </select>
-              
+
               <Button variant="outline" size="sm">
                 <Filter className="h-3 w-3 mb-0.5 mr-2" />
                 Filtros
               </Button>
             </div>
           </div>
-          
+
         </CardContent>
       </Card>
 
