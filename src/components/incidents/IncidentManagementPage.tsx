@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,10 @@ import {
   Archive,
   LayoutList,
   LayoutGrid,
-  RefreshCw
+  RefreshCw,
+  BarChart3,
+  Target,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useIncidentManagement } from '@/hooks/useIncidentManagement';
@@ -209,7 +213,7 @@ const IncidentManagementPage = () => {
   }
 
   return (
-    <div className="space-y-8 p-6 max-w-[1600px] mx-auto">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div>
@@ -259,86 +263,99 @@ const IncidentManagementPage = () => {
       </div>
 
       {/* Métricas Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-gray-950 border-blue-100 dark:border-blue-900 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total de Incidentes</p>
-                <h3 className="text-3xl font-bold mt-2 text-gray-900 dark:text-gray-100">{metrics.total_incidents}</h3>
-              </div>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Shield className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
+      {/* Métricas Cards - Premium Storytelling */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Card 1: Panorama Geral */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <Shield className="h-24 w-24" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+              Panorama Geral
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-3xl font-bold text-foreground">{metrics.total_incidents}</span>
+              <span className="text-sm text-muted-foreground">incidentes totais</span>
             </div>
-            <div className="mt-4 flex items-center text-xs text-muted-foreground">
-              <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center mr-1">
-                <Activity className="h-3 w-3 mr-1" /> +{metrics.incidents_trend_7_days}
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed mb-4">
+              <span className="text-blue-600 font-bold flex items-center gap-1">
+                <Activity className="h-3 w-3" /> +{metrics.incidents_trend_7_days}
               </span>
-              nos últimos 7 dias
+              novos incidentes nos últimos 7 dias.
+            </p>
+            <Progress value={75} className="h-2 opacity-50" />
+            {/* Progress placeholder since we don't have a specific percentage metric for total */}
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Atenção Crítica */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertTriangle className="h-24 w-24 text-red-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
+              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Críticos & Abertos</p>
+              <h3 className="text-3xl font-bold text-red-600 dark:text-red-500">
+                {metrics.incidents_by_severity.critical || 0}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
+                {metrics.incidents_by_status.open || 0} aguardando triagem
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-white dark:from-red-950/20 dark:to-gray-950 border-red-100 dark:border-red-900 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-red-600 dark:text-red-400">Críticos & Abertos</p>
-                <h3 className="text-3xl font-bold mt-2 text-gray-900 dark:text-gray-100">
-                  {metrics.incidents_by_severity.critical || 0}
-                </h3>
-              </div>
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
+        {/* Card 3: Status Operacional */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity className="h-24 w-24 text-orange-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
+              <Activity className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
-            <div className="mt-4 flex items-center text-xs text-muted-foreground">
-              <span className="text-red-600 dark:text-red-400 font-medium mr-1">
-                {metrics.incidents_by_status.open || 0}
-              </span>
-              aguardando triagem
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/20 dark:to-gray-950 border-orange-100 dark:border-orange-900 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Em Investigação</p>
-                <h3 className="text-3xl font-bold mt-2 text-gray-900 dark:text-gray-100">
-                  {metrics.incidents_by_status.investigating || 0}
-                </h3>
-              </div>
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <Activity className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-xs text-muted-foreground">
-              Tempo médio: <span className="font-medium ml-1">{Math.round(metrics.average_resolution_time || 0)}h</span>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Em Investigação</p>
+              <h3 className="text-3xl font-bold text-foreground">
+                {metrics.incidents_by_status.investigating || 0}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center">
+                <Clock className="h-3 w-3 mr-1" />
+                Tempo médio: {Math.round(metrics.average_resolution_time || 0)}h
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-gray-950 border-green-100 dark:border-green-900 shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-green-600 dark:text-green-400">Resolvidos</p>
-                <h3 className="text-3xl font-bold mt-2 text-gray-900 dark:text-gray-100">
-                  {metrics.incidents_by_status.resolved || 0}
-                </h3>
-              </div>
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-            <div className="mt-4 flex items-center text-xs text-muted-foreground">
-              <span className="text-green-600 dark:text-green-400 font-medium mr-1">
+        {/* Card 4: Eficiência de Resolução */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <CheckCircle className="h-24 w-24 text-green-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Eficiência
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-green-600">
                 {Math.round((metrics.incidents_by_status.resolved || 0) / (metrics.total_incidents || 1) * 100)}%
               </span>
-              taxa de resolução
+              <span className="text-sm text-muted-foreground">resolvidos</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Total de <span className="font-medium text-foreground">{metrics.incidents_by_status.resolved || 0}</span> incidentes mitigados.
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-green-500" style={{ width: `${Math.round((metrics.incidents_by_status.resolved || 0) / (metrics.total_incidents || 1) * 100)}%` }}></div>
             </div>
           </CardContent>
         </Card>

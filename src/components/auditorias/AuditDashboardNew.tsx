@@ -167,55 +167,93 @@ export function AuditDashboardNew() {
       </div>
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
-        <Card className="col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Projetos</p>
-                <p className="text-3xl font-bold">{metrics?.total_projetos || 0}</p>
-                <p className="text-xs text-muted-foreground mt-1">Projetos de auditoria</p>
-              </div>
-              <Target className="h-8 w-8 text-blue-600" />
+      {/* Premium Storytelling Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+        {/* Card 1: Dynamic Narrative Card - Execution Status */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+          <div className={`absolute top-0 right-0 p-3 opacity-10`}>
+            {(metrics?.apontamentos_criticos || 0) > 0 ? <AlertTriangle className="h-24 w-24" /> :
+              (metrics?.projetos_atrasados || 0) > 0 ? <Clock className="h-24 w-24" /> : <CheckCircle className="h-24 w-24" />}
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${(metrics?.apontamentos_criticos || 0) > 0 ? 'text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
+              {(metrics?.apontamentos_criticos || 0) > 0 ? 'Pontos Críticos' :
+                (metrics?.projetos_atrasados || 0) > 0 ? 'Atrasos no Plano' : 'Execução Normal'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+              {(metrics?.apontamentos_criticos || 0) > 0
+                ? `${metrics?.apontamentos_criticos} apontamentos críticos detectados nos projetos ativos.`
+                : (metrics?.projetos_atrasados || 0) > 0
+                  ? 'Existem projetos com cronograma atrasado. Verifique os prazos.'
+                  : 'Todos os projetos de auditoria estão seguindo o cronograma previsto.'}
+            </p>
+            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(metrics?.apontamentos_criticos || 0) > 0 ? 'bg-red-500/10 text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+              {(metrics?.apontamentos_criticos || 0) > 0 ? 'Ação Requerida' : (metrics?.projetos_atrasados || 0) > 0 ? 'Atenção ao Prazo' : 'Em Conformidade'}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Projetos Ativos</p>
-                <p className="text-3xl font-bold text-blue-600">{metrics?.projetos_ativos || 0}</p>
-                <p className="text-xs text-muted-foreground mt-1">Em andamento</p>
-              </div>
-              <PlayCircle className="h-8 w-8 text-blue-600" />
+        {/* Card 2: Total Projects (Reliable Data) */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Target className="h-24 w-24 text-blue-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+              <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Total de Projetos</p>
+              <h3 className="text-3xl font-bold text-foreground">{metrics?.total_projetos || 0}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {metrics?.projetos_concluidos || 0} concluídos
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Taxa de Conclusão</p>
-                <p className="text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">Projetos concluídos</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+        {/* Card 3: Active Execution */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <PlayCircle className="h-24 w-24 text-purple-500" />
+          </div>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
+              <PlayCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Em Execução</p>
+              <h3 className="text-3xl font-bold text-foreground">{metrics?.projetos_ativos || 0}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Atividades em andamento
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Apontamentos Críticos</p>
-                <p className="text-3xl font-bold text-red-600">{metrics?.apontamentos_criticos || 0}</p>
-                <p className="text-xs text-muted-foreground mt-1">Requer atenção</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+        {/* Card 4: Compliance Rate */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <CheckCircle className="h-24 w-24 text-green-500" />
+          </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-foreground">
+              Taxa de Conclusão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
+              <span className="text-sm text-muted-foreground">geral</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Percentual médio de avanço dos projetos.
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="bg-green-500 h-full rounded-full" style={{ width: `${Math.round(metrics?.taxa_conclusao || 0)}%` }}></div>
             </div>
           </CardContent>
         </Card>

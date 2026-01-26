@@ -5,7 +5,7 @@ import AssessmentsDashboard from './AssessmentsDashboard';
 
 export default function EnhancedAssessmentHub() {
   return (
-    <div className="container mx-auto p-4 space-y-6 max-w-[1600px]">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Central de Assessments</h1>
         <p className="text-muted-foreground">
