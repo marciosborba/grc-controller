@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
+import {
   Settings,
   ArrowLeft,
   Plus,
@@ -115,21 +115,21 @@ const FIELD_TEMPLATES: FieldTemplate[] = [
 export default function ApplicationFieldsCustomization() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  const { 
-    customFields, 
-    loading, 
-    canManageFields, 
-    createCustomField, 
-    updateCustomField, 
-    deleteCustomField, 
-    reorderFields 
+
+  const {
+    customFields,
+    loading,
+    canManageFields,
+    createCustomField,
+    updateCustomField,
+    deleteCustomField,
+    reorderFields
   } = useApplicationCustomFields({ includeHidden: true });
-  
+
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingField, setEditingField] = useState<ApplicationCustomField | null>(null);
-  
+
   const [fieldForm, setFieldForm] = useState({
     name: '',
     label: '',
@@ -185,11 +185,11 @@ export default function ApplicationFieldsCustomization() {
         placeholder: fieldForm.placeholder,
         defaultValue: fieldForm.defaultValue,
         options: fieldForm.type === 'select' ? fieldForm.options.filter(opt => opt.trim()) : undefined,
-        validation: fieldForm.validation.pattern || fieldForm.validation.min || fieldForm.validation.max 
-          ? fieldForm.validation 
+        validation: fieldForm.validation.pattern || fieldForm.validation.min || fieldForm.validation.max
+          ? fieldForm.validation
           : undefined,
-        importMapping: Object.values(fieldForm.importMapping).some(v => v) 
-          ? fieldForm.importMapping 
+        importMapping: Object.values(fieldForm.importMapping).some(v => v)
+          ? fieldForm.importMapping
           : undefined,
       };
 
@@ -205,6 +205,35 @@ export default function ApplicationFieldsCustomization() {
       console.error('Error saving field:', error);
       toast.error('Error saving field: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+  };
+
+  const handleEdit = (field: ApplicationCustomField) => {
+    setFieldForm({
+      name: field.name,
+      label: field.label,
+      type: field.type,
+      required: field.required,
+      visible: field.visible,
+      tab: field.tab,
+      description: field.description || '',
+      placeholder: field.placeholder || '',
+      defaultValue: field.defaultValue || '',
+      options: field.options || [''],
+      validation: field.validation || {
+        min: undefined,
+        max: undefined,
+        pattern: '',
+        message: ''
+      },
+      importMapping: {
+        csv: '',
+        api: '',
+        custom: '',
+        ...field.importMapping
+      }
+    });
+    setEditingField(field);
+    setShowFieldDialog(true);
   };
 
   const handleDeleteField = async (fieldId: string) => {
@@ -282,7 +311,7 @@ export default function ApplicationFieldsCustomization() {
             <Download className="h-4 w-4 mr-2" />
             Templates
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               if (!canManageFields) {
                 toast.error('No permission to create fields');
@@ -302,7 +331,7 @@ export default function ApplicationFieldsCustomization() {
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Restricted Access:</strong> Only tenant administrators can customize application fields. 
+          <strong>Restricted Access:</strong> Only tenant administrators can customize application fields.
           Changes will affect all users in the organization.
         </AlertDescription>
       </Alert>
@@ -351,7 +380,7 @@ export default function ApplicationFieldsCustomization() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleEdit(field)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
