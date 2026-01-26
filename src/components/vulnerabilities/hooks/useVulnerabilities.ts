@@ -21,7 +21,7 @@ interface UseVulnerabilitiesOptions {
 export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
   const { user } = useAuth();
   const effectiveTenantId = useCurrentTenantId();
-  
+
   const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>([]);
   const [metrics, setMetrics] = useState<VulnerabilityMetrics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,18 +49,18 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       console.log('❌ [HOOK] No effectiveTenantId, returning early');
       return;
     }
-    
+
     console.log('🔍 [HOOK] Starting loadVulnerabilities with tenant:', effectiveTenantId);
-    
+
     // Prevent multiple simultaneous loads
     if (isLoadingRef.current) {
       console.log('🔄 [HOOK] Already loading, skipping...');
       return;
     }
-    
+
     console.log('🔍 [HOOK] Loading vulnerabilities for tenant:', effectiveTenantId);
     isLoadingRef.current = true;
-    
+
     // If we already know the table doesn't exist, don't try again (unless forced)
     if (tableExists === false && !forceRefresh) {
       setVulnerabilities([]);
@@ -68,7 +68,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       setLoading(false);
       return;
     }
-    
+
     // Reset force refresh flag
     if (forceRefresh) {
       setForceRefresh(false);
@@ -77,7 +77,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       setAttemptCount(0);
       setSuppressToasts(false);
     }
-    
+
     // If we've tried multiple times and failed, assume table doesn't exist
     if (attemptCount >= 3) {
       console.warn('Multiple attempts failed, assuming table does not exist');
@@ -145,30 +145,30 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       const { data, error, count } = await query;
 
       if (error) throw error;
-      
+
       console.log('✅ [HOOK] Successfully loaded vulnerabilities:', {
         count: data?.length || 0,
         totalCount: count || 0,
         tenant: effectiveTenantId
       });
-      
+
       setVulnerabilities(data || []);
       setTotalCount(count || 0);
       setTableExists(true);
       setInitialized(true);
       setAttemptCount(0); // Reset attempt count on success
       loadedTenantRef.current = effectiveTenantId;
-      
+
       // Load metrics immediately after vulnerabilities are loaded
       console.log('📊 [HOOK] Triggering metrics load after vulnerabilities loaded');
       // Call loadMetrics directly since we have the data
       await loadMetrics();
     } catch (err) {
       console.error('Error loading vulnerabilities:', err);
-      
+
       // Check if the error is due to table not existing
       const errorMessage = err instanceof Error ? err.message : String(err);
-      
+
       // More comprehensive check for table not existing
       const tableNotExistsPatterns = [
         'relation "vulnerabilities" does not exist',
@@ -179,11 +179,11 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
         'relation "public.vulnerabilities" does not exist',
         'table "public.vulnerabilities" does not exist'
       ];
-      
-      const isTableNotExist = tableNotExistsPatterns.some(pattern => 
+
+      const isTableNotExist = tableNotExistsPatterns.some(pattern =>
         errorMessage.toLowerCase().includes(pattern.toLowerCase())
       );
-      
+
       if (isTableNotExist) {
         console.warn('Vulnerabilities table does not exist in database');
         setTableExists(false);
@@ -206,133 +206,27 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
 
   // Load metrics
   const loadMetrics = useCallback(async () => {
-    console.log('📊 [HOOK] loadMetrics called with tenant:', effectiveTenantId);
-    
-    if (!effectiveTenantId) {
-      console.log('❌ [HOOK] No effectiveTenantId for metrics, returning early');
-      return;
-    }
-    
-    // If table doesn't exist, return empty metrics
-    console.log('📊 [HOOK] Checking tableExists:', tableExists);
-    if (tableExists === false) {
-      const emptyMetrics: VulnerabilityMetrics = {
-        total_vulnerabilities: 0,
-        by_severity: {
-          Critical: 0,
-          High: 0,
-          Medium: 0,
-          Low: 0,
-          Info: 0,
-        },
-        by_status: {
-          Open: 0,
-          In_Progress: 0,
-          Testing: 0,
-          Resolved: 0,
-          Accepted: 0,
-          False_Positive: 0,
-          Duplicate: 0,
-        },
-        by_source: {
-          Pentest: 0,
-          SAST: 0,
-          DAST: 0,
-          Cloud: 0,
-          Infrastructure: 0,
-          Manual: 0,
-          Risk_Register: 0,
-          Bug_Bounty: 0,
-          Compliance_Audit: 0,
-        },
-        sla_compliance: 100,
-        avg_resolution_time: 0,
-        overdue_count: 0,
-        critical_open: 0,
-        high_open: 0,
-        trend_data: [],
-      };
-      setMetrics(emptyMetrics);
-      return;
-    }
+    if (!effectiveTenantId) return;
+
+    // If table existence is unknown or false, metrics might fail, but let's try the RPC
+    // RPC is safer as it handles empty states internally
 
     try {
-      console.log('📊 [HOOK] Executing metrics query for tenant:', effectiveTenantId);
-      
+      console.log('📊 [HOOK] Loading metrics via RPC for tenant:', effectiveTenantId);
+
       const { data, error } = await supabase
-        .from('vulnerabilities')
-        .select('severity, status, source_type, created_at, resolved_at, due_date, sla_breach')
-        .eq('tenant_id', effectiveTenantId);
-        
-      console.log('📊 [HOOK] Metrics query result:', { data: data?.length, error });
+        .rpc('get_vulnerability_metrics', { p_tenant_id: effectiveTenantId });
 
       if (error) throw error;
 
-      const vulnerabilities = data || [];
-      const now = new Date();
-
-      // Calculate metrics
-      const metrics: VulnerabilityMetrics = {
-        total_vulnerabilities: vulnerabilities.length,
-        by_severity: {
-          Critical: vulnerabilities.filter(v => v.severity === 'Critical').length,
-          High: vulnerabilities.filter(v => v.severity === 'High').length,
-          Medium: vulnerabilities.filter(v => v.severity === 'Medium').length,
-          Low: vulnerabilities.filter(v => v.severity === 'Low').length,
-          Info: vulnerabilities.filter(v => v.severity === 'Info').length,
-        },
-        by_status: {
-          Open: vulnerabilities.filter(v => v.status === 'Open').length,
-          In_Progress: vulnerabilities.filter(v => v.status === 'In_Progress').length,
-          Testing: vulnerabilities.filter(v => v.status === 'Testing').length,
-          Resolved: vulnerabilities.filter(v => v.status === 'Resolved').length,
-          Accepted: vulnerabilities.filter(v => v.status === 'Accepted').length,
-          False_Positive: vulnerabilities.filter(v => v.status === 'False_Positive').length,
-          Duplicate: vulnerabilities.filter(v => v.status === 'Duplicate').length,
-        },
-        by_source: {
-          Pentest: vulnerabilities.filter(v => v.source_type === 'Pentest').length,
-          SAST: vulnerabilities.filter(v => v.source_type === 'SAST').length,
-          DAST: vulnerabilities.filter(v => v.source_type === 'DAST').length,
-          Cloud: vulnerabilities.filter(v => v.source_type === 'Cloud').length,
-          Infrastructure: vulnerabilities.filter(v => v.source_type === 'Infrastructure').length,
-          Manual: vulnerabilities.filter(v => v.source_type === 'Manual').length,
-          Risk_Register: vulnerabilities.filter(v => v.source_type === 'Risk_Register').length,
-          Bug_Bounty: vulnerabilities.filter(v => v.source_type === 'Bug_Bounty').length,
-          Compliance_Audit: vulnerabilities.filter(v => v.source_type === 'Compliance_Audit').length,
-        },
-        sla_compliance: vulnerabilities.length > 0 
-          ? Math.round((vulnerabilities.filter(v => !v.sla_breach).length / vulnerabilities.length) * 100)
-          : 100,
-        avg_resolution_time: calculateAverageResolutionTime(vulnerabilities),
-        overdue_count: vulnerabilities.filter(v => 
-          v.due_date && new Date(v.due_date) < now && !['Resolved', 'Accepted', 'False_Positive'].includes(v.status)
-        ).length,
-        critical_open: vulnerabilities.filter(v => 
-          v.severity === 'Critical' && !['Resolved', 'Accepted', 'False_Positive'].includes(v.status)
-        ).length,
-        high_open: vulnerabilities.filter(v => 
-          v.severity === 'High' && !['Resolved', 'Accepted', 'False_Positive'].includes(v.status)
-        ).length,
-        trend_data: calculateTrendData(vulnerabilities),
-      };
-
-      console.log('✅ [HOOK] Metrics calculated successfully:', {
-        total: metrics.total_vulnerabilities,
-        critical: metrics.by_severity.Critical,
-        high: metrics.by_severity.High
+      console.log('✅ [HOOK] Metrics loaded via RPC:', {
+        total: (data as any)?.total_vulnerabilities
       });
-      
-      setMetrics(metrics);
+
+      setMetrics(data as VulnerabilityMetrics);
     } catch (err) {
       console.error('Error loading metrics:', err);
-      // If metrics fail to load due to table not existing, handle gracefully
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      if (errorMessage.includes('relation "vulnerabilities" does not exist') || 
-          errorMessage.includes('table "vulnerabilities" does not exist') ||
-          errorMessage.includes('relation does not exist')) {
-        setTableExists(false);
-      }
+      // Graceful degradation handled by UI checks
     }
   }, [effectiveTenantId]);
 
@@ -357,7 +251,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       toast.success('Vulnerability created successfully');
       await loadVulnerabilities();
       await loadMetrics();
-      
+
       return data;
     } catch (err) {
       console.error('Error creating vulnerability:', err);
@@ -386,7 +280,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       toast.success('Vulnerability updated successfully');
       await loadVulnerabilities();
       await loadMetrics();
-      
+
       return true;
     } catch (err) {
       console.error('Error updating vulnerability:', err);
@@ -409,7 +303,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       toast.success('Vulnerability deleted successfully');
       await loadVulnerabilities();
       await loadMetrics();
-      
+
       return true;
     } catch (err) {
       console.error('Error deleting vulnerability:', err);
@@ -438,7 +332,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       toast.success(`${ids.length} vulnerabilities updated successfully`);
       await loadVulnerabilities();
       await loadMetrics();
-      
+
       return true;
     } catch (err) {
       console.error('Error bulk updating vulnerabilities:', err);
@@ -461,7 +355,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       forceRefresh,
       shouldLoad: effectiveTenantId && (loadedTenantRef.current !== effectiveTenantId || forceRefresh)
     });
-    
+
     if (effectiveTenantId && (loadedTenantRef.current !== effectiveTenantId || forceRefresh)) {
       loadVulnerabilities();
     }
@@ -476,7 +370,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       tableExists,
       shouldLoadMetrics: effectiveTenantId && initialized && tableExists === true
     });
-    
+
     if (effectiveTenantId && initialized && tableExists === true) {
       console.log('📊 [HOOK] Loading metrics...');
       loadMetrics();
@@ -500,55 +394,3 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
     forceRefresh: forceRefreshData,
   };
 };
-
-// Helper functions
-function calculateAverageResolutionTime(vulnerabilities: any[]): number {
-  const resolved = vulnerabilities.filter(v => v.resolved_at && v.created_at);
-  if (resolved.length === 0) return 0;
-
-  const totalTime = resolved.reduce((sum, v) => {
-    const created = new Date(v.created_at);
-    const resolvedDate = new Date(v.resolved_at);
-    return sum + (resolvedDate.getTime() - created.getTime());
-  }, 0);
-
-  return Math.round(totalTime / resolved.length / (1000 * 60 * 60 * 24)); // Days
-}
-
-function calculateTrendData(vulnerabilities: any[]): any[] {
-  const last30Days = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    return date.toISOString().split('T')[0];
-  }).reverse();
-
-  return last30Days.map(date => {
-    const dayStart = new Date(date);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
-
-    const newVulns = vulnerabilities.filter(v => {
-      const created = new Date(v.created_at);
-      return created >= dayStart && created <= dayEnd;
-    }).length;
-
-    const resolvedVulns = vulnerabilities.filter(v => {
-      if (!v.resolved_at) return false;
-      const resolved = new Date(v.resolved_at);
-      return resolved >= dayStart && resolved <= dayEnd;
-    }).length;
-
-    const totalAtEndOfDay = vulnerabilities.filter(v => {
-      const created = new Date(v.created_at);
-      const resolved = v.resolved_at ? new Date(v.resolved_at) : null;
-      return created <= dayEnd && (!resolved || resolved > dayEnd);
-    }).length;
-
-    return {
-      date,
-      total: totalAtEndOfDay,
-      resolved: resolvedVulns,
-      new: newVulns,
-    };
-  });
-}
