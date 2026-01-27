@@ -5,14 +5,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Bell, 
-  Filter, 
-  Search, 
-  CheckCheck, 
-  Archive, 
-  Trash2, 
-  Settings, 
+import {
+  Bell,
+  Filter,
+  Search,
+  CheckCheck,
+  Archive,
+  Trash2,
+  Settings,
   RefreshCw,
   Plus,
   MoreVertical,
@@ -38,7 +38,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -62,24 +62,25 @@ import { toast } from 'sonner';
 
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationsRealtime } from '@/contexts/NotificationsRealtimeContext';
-import { 
-  Notification, 
-  NotificationFilters, 
-  NotificationPriority, 
-  NotificationStatus, 
-  NotificationModule 
+import {
+  Notification,
+  NotificationFilters,
+  NotificationPriority,
+  NotificationStatus,
+  NotificationModule
 } from '@/types/notifications';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { NotificationPreferences } from './NotificationPreferences';
 import ExpandableNotificationCard from './ExpandableNotificationCard';
+import { QuickMetrics } from './shared/QuickMetrics';
 
 // Componente principal da página
 export const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
+
   const {
     notifications,
     loading,
@@ -112,7 +113,7 @@ export const NotificationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Filtros
   const [currentFilters, setCurrentFilters] = useState<NotificationFilters>({});
 
@@ -155,14 +156,14 @@ export const NotificationsPage: React.FC = () => {
     const searchParam = searchParams.get('search');
 
     const urlFilters: NotificationFilters = {};
-    
+
     if (statusParam) urlFilters.status = [statusParam as NotificationStatus];
     if (priorityParam) urlFilters.priority = [priorityParam as NotificationPriority];
     if (moduleParam) urlFilters.module = [moduleParam as NotificationModule];
-    
+
     setCurrentFilters(urlFilters);
     filterNotifications(urlFilters);
-    
+
     if (searchParam) {
       setSearchQuery(searchParam);
       searchNotifications(searchParam);
@@ -173,7 +174,7 @@ export const NotificationsPage: React.FC = () => {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     searchNotifications(query);
-    
+
     if (query) {
       searchParams.set('search', query);
     } else {
@@ -185,7 +186,7 @@ export const NotificationsPage: React.FC = () => {
   const handleFilterChange = (newFilters: NotificationFilters) => {
     setCurrentFilters(newFilters);
     filterNotifications(newFilters);
-    
+
     // Atualizar URL
     Object.entries(newFilters).forEach(([key, value]) => {
       if (value && Array.isArray(value) && value.length > 0) {
@@ -286,14 +287,14 @@ export const NotificationsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <div className={cn(
                 "w-2 h-2 rounded-full",
-                isConnected ? "bg-green-500 animate-pulse" : 
-                connectionStatus === 'connecting' ? "bg-yellow-500 animate-pulse" : 
-                "bg-red-500"
+                isConnected ? "bg-green-500 animate-pulse" :
+                  connectionStatus === 'connecting' ? "bg-yellow-500 animate-pulse" :
+                    "bg-red-500"
               )} />
               <span className="text-xs text-muted-foreground hidden sm:inline">
-                {isConnected ? 'Tempo real ativo' : 
-                 connectionStatus === 'connecting' ? 'Conectando...' : 
-                 'Desconectado'}
+                {isConnected ? 'Tempo real ativo' :
+                  connectionStatus === 'connecting' ? 'Conectando...' :
+                    'Desconectado'}
               </span>
               {!isConnected && connectionStatus === 'error' && (
                 <Button
@@ -319,7 +320,7 @@ export const NotificationsPage: React.FC = () => {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             <span className="hidden sm:inline ml-1">Atualizar</span>
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -352,52 +353,21 @@ export const NotificationsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">notificações</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Não Lidas</CardTitle>
-            <EyeOff className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.unread}</div>
-            <p className="text-xs text-muted-foreground">pendentes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Críticas</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.byPriority.critical || 0}</div>
-            <p className="text-xs text-muted-foreground">alta prioridade</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ação Requerida</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.actionRequired}</div>
-            <p className="text-xs text-muted-foreground">requerem ação</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Stats Cards - Premium Style */}
+      <QuickMetrics
+        metrics={{
+          totalNotifications: stats.total,
+          unreadCount: stats.unread,
+          criticalCount: stats.byPriority.critical || 0,
+          overdueCount: stats.overdue || 0,
+          byPriority: stats.byPriority,
+          byModule: stats.byModule,
+          byStatus: stats.byStatus,
+          responseRate: 0, // Não disponível no hook padrão
+          avgResponseTime: 0 // Não disponível no hook padrão
+        }}
+        isLoading={loading}
+      />
 
       {/* Filtros */}
       {showFilters && (
@@ -414,10 +384,10 @@ export const NotificationsPage: React.FC = () => {
                 <label className="text-sm font-medium">Status</label>
                 <Select
                   value={currentFilters.status?.[0] || ''}
-                  onValueChange={(value) => 
-                    handleFilterChange({ 
-                      ...currentFilters, 
-                      status: value ? [value as NotificationStatus] : undefined 
+                  onValueChange={(value) =>
+                    handleFilterChange({
+                      ...currentFilters,
+                      status: value ? [value as NotificationStatus] : undefined
                     })
                   }
                 >
@@ -541,79 +511,79 @@ export const NotificationsPage: React.FC = () => {
 
       {/* Content */}
       <div className="space-y-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="all" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Todas ({stats.total})
-              </TabsTrigger>
-              <TabsTrigger value="unread" className="flex items-center gap-2">
-                <EyeOff className="h-4 w-4" />
-                Não lidas ({stats.unread})
-              </TabsTrigger>
-              <TabsTrigger value="important" className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Importantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})
-              </TabsTrigger>
-              <TabsTrigger value="archived" className="flex items-center gap-2">
-                <Archive className="h-4 w-4" />
-                Arquivadas ({stats.byStatus.archived || 0})
-              </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configurações
-              </TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="all" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Todas ({stats.total})
+            </TabsTrigger>
+            <TabsTrigger value="unread" className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4" />
+              Não lidas ({stats.unread})
+            </TabsTrigger>
+            <TabsTrigger value="important" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Importantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})
+            </TabsTrigger>
+            <TabsTrigger value="archived" className="flex items-center gap-2">
+              <Archive className="h-4 w-4" />
+              Arquivadas ({stats.byStatus.archived || 0})
+            </TabsTrigger>
+            <TabsTrigger value="preferences" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configurações
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value={activeTab} className="mt-4">
-              {activeTab === 'preferences' ? (
-                <NotificationPreferences />
-              ) : loading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Card key={i} className="animate-pulse">
-                      <CardContent className="p-4">
-                        <div className="flex items-start space-x-4">
-                          <div className="w-4 h-4 bg-gray-200 rounded"></div>
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                          </div>
+          <TabsContent value={activeTab} className="mt-4">
+            {activeTab === 'preferences' ? (
+              <NotificationPreferences />
+            ) : loading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : filteredNotifications.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                      Nenhuma notificação encontrada
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {activeTab === 'all' 
-                        ? 'Você não tem notificações no momento.' 
-                        : `Nenhuma notificação ${activeTab === 'unread' ? 'não lida' : activeTab} encontrada.`
-                      }
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <ExpandableNotificationsList
-                  notifications={filteredNotifications}
-                  selectedNotifications={selectedNotifications}
-                  onSelectNotification={handleSelectNotification}
-                  onSelectAll={handleSelectAll}
-                  onMarkAsRead={markAsRead}
-                  onMarkAsUnread={markAsUnread}
-                  onArchive={archiveNotification}
-                  onDelete={dismissNotification}
-                  onActionClick={handleActionClick}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : filteredNotifications.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                    Nenhuma notificação encontrada
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {activeTab === 'all'
+                      ? 'Você não tem notificações no momento.'
+                      : `Nenhuma notificação ${activeTab === 'unread' ? 'não lida' : activeTab} encontrada.`
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <ExpandableNotificationsList
+                notifications={filteredNotifications}
+                selectedNotifications={selectedNotifications}
+                onSelectNotification={handleSelectNotification}
+                onSelectAll={handleSelectAll}
+                onMarkAsRead={markAsRead}
+                onMarkAsUnread={markAsUnread}
+                onArchive={archiveNotification}
+                onDelete={dismissNotification}
+                onActionClick={handleActionClick}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -652,10 +622,7 @@ const ExpandableNotificationsList: React.FC<ExpandableNotificationsListProps> = 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Checkbox
-            checked={allSelected}
-            ref={(el) => {
-              if (el) el.indeterminate = someSelected;
-            }}
+            checked={someSelected ? 'indeterminate' : allSelected}
             onCheckedChange={onSelectAll}
           />
           <span className="text-sm text-muted-foreground">

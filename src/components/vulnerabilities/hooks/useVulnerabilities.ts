@@ -98,7 +98,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       // Use normal supabase client (with RLS)
       let query = supabase
         .from('vulnerabilities')
-        .select('*', { count: 'exact' })
+        .select('*, groups(name)', { count: 'exact' })
         .eq('tenant_id', effectiveTenantId);
 
       // Apply filters

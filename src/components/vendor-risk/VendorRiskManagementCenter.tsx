@@ -360,10 +360,10 @@ export const VendorRiskManagementCenter: React.FC = () => {
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-muted-foreground">
-                  <Shield className="h-4 w-4 text-green-500" /> Certificados
+                  <Shield className="h-4 w-4 text-green-500" /> Baixo Risco
                 </span>
                 <span className="font-medium">
-                  {vendors.filter(v => v.security_score > 80).length}
+                  {vendors.filter(v => v.criticality_level === 'low').length}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">

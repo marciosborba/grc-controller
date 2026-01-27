@@ -39,6 +39,7 @@ import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 
 // Importar seções
 import { UserManagementSection } from './sections/UserManagementSection';
+import { GroupManagementSection } from './sections/GroupManagementSection';
 // import { SecurityConfigSection } from './sections/SecurityConfigSection';
 import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 // import { SSOConfigSection } from './sections/SSOConfigSection';
@@ -481,7 +482,7 @@ const TenantSettingsPage: React.FC = () => {
 
       {/* Tabs de Configuração */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10">
           <TabsTrigger value="overview" className="flex items-center space-x-1">
             <Eye className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -489,6 +490,10 @@ const TenantSettingsPage: React.FC = () => {
           <TabsTrigger value="users" className="flex items-center space-x-1">
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Usuários</span>
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="flex items-center space-x-1">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Grupos</span>
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center space-x-1">
             <Shield className="h-4 w-4" />
@@ -670,6 +675,11 @@ const TenantSettingsPage: React.FC = () => {
               }
             }}
           />
+        </TabsContent>
+
+        {/* Gerenciamento de Grupos */}
+        <TabsContent value="groups">
+          <GroupManagementSection tenantId={currentTenantId} />
         </TabsContent>
 
         <TabsContent value="security">
