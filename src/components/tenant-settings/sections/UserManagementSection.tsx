@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,6 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GroupManagementSection } from './GroupManagementSection';
 import {
   Select,
   SelectContent,
@@ -29,14 +31,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Mail, 
-  Shield, 
-  Clock, 
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Mail,
+  Shield,
+  Clock,
   Search,
   UserCheck,
   UserX,
@@ -69,9 +71,9 @@ interface UserManagementSectionProps {
 
 export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   tenantId,
-  onUserChange = () => {},
-  onSettingsChange = () => {},
-  onMetricsUpdate = () => {}
+  onUserChange = () => { },
+  onSettingsChange = () => { },
+  onMetricsUpdate = () => { }
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +92,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     phone: '',
     send_invitation: true
   });
-  
+
   // Hook de permissões
   const permissions = usePermissions();
 
@@ -100,43 +102,43 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   const loadUsers = async () => {
     setIsLoading(true);
-    
+
     try {
       if (!tenantId) {
         setUsers([]);
         onMetricsUpdate({ totalUsers: 0, activeUsers: 0 });
         return;
       }
-      
+
       // Carregar usuários reais do banco de dados
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
-        
+
       if (profilesError) {
         toast.error(`Erro ao carregar usuários: ${profilesError.message}`);
         return;
       }
-      
+
       if (!profilesData || profilesData.length === 0) {
         setUsers([]);
         onMetricsUpdate({ totalUsers: 0, activeUsers: 0 });
         return;
       }
-      
+
       // Buscar roles dos usuários da tabela user_roles
       const userIds = profilesData.map(p => p.user_id).filter(Boolean);
       let userRolesData: any[] = [];
-      
+
       if (userIds.length > 0) {
         try {
           const { data: rolesData, error: rolesError } = await supabase
             .from('user_roles')
             .select('user_id, role')
             .in('user_id', userIds);
-            
+
           if (rolesError) {
             userRolesData = [];
           } else {
@@ -146,10 +148,10 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           userRolesData = [];
         }
       }
-      
+
       // Buscar últimos logins dos usuários
       let lastLoginsData: any[] = [];
-      
+
       if (userIds.length > 0) {
         try {
           const { data: loginsData, error: loginsError } = await supabase
@@ -159,7 +161,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
             .eq('action', 'login')
             .in('user_id', userIds)
             .order('created_at', { ascending: false });
-            
+
           if (loginsError) {
             lastLoginsData = [];
           } else {
@@ -169,21 +171,21 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           lastLoginsData = [];
         }
       }
-      
+
       // Processar dados dos usuários
       const realUsers: User[] = profilesData.map((profile, index) => {
         // Encontrar último login do usuário
         const lastLogin = lastLoginsData.find(log => log.user_id === profile.user_id);
-        
+
         // Buscar roles do usuário
         const userRoles = userRolesData.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role);
-        
+
         // Determinar role principal
         let role: User['role'] = 'user';
         if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
         else if (userRoles.includes('admin')) role = 'admin';
         else if (userRoles.includes('super_admin')) role = 'admin';
-        
+
         // Determinar status baseado no user_id e is_active
         let status: User['status'] = 'active';
         try {
@@ -200,7 +202,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         } catch (error) {
           status = 'active';
         }
-        
+
         const processedUser = {
           id: profile.id || `unknown_${index}`,
           email: profile.email || '',
@@ -213,19 +215,19 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           phone: profile.phone || undefined,
           mfa_enabled: false // TODO: Implementar quando houver campo MFA
         };
-        
+
         return processedUser;
       });
-      
-      
+
+
       setUsers(realUsers);
-      
+
       // Atualizar métricas para sincronizar com o card
       // Contar apenas usuários ativos e pendentes (excluir inativos)
       const activeAndPendingUsers = realUsers.filter(u => u.status !== 'inactive');
       const totalUsers = activeAndPendingUsers.length;
       const activeUsers = realUsers.filter(u => u.status === 'active').length;
-      
+
       // Métricas calculadas: total de usuários ativos/pendentes e usuários com status ativo
       onMetricsUpdate({ totalUsers, activeUsers });
     } catch (error) {
@@ -238,45 +240,45 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.department?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    
+
     return matchesSearch && matchesRole;
   });
 
   const handleCreateUser = async () => {
     try {
       setIsCreating(true);
-      
+
       // Validações básicas
       if (!formData.email || formData.email.trim() === '') {
         toast.error('Email é obrigatório');
         setIsCreating(false);
         return;
       }
-      
+
       if (!formData.full_name || formData.full_name.trim() === '') {
         toast.error('Nome é obrigatório');
         setIsCreating(false);
         return;
       }
-      
+
       if (!tenantId) {
         toast.error('Erro: Tenant ID não encontrado');
         setIsCreating(false);
         return;
       }
-      
+
       // Verificar se email já existe
       const { data: existingUsers, error: checkError } = await supabase
         .from('profiles')
         .select('email')
         .eq('email', formData.email);
-        
+
       if (checkError) {
         toast.error('Erro ao verificar email existente');
         setIsCreating(false);
@@ -286,7 +288,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         setIsCreating(false);
         return;
       }
-      
+
       // Validar formato do email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
@@ -294,34 +296,34 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         setIsCreating(false);
         return;
       }
-      
+
       // Verificar permissões usando o hook
       if (permissions.isLoading) {
         toast.error('Verificando permissões...');
         setIsCreating(false);
         return;
       }
-      
+
       if (!permissions.canAccessTenant(tenantId)) {
         toast.error('Você não tem permissão para criar usuários nesta organização');
         setIsCreating(false);
         return;
       }
-      
-      
+
+
       // Verificar tenant
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('id, name')
         .eq('id', tenantId)
         .single();
-        
+
       if (tenantError || !tenantData) {
         toast.error('Erro: Organização não encontrada');
         setIsCreating(false);
         return;
       }
-      
+
       // PASSO 1: Criar profile sem user_id (convite)
       const profileData = {
         full_name: formData.full_name.trim(),
@@ -332,32 +334,32 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         phone: formData.phone?.trim() || null
         // user_id não enviado (será null) - usuário se vincula quando fazer login
       };
-      
-      
+
+
       const { data: newProfile, error: insertError } = await supabase
         .from('profiles')
         .insert(profileData)
         .select('*')
         .single();
-      
+
       if (insertError) {
         toast.error(`Erro Profile: ${insertError.message}`);
         setIsCreating(false);
         return;
       }
-      
-      
+
+
       // Nota: Role será criada quando o usuário se registrar com um user_id válido
-      
+
       // Finalizar
       setIsCreateDialogOpen(false);
       resetForm();
       await loadUsers();
       onUserChange();
       onSettingsChange();
-      
+
       toast.success('Convite criado! O usuário deve se registrar para ativar a conta.');
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       toast.error(`Erro inesperado: ${errorMessage}`);
@@ -371,23 +373,23 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       toast.error('Nenhum usuário selecionado');
       return;
     }
-    
+
     try {
       setIsProcessing(true);
-      
+
       // Validações básicas
       if (!formData.full_name || formData.full_name.trim() === '') {
         toast.error('Nome é obrigatório');
         setIsProcessing(false);
         return;
       }
-      
+
       if (!formData.email || formData.email.trim() === '') {
         toast.error('Email é obrigatório');
         setIsProcessing(false);
         return;
       }
-      
+
       // Validar formato do email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
@@ -395,7 +397,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         setIsProcessing(false);
         return;
       }
-      
+
       // Verificar se email já existe para outro usuário
       if (formData.email !== selectedUser.email) {
         const { data: existingUsers, error: checkError } = await supabase
@@ -403,7 +405,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           .select('id')
           .eq('email', formData.email)
           .neq('id', selectedUser.id);
-          
+
         if (checkError) {
           toast.error('Erro ao verificar email existente');
           setIsProcessing(false);
@@ -414,7 +416,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           return;
         }
       }
-      
+
       // Atualizar no banco de dados se for usuário real (não temporário)
       if (!selectedUser.id.startsWith('temp_')) {
         const updateData = {
@@ -424,18 +426,18 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           phone: formData.phone || null,
           updated_at: new Date().toISOString()
         };
-        
+
         const { error: updateError } = await supabase
           .from('profiles')
           .update(updateData)
           .eq('id', selectedUser.id);
-          
+
         if (updateError) {
           toast.error('Erro ao atualizar usuário no banco de dados');
           setIsProcessing(false);
           return;
         }
-        
+
         // Atualizar role se necessário (tabela user_roles)
         if (formData.role !== selectedUser.role) {
           // Buscar user_id do profile
@@ -444,14 +446,14 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
             .select('user_id')
             .eq('id', selectedUser.id)
             .single();
-            
+
           if (profileData?.user_id) {
             // Remover roles antigas
             await supabase
               .from('user_roles')
               .delete()
               .eq('user_id', profileData.user_id);
-              
+
             // Adicionar nova role
             await supabase
               .from('user_roles')
@@ -463,20 +465,20 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
               });
           }
         }
-        
+
       }
-      
+
       // Fechar diálogo e resetar estado
       setIsEditDialogOpen(false);
       setSelectedUser(null);
       resetForm();
-      
+
       // Recarregar dados do banco para garantir sincronização
       await loadUsers();
-      
+
       onUserChange();
       onSettingsChange();
-      
+
       toast.success('Usuário atualizado com sucesso!');
     } catch (error) {
       toast.error('Erro ao atualizar usuário');
@@ -488,23 +490,23 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const handleDeleteUser = async (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-    
+
     // Verificar se é usuário pendente (convite) ou usuário ativo/inativo
     if (user.status === 'pending') {
       if (!confirm(`Tem certeza que deseja excluir o convite para ${user.full_name}?\n\nEsta ação não pode ser desfeita.`)) return;
-      
+
       try {
         // Excluir permanentemente da tabela profiles (é apenas um convite)
         const { error: deleteError } = await supabase
           .from('profiles')
           .delete()
           .eq('id', userId);
-          
+
         if (deleteError) {
           toast.error('Erro ao excluir convite: ' + deleteError.message);
           return;
         }
-        
+
         toast.success('Convite excluído com sucesso!');
       } catch (error) {
         toast.error('Erro inesperado ao excluir convite');
@@ -512,7 +514,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     } else {
       // Para usuários ativos/inativos, apenas inativar
       if (!confirm(`Tem certeza que deseja inativar o usuário ${user.full_name}?\n\nO usuário ficará inativo mas poderá ser reativado posteriormente.`)) return;
-      
+
       try {
         // Marcar usuário como inativo (soft delete)
         const { error: deactivateError } = await supabase
@@ -522,21 +524,21 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
-          
+
         if (deactivateError) {
           toast.error('Erro ao desativar usuário no banco de dados');
           return;
         }
-        
+
         toast.success('Usuário inativado com sucesso!');
       } catch (error) {
         toast.error('Erro inesperado ao inativar usuário');
       }
     }
-    
+
     // Recarregar dados do banco para garantir sincronização
     await loadUsers();
-    
+
     onUserChange();
     onSettingsChange();
   };
@@ -544,17 +546,17 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const handleToggleUserStatus = async (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-    
+
     // Não permitir toggle para usuários pendentes (convites)
     if (user.status === 'pending') {
       toast.error('Não é possível ativar/desativar convites pendentes. Use excluir para remover o convite.');
       return;
     }
-    
+
     try {
       const newStatus = user.status === 'active' ? 'inactive' : 'active';
       const isActive = newStatus === 'active';
-      
+
       // Atualizar no banco de dados se for usuário real (não temporário)
       if (!user.id.startsWith('temp_')) {
         const { error: updateError } = await supabase
@@ -564,20 +566,20 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
             updated_at: new Date().toISOString()
           })
           .eq('id', userId);
-          
+
         if (updateError) {
           toast.error('Erro ao atualizar status no banco de dados');
           return;
         }
-        
+
       }
-      
+
       // Recarregar dados do banco para garantir sincronização
       await loadUsers();
-      
+
       onUserChange();
       onSettingsChange();
-      
+
       toast.success(`Usuário ${newStatus === 'active' ? 'ativado' : 'desativado'} com sucesso!`);
     } catch (error) {
       toast.error('Erro ao atualizar status do usuário');
@@ -597,7 +599,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
-    
+
     const newFormData = {
       email: user.email,
       full_name: user.full_name,
@@ -606,7 +608,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       phone: user.phone || '',
       send_invitation: false
     };
-    
+
     setFormData(newFormData);
     setIsEditDialogOpen(true);
   };
@@ -657,7 +659,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                 Você não tem permissão para gerenciar usuários nesta organização.
               </p>
               <p className="text-sm text-muted-foreground">
-                Para obter acesso, solicite ao administrador da plataforma que atribua 
+                Para obter acesso, solicite ao administrador da plataforma que atribua
                 a role de 'admin' ou 'tenant_admin' ao seu usuário.
               </p>
             </div>
@@ -667,359 +669,380 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     );
   }
 
+
+
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Gerenciamento de Usuários
-              </CardTitle>
-              <CardDescription>
-                Gerencie usuários da sua organização
-              </CardDescription>
-            </div>
-            
-            {permissions.canAccessTenant(tenantId) && (
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={resetForm}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Usuário
-                  </Button>
-                </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Criar Novo Usuário</DialogTitle>
-                  <DialogDescription>
-                    Adicione um novo usuário à sua organização.
-                  </DialogDescription>
-                </DialogHeader>
+      <Tabs defaultValue="users" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="users" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Usuários</span>
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="flex items-center space-x-2">
+            <Users className="h-4 w-4" />
+            <span>Grupos</span>
+          </TabsTrigger>
+        </TabsList>
 
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="full_name">Nome Completo</Label>
-                    <Input
-                      id="full_name"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="role">Função</Label>
-                    <Select
-                      value={formData.role}
-                      onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="department">Departamento</Label>
-                    <Input
-                      id="department"
-                      value={formData.department}
-                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="phone">Telefone</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="send_invitation"
-                      checked={formData.send_invitation}
-                      onCheckedChange={(checked) => setFormData({ ...formData, send_invitation: checked })}
-                    />
-                    <Label htmlFor="send_invitation">Enviar convite por email</Label>
-                  </div>
+        <TabsContent value="users">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Gerenciamento de Usuários
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie usuários da sua organização
+                  </CardDescription>
                 </div>
 
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={handleCreateUser} disabled={isCreating}>
-                    {isCreating ? 'Criando...' : 'Criar Usuário'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            )}
-            
-            {!permissions.canAccessTenant(tenantId) && !permissions.isLoading && (
-              <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                🔒 Apenas administradores podem gerenciar usuários
-              </div>
-            )}
-          </div>
-        </CardHeader>
+                {permissions.canAccessTenant(tenantId) && (
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={resetForm}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Usuário
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Criar Novo Usuário</DialogTitle>
+                        <DialogDescription>
+                          Adicione um novo usuário à sua organização.
+                        </DialogDescription>
+                      </DialogHeader>
 
-        <CardContent>
-          {/* Filtros */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar por nome, email ou departamento..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filtrar por função" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as funções</SelectItem>
-                <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tabela de Usuários */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Último Login</TableHead>
-                  <TableHead>MFA</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.full_name}</div>
-                        <div className="text-sm text-muted-foreground">{user.email}</div>
-                        {user.department && (
-                          <div className="text-xs text-muted-foreground">{user.department}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {getRoleLabel(user.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(user.status)}
-                    </TableCell>
-                    <TableCell>
-                      {user.last_login ? (
-                        <div className="text-sm">
-                          {new Date(user.last_login).toLocaleDateString('pt-BR')}
-                          <div className="text-xs text-muted-foreground">
-                            {new Date(user.last_login).toLocaleTimeString('pt-BR')}
-                          </div>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            required
+                          />
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">Nunca</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {user.mfa_enabled ? (
-                        <Badge className="bg-green-600 text-white">
-                          <Shield className="h-3 w-3 mr-1" />
-                          Ativo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-orange-600">
-                          Inativo
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditDialog(user);
-                          }}
-                          title="Editar usuário"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        
-                        {user.status === 'pending' ? (
-                          // Para convites pendentes: apenas excluir
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteUser(user.id);
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                            title="Excluir convite"
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="full_name">Nome Completo</Label>
+                          <Input
+                            id="full_name"
+                            value={formData.full_name}
+                            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="role">Função</Label>
+                          <Select
+                            value={formData.role}
+                            onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          // Para usuários ativos/inativos: toggle status + inativar
-                          <>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">Usuário</SelectItem>
+                              <SelectItem value="admin">Administrador</SelectItem>
+                              <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="department">Departamento</Label>
+                          <Input
+                            id="department"
+                            value={formData.department}
+                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="phone">Telefone</Label>
+                          <Input
+                            id="phone"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="send_invitation"
+                            checked={formData.send_invitation}
+                            onCheckedChange={(checked) => setFormData({ ...formData, send_invitation: checked })}
+                          />
+                          <Label htmlFor="send_invitation">Enviar convite por email</Label>
+                        </div>
+                      </div>
+
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleCreateUser} disabled={isCreating}>
+                          {isCreating ? 'Criando...' : 'Criar Usuário'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+
+                {!permissions.canAccessTenant(tenantId) && !permissions.isLoading && (
+                  <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                    🔒 Apenas administradores podem gerenciar usuários
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              {/* Filtros */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar por nome, email ou departamento..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filtrar por função" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as funções</SelectItem>
+                    <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="user">Usuário</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tabela de Usuários */}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Função</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Último Login</TableHead>
+                      <TableHead>MFA</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{user.full_name}</div>
+                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                            {user.department && (
+                              <div className="text-xs text-muted-foreground">{user.department}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getRoleLabel(user.role)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(user.status)}
+                        </TableCell>
+                        <TableCell>
+                          {user.last_login ? (
+                            <div className="text-sm">
+                              {new Date(user.last_login).toLocaleDateString('pt-BR')}
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(user.last_login).toLocaleTimeString('pt-BR')}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Nunca</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {user.mfa_enabled ? (
+                            <Badge className="bg-green-600 text-white">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Ativo
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-orange-600">
+                              Inativo
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleToggleUserStatus(user.id);
+                                openEditDialog(user);
                               }}
-                              title={user.status === 'active' ? 'Desativar usuário' : 'Reativar usuário'}
+                              title="Editar usuário"
                             >
-                              {user.status === 'active' ? (
-                                <UserX className="h-4 w-4" />
-                              ) : (
-                                <UserCheck className="h-4 w-4" />
-                              )}
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
 
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm || selectedRole !== 'all' 
-                ? 'Nenhum usuário encontrado com os filtros aplicados.'
-                : 'Nenhum usuário cadastrado.'
-              }
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                            {user.status === 'pending' ? (
+                              // Para convites pendentes: apenas excluir
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteUser(user.id);
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                                title="Excluir convite"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              // Para usuários ativos/inativos: toggle status + inativar
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleUserStatus(user.id);
+                                  }}
+                                  title={user.status === 'active' ? 'Desativar usuário' : 'Reativar usuário'}
+                                >
+                                  {user.status === 'active' ? (
+                                    <UserX className="h-4 w-4" />
+                                  ) : (
+                                    <UserCheck className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-      {/* Dialog de Edição */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              Atualize as informações do usuário.
-            </DialogDescription>
-          </DialogHeader>
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm || selectedRole !== 'all'
+                    ? 'Nenhum usuário encontrado com os filtros aplicados.'
+                    : 'Nenhum usuário cadastrado.'
+                  }
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit_email">Email</Label>
-              <Input
-                id="edit_email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+          {/* Dialog de Edição */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Editar Usuário</DialogTitle>
+                <DialogDescription>
+                  Atualize as informações do usuário.
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit_full_name">Nome Completo</Label>
-              <Input
-                id="edit_full_name"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                required
-              />
-            </div>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_email">Email</Label>
+                  <Input
+                    id="edit_email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit_role">Função</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_full_name">Nome Completo</Label>
+                  <Input
+                    id="edit_full_name"
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    required
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit_department">Departamento</Label>
-              <Input
-                id="edit_department"
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              />
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_role">Função</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit_phone">Telefone</Label>
-              <Input
-                id="edit_phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-          </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_department">Departamento</Label>
+                  <Input
+                    id="edit_department"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  />
+                </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => {
-              setIsEditDialogOpen(false);
-            }}>
-              Cancelar
-            </Button>
-            <Button 
-              type="button"
-              onClick={handleEditUser}
-              disabled={isProcessing}
-            >
-              {isProcessing ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_phone">Telefone</Label>
+                  <Input
+                    id="edit_phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleEditUser}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <GroupManagementSection tenantId={tenantId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
