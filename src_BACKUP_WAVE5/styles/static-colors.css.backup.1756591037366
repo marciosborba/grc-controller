@@ -1,0 +1,184 @@
+/* ============================================================================ */
+/* SISTEMA DE CORES ESTÁTICO - GRC CONTROLLER */
+/* ============================================================================ */
+/* Arquivo atualizado automaticamente pelo Static Color Controller */
+/* Última atualização: 30/08/2025, 18:51:54 */
+
+@layer base {
+  /* ========================================================================== */
+  /* LIGHT MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  :root {
+    --primary: 274 42% 36%;
+    --primary-hover: 173 88% 54%;
+    --primary-glow: 173 95% 78%;
+    --background: 0 0% 100%;
+    --foreground: 225 71% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 71% 12%;
+    --border: 214 32% 91%;
+    --muted: 210 20% 96%;
+    --success: 142 76% 36%;
+    --warning: 38 92% 50%;
+    --danger: 0 84% 60%;
+    --risk-critical: 0 84% 60%;
+    --risk-high: 24 95% 53%;
+    --risk-medium: 38 92% 50%;
+    --risk-low: 142 76% 36%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+  }
+
+  /* ========================================================================== */
+  /* DARK MODE - CORES PRINCIPAIS */  
+  /* ========================================================================== */
+  .dark {
+    --primary: 173 88% 58%;
+    --primary-hover: 173 88% 54%;
+    --primary-glow: 173 95% 78%;
+    --background: 222 18% 4%;
+    --foreground: 0 0% 100%;
+    --card: 215 8% 12%;
+    --card-foreground: 0 0% 100%;
+    --border: 215 10% 22%;
+    --muted: 215 12% 16%;
+    --success: 142 76% 46%;
+    --warning: 38 92% 60%;
+    --danger: 0 84% 70%;
+    --risk-critical: 0 84% 70%;
+    --risk-high: 24 95% 63%;
+    --risk-medium: 38 92% 60%;
+    --risk-low: 142 76% 46%;
+    --sidebar-background: 215 8% 12%;
+    --sidebar-foreground: 0 0% 100%;
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões primários */
+  .btn-primary, 
+  .bg-primary {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  .btn-primary:hover, 
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover));
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Estados de risco GRC */
+  .risk-critical, [data-risk="critical"] {
+    background-color: hsl(var(--risk-critical));
+    color: hsl(var(--danger-foreground));
+  }
+
+  .risk-high, [data-risk="high"] {
+    background-color: hsl(var(--risk-high));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-medium, [data-risk="medium"] {
+    background-color: hsl(var(--risk-medium));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-low, [data-risk="low"] {
+    background-color: hsl(var(--risk-low));
+    color: hsl(var(--success-foreground));
+  }
+
+  /* Estados funcionais */
+  .status-success, [data-status="success"] {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+
+  .status-warning, [data-status="warning"] {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .status-danger, [data-status="danger"] {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+  /* Muted backgrounds */
+  .bg-muted {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Secondary colors */
+  .bg-secondary {
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+  }
+
+  /* Popover and dropdowns */
+  .popover, [data-radix-popper-content-wrapper] {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+}

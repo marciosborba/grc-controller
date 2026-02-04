@@ -1,0 +1,1070 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { Play, Pause, Save, Send, FileText, Clock, Users, CheckCircle, AlertTriangle, Eye, Upload, Download } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { supabase } from '@/integrations/supabase/client';
+import { Assessment, AssessmentFramework, AssessmentDomain, AssessmentControl, AssessmentQuestion, AssessmentResponse, AssessmentFormData, ResponseFormData } from '@/types/assessment';
+import { sanitizeInput, sanitizeObject, auditLog } from '@/utils/securityLogger';
+import { useCRUDRateLimit } from '@/hooks/useRateLimit';
+
+export default function AssessmentExecution() {
+  const { user, effectiveTenantId } = useAuth();
+  const rateLimitCRUD = useCRUDRateLimit(user?.id || 'anonymous');
+
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [frameworks, setFrameworks] = useState<AssessmentFramework[]>([]);
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [assessmentStructure, setAssessmentStructure] = useState<{
+    domains: AssessmentDomain[];
+    controls: AssessmentControl[];
+    questions: AssessmentQuestion[];
+    responses: AssessmentResponse[];
+  }>({
+    domains: [],
+    controls: [],
+    questions: [],
+    responses: []
+  });
+  const [currentDomain, setCurrentDomain] = useState<AssessmentDomain | null>(null);
+  const [currentControl, setCurrentControl] = useState<AssessmentControl | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCreateAssessmentOpen, setIsCreateAssessmentOpen] = useState(false);
+
+  const [assessmentForm, setAssessmentForm] = useState<AssessmentFormData>({
+    codigo: '',
+    titulo: '',
+    descricao: '',
+    framework_id: '',
+    area_avaliada: '',
+    unidade_organizacional: '',
+    escopo: '',
+    objetivos: '',
+    data_inicio: '',
+    data_fim_planejada: '',
+    responsavel_assessment: '',
+    coordenador_assessment: '',
+    avaliadores: [],
+    participantes: []
+  });
+
+  const [currentResponses, setCurrentResponses] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    loadAssessments();
+    loadFrameworks();
+  }, [effectiveTenantId]);
+
+  useEffect(() => {
+    if (selectedAssessment) {
+      loadAssessmentStructure(selectedAssessment.id);
+    }
+  }, [selectedAssessment]);
+
+  const loadAssessments = async () => {
+    try {
+      if (!rateLimitCRUD.checkRateLimit('read')) {
+        toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('assessments')
+        .select(`
+          *,
+          framework:assessment_frameworks(nome, codigo, versao),
+          responsavel_profile:profiles!assessments_responsavel_assessment_fkey(full_name),
+          coordenador_profile:profiles!assessments_coordenador_assessment_fkey(full_name)
+        `)
+        .eq('tenant_id', effectiveTenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setAssessments(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar assessments:', error);
+      toast.error('Erro ao carregar assessments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadFrameworks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assessment_frameworks')
+        .select('*')
+        .eq('tenant_id', effectiveTenantId)
+        .eq('status', 'ativo')
+        .order('nome', { ascending: true });
+
+      if (error) throw error;
+
+      setFrameworks(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar frameworks:', error);
+      toast.error('Erro ao carregar frameworks');
+    }
+  };
+
+  const loadAssessmentStructure = async (assessmentId: string) => {
+    try {
+      const assessment = assessments.find(a => a.id === assessmentId);
+      if (!assessment) return;
+
+      // Carregar domínios
+      const { data: domains, error: domainsError } = await supabase
+        .from('assessment_domains')
+        .select('*')
+        .eq('framework_id', assessment.framework_id)
+        .eq('tenant_id', effectiveTenantId)
+        .eq('ativo', true)
+        .order('ordem', { ascending: true });
+
+      if (domainsError) throw domainsError;
+
+      // Carregar controles
+      const { data: controls, error: controlsError } = await supabase
+        .from('assessment_controls')
+        .select('*')
+        .eq('framework_id', assessment.framework_id)
+        .eq('tenant_id', effectiveTenantId)
+        .eq('ativo', true)
+        .order('ordem', { ascending: true });
+
+      if (controlsError) throw controlsError;
+
+      // Carregar questões
+      const controlIds = controls?.map(c => c.id) || [];
+      const { data: questions, error: questionsError } = await supabase
+        .from('assessment_questions')
+        .select('*')
+        .in('control_id', controlIds)
+        .eq('tenant_id', effectiveTenantId)
+        .eq('ativa', true)
+        .order('ordem', { ascending: true });
+
+      if (questionsError) throw questionsError;
+
+      // Carregar respostas existentes
+      const { data: responses, error: responsesError } = await supabase
+        .from('assessment_responses')
+        .select(`
+          *,
+          question:assessment_questions(texto, tipo_pergunta, opcoes_resposta),
+          control:assessment_controls(titulo, codigo),
+          respondido_por_profile:profiles!assessment_responses_respondido_por_fkey(full_name)
+        `)
+        .eq('assessment_id', assessmentId)
+        .eq('tenant_id', effectiveTenantId);
+
+      if (responsesError) throw responsesError;
+
+      setAssessmentStructure({
+        domains: domains || [],
+        controls: controls || [],
+        questions: questions || [],
+        responses: responses || []
+      });
+
+      // Definir o primeiro domínio como atual
+      if (domains && domains.length > 0) {
+        setCurrentDomain(domains[0]);
+        const domainControls = controls?.filter(c => c.domain_id === domains[0].id) || [];
+        if (domainControls.length > 0) {
+          setCurrentControl(domainControls[0]);
+        }
+      }
+
+      // Preparar respostas atuais para edição
+      const responsesMap: Record<string, any> = {};
+      responses?.forEach(response => {
+        responsesMap[response.question_id] = {
+          id: response.id,
+          resposta_texto: response.resposta_texto,
+          resposta_numerica: response.resposta_numerica,
+          resposta_booleana: response.resposta_booleana,
+          resposta_data: response.resposta_data,
+          resposta_multipla_escolha: response.resposta_multipla_escolha,
+          evidencias: response.evidencias,
+          justificativa: response.justificativa,
+          comentarios: response.comentarios,
+          fonte_informacao: response.fonte_informacao,
+          confiabilidade_resposta: response.confiabilidade_resposta
+        };
+      });
+      setCurrentResponses(responsesMap);
+
+    } catch (error) {
+      console.error('Erro ao carregar estrutura do assessment:', error);
+      toast.error('Erro ao carregar estrutura do assessment');
+    }
+  };
+
+  const handleCreateAssessment = async () => {
+    try {
+      if (!rateLimitCRUD.checkRateLimit('create')) {
+        toast.error('Limite de operações excedido. Tente novamente em alguns segundos.');
+        return;
+      }
+
+      const sanitizedFormData = sanitizeObject({
+        ...assessmentForm,
+        codigo: sanitizeInput(assessmentForm.codigo),
+        titulo: sanitizeInput(assessmentForm.titulo),
+        descricao: sanitizeInput(assessmentForm.descricao),
+        area_avaliada: sanitizeInput(assessmentForm.area_avaliada),
+        unidade_organizacional: sanitizeInput(assessmentForm.unidade_organizacional),
+        escopo: sanitizeInput(assessmentForm.escopo)
+      });
+
+      const assessmentData = {
+        ...sanitizedFormData,
+        tenant_id: effectiveTenantId,
+        objetivos: assessmentForm.objetivos.split(',').map(o => o.trim()).filter(o => o),
+        status: 'planejado' as const,
+        fase_atual: 'preparacao' as const,
+        percentual_conclusao: 0,
+        dominios_avaliados: 0,
+        controles_avaliados: 0,
+        controles_conformes: 0,
+        controles_nao_conformes: 0,
+        controles_parcialmente_conformes: 0,
+        gaps_identificados: 0,
+        created_by: user?.id
+      };
+
+      const { data, error } = await supabase
+        .from('assessments')
+        .insert(assessmentData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      await auditLog('CREATE', 'assessments', {
+        id: data.id,
+        codigo: sanitizedFormData.codigo,
+        titulo: sanitizedFormData.titulo,
+        tenant_id: effectiveTenantId
+      });
+
+      toast.success('Assessment criado com sucesso!');
+      setIsCreateAssessmentOpen(false);
+      setAssessmentForm({
+        codigo: '',
+        titulo: '',
+        descricao: '',
+        framework_id: '',
+        area_avaliada: '',
+        unidade_organizacional: '',
+        escopo: '',
+        objetivos: '',
+        data_inicio: '',
+        data_fim_planejada: '',
+        responsavel_assessment: '',
+        coordenador_assessment: '',
+        avaliadores: [],
+        participantes: []
+      });
+      loadAssessments();
+    } catch (error) {
+      console.error('Erro ao criar assessment:', error);
+      toast.error('Erro ao criar assessment');
+    }
+  };
+
+  const handleSaveResponse = async (questionId: string, responseData: any) => {
+    try {
+      if (!rateLimitCRUD.checkRateLimit('update')) {
+        toast.error('Limite de operações excedido.');
+        return;
+      }
+
+      setIsSaving(true);
+
+      const question = assessmentStructure.questions.find(q => q.id === questionId);
+      const control = assessmentStructure.controls.find(c => c.id === question?.control_id);
+      
+      if (!question || !control || !selectedAssessment) return;
+
+      const sanitizedResponseData = sanitizeObject({
+        ...responseData,
+        justificativa: sanitizeInput(responseData.justificativa || ''),
+        comentarios: sanitizeInput(responseData.comentarios || ''),
+        fonte_informacao: sanitizeInput(responseData.fonte_informacao || '')
+      });
+
+      // Calcular pontuação baseada no tipo de pergunta e resposta
+      let pontuacao_obtida = 0;
+      const pontuacao_maxima = control.pontuacao_maxima;
+
+      if (question.tipo_pergunta === 'escala' && responseData.resposta_numerica) {
+        pontuacao_obtida = responseData.resposta_numerica;
+      } else if (question.tipo_pergunta === 'sim_nao' && responseData.resposta_booleana !== undefined) {
+        pontuacao_obtida = responseData.resposta_booleana ? pontuacao_maxima : 0;
+      } else if (question.tipo_pergunta === 'multipla_escolha' && responseData.resposta_multipla_escolha) {
+        // Pontuação baseada nas opções selecionadas
+        const opcao = question.opcoes_resposta?.find((o: any) => 
+          responseData.resposta_multipla_escolha.includes(o.value)
+        );
+        pontuacao_obtida = opcao?.points || 0;
+      }
+
+      const percentual_conformidade = (pontuacao_obtida / pontuacao_maxima) * 100;
+      
+      let status_conformidade: 'conforme' | 'nao_conforme' | 'parcialmente_conforme' | 'nao_aplicavel' = 'nao_conforme';
+      if (percentual_conformidade >= 80) {
+        status_conformidade = 'conforme';
+      } else if (percentual_conformidade >= 50) {
+        status_conformidade = 'parcialmente_conforme';
+      }
+
+      const responsePayload = {
+        assessment_id: selectedAssessment.id,
+        question_id: questionId,
+        control_id: question.control_id,
+        tenant_id: effectiveTenantId,
+        ...sanitizedResponseData,
+        pontuacao_obtida,
+        pontuacao_maxima,
+        percentual_conformidade,
+        nivel_maturidade: question.tipo_pergunta === 'escala' ? responseData.resposta_numerica : null,
+        status_conformidade,
+        gap_identificado: status_conformidade !== 'conforme',
+        criticidade_gap: status_conformidade !== 'conforme' ? control.criticidade : null,
+        necessita_revisao: false,
+        revisado: false,
+        aprovado: false,
+        respondido_por: user?.id,
+        data_resposta: new Date().toISOString()
+      };
+
+      const existingResponse = assessmentStructure.responses.find(r => r.question_id === questionId);
+
+      if (existingResponse) {
+        const { error } = await supabase
+          .from('assessment_responses')
+          .update(responsePayload)
+          .eq('id', existingResponse.id)
+          .eq('tenant_id', effectiveTenantId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('assessment_responses')
+          .insert(responsePayload);
+
+        if (error) throw error;
+      }
+
+      // Atualizar estado local
+      setCurrentResponses(prev => ({
+        ...prev,
+        [questionId]: responseData
+      }));
+
+      await auditLog('UPDATE', 'assessment_responses', {
+        assessment_id: selectedAssessment.id,
+        question_id: questionId,
+        control_id: question.control_id,
+        tenant_id: effectiveTenantId
+      });
+
+      toast.success('Resposta salva com sucesso!');
+      
+      // Recarregar estrutura para atualizar estatísticas
+      loadAssessmentStructure(selectedAssessment.id);
+
+    } catch (error) {
+      console.error('Erro ao salvar resposta:', error);
+      toast.error('Erro ao salvar resposta');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStartAssessment = async (assessment: Assessment) => {
+    try {
+      if (!rateLimitCRUD.checkRateLimit('update')) {
+        toast.error('Limite de operações excedido.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('assessments')
+        .update({
+          status: 'em_andamento',
+          fase_atual: 'coleta_dados',
+          data_inicio: new Date().toISOString(),
+          updated_by: user?.id
+        })
+        .eq('id', assessment.id)
+        .eq('tenant_id', effectiveTenantId);
+
+      if (error) throw error;
+
+      await auditLog('UPDATE', 'assessments', {
+        id: assessment.id,
+        action: 'start_assessment',
+        tenant_id: effectiveTenantId
+      });
+
+      toast.success('Assessment iniciado com sucesso!');
+      loadAssessments();
+    } catch (error) {
+      console.error('Erro ao iniciar assessment:', error);
+      toast.error('Erro ao iniciar assessment');
+    }
+  };
+
+  const renderQuestionInput = (question: AssessmentQuestion) => {
+    const currentResponse = currentResponses[question.id] || {};
+
+    switch (question.tipo_pergunta) {
+      case 'escala':
+        return (
+          <div className="space-y-3">
+            <RadioGroup
+              value={currentResponse.resposta_numerica?.toString() || ''}
+              onValueChange={(value) => {
+                const responseData = {
+                  ...currentResponse,
+                  resposta_numerica: parseInt(value)
+                };
+                setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                handleSaveResponse(question.id, responseData);
+              }}
+            >
+              {[1, 2, 3, 4, 5].map((level) => (
+                <div key={level} className="flex items-center space-x-2">
+                  <RadioGroupItem value={level.toString()} id={`${question.id}-${level}`} />
+                  <Label htmlFor={`${question.id}-${level}`} className="text-sm">
+                    {level} - {level === 1 ? 'Inicial' : level === 2 ? 'Gerenciado' : level === 3 ? 'Definido' : level === 4 ? 'Quantitativamente Gerenciado' : 'Otimizado'}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        );
+      
+      case 'sim_nao':
+        return (
+          <RadioGroup
+            value={currentResponse.resposta_booleana !== undefined ? currentResponse.resposta_booleana.toString() : ''}
+            onValueChange={(value) => {
+              const responseData = {
+                ...currentResponse,
+                resposta_booleana: value === 'true'
+              };
+              setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+              handleSaveResponse(question.id, responseData);
+            }}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="true" id={`${question.id}-sim`} />
+              <Label htmlFor={`${question.id}-sim`}>Sim</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="false" id={`${question.id}-nao`} />
+              <Label htmlFor={`${question.id}-nao`}>Não</Label>
+            </div>
+          </RadioGroup>
+        );
+      
+      case 'texto_livre':
+        return (
+          <Textarea
+            value={currentResponse.resposta_texto || ''}
+            onChange={(e) => {
+              const responseData = {
+                ...currentResponse,
+                resposta_texto: e.target.value
+              };
+              setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+            }}
+            onBlur={() => handleSaveResponse(question.id, currentResponse)}
+            placeholder="Digite sua resposta..."
+            rows={4}
+          />
+        );
+      
+      case 'numerica':
+        return (
+          <Input
+            type="number"
+            value={currentResponse.resposta_numerica || ''}
+            onChange={(e) => {
+              const responseData = {
+                ...currentResponse,
+                resposta_numerica: parseFloat(e.target.value) || 0
+              };
+              setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+            }}
+            onBlur={() => handleSaveResponse(question.id, currentResponse)}
+            placeholder="Digite um valor numérico"
+          />
+        );
+      
+      case 'data':
+        return (
+          <Input
+            type="date"
+            value={currentResponse.resposta_data || ''}
+            onChange={(e) => {
+              const responseData = {
+                ...currentResponse,
+                resposta_data: e.target.value
+              };
+              setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+              handleSaveResponse(question.id, responseData);
+            }}
+          />
+        );
+      
+      default:
+        return <Input placeholder="Tipo de pergunta não reconhecido" disabled />;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      planejado: 'bg-blue-100 text-blue-800',
+      iniciado: 'bg-green-100 text-green-800',
+      em_andamento: 'bg-yellow-100 text-yellow-800',
+      em_revisao: 'bg-orange-100 text-orange-800',
+      concluido: 'bg-green-100 text-green-800',
+      cancelado: 'bg-red-100 text-red-800'
+    };
+    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  const currentDomainQuestions = assessmentStructure.questions.filter(q => {
+    const control = assessmentStructure.controls.find(c => c.id === q.control_id);
+    return control?.domain_id === currentDomain?.id;
+  });
+
+  const currentControlQuestions = assessmentStructure.questions.filter(q => 
+    q.control_id === currentControl?.id
+  );
+
+  const completedQuestions = currentControlQuestions.filter(q => 
+    currentResponses[q.id] && Object.keys(currentResponses[q.id]).length > 1
+  ).length;
+
+  const completionPercentage = currentControlQuestions.length > 0 
+    ? (completedQuestions / currentControlQuestions.length) * 100 
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Execução de Assessments</h2>
+          <p className="text-muted-foreground">
+            Execute avaliações de maturidade e conformidade
+          </p>
+        </div>
+        <Dialog open={isCreateAssessmentOpen} onOpenChange={setIsCreateAssessmentOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Play className="h-4 w-4 mr-2" />
+              Novo Assessment
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Criar Novo Assessment</DialogTitle>
+              <DialogDescription>
+                Configure um novo assessment para execução
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-codigo">Código</Label>
+                  <Input
+                    id="assessment-codigo"
+                    value={assessmentForm.codigo}
+                    onChange={(e) => setAssessmentForm(prev => ({ ...prev, codigo: e.target.value }))}
+                    placeholder="Ex: ASS-2025-001"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-framework">Framework</Label>
+                  <Select value={assessmentForm.framework_id} onValueChange={(value) => setAssessmentForm(prev => ({ ...prev, framework_id: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um framework" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {frameworks.map((framework) => (
+                        <SelectItem key={framework.id} value={framework.id}>
+                          {framework.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assessment-titulo">Título</Label>
+                <Input
+                  id="assessment-titulo"
+                  value={assessmentForm.titulo}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, titulo: e.target.value }))}
+                  placeholder="Ex: Avaliação de Maturidade ISO 27001 - Q1 2025"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assessment-descricao">Descrição</Label>
+                <Textarea
+                  id="assessment-descricao"
+                  value={assessmentForm.descricao}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, descricao: e.target.value }))}
+                  placeholder="Descrição do assessment"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-area">Área Avaliada</Label>
+                  <Input
+                    id="assessment-area"
+                    value={assessmentForm.area_avaliada}
+                    onChange={(e) => setAssessmentForm(prev => ({ ...prev, area_avaliada: e.target.value }))}
+                    placeholder="Ex: TI, Operações, Compliance"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-unidade">Unidade Organizacional</Label>
+                  <Input
+                    id="assessment-unidade"
+                    value={assessmentForm.unidade_organizacional}
+                    onChange={(e) => setAssessmentForm(prev => ({ ...prev, unidade_organizacional: e.target.value }))}
+                    placeholder="Ex: Matriz, Filial SP"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assessment-escopo">Escopo</Label>
+                <Textarea
+                  id="assessment-escopo"
+                  value={assessmentForm.escopo}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, escopo: e.target.value }))}
+                  placeholder="Defina o escopo da avaliação"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assessment-objetivos">Objetivos (separados por vírgula)</Label>
+                <Textarea
+                  id="assessment-objetivos"
+                  value={assessmentForm.objetivos}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, objetivos: e.target.value }))}
+                  placeholder="Ex: Avaliar maturidade, Identificar gaps, Planejar melhorias"
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-inicio">Data de Início</Label>
+                  <Input
+                    id="assessment-inicio"
+                    type="date"
+                    value={assessmentForm.data_inicio}
+                    onChange={(e) => setAssessmentForm(prev => ({ ...prev, data_inicio: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="assessment-fim">Data de Fim Planejada</Label>
+                  <Input
+                    id="assessment-fim"
+                    type="date"
+                    value={assessmentForm.data_fim_planejada}
+                    onChange={(e) => setAssessmentForm(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateAssessmentOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateAssessment}>
+                Criar Assessment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Tabs defaultValue="lista" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="lista">Lista de Assessments</TabsTrigger>
+          <TabsTrigger value="execucao" disabled={!selectedAssessment}>
+            Execução {selectedAssessment && `(${selectedAssessment.titulo})`}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lista" className="space-y-4">
+          <div className="grid gap-4">
+            {loading ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-sm text-muted-foreground mt-2">Carregando assessments...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : assessments.length === 0 ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium">Nenhum assessment encontrado</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Comece criando seu primeiro assessment
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              assessments.map((assessment) => (
+                <Card 
+                  key={assessment.id} 
+                  className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                    selectedAssessment?.id === assessment.id ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setSelectedAssessment(assessment)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <CardTitle className="text-lg">{assessment.titulo}</CardTitle>
+                        <CardDescription>
+                          {assessment.codigo} • {assessment.framework?.nome}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusBadge(assessment.status)}>
+                          {assessment.status}
+                        </Badge>
+                        <Badge variant="outline">
+                          {assessment.percentual_conclusao}% concluído
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {assessment.descricao}
+                    </p>
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      {assessment.area_avaliada && (
+                        <span className="flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {assessment.area_avaliada}
+                        </span>
+                      )}
+                      {assessment.responsavel_profile && (
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {assessment.responsavel_profile.full_name}
+                        </span>
+                      )}
+                      {assessment.data_fim_planejada && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(assessment.data_fim_planejada).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      {assessment.status === 'planejado' && (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartAssessment(assessment);
+                          }}
+                        >
+                          <Play className="h-3 w-3 mr-1" />
+                          Iniciar
+                        </Button>
+                      )}
+                      {(assessment.status === 'em_andamento' || assessment.status === 'iniciado') && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAssessment(assessment);
+                          }}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          Continuar
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="execucao" className="space-y-4">
+          {selectedAssessment && (
+            <div className="grid gap-6 lg:grid-cols-4">
+              <div className="lg:col-span-1 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Navegação</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {assessmentStructure.domains.map((domain) => {
+                      const domainControls = assessmentStructure.controls.filter(c => c.domain_id === domain.id);
+                      return (
+                        <Button
+                          key={domain.id}
+                          variant={currentDomain?.id === domain.id ? 'default' : 'ghost'}
+                          className="w-full justify-start text-left"
+                          onClick={() => {
+                            setCurrentDomain(domain);
+                            if (domainControls.length > 0) {
+                              setCurrentControl(domainControls[0]);
+                            }
+                          }}
+                        >
+                          <div>
+                            <div className="font-medium">{domain.nome}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {domainControls.length} controles
+                            </div>
+                          </div>
+                        </Button>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {currentDomain && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Controles</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                      {assessmentStructure.controls
+                        .filter(c => c.domain_id === currentDomain.id)
+                        .map((control) => (
+                          <Button
+                            key={control.id}
+                            variant={currentControl?.id === control.id ? 'default' : 'ghost'}
+                            size="sm"
+                            className="w-full justify-start text-left"
+                            onClick={() => setCurrentControl(control)}
+                          >
+                            <div>
+                              <div className="font-medium text-xs">{control.codigo}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {control.titulo}
+                              </div>
+                            </div>
+                          </Button>
+                        ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              <div className="lg:col-span-3 space-y-4">
+                {currentControl && (
+                  <>
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle>{currentControl.titulo}</CardTitle>
+                            <CardDescription>
+                              {currentControl.codigo} • {currentControl.tipo_controle} • 
+                              Criticidade: {currentControl.criticidade}
+                            </CardDescription>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium">
+                              {completedQuestions}/{currentControlQuestions.length} questões
+                            </div>
+                            <Progress value={completionPercentage} className="w-24" />
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {currentControl.descricao}
+                        </p>
+                        {currentControl.objetivo && (
+                          <p className="text-sm">
+                            <strong>Objetivo:</strong> {currentControl.objetivo}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <div className="space-y-4">
+                      {currentControlQuestions.map((question, index) => (
+                        <Card key={question.id}>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base">
+                                Q{index + 1}. {question.texto}
+                                {question.obrigatoria && (
+                                  <Badge variant="destructive" className="ml-2 text-xs">Obrigatória</Badge>
+                                )}
+                              </CardTitle>
+                              {currentResponses[question.id] && Object.keys(currentResponses[question.id]).length > 1 && (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              )}
+                            </div>
+                            {question.descricao && (
+                              <CardDescription>{question.descricao}</CardDescription>
+                            )}
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {renderQuestionInput(question)}
+
+                            <Separator />
+
+                            <div className="grid gap-4">
+                              <div className="space-y-2">
+                                <Label htmlFor={`evidencias-${question.id}`}>Evidências</Label>
+                                <Textarea
+                                  id={`evidencias-${question.id}`}
+                                  value={currentResponses[question.id]?.evidencias?.join('\n') || ''}
+                                  onChange={(e) => {
+                                    const responseData = {
+                                      ...currentResponses[question.id],
+                                      evidencias: e.target.value.split('\n').filter(e => e.trim())
+                                    };
+                                    setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                                  }}
+                                  onBlur={() => handleSaveResponse(question.id, currentResponses[question.id])}
+                                  placeholder="Liste as evidências (uma por linha)"
+                                  rows={2}
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`justificativa-${question.id}`}>Justificativa</Label>
+                                  <Textarea
+                                    id={`justificativa-${question.id}`}
+                                    value={currentResponses[question.id]?.justificativa || ''}
+                                    onChange={(e) => {
+                                      const responseData = {
+                                        ...currentResponses[question.id],
+                                        justificativa: e.target.value
+                                      };
+                                      setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                                    }}
+                                    onBlur={() => handleSaveResponse(question.id, currentResponses[question.id])}
+                                    placeholder="Justifique sua resposta"
+                                    rows={2}
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`comentarios-${question.id}`}>Comentários</Label>
+                                  <Textarea
+                                    id={`comentarios-${question.id}`}
+                                    value={currentResponses[question.id]?.comentarios || ''}
+                                    onChange={(e) => {
+                                      const responseData = {
+                                        ...currentResponses[question.id],
+                                        comentarios: e.target.value
+                                      };
+                                      setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                                    }}
+                                    onBlur={() => handleSaveResponse(question.id, currentResponses[question.id])}
+                                    placeholder="Comentários adicionais"
+                                    rows={2}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`fonte-${question.id}`}>Fonte da Informação</Label>
+                                  <Input
+                                    id={`fonte-${question.id}`}
+                                    value={currentResponses[question.id]?.fonte_informacao || ''}
+                                    onChange={(e) => {
+                                      const responseData = {
+                                        ...currentResponses[question.id],
+                                        fonte_informacao: e.target.value
+                                      };
+                                      setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                                    }}
+                                    onBlur={() => handleSaveResponse(question.id, currentResponses[question.id])}
+                                    placeholder="Ex: Documento, Sistema, Entrevista"
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor={`confiabilidade-${question.id}`}>Confiabilidade (1-5)</Label>
+                                  <Input
+                                    id={`confiabilidade-${question.id}`}
+                                    type="number"
+                                    min="1"
+                                    max="5"
+                                    value={currentResponses[question.id]?.confiabilidade_resposta || ''}
+                                    onChange={(e) => {
+                                      const responseData = {
+                                        ...currentResponses[question.id],
+                                        confiabilidade_resposta: parseInt(e.target.value)
+                                      };
+                                      setCurrentResponses(prev => ({ ...prev, [question.id]: responseData }));
+                                    }}
+                                    onBlur={() => handleSaveResponse(question.id, currentResponses[question.id])}
+                                    placeholder="1-5"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {question.texto_ajuda && (
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm text-blue-700">
+                                  <AlertTriangle className="h-4 w-4 inline mr-1" />
+                                  {question.texto_ajuda}
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
