@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Target } from 'lucide-react';
 import type { MatrixSize, RiskLevel } from '@/types/risk-management';
 import { generateMatrixData, findRiskPositionInMatrix, getTenantMatrixConfig } from '@/utils/risk-analysis';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 interface RiskMatrixProps {
   probabilityScore: number;
@@ -13,16 +13,16 @@ interface RiskMatrixProps {
   qualitativeLevel?: RiskLevel;
 }
 
-const RiskMatrix: React.FC<RiskMatrixProps> = ({ 
-  probabilityScore, 
-  impactScore, 
+const RiskMatrix: React.FC<RiskMatrixProps> = React.memo(({
+  probabilityScore,
+  impactScore,
   matrixSize: propMatrixSize,
   qualitativeLevel
 }) => {
   const { user } = useAuth();
   const [matrixSize, setMatrixSize] = useState<MatrixSize>(propMatrixSize || '4x4');
   const [matrixData, setMatrixData] = useState(generateMatrixData(matrixSize));
-  
+
   useEffect(() => {
     const loadTenantConfig = async () => {
       if (user?.tenant?.id) {
@@ -34,19 +34,19 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
         setMatrixData(generateMatrixData(propMatrixSize));
       }
     };
-    
+
     loadTenantConfig();
   }, [user?.tenant?.id, propMatrixSize]);
-  
+
   const riskPosition = findRiskPositionInMatrix(probabilityScore || 0, impactScore || 0, matrixSize);
-  
+
   const size = matrixSize === '4x4' ? 4 : 5;
   // Responsivo: células menores em mobile, maiores em desktop
-  const cellSize = size === 4 
-    ? 'h-12 w-12 sm:h-16 sm:w-16' 
+  const cellSize = size === 4
+    ? 'h-12 w-12 sm:h-16 sm:w-16'
     : 'h-10 w-10 sm:h-12 sm:w-12';
-  const textSize = size === 4 
-    ? 'text-xs sm:text-sm' 
+  const textSize = size === 4
+    ? 'text-xs sm:text-sm'
     : 'text-[10px] sm:text-xs';
 
   const getQualitativeLevelColor = (level?: RiskLevel) => {
@@ -93,36 +93,36 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
               {/* Label do eixo Y (Impacto) - Escondido em mobile muito pequeno */}
               <div className="flex">
                 <div className="hidden xs:flex flex-col justify-center items-center mr-2 sm:mr-3">
-                  <div 
+                  <div
                     className="text-xs sm:text-sm font-medium text-muted-foreground transform -rotate-90 whitespace-nowrap"
                     style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
                   >
                     IMPACTO
                   </div>
                 </div>
-                
+
                 <div className="space-y-0">
                   {/* Números do eixo Y */}
                   <div className="flex">
                     <div className="flex flex-col space-y-0 mr-1 sm:mr-2">
                       {Array.from({ length: size }, (_, i) => (
-                        <div 
-                          key={i} 
+                        <div
+                          key={i}
                           className={`${cellSize} flex items-center justify-center text-xs sm:text-sm font-medium text-muted-foreground`}
                         >
                           {size - i}
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Grid da matriz */}
                     <div className={`grid grid-rows-${size} gap-0 border-2 border-white shadow-lg`}>
                       {matrixData.slice(0, size).map((row, rowIndex) => (
                         <div key={rowIndex} className={`grid grid-cols-${size} gap-0`}>
                           {row.slice(0, size).map((cell, colIndex) => {
-                            const isRiskPosition = 
+                            const isRiskPosition =
                               rowIndex === riskPosition.y && colIndex === riskPosition.x;
-                            
+
                             return (
                               <div
                                 key={`${rowIndex}-${colIndex}`}
@@ -132,7 +132,7 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                                   hover:scale-105 hover:z-20 hover:shadow-lg
                                   ${isRiskPosition ? 'ring-4 ring-blue-500 ring-offset-2 z-10 shadow-xl' : ''}
                                 `}
-                                style={{ 
+                                style={{
                                   backgroundColor: cell.color,
                                 }}
                               >
@@ -171,13 +171,13 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Label do eixo X (Probabilidade) */}
                   <div className="flex justify-center mt-2">
                     <div className="flex space-x-0 ml-6 sm:ml-10">
                       {Array.from({ length: size }, (_, i) => (
-                        <div 
-                          key={i} 
+                        <div
+                          key={i}
                           className={`${cellSize} flex items-center justify-center text-xs sm:text-sm font-medium text-muted-foreground`}
                         >
                           {i + 1}
@@ -185,7 +185,7 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                       ))}
                     </div>
                   </div>
-                  
+
                   <div className="text-center mt-1">
                     <div className="text-xs sm:text-sm font-medium text-muted-foreground">
                       PROBABILIDADE
@@ -217,7 +217,7 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
                 ]
               ).map(({ level, color, description, range }) => (
                 <div key={level} className="flex items-center space-x-2 bg-white dark:bg-gray-600 px-3 py-2 rounded-lg shadow-sm">
-                  <div 
+                  <div
                     className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-white shadow-md"
                     style={{ backgroundColor: color }}
                   />
@@ -250,13 +250,14 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
             <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
               <h6 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Nível de Risco Qualitativo</h6>
               <div className="inline-flex items-center gap-3 bg-white dark:bg-gray-600 px-4 py-3 rounded-lg shadow-md">
-                <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: 
-                  qualitativeLevel === 'Muito Alto' ? '#ef4444' :
-                  qualitativeLevel === 'Alto' ? '#f97316' :
-                  qualitativeLevel === 'Médio' ? '#eab308' :
-                  qualitativeLevel === 'Baixo' ? '#84cc16' : '#22c55e'
+                <div className="w-3 h-3 rounded-full animate-pulse" style={{
+                  backgroundColor:
+                    qualitativeLevel === 'Muito Alto' ? '#ef4444' :
+                      qualitativeLevel === 'Alto' ? '#f97316' :
+                        qualitativeLevel === 'Médio' ? '#eab308' :
+                          qualitativeLevel === 'Baixo' ? '#84cc16' : '#22c55e'
                 }} />
-                <Badge 
+                <Badge
                   className={`text-lg px-4 py-2 font-bold ${getQualitativeLevelColor(qualitativeLevel)}`}
                   variant="outline"
                 >
@@ -269,6 +270,6 @@ const RiskMatrix: React.FC<RiskMatrixProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 export default RiskMatrix;

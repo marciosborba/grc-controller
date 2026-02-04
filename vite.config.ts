@@ -55,8 +55,17 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('@tanstack/react-query')) {
             return 'vendor-query';
           }
-          if (id.includes('recharts') || id.includes('html2canvas')) {
+          if (id.includes('recharts')) {
             return 'vendor-charts';
+          }
+          if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('xlsx')) {
+            return 'vendor-reports';
+          }
+          if (id.includes('framer-motion')) {
+             return 'vendor-animation';
+          }
+          if (id.includes('@dnd-kit') || id.includes('@hello-pangea')) {
+            return 'vendor-dnd';
           }
 
           // Feature chunks

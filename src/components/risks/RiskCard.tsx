@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -78,30 +78,30 @@ import {
 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useRiskManagement } from '@/hooks/useRiskManagement';
 import { useRiskPDF } from '@/hooks/useRiskPDF';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { 
-  RISK_ASSESSMENT_QUESTIONS, 
-  ASSESSMENT_RESPONSE_OPTIONS, 
+import {
+  RISK_ASSESSMENT_QUESTIONS,
+  ASSESSMENT_RESPONSE_OPTIONS,
   GUT_RESPONSE_OPTIONS,
-  GUT_QUESTIONS 
+  GUT_QUESTIONS
 } from '@/data/risk-assessment-questions';
-import { 
-  processRiskAnalysis, 
+import {
+  processRiskAnalysis,
   processRiskAnalysisWithTenantConfig,
-  generateMatrixData, 
+  generateMatrixData,
   findRiskPositionInMatrix,
-  getTenantMatrixConfig 
+  getTenantMatrixConfig
 } from '@/utils/risk-analysis';
 import RiskAssessmentQuestions from './RiskAssessmentQuestions';
 import GUTMatrixSection from './GUTMatrixSection';
 import RiskMatrix from './RiskMatrix';
-import type { 
-  Risk, 
-  Activity as RiskActivity, 
+import type {
+  Risk,
+  Activity as RiskActivity,
   RiskCommunication,
   TreatmentType,
   ActivityStatus,
@@ -115,6 +115,37 @@ import type {
 } from '@/types/risk-management';
 import { RISK_CATEGORIES, TREATMENT_TYPES, ACTIVITY_STATUSES } from '@/types/risk-management';
 
+const getRiskLevelColor = (level: string) => {
+  switch (level) {
+    case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200';
+    case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200';
+    case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-200';
+    case 'Baixo': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200';
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'Identificado': return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'Em Tratamento': return 'bg-orange-100 text-orange-800 border-orange-200';
+    case 'Monitorado': return 'bg-green-100 text-green-800 border-green-200';
+    case 'Fechado': return 'bg-gray-100 text-gray-800 border-gray-200';
+    default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getActivityStatusColor = (status: ActivityStatus) => {
+  switch (status) {
+    case 'Concluído': return 'bg-green-100 text-green-800';
+    case 'Em Andamento': return 'bg-blue-100 text-blue-800';
+    case 'Atrasado': return 'bg-red-100 text-red-800';
+    case 'Aguardando': return 'bg-yellow-100 text-yellow-800';
+    case 'Cancelado': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-purple-100 text-purple-800';
+  }
+};
+
 interface RiskCardProps {
   risk: Risk;
   onUpdate?: (riskId: string, updates: Partial<Risk>) => void;
@@ -125,7 +156,7 @@ interface RiskCardProps {
   canDelete?: boolean;
 }
 
-const RiskCard: React.FC<RiskCardProps> = ({
+const RiskCard: React.FC<RiskCardProps> = React.memo(({
   risk,
   onUpdate,
   onDelete,
@@ -137,10 +168,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
   const { user } = useAuth();
   const { addActivity, updateActivity, createAcceptanceLetter } = useRiskManagement();
   const { generateAcceptanceLetter, generateActionPlan, isGenerating } = useRiskPDF();
-  
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<'general' | 'analysis' | 'action' | 'acceptance' | 'communication'>('general');
-  
+
   // Estados para edição de informações gerais
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
   const [generalData, setGeneralData] = useState({
@@ -215,7 +246,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
       impact: risk.impact,
       riskScore: risk.riskScore
     });
-    
+
     setGeneralData({
       name: risk.name,
       description: risk.description || '',
@@ -239,18 +270,18 @@ const RiskCard: React.FC<RiskCardProps> = ({
         try {
           console.log('🔄 Carregando configuração da matriz para tenant:', user.tenant.id);
           const config = await getTenantMatrixConfig(user.tenant.id);
-          
+
           console.log('🏢 Configuração da matriz da tenant carregada:', {
             tenantId: user.tenant.id,
             configMatrixType: config.type,
             currentMatrixSize: matrixSize,
             needsUpdate: config.type !== matrixSize
           });
-          
+
           // SEMPRE atualizar o tipo de matriz conforme a configuração da tenant
           setMatrixSize(config.type);
           console.log('⚙️ Tipo de matriz DEFINIDO para:', config.type);
-          
+
           // Se já existe analysisData, atualizar o matrixSize nela também
           if (analysisData && analysisData.matrixSize !== config.type) {
             console.log('🔄 Atualizando matrixSize na analysisData existente');
@@ -266,7 +297,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         console.log('⚠️ Nenhum tenant ID disponível');
       }
     };
-    
+
     loadTenantMatrixConfig();
   }, [user?.tenant?.id, analysisData?.matrixSize]);
 
@@ -282,17 +313,17 @@ const RiskCard: React.FC<RiskCardProps> = ({
       impact: generalData.impact,
       score: generalData.probability * generalData.impact
     });
-    
+
     // Priorizar nível da análise estruturada se disponível
     if (analysisData?.qualitativeRiskLevel) {
       console.log('🔬 Usando nível da análise estruturada:', analysisData.qualitativeRiskLevel);
       return analysisData.qualitativeRiskLevel;
     }
-    
+
     // REMOVIDO: Não usar generalData.riskLevel pois pode estar desatualizado
     // Sempre recalcular baseado no score quando não há análise estruturada
     console.log('🔬 Sem análise estruturada - forçando recálculo baseado no score');
-    
+
     // Fallback para cálculo tradicional baseado nos valores atuais
     const score = generalData.probability * generalData.impact;
     let calculatedLevel;
@@ -301,46 +332,15 @@ const RiskCard: React.FC<RiskCardProps> = ({
     else if (score >= 8) calculatedLevel = 'Médio';
     else if (score >= 4) calculatedLevel = 'Baixo';
     else calculatedLevel = 'Muito Baixo';
-    
-    console.log('🔬 Usando cálculo tradicional:', { 
-      score, 
+
+    console.log('🔬 Usando cálculo tradicional:', {
+      score,
       calculatedLevel,
       bankLevel: generalData.riskLevel,
       divergent: calculatedLevel !== generalData.riskLevel
     });
-    
+
     return calculatedLevel;
-  };
-
-  const getRiskLevelColor = (level: string) => {
-    switch (level) {
-      case 'Muito Alto': return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200';
-      case 'Alto': return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200';
-      case 'Médio': return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-900 dark:text-amber-200';
-      case 'Baixo': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Identificado': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Em Tratamento': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Monitorado': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Fechado': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getActivityStatusColor = (status: ActivityStatus) => {
-    switch (status) {
-      case 'Concluído': return 'bg-green-100 text-green-800';
-      case 'Em Andamento': return 'bg-blue-100 text-blue-800';
-      case 'Atrasado': return 'bg-red-100 text-red-800';
-      case 'Aguardando': return 'bg-yellow-100 text-yellow-800';
-      case 'Cancelado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-purple-100 text-purple-800';
-    }
   };
 
   const handleSaveGeneral = async () => {
@@ -358,7 +358,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         assignedTo: generalData.assignedTo || undefined,
         dueDate: generalData.dueDate ? new Date(generalData.dueDate) : undefined
       };
-      
+
       console.log('💾 RiskCard: Salvando dados gerais:', {
         riskId: risk.id,
         updates: updates,
@@ -367,7 +367,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         originalImpact: risk.impact,
         newImpact: generalData.impact
       });
-      
+
       try {
         await onUpdate(risk.id, updates);
         console.log('✅ RiskCard: Dados salvos com sucesso');
@@ -411,7 +411,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
   };
 
   const handleUpdateActivity = (activityId: string, updates: Partial<RiskActivity>) => {
-    setActivities(activities.map(activity => 
+    setActivities(activities.map(activity =>
       activity.id === activityId ? { ...activity, ...updates } : activity
     ));
   };
@@ -503,13 +503,33 @@ const RiskCard: React.FC<RiskCardProps> = ({
     setIsAnalysisMode(true);
   };
 
-  const handleQuestionAnswer = (answer: RiskAssessmentAnswer) => {
+  const processAnalysis = useCallback(async (probAnswers: RiskAssessmentAnswer[], impAnswers: RiskAssessmentAnswer[]) => {
+    const analysis = await processRiskAnalysisWithTenantConfig(
+      selectedRiskType,
+      probAnswers,
+      impAnswers,
+      user?.tenant?.id
+    );
+
+    setAnalysisData(analysis);
+    setShowMatrix(true);
+
+    // Atualizar os scores e nível de risco no formulário geral
+    setGeneralData(prev => ({
+      ...prev,
+      probability: Math.round(analysis.probabilityScore || 0),
+      impact: Math.round(analysis.impactScore || 0),
+      riskLevel: analysis.qualitativeRiskLevel
+    }));
+  }, [selectedRiskType, user?.tenant?.id]);
+
+  const handleQuestionAnswer = useCallback((answer: RiskAssessmentAnswer) => {
     const currentQuestions = RISK_ASSESSMENT_QUESTIONS[selectedRiskType][currentAssessmentType];
-    
+
     if (currentAssessmentType === 'probability') {
       const newAnswers = [...probabilityAnswers, answer];
       setProbabilityAnswers(newAnswers);
-      
+
       if (newAnswers.length === currentQuestions.length) {
         // Todas as questões de probabilidade respondidas, passar para impacto
         setCurrentAssessmentType('impact');
@@ -520,7 +540,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
     } else {
       const newAnswers = [...impactAnswers, answer];
       setImpactAnswers(newAnswers);
-      
+
       if (newAnswers.length === currentQuestions.length) {
         // Todas as questões respondidas, processar análise
         processAnalysis(probabilityAnswers, newAnswers);
@@ -529,27 +549,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       }
     }
-  };
-
-  const processAnalysis = async (probAnswers: RiskAssessmentAnswer[], impAnswers: RiskAssessmentAnswer[]) => {
-    const analysis = await processRiskAnalysisWithTenantConfig(
-      selectedRiskType,
-      probAnswers,
-      impAnswers,
-      user?.tenant?.id
-    );
-    
-    setAnalysisData(analysis);
-    setShowMatrix(true);
-    
-    // Atualizar os scores e nível de risco no formulário geral
-    setGeneralData(prev => ({
-      ...prev,
-      probability: Math.round(analysis.probabilityScore || 0),
-      impact: Math.round(analysis.impactScore || 0),
-      riskLevel: analysis.qualitativeRiskLevel
-    }));
-  };
+  }, [selectedRiskType, currentAssessmentType, currentQuestionIndex, probabilityAnswers, impactAnswers, processAnalysis]);
 
   const handleGUTAnalysis = (gravity: number, urgency: number, tendency: number) => {
     const gutScore = gravity * urgency * tendency;
@@ -558,14 +558,14 @@ const RiskCard: React.FC<RiskCardProps> = ({
       urgency,
       tendency,
       gutScore,
-      priority: gutScore >= 100 ? 'Muito Alta' : 
-                gutScore >= 64 ? 'Alta' : 
-                gutScore >= 27 ? 'Média' : 
-                gutScore >= 8 ? 'Baixa' : 'Muito Baixa'
+      priority: gutScore >= 100 ? 'Muito Alta' :
+        gutScore >= 64 ? 'Alta' :
+          gutScore >= 27 ? 'Média' :
+            gutScore >= 8 ? 'Baixa' : 'Muito Baixa'
     };
-    
+
     setGutAnalysis(analysis);
-    
+
     // Atualizar analysisData
     if (analysisData) {
       const updatedAnalysis = { ...analysisData, gutAnalysis: analysis };
@@ -578,12 +578,12 @@ const RiskCard: React.FC<RiskCardProps> = ({
       toast.error('Nenhuma análise para salvar');
       return;
     }
-    
+
     if (!onUpdate) {
       toast.error('Função de atualização não disponível');
       return;
     }
-    
+
     try {
       console.log('💾 Salvando análise de risco:', {
         riskId: risk.id,
@@ -593,7 +593,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         impactScore: analysisData.impactScore,
         qualitativeRiskLevel: analysisData.qualitativeRiskLevel
       });
-      
+
       // Preparar dados completos para atualização
       const updateData = {
         // Dados da análise estruturada
@@ -613,24 +613,24 @@ const RiskCard: React.FC<RiskCardProps> = ({
           createdBy: user?.id,
           tenantId: user?.tenant?.id // Incluir tenant_id na análise
         },
-        
+
         // Atualizar campos principais do risco baseados na análise
         probability: Math.max(1, Math.min(5, Math.round(analysisData.probabilityScore || 0))),
         impact: Math.max(1, Math.min(5, Math.round(analysisData.impactScore || 0))),
         riskLevel: analysisData.qualitativeRiskLevel,
         riskScore: Math.round(analysisData.probabilityScore || 0) * Math.round(analysisData.impactScore || 0),
-        
+
         // Atualizar timestamp de última revisão
         lastReviewDate: new Date()
       };
-      
+
       console.log('📤 Enviando dados para atualização:', updateData);
-      
+
       await onUpdate(risk.id, updateData);
-      
+
       toast.success('✅ Análise de risco salva com sucesso no banco de dados!');
       setIsAnalysisMode(false);
-      
+
       // Atualizar estado local para refletir as mudanças
       setGeneralData(prev => ({
         ...prev,
@@ -638,7 +638,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
         impact: updateData.impact,
         riskLevel: updateData.riskLevel
       }));
-      
+
     } catch (error: any) {
       console.error('❌ Erro ao salvar análise:', error);
       toast.error(`Erro ao salvar análise de risco: ${error.message || 'Erro desconhecido'}`);
@@ -656,10 +656,18 @@ const RiskCard: React.FC<RiskCardProps> = ({
     setCurrentAssessmentType('probability');
   };
 
-  const currentRiskLevel = calculateRiskLevel();
+  // Memoize risk level calculation to avoid re-running logic on every render
+  const currentRiskLevel = useMemo(() => {
+    return calculateRiskLevel();
+  }, [
+    analysisData,
+    generalData.riskLevel,
+    generalData.probability,
+    generalData.impact
+  ]);
   const showAcceptanceSection = generalData.treatmentType === 'Aceitar';
   const showActionSection = generalData.treatmentType !== 'Aceitar';
-  
+
   // Quando o tipo de tratamento mudar, ajustar a seção ativa
   useEffect(() => {
     if (showAcceptanceSection && activeSection === 'action') {
@@ -672,8 +680,8 @@ const RiskCard: React.FC<RiskCardProps> = ({
   return (
     <Card className={cn(
       "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
-      isExpanded 
-        ? "shadow-lg border-primary/30" 
+      isExpanded
+        ? "shadow-lg border-primary/30"
         : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -682,15 +690,15 @@ const RiskCard: React.FC<RiskCardProps> = ({
             <div className="flex items-center justify-between gap-4">
               {/* Left Section */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? 
-                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
+                {isExpanded ?
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> :
                   <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 }
-                
+
                 <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
                   <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                 </div>
-                
+
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <CardTitle className="text-sm font-semibold truncate">{risk.name}</CardTitle>
@@ -717,14 +725,14 @@ const RiskCard: React.FC<RiskCardProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               {/* Center Section - Treatment */}
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   {isEditingGeneral ? generalData.treatmentType : risk.treatmentType}
                 </Badge>
               </div>
-              
+
               {/* Right Section */}
               <div className="text-right flex-shrink-0">
                 {risk.dueDate && (
@@ -748,21 +756,21 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 <TabsList className={cn(
                   "grid w-full",
                   showActionSection && showAcceptanceSection ? "grid-cols-2 lg:grid-cols-5" :
-                  showActionSection || showAcceptanceSection ? "grid-cols-2 lg:grid-cols-4" :
-                  "grid-cols-2 lg:grid-cols-3"
+                    showActionSection || showAcceptanceSection ? "grid-cols-2 lg:grid-cols-4" :
+                      "grid-cols-2 lg:grid-cols-3"
                 )}>
                   <TabsTrigger value="general" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
                     <Shield className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
                     <span className="hidden sm:inline truncate">Informações</span>
                     <span className="sm:hidden">Info</span>
                   </TabsTrigger>
-                  
+
                   <TabsTrigger value="analysis" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
                     <BarChart3 className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
                     <span className="hidden sm:inline truncate">Análise</span>
                     <span className="sm:hidden">Análise</span>
                   </TabsTrigger>
-                  
+
                   {showActionSection && (
                     <TabsTrigger value="action" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
                       <Target className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
@@ -770,7 +778,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       <span className="sm:hidden">Plano</span>
                     </TabsTrigger>
                   )}
-                  
+
                   {showAcceptanceSection && (
                     <TabsTrigger value="acceptance" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
                       <FileText className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
@@ -778,7 +786,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       <span className="sm:hidden">Carta</span>
                     </TabsTrigger>
                   )}
-                  
+
                   <TabsTrigger value="communication" className="flex items-center gap-1 lg:gap-2 text-xs lg:text-sm px-2 lg:px-3">
                     <Mail className="h-3 w-3 lg:h-4 lg:w-4 flex-shrink-0" />
                     <span className="hidden sm:inline truncate">Comunicação</span>
@@ -813,7 +821,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, name: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="category">Tipo do Risco</Label>
                         <Select
@@ -832,7 +840,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="treatmentType">Tipo de Tratamento</Label>
                         <Select
@@ -851,7 +859,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="probability">Probabilidade (1-5)</Label>
                         <Input
@@ -863,7 +871,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, probability: parseInt(e.target.value) })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="impact">Impacto (1-5)</Label>
                         <Input
@@ -875,7 +883,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, impact: parseInt(e.target.value) })}
                         />
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor="description">Detalhes Técnicos do Risco</Label>
                         <Textarea
@@ -885,7 +893,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           rows={3}
                         />
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor="executiveSummary">Sumário Executivo do Risco</Label>
                         <Textarea
@@ -895,7 +903,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           rows={2}
                         />
                       </div>
-                      
+
                       <div className="col-span-2 bg-muted/50 p-4 rounded-lg">
                         <Label className="text-sm font-medium">Nível de Risco Calculado</Label>
                         <div className="mt-2">
@@ -910,7 +918,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="col-span-2 flex gap-2">
                         <Button onClick={handleSaveGeneral} disabled={isUpdating}>
                           Salvar Alterações
@@ -929,7 +937,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         <span className="font-medium">Tratamento:</span> {risk.treatmentType}
                       </div>
                       <div>
-                        <span className="font-medium">Nível:</span> 
+                        <span className="font-medium">Nível:</span>
                         <Badge className={getRiskLevelColor(currentRiskLevel)}>
                           {(() => {
                             console.log('🏷️ Badge Visualização - currentRiskLevel:', currentRiskLevel);
@@ -956,7 +964,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 {/* 2. ANÁLISE DE RISCO */}
                 <TabsContent value="analysis" className="space-y-6 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">ANÁLISE ESTRUTURADA DE RISCO</h4>
-                  
+
                   {!isAnalysisMode ? (
                     // Tela inicial - seleção de tipo e resultados anteriores
                     <div className="space-y-4">
@@ -967,7 +975,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                           onSkip={() => saveAnalysis()}
                         />
                       )}
-                      
+
                       {analysisData ? (
                         // Mostrar análise existente
                         <div className="space-y-4">
@@ -975,17 +983,17 @@ const RiskCard: React.FC<RiskCardProps> = ({
                             <div className="flex items-center justify-between mb-3">
                               <h5 className="font-semibold text-green-800 dark:text-green-200">Análise Concluída</h5>
                               <div className="flex gap-2">
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => setIsAnalysisMode(true)}
                                 >
                                   <Edit className="h-4 w-4 mr-1" />
                                   Refazer
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   onClick={resetAnalysis}
                                 >
                                   <Trash2 className="h-4 w-4 mr-1" />
@@ -993,7 +1001,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                                 </Button>
                               </div>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div className="bg-white dark:bg-gray-800 p-3 rounded-lg">
                                 <div className="text-sm text-muted-foreground">Tipo de Risco</div>
@@ -1008,13 +1016,13 @@ const RiskCard: React.FC<RiskCardProps> = ({
                                 <div className="font-medium">{analysisData.impactScore?.toFixed(1) || '0.0'}/5</div>
                               </div>
                             </div>
-                            
+
                             <div className="mt-4">
                               <Badge className={`text-base px-3 py-1 ${getRiskLevelColor(analysisData.qualitativeRiskLevel)}`}>
                                 {analysisData.qualitativeRiskLevel}
                               </Badge>
                             </div>
-                            
+
                             {analysisData.gutAnalysis && (
                               <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
                                 <h6 className="font-medium mb-2">Matriz GUT</h6>
@@ -1029,10 +1037,10 @@ const RiskCard: React.FC<RiskCardProps> = ({
                               </div>
                             )}
                           </div>
-                          
+
                           {/* Matriz Visual */}
-                          <RiskMatrix 
-                            probabilityScore={analysisData.probabilityScore} 
+                          <RiskMatrix
+                            probabilityScore={analysisData.probabilityScore}
                             impactScore={analysisData.impactScore}
                             matrixSize={analysisData.matrixSize}
                             qualitativeLevel={analysisData.qualitativeRiskLevel}
@@ -1048,7 +1056,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                               Realize uma análise estruturada para avaliar este risco com precisão
                             </p>
                           </div>
-                          
+
                           <div className="space-y-4">
                             <div>
                               <Label htmlFor="riskType">Selecione o Tipo de Risco</Label>
@@ -1069,7 +1077,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                                 </SelectContent>
                               </Select>
                             </div>
-                            
+
                             <div>
                               <Label htmlFor="matrixSize">Matriz de Risco (Configurada pela Organização)</Label>
                               <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-md border">
@@ -1080,8 +1088,8 @@ const RiskCard: React.FC<RiskCardProps> = ({
                                 </span>
                               </div>
                             </div>
-                            
-                            <Button 
+
+                            <Button
                               onClick={() => handleStartAnalysis(selectedRiskType)}
                               className="w-full"
                             >
@@ -1104,7 +1112,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                       onCancel={() => setIsAnalysisMode(false)}
                     />
                   )}
-                  
+
                   {/* Botões de ação */}
                   {analysisData && analysisData.gutAnalysis && (
                     <div className="flex gap-2 pt-4">
@@ -1123,7 +1131,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 {/* 3. PLANO DE AÇÃO */}
                 <TabsContent value="action" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">PLANO DE AÇÃO</h4>
-                  
+
                   <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center gap-2 mb-2">
                       <Target className="h-4 w-4 text-blue-600" />
@@ -1266,7 +1274,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 {/* 4. CARTA DE RISCO */}
                 <TabsContent value="acceptance" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">CARTA DE ACEITAÇÃO DE RISCO</h4>
-                  
+
                   <div className="bg-yellow-50 dark:bg-yellow-950/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="h-4 w-4 text-yellow-600" />
@@ -1290,7 +1298,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         rows={3}
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="compensatingControls">Controles Compensatórios</Label>
                       <Textarea
@@ -1301,7 +1309,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         rows={3}
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="businessJustification">Justificativa de Negócio</Label>
                       <Textarea
@@ -1312,7 +1320,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         rows={2}
                       />
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="approver">Aprovador Responsável *</Label>
@@ -1333,7 +1341,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         />
                       </div>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="reviewConditions">Condições para Revisão</Label>
                       <Textarea
@@ -1344,7 +1352,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                         rows={2}
                       />
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Button onClick={handleCreateAcceptanceLetter}>
                         <FileText className="h-4 w-4 mr-2" />
@@ -1361,7 +1369,7 @@ const RiskCard: React.FC<RiskCardProps> = ({
                 {/* 5. COMUNICAÇÃO */}
                 <TabsContent value="communication" className="space-y-4 mt-6">
                   <h4 className="text-lg font-medium text-muted-foreground">COMUNICAÇÃO DO RISCO</h4>
-                  
+
                   {/* Adicionar Nova Comunicação */}
                   <div className="border rounded-lg p-4 space-y-3">
                     <h5 className="font-medium">Nova Comunicação</h5>
@@ -1472,11 +1480,11 @@ const RiskCard: React.FC<RiskCardProps> = ({
                               <TableCell>
                                 <Badge className={
                                   comm.respondedAt ? 'bg-green-100 text-green-800' :
-                                  comm.sentAt ? 'bg-blue-100 text-blue-800' :
-                                  'bg-gray-100 text-gray-800'
+                                    comm.sentAt ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
                                 }>
                                   {comm.respondedAt ? 'Respondido' :
-                                   comm.sentAt ? 'Enviado' : 'Pendente'}
+                                    comm.sentAt ? 'Enviado' : 'Pendente'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -1532,6 +1540,6 @@ const RiskCard: React.FC<RiskCardProps> = ({
       </Collapsible>
     </Card>
   );
-};
+});
 
 export default RiskCard;

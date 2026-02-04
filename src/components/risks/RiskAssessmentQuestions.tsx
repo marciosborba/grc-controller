@@ -6,13 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
-import type { 
-  RiskAnalysisType, 
-  RiskAssessmentAnswer 
+import type {
+  RiskAnalysisType,
+  RiskAssessmentAnswer
 } from '@/types/risk-management';
-import { 
-  RISK_ASSESSMENT_QUESTIONS, 
-  ASSESSMENT_RESPONSE_OPTIONS 
+import {
+  RISK_ASSESSMENT_QUESTIONS,
+  ASSESSMENT_RESPONSE_OPTIONS
 } from '@/data/risk-assessment-questions';
 
 interface RiskAssessmentQuestionsProps {
@@ -25,7 +25,7 @@ interface RiskAssessmentQuestionsProps {
   onCancel: () => void;
 }
 
-const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
+const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = React.memo(({
   riskType,
   currentQuestionIndex,
   currentAssessmentType,
@@ -43,15 +43,15 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
   React.useEffect(() => {
     setSelectedValue(null);
   }, [currentQuestionIndex, currentAssessmentType]);
-  
+
   // Calcular progresso
-  const totalQuestions = RISK_ASSESSMENT_QUESTIONS[riskType].probability.length + 
-                        RISK_ASSESSMENT_QUESTIONS[riskType].impact.length;
+  const totalQuestions = RISK_ASSESSMENT_QUESTIONS[riskType].probability.length +
+    RISK_ASSESSMENT_QUESTIONS[riskType].impact.length;
   const answeredQuestions = probabilityAnswers.length + impactAnswers.length;
   // Incluir a pergunta atual no progresso (pergunta sendo respondida conta como +1)
   const currentProgress = answeredQuestions + 1; // +1 para a pergunta atual
   const progress = Math.min((currentProgress / totalQuestions) * 100, 100);
-  
+
 
   const handleAnswer = () => {
     if (selectedValue !== null && currentQuestion) {
@@ -74,7 +74,7 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
   };
 
   const getAssessmentTypeDescription = (type: 'probability' | 'impact') => {
-    return type === 'probability' 
+    return type === 'probability'
       ? 'Avalie a probabilidade de este risco se materializar'
       : 'Avalie o potencial impacto se este risco se materializar';
   };
@@ -95,7 +95,7 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>Questão {currentProgress} de {totalQuestions}</span>
@@ -123,8 +123,8 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
               return (
                 <div key={option.value} className="flex items-center space-x-2">
                   <RadioGroupItem value={option.value.toString()} id={uniqueId} />
-                  <Label 
-                    htmlFor={uniqueId} 
+                  <Label
+                    htmlFor={uniqueId}
                     className="flex-1 cursor-pointer py-2 px-3 rounded-md hover:bg-muted/50 transition-colors"
                   >
                     <span className="font-medium">{option.value}</span> - {option.label}
@@ -145,9 +145,9 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
                 </span>
               )}
             </div>
-            
-            <Button 
-              onClick={handleAnswer} 
+
+            <Button
+              onClick={handleAnswer}
               disabled={selectedValue === null}
               className="min-w-[120px]"
             >
@@ -161,34 +161,30 @@ const RiskAssessmentQuestions: React.FC<RiskAssessmentQuestionsProps> = ({
       {/* Indicador de seção */}
       <div className="flex justify-center">
         <div className="flex items-center space-x-4">
-          <div className={`flex items-center space-x-2 ${
-            currentAssessmentType === 'probability' || probabilityAnswers.length === RISK_ASSESSMENT_QUESTIONS[riskType].probability.length 
-              ? 'text-primary' : 'text-muted-foreground'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              probabilityAnswers.length === RISK_ASSESSMENT_QUESTIONS[riskType].probability.length 
-                ? 'bg-green-500' 
-                : currentAssessmentType === 'probability' 
-                  ? 'bg-primary' 
-                  : 'bg-muted-foreground'
-            }`} />
+          <div className={`flex items-center space-x-2 ${currentAssessmentType === 'probability' || probabilityAnswers.length === RISK_ASSESSMENT_QUESTIONS[riskType].probability.length
+            ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+            <div className={`w-2 h-2 rounded-full ${probabilityAnswers.length === RISK_ASSESSMENT_QUESTIONS[riskType].probability.length
+              ? 'bg-green-500'
+              : currentAssessmentType === 'probability'
+                ? 'bg-primary'
+                : 'bg-muted-foreground'
+              }`} />
             <span className="text-sm">Probabilidade</span>
           </div>
-          
+
           <div className="w-8 h-px bg-muted-foreground" />
-          
-          <div className={`flex items-center space-x-2 ${
-            currentAssessmentType === 'impact' ? 'text-primary' : 'text-muted-foreground'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              currentAssessmentType === 'impact' ? 'bg-primary' : 'bg-muted-foreground'
-            }`} />
+
+          <div className={`flex items-center space-x-2 ${currentAssessmentType === 'impact' ? 'text-primary' : 'text-muted-foreground'
+            }`}>
+            <div className={`w-2 h-2 rounded-full ${currentAssessmentType === 'impact' ? 'bg-primary' : 'bg-muted-foreground'
+              }`} />
             <span className="text-sm">Impacto</span>
           </div>
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default RiskAssessmentQuestions;

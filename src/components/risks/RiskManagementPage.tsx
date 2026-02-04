@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, Brain, Shield, Target, Users, Mail, FileText, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 
 import { AIContentGenerator } from '@/components/ai/AIContentGenerator';
@@ -32,7 +32,7 @@ const RiskManagementPage = React.memo(() => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<any>(null);
   const [dueDate, setDueDate] = useState<Date>();
-  
+
   // Estados para plano de ação
   const [actionPlan, setActionPlan] = useState<any>(null);
   const [activities, setActivities] = useState<any[]>([]);
@@ -42,7 +42,7 @@ const RiskManagementPage = React.memo(() => {
     deadline: '',
     status: 'Pendente'
   });
-  
+
   // Estados para comunicação
   const [communications, setCommunications] = useState<any[]>([]);
   const [newCommunication, setNewCommunication] = useState({
@@ -51,7 +51,7 @@ const RiskManagementPage = React.memo(() => {
     decision: '',
     justification: ''
   });
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -77,23 +77,23 @@ const RiskManagementPage = React.memo(() => {
   // Optimized filtering with useMemo
   const filteredRisks = useMemo(() => {
     let filtered = risks;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(risk => 
+      filtered = filtered.filter(risk =>
         risk.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         risk.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         risk.risk_category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (riskLevelFilter !== 'all') {
       filtered = filtered.filter(risk => risk.risk_level === riskLevelFilter);
     }
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter(risk => risk.status === statusFilter);
     }
-    
+
     return filtered;
   }, [risks, searchTerm, riskLevelFilter, statusFilter]);
 
@@ -132,7 +132,7 @@ const RiskManagementPage = React.memo(() => {
       });
 
       if (!response.ok) throw new Error('Erro ao enviar notificação');
-      
+
       toast({
         title: 'Sucesso',
         description: `Notificação enviada para ${recipientEmail}`,
@@ -149,7 +149,7 @@ const RiskManagementPage = React.memo(() => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const riskData = {
         title: formData.title,
@@ -166,12 +166,12 @@ const RiskManagementPage = React.memo(() => {
         // Calculate risk level and score
         risk_score: formData.impact_score * formData.likelihood_score,
         risk_level: formData.impact_score * formData.likelihood_score >= 75 ? 'Muito Alto' :
-                   formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
-                   formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'
+          formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
+            formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'
       };
 
       let savedRisk;
-      
+
       if (editingRisk) {
         savedRisk = await updateRiskMutation.mutateAsync({ id: editingRisk.id, ...riskData });
       } else {
@@ -180,7 +180,7 @@ const RiskManagementPage = React.memo(() => {
 
       // TODO: Implement action plans and communications optimization in future iterations
       // For now, keeping the modal simple and focusing on core risk management
-      
+
       setIsDialogOpen(false);
       resetForm();
     } catch (error: any) {
@@ -189,7 +189,7 @@ const RiskManagementPage = React.memo(() => {
     }
   };
 
-  const handleEdit = (risk: any) => {
+  const handleEdit = React.useCallback((risk: any) => {
     setEditingRisk(risk);
     setFormData({
       title: risk.title,
@@ -205,12 +205,12 @@ const RiskManagementPage = React.memo(() => {
     });
     setDueDate(risk.due_date ? new Date(risk.due_date) : undefined);
     setIsDialogOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = React.useCallback(async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este risco?')) return;
     await deleteRiskMutation.mutateAsync(id);
-  };
+  }, [deleteRiskMutation]);
 
   const resetForm = () => {
     setFormData({
@@ -316,9 +316,9 @@ const RiskManagementPage = React.memo(() => {
           <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Monitore e avalie riscos corporativos</p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
-          <ImprovedAIChatDialog 
+          <ImprovedAIChatDialog
             type="risk"
             context={{ risks: filteredRisks }}
             trigger={
@@ -333,8 +333,8 @@ const RiskManagementPage = React.memo(() => {
               </Button>
             }
           />
-          
-          <AIContentGenerator 
+
+          <AIContentGenerator
             type="risk_assessment"
             trigger={
               <Button variant="outline" className="flex items-center space-x-2">
@@ -343,7 +343,7 @@ const RiskManagementPage = React.memo(() => {
               </Button>
             }
           />
-          
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
@@ -358,7 +358,7 @@ const RiskManagementPage = React.memo(() => {
                   <span>{editingRisk ? 'Editar Risco' : 'Novo Risco'}</span>
                 </DialogTitle>
               </DialogHeader>
-              
+
               <Tabs defaultValue="basic" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="basic" className="flex items-center space-x-2">
@@ -383,28 +383,28 @@ const RiskManagementPage = React.memo(() => {
                         <Input
                           id="title"
                           value={formData.title}
-                          onChange={(e) => setFormData({...formData, title: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                           required
                           placeholder="Ex: Vulnerabilidade crítica no sistema de pagamentos"
                         />
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor="description">Descrição</Label>
                         <Textarea
                           id="description"
                           value={formData.description}
-                          onChange={(e) => setFormData({...formData, description: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                           rows={3}
                           placeholder="Descreva detalhadamente o risco identificado..."
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="category">Categoria *</Label>
                         <Select
                           value={formData.risk_category}
-                          onValueChange={(value) => setFormData({...formData, risk_category: value})}
+                          onValueChange={(value) => setFormData({ ...formData, risk_category: value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a categoria..." />
@@ -421,12 +421,12 @@ const RiskManagementPage = React.memo(() => {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="status">Status</Label>
                         <Select
                           value={formData.status}
-                          onValueChange={(value: any) => setFormData({...formData, status: value})}
+                          onValueChange={(value: any) => setFormData({ ...formData, status: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -439,7 +439,7 @@ const RiskManagementPage = React.memo(() => {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label>Impacto (1-10) *</Label>
                         <Input
@@ -447,12 +447,12 @@ const RiskManagementPage = React.memo(() => {
                           min="1"
                           max="10"
                           value={formData.impact_score}
-                          onChange={(e) => setFormData({...formData, impact_score: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, impact_score: parseInt(e.target.value) })}
                           required
                         />
                         <p className="text-xs text-muted-foreground mt-1">1 = Insignificante, 10 = Catastrófico</p>
                       </div>
-                      
+
                       <div>
                         <Label>Probabilidade (1-10) *</Label>
                         <Input
@@ -460,12 +460,12 @@ const RiskManagementPage = React.memo(() => {
                           min="1"
                           max="10"
                           value={formData.likelihood_score}
-                          onChange={(e) => setFormData({...formData, likelihood_score: parseInt(e.target.value)})}
+                          onChange={(e) => setFormData({ ...formData, likelihood_score: parseInt(e.target.value) })}
                           required
                         />
                         <p className="text-xs text-muted-foreground mt-1">1 = Raro, 10 = Quase Certo</p>
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label>Data de Vencimento</Label>
                         <Popover>
@@ -499,12 +499,12 @@ const RiskManagementPage = React.memo(() => {
                           <div className="mt-2">
                             <Badge className={getRiskLevelColor(
                               formData.impact_score * formData.likelihood_score >= 75 ? 'Muito Alto' :
-                              formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
-                              formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'
+                                formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
+                                  formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'
                             )}>
                               {formData.impact_score * formData.likelihood_score >= 75 ? 'Muito Alto' :
-                               formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
-                               formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'}
+                                formData.impact_score * formData.likelihood_score >= 50 ? 'Alto' :
+                                  formData.impact_score * formData.likelihood_score >= 25 ? 'Médio' : 'Baixo'}
                             </Badge>
                             <span className="ml-2 text-sm text-muted-foreground">
                               (Score: {formData.impact_score * formData.likelihood_score})
@@ -521,7 +521,7 @@ const RiskManagementPage = React.memo(() => {
                         <Label>Tipo de Tratamento *</Label>
                         <Select
                           value={formData.treatment_type}
-                          onValueChange={(value) => setFormData({...formData, treatment_type: value})}
+                          onValueChange={(value) => setFormData({ ...formData, treatment_type: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -542,22 +542,22 @@ const RiskManagementPage = React.memo(() => {
                             <Input
                               placeholder="Descrição da atividade"
                               value={newActivity.description}
-                              onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
+                              onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
                             />
                             <Input
                               placeholder="Responsável"
                               value={newActivity.responsible_person}
-                              onChange={(e) => setNewActivity({...newActivity, responsible_person: e.target.value})}
+                              onChange={(e) => setNewActivity({ ...newActivity, responsible_person: e.target.value })}
                             />
                             <Input
                               type="date"
                               value={newActivity.deadline}
-                              onChange={(e) => setNewActivity({...newActivity, deadline: e.target.value})}
+                              onChange={(e) => setNewActivity({ ...newActivity, deadline: e.target.value })}
                             />
                             <div className="flex space-x-2">
                               <Select
                                 value={newActivity.status}
-                                onValueChange={(value) => setNewActivity({...newActivity, status: value})}
+                                onValueChange={(value) => setNewActivity({ ...newActivity, status: value })}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
@@ -631,7 +631,7 @@ const RiskManagementPage = React.memo(() => {
                             <Input
                               placeholder="Nome completo"
                               value={newCommunication.person_name}
-                              onChange={(e) => setNewCommunication({...newCommunication, person_name: e.target.value})}
+                              onChange={(e) => setNewCommunication({ ...newCommunication, person_name: e.target.value })}
                             />
                           </div>
                           <div>
@@ -640,14 +640,14 @@ const RiskManagementPage = React.memo(() => {
                               type="email"
                               placeholder="email@empresa.com"
                               value={newCommunication.person_email}
-                              onChange={(e) => setNewCommunication({...newCommunication, person_email: e.target.value})}
+                              onChange={(e) => setNewCommunication({ ...newCommunication, person_email: e.target.value })}
                             />
                           </div>
                           <div>
                             <Label>Decisão</Label>
                             <Select
                               value={newCommunication.decision}
-                              onValueChange={(value) => setNewCommunication({...newCommunication, decision: value})}
+                              onValueChange={(value) => setNewCommunication({ ...newCommunication, decision: value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione..." />
@@ -664,7 +664,7 @@ const RiskManagementPage = React.memo(() => {
                             <Input
                               placeholder="Justificativa da decisão"
                               value={newCommunication.justification}
-                              onChange={(e) => setNewCommunication({...newCommunication, justification: e.target.value})}
+                              onChange={(e) => setNewCommunication({ ...newCommunication, justification: e.target.value })}
                             />
                           </div>
                           <div className="col-span-2">
@@ -761,7 +761,7 @@ const RiskManagementPage = React.memo(() => {
                 />
               </div>
             </div>
-            
+
             <Select value={riskLevelFilter} onValueChange={setRiskLevelFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Nível de Risco" />
@@ -774,7 +774,7 @@ const RiskManagementPage = React.memo(() => {
                 <SelectItem value="Baixo">Baixo</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Status" />
@@ -806,7 +806,7 @@ const RiskManagementPage = React.memo(() => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center">
@@ -820,7 +820,7 @@ const RiskManagementPage = React.memo(() => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center">
@@ -834,7 +834,7 @@ const RiskManagementPage = React.memo(() => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center">
@@ -878,7 +878,7 @@ const RiskManagementPage = React.memo(() => {
           )}
         </CardContent>
       </Card>
-      
+
 
     </div>
   );
