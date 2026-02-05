@@ -426,7 +426,7 @@ export type Database = {
           campo_alterado: string | null
           data_acao: string | null
           id: string
-          ip_origem: unknown | null
+          ip_origem: unknown
           metadados: Json | null
           observacoes: string | null
           tenant_id: string
@@ -442,7 +442,7 @@ export type Database = {
           campo_alterado?: string | null
           data_acao?: string | null
           id?: string
-          ip_origem?: unknown | null
+          ip_origem?: unknown
           metadados?: Json | null
           observacoes?: string | null
           tenant_id: string
@@ -458,7 +458,7 @@ export type Database = {
           campo_alterado?: string | null
           data_acao?: string | null
           id?: string
-          ip_origem?: unknown | null
+          ip_origem?: unknown
           metadados?: Json | null
           observacoes?: string | null
           tenant_id?: string
@@ -973,10 +973,10 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           resource_id: string | null
           resource_type: string
-          tenant_id: string
+          tenant_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -985,10 +985,10 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type: string
-          tenant_id: string
+          tenant_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -997,10 +997,10 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           resource_id?: string | null
           resource_type?: string
-          tenant_id?: string
+          tenant_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -1246,6 +1246,55 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_conversation_contexts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ai_function_mappings: {
+        Row: {
+          created_at: string | null
+          function_key: string
+          id: string
+          prompt_template_id: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          function_key: string
+          id?: string
+          prompt_template_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          function_key?: string
+          id?: string
+          prompt_template_id?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_function_mappings_prompt_template_id_fkey"
+            columns: ["prompt_template_id"]
+            isOneToOne: false
+            referencedRelation: "ai_grc_prompt_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_function_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_function_mappings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
@@ -2053,13 +2102,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "apontamentos_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos_auditoria"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "apontamentos_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2079,6 +2121,210 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      apontamentos_auditoria: {
+        Row: {
+          categoria: string | null
+          causa_raiz: string | null
+          codigo: string
+          created_at: string | null
+          created_by: string | null
+          criticidade: string | null
+          data_comunicacao: string | null
+          data_identificacao: string | null
+          data_resposta_area: string | null
+          descricao: string
+          evidencias: string[] | null
+          id: string
+          impacto: string | null
+          prazo_implementacao: string | null
+          probabilidade_ocorrencia: string | null
+          projeto_id: string
+          recomendacao: string | null
+          referencias: string[] | null
+          responsavel_area: string | null
+          status: string | null
+          tenant_id: string
+          tipo_apontamento: string | null
+          titulo: string
+          trabalho_origem: string | null
+          updated_at: string | null
+          valor_impacto: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          causa_raiz?: string | null
+          codigo: string
+          created_at?: string | null
+          created_by?: string | null
+          criticidade?: string | null
+          data_comunicacao?: string | null
+          data_identificacao?: string | null
+          data_resposta_area?: string | null
+          descricao: string
+          evidencias?: string[] | null
+          id?: string
+          impacto?: string | null
+          prazo_implementacao?: string | null
+          probabilidade_ocorrencia?: string | null
+          projeto_id: string
+          recomendacao?: string | null
+          referencias?: string[] | null
+          responsavel_area?: string | null
+          status?: string | null
+          tenant_id: string
+          tipo_apontamento?: string | null
+          titulo: string
+          trabalho_origem?: string | null
+          updated_at?: string | null
+          valor_impacto?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          causa_raiz?: string | null
+          codigo?: string
+          created_at?: string | null
+          created_by?: string | null
+          criticidade?: string | null
+          data_comunicacao?: string | null
+          data_identificacao?: string | null
+          data_resposta_area?: string | null
+          descricao?: string
+          evidencias?: string[] | null
+          id?: string
+          impacto?: string | null
+          prazo_implementacao?: string | null
+          probabilidade_ocorrencia?: string | null
+          projeto_id?: string
+          recomendacao?: string | null
+          referencias?: string[] | null
+          responsavel_area?: string | null
+          status?: string | null
+          tenant_id?: string
+          tipo_apontamento?: string | null
+          titulo?: string
+          trabalho_origem?: string | null
+          updated_at?: string | null
+          valor_impacto?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apontamentos_auditoria_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_auditoria_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_auditoria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apontamentos_auditoria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "apontamentos_auditoria_trabalho_origem_fkey"
+            columns: ["trabalho_origem"]
+            isOneToOne: false
+            referencedRelation: "trabalhos_auditoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          business_criticality: string | null
+          compliance_requirements: string[] | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          environment: string | null
+          id: string
+          last_scan: string | null
+          name: string
+          owner: string | null
+          risk_level: string | null
+          status: string
+          technology: string | null
+          tenant_id: string
+          type: string
+          updated_at: string | null
+          updated_by: string | null
+          url: string | null
+          vulnerabilities: number | null
+        }
+        Insert: {
+          business_criticality?: string | null
+          compliance_requirements?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          environment?: string | null
+          id: string
+          last_scan?: string | null
+          name: string
+          owner?: string | null
+          risk_level?: string | null
+          status?: string
+          technology?: string | null
+          tenant_id: string
+          type: string
+          updated_at?: string | null
+          updated_by?: string | null
+          url?: string | null
+          vulnerabilities?: number | null
+        }
+        Update: {
+          business_criticality?: string | null
+          compliance_requirements?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          environment?: string | null
+          id?: string
+          last_scan?: string | null
+          name?: string
+          owner?: string | null
+          risk_level?: string | null
+          status?: string
+          technology?: string | null
+          tenant_id?: string
+          type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          url?: string | null
+          vulnerabilities?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -2588,6 +2834,7 @@ export type Database = {
           escala_maturidade: Json
           id: string
           industria_aplicavel: string[] | null
+          is_standard: boolean | null
           nome: string
           padrao_origem: string | null
           peso_total: number
@@ -2609,6 +2856,7 @@ export type Database = {
           escala_maturidade?: Json
           id?: string
           industria_aplicavel?: string[] | null
+          is_standard?: boolean | null
           nome: string
           padrao_origem?: string | null
           peso_total?: number
@@ -2630,6 +2878,7 @@ export type Database = {
           escala_maturidade?: Json
           id?: string
           industria_aplicavel?: string[] | null
+          is_standard?: boolean | null
           nome?: string
           padrao_origem?: string | null
           peso_total?: number
@@ -2668,7 +2917,7 @@ export type Database = {
           data_acao: string | null
           descricao: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadados: Json | null
           tenant_id: string
           user_agent: string | null
@@ -2683,7 +2932,7 @@ export type Database = {
           data_acao?: string | null
           descricao?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadados?: Json | null
           tenant_id: string
           user_agent?: string | null
@@ -2698,7 +2947,7 @@ export type Database = {
           data_acao?: string | null
           descricao?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadados?: Json | null
           tenant_id?: string
           user_agent?: string | null
@@ -2745,6 +2994,7 @@ export type Database = {
           created_by: string | null
           dependencias: string[] | null
           descricao: string | null
+          evidencias_requeridas: boolean | null
           exemplos: string[] | null
           id: string
           mapeamento_pontuacao: Json | null
@@ -2772,6 +3022,7 @@ export type Database = {
           created_by?: string | null
           dependencias?: string[] | null
           descricao?: string | null
+          evidencias_requeridas?: boolean | null
           exemplos?: string[] | null
           id?: string
           mapeamento_pontuacao?: Json | null
@@ -2799,6 +3050,7 @@ export type Database = {
           created_by?: string | null
           dependencias?: string[] | null
           descricao?: string | null
+          evidencias_requeridas?: boolean | null
           exemplos?: string[] | null
           id?: string
           mapeamento_pontuacao?: Json | null
@@ -2880,6 +3132,7 @@ export type Database = {
           pontuacao_obtida: number | null
           question_id: string | null
           respondido_por: string | null
+          resposta: Json | null
           resposta_arquivo_urls: string[] | null
           resposta_booleana: boolean | null
           resposta_data: string | null
@@ -2917,6 +3170,7 @@ export type Database = {
           pontuacao_obtida?: number | null
           question_id?: string | null
           respondido_por?: string | null
+          resposta?: Json | null
           resposta_arquivo_urls?: string[] | null
           resposta_booleana?: boolean | null
           resposta_data?: string | null
@@ -2954,6 +3208,7 @@ export type Database = {
           pontuacao_obtida?: number | null
           question_id?: string | null
           respondido_por?: string | null
+          resposta?: Json | null
           resposta_arquivo_urls?: string[] | null
           resposta_booleana?: boolean | null
           resposta_data?: string | null
@@ -3013,7 +3268,7 @@ export type Database = {
           duracao_planejada_dias: number | null
           escopo: string | null
           fase_atual: string
-          framework_id: string
+          framework_id: string | null
           gaps_identificados: number
           id: string
           nivel_maturidade_geral: number | null
@@ -3056,7 +3311,7 @@ export type Database = {
           duracao_planejada_dias?: number | null
           escopo?: string | null
           fase_atual?: string
-          framework_id: string
+          framework_id?: string | null
           gaps_identificados?: number
           id?: string
           nivel_maturidade_geral?: number | null
@@ -3099,7 +3354,7 @@ export type Database = {
           duracao_planejada_dias?: number | null
           escopo?: string | null
           fase_atual?: string
-          framework_id?: string
+          framework_id?: string | null
           gaps_identificados?: number
           id?: string
           nivel_maturidade_geral?: number | null
@@ -3159,11 +3414,101 @@ export type Database = {
           },
         ]
       }
+      assets: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          ip_address: unknown
+          last_scan: string | null
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          os: string | null
+          owner: string | null
+          purchase_date: string | null
+          risk_level: string | null
+          serial_number: string | null
+          status: string
+          tenant_id: string
+          type: string
+          updated_at: string | null
+          updated_by: string | null
+          vulnerabilities: number | null
+          warranty_expiry: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id: string
+          ip_address?: unknown
+          last_scan?: string | null
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          os?: string | null
+          owner?: string | null
+          purchase_date?: string | null
+          risk_level?: string | null
+          serial_number?: string | null
+          status?: string
+          tenant_id: string
+          type: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vulnerabilities?: number | null
+          warranty_expiry?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: unknown
+          last_scan?: string | null
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          os?: string | null
+          owner?: string | null
+          purchase_date?: string | null
+          risk_level?: string | null
+          serial_number?: string | null
+          status?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vulnerabilities?: number | null
+          warranty_expiry?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           new_data: Json | null
           old_data: Json | null
@@ -3178,7 +3523,7 @@ export type Database = {
         Insert: {
           action: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_data?: Json | null
           old_data?: Json | null
@@ -3193,7 +3538,7 @@ export type Database = {
         Update: {
           action?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_data?: Json | null
           old_data?: Json | null
@@ -3293,13 +3638,534 @@ export type Database = {
           },
         ]
       }
+      audit_risk_assessments: {
+        Row: {
+          approval_date: string | null
+          assessment_date: string
+          assessor_id: string
+          assumptions: string | null
+          audit_priority: string | null
+          control_effectiveness: string
+          control_frequency: string
+          control_testing_results: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          inherent_impact: number
+          inherent_probability: number
+          inherent_risk_score: number | null
+          limitations: string | null
+          methodology: string | null
+          next_review_date: string | null
+          projeto_auditoria_id: string | null
+          recommendations: string | null
+          recommended_audit_frequency: number | null
+          residual_impact: number
+          residual_probability: number
+          residual_risk_score: number | null
+          reviewer_id: string | null
+          risk_category: string
+          risk_code: string
+          risk_description: string | null
+          risk_title: string
+          status: string
+          tenant_id: string
+          trabalho_auditoria_id: string | null
+          universo_auditavel_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          approval_date?: string | null
+          assessment_date?: string
+          assessor_id: string
+          assumptions?: string | null
+          audit_priority?: string | null
+          control_effectiveness?: string
+          control_frequency?: string
+          control_testing_results?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          inherent_impact: number
+          inherent_probability: number
+          inherent_risk_score?: number | null
+          limitations?: string | null
+          methodology?: string | null
+          next_review_date?: string | null
+          projeto_auditoria_id?: string | null
+          recommendations?: string | null
+          recommended_audit_frequency?: number | null
+          residual_impact: number
+          residual_probability: number
+          residual_risk_score?: number | null
+          reviewer_id?: string | null
+          risk_category: string
+          risk_code: string
+          risk_description?: string | null
+          risk_title: string
+          status?: string
+          tenant_id: string
+          trabalho_auditoria_id?: string | null
+          universo_auditavel_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          approval_date?: string | null
+          assessment_date?: string
+          assessor_id?: string
+          assumptions?: string | null
+          audit_priority?: string | null
+          control_effectiveness?: string
+          control_frequency?: string
+          control_testing_results?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          inherent_impact?: number
+          inherent_probability?: number
+          inherent_risk_score?: number | null
+          limitations?: string | null
+          methodology?: string | null
+          next_review_date?: string | null
+          projeto_auditoria_id?: string | null
+          recommendations?: string | null
+          recommended_audit_frequency?: number | null
+          residual_impact?: number
+          residual_probability?: number
+          residual_risk_score?: number | null
+          reviewer_id?: string | null
+          risk_category?: string
+          risk_code?: string
+          risk_description?: string | null
+          risk_title?: string
+          status?: string
+          tenant_id?: string
+          trabalho_auditoria_id?: string | null
+          universo_auditavel_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_audit_risk_assessor"
+            columns: ["assessor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_audit_risk_reviewer"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_audit_risk_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_audit_risk_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      audit_risk_matrix_config: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          impact_levels: Json
+          is_active: boolean
+          matrix_name: string
+          matrix_type: string
+          probability_levels: Json
+          risk_levels: Json
+          tenant_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          impact_levels?: Json
+          is_active?: boolean
+          matrix_name?: string
+          matrix_type?: string
+          probability_levels?: Json
+          risk_levels?: Json
+          tenant_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          impact_levels?: Json
+          is_active?: boolean
+          matrix_name?: string
+          matrix_type?: string
+          probability_levels?: Json
+          risk_levels?: Json
+          tenant_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_audit_risk_matrix_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_audit_risk_matrix_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      audit_sampling_configs: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_confidence_level: number
+          default_expected_error_rate: number
+          default_tolerable_error_rate: number
+          enable_stratification: boolean
+          id: string
+          is_active: boolean
+          max_strata: number
+          mus_precision_factor: number
+          mus_reliability_factor: number
+          stratification_threshold: number
+          tenant_id: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_confidence_level?: number
+          default_expected_error_rate?: number
+          default_tolerable_error_rate?: number
+          enable_stratification?: boolean
+          id?: string
+          is_active?: boolean
+          max_strata?: number
+          mus_precision_factor?: number
+          mus_reliability_factor?: number
+          stratification_threshold?: number
+          tenant_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_confidence_level?: number
+          default_expected_error_rate?: number
+          default_tolerable_error_rate?: number
+          enable_stratification?: boolean
+          id?: string
+          is_active?: boolean
+          max_strata?: number
+          mus_precision_factor?: number
+          mus_reliability_factor?: number
+          stratification_threshold?: number
+          tenant_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sampling_config_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_config_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      audit_sampling_items: {
+        Row: {
+          created_at: string | null
+          error_amount: number | null
+          error_description: string | null
+          error_found: boolean | null
+          error_type: string | null
+          id: string
+          item_description: string | null
+          item_sequence: number
+          item_value: number | null
+          population_item_id: string | null
+          random_number: number | null
+          sampling_plan_id: string
+          selection_method: string | null
+          stratum_id: number | null
+          tenant_id: string
+          test_date: string | null
+          test_notes: string | null
+          tested: boolean
+          tested_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_amount?: number | null
+          error_description?: string | null
+          error_found?: boolean | null
+          error_type?: string | null
+          id?: string
+          item_description?: string | null
+          item_sequence: number
+          item_value?: number | null
+          population_item_id?: string | null
+          random_number?: number | null
+          sampling_plan_id: string
+          selection_method?: string | null
+          stratum_id?: number | null
+          tenant_id: string
+          test_date?: string | null
+          test_notes?: string | null
+          tested?: boolean
+          tested_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_amount?: number | null
+          error_description?: string | null
+          error_found?: boolean | null
+          error_type?: string | null
+          id?: string
+          item_description?: string | null
+          item_sequence?: number
+          item_value?: number | null
+          population_item_id?: string | null
+          random_number?: number | null
+          sampling_plan_id?: string
+          selection_method?: string | null
+          stratum_id?: number | null
+          tenant_id?: string
+          test_date?: string | null
+          test_notes?: string | null
+          tested?: boolean
+          tested_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sampling_item_plan"
+            columns: ["sampling_plan_id"]
+            isOneToOne: false
+            referencedRelation: "audit_sampling_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_item_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_item_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_item_tester"
+            columns: ["tested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_sampling_plans: {
+        Row: {
+          actual_sample_size: number | null
+          approved_at: string | null
+          approved_by: string | null
+          calculated_sample_size: number | null
+          conclusions: string | null
+          confidence_level: number
+          created_at: string | null
+          created_by: string | null
+          errors_found: number | null
+          expected_error_rate: number
+          id: string
+          limitations: string | null
+          methodology_notes: string | null
+          mus_expected_misstatement: number | null
+          mus_materiality: number | null
+          mus_tolerable_misstatement: number | null
+          plan_code: string
+          plan_title: string
+          population_description: string
+          population_size: number
+          population_value: number | null
+          procedimento_auditoria_id: string | null
+          projected_error: number | null
+          projeto_auditoria_id: string | null
+          random_seed: number | null
+          sample_results: Json | null
+          sampling_interval: number | null
+          sampling_method: string
+          selection_method: string | null
+          starting_point: number | null
+          status: string
+          strata_details: Json | null
+          stratification_criteria: string | null
+          tenant_id: string
+          tolerable_error_rate: number
+          total_error_value: number | null
+          trabalho_auditoria_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+          upper_error_limit: number | null
+        }
+        Insert: {
+          actual_sample_size?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_sample_size?: number | null
+          conclusions?: string | null
+          confidence_level?: number
+          created_at?: string | null
+          created_by?: string | null
+          errors_found?: number | null
+          expected_error_rate?: number
+          id?: string
+          limitations?: string | null
+          methodology_notes?: string | null
+          mus_expected_misstatement?: number | null
+          mus_materiality?: number | null
+          mus_tolerable_misstatement?: number | null
+          plan_code: string
+          plan_title: string
+          population_description: string
+          population_size: number
+          population_value?: number | null
+          procedimento_auditoria_id?: string | null
+          projected_error?: number | null
+          projeto_auditoria_id?: string | null
+          random_seed?: number | null
+          sample_results?: Json | null
+          sampling_interval?: number | null
+          sampling_method: string
+          selection_method?: string | null
+          starting_point?: number | null
+          status?: string
+          strata_details?: Json | null
+          stratification_criteria?: string | null
+          tenant_id: string
+          tolerable_error_rate?: number
+          total_error_value?: number | null
+          trabalho_auditoria_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          upper_error_limit?: number | null
+        }
+        Update: {
+          actual_sample_size?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_sample_size?: number | null
+          conclusions?: string | null
+          confidence_level?: number
+          created_at?: string | null
+          created_by?: string | null
+          errors_found?: number | null
+          expected_error_rate?: number
+          id?: string
+          limitations?: string | null
+          methodology_notes?: string | null
+          mus_expected_misstatement?: number | null
+          mus_materiality?: number | null
+          mus_tolerable_misstatement?: number | null
+          plan_code?: string
+          plan_title?: string
+          population_description?: string
+          population_size?: number
+          population_value?: number | null
+          procedimento_auditoria_id?: string | null
+          projected_error?: number | null
+          projeto_auditoria_id?: string | null
+          random_seed?: number | null
+          sample_results?: Json | null
+          sampling_interval?: number | null
+          sampling_method?: string
+          selection_method?: string | null
+          starting_point?: number | null
+          status?: string
+          strata_details?: Json | null
+          stratification_criteria?: string | null
+          tenant_id?: string
+          tolerable_error_rate?: number
+          total_error_value?: number | null
+          trabalho_auditoria_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          upper_error_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sampling_procedure"
+            columns: ["procedimento_auditoria_id"]
+            isOneToOne: false
+            referencedRelation: "procedimentos_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_sampling_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       audit_trail: {
         Row: {
           changed_fields: string[] | null
           hash_current: string | null
           hash_previous: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           new_values: Json | null
           old_values: Json | null
@@ -3318,7 +4184,7 @@ export type Database = {
           hash_current?: string | null
           hash_previous?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_values?: Json | null
           old_values?: Json | null
@@ -3337,7 +4203,7 @@ export type Database = {
           hash_current?: string | null
           hash_previous?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_values?: Json | null
           old_values?: Json | null
@@ -3389,6 +4255,7 @@ export type Database = {
           data_planejada: string
           descricao: string | null
           equipe_avaliacao: string[] | null
+          evidencias: Json | null
           evidencias_coletadas: string[] | null
           id: string
           limitacoes_avaliacao: string | null
@@ -3424,6 +4291,7 @@ export type Database = {
           data_planejada: string
           descricao?: string | null
           equipe_avaliacao?: string[] | null
+          evidencias?: Json | null
           evidencias_coletadas?: string[] | null
           id?: string
           limitacoes_avaliacao?: string | null
@@ -3459,6 +4327,7 @@ export type Database = {
           data_planejada?: string
           descricao?: string | null
           equipe_avaliacao?: string[] | null
+          evidencias?: Json | null
           evidencias_coletadas?: string[] | null
           id?: string
           limitacoes_avaliacao?: string | null
@@ -4403,101 +5272,6 @@ export type Database = {
           },
         ]
       }
-      cronograma_auditoria: {
-        Row: {
-          atividade: string
-          created_at: string | null
-          criticidade: string | null
-          data_fim: string
-          data_inicio: string
-          dependencias: string[] | null
-          descricao: string | null
-          e_marco: boolean | null
-          fase: string
-          horas_alocadas: number | null
-          id: string
-          observacoes: string | null
-          percentual_conclusao: number | null
-          recursos_necessarios: string[] | null
-          responsavel_id: string | null
-          status: string | null
-          tenant_id: string
-          trabalho_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          atividade: string
-          created_at?: string | null
-          criticidade?: string | null
-          data_fim: string
-          data_inicio: string
-          dependencias?: string[] | null
-          descricao?: string | null
-          e_marco?: boolean | null
-          fase: string
-          horas_alocadas?: number | null
-          id?: string
-          observacoes?: string | null
-          percentual_conclusao?: number | null
-          recursos_necessarios?: string[] | null
-          responsavel_id?: string | null
-          status?: string | null
-          tenant_id: string
-          trabalho_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          atividade?: string
-          created_at?: string | null
-          criticidade?: string | null
-          data_fim?: string
-          data_inicio?: string
-          dependencias?: string[] | null
-          descricao?: string | null
-          e_marco?: boolean | null
-          fase?: string
-          horas_alocadas?: number | null
-          id?: string
-          observacoes?: string | null
-          percentual_conclusao?: number | null
-          recursos_necessarios?: string[] | null
-          responsavel_id?: string | null
-          status?: string | null
-          tenant_id?: string
-          trabalho_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cronograma_auditoria_responsavel_id_fkey"
-            columns: ["responsavel_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cronograma_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cronograma_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_encryption_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "cronograma_auditoria_trabalho_id_fkey"
-            columns: ["trabalho_id"]
-            isOneToOne: false
-            referencedRelation: "trabalhos_auditoria"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       crypto_field_mapping: {
         Row: {
           created_at: string | null
@@ -4539,6 +5313,139 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      custom_field_values: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          field_id: string
+          id: string
+          tenant_id: string
+          updated_at: string | null
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          field_id: string
+          id?: string
+          tenant_id: string
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          field_id?: string
+          id?: string
+          tenant_id?: string
+          updated_at?: string | null
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_field_values_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_field_values_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_field_values_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      custom_fields: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          entity_type: string
+          id: string
+          import_mapping: Json | null
+          label: string
+          metadata: Json | null
+          name: string
+          options: Json | null
+          order_index: number | null
+          placeholder: string | null
+          required: boolean | null
+          tab: string | null
+          tenant_id: string
+          type: string
+          updated_at: string | null
+          validation: Json | null
+          visible: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          entity_type: string
+          id?: string
+          import_mapping?: Json | null
+          label: string
+          metadata?: Json | null
+          name: string
+          options?: Json | null
+          order_index?: number | null
+          placeholder?: string | null
+          required?: boolean | null
+          tab?: string | null
+          tenant_id: string
+          type: string
+          updated_at?: string | null
+          validation?: Json | null
+          visible?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          entity_type?: string
+          id?: string
+          import_mapping?: Json | null
+          label?: string
+          metadata?: Json | null
+          name?: string
+          options?: Json | null
+          order_index?: number | null
+          placeholder?: string | null
+          required?: boolean | null
+          tab?: string | null
+          tenant_id?: string
+          type?: string
+          updated_at?: string | null
+          validation?: Json | null
+          visible?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_fields_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_fields_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       custom_fonts: {
         Row: {
@@ -5129,7 +6036,7 @@ export type Database = {
           created_at: string | null
           description: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           new_value: string | null
           old_value: string | null
@@ -5144,7 +6051,7 @@ export type Database = {
           created_at?: string | null
           description: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_value?: string | null
           old_value?: string | null
@@ -5159,7 +6066,7 @@ export type Database = {
           created_at?: string | null
           description?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_value?: string | null
           old_value?: string | null
@@ -5379,6 +6286,114 @@ export type Database = {
           },
         ]
       }
+      ethics_communication_templates: {
+        Row: {
+          approval_required: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          body_template: string
+          created_at: string | null
+          created_by: string
+          id: string
+          is_active: boolean | null
+          language_code: string | null
+          legal_review_required: boolean | null
+          legal_reviewed_at: string | null
+          legal_reviewed_by: string | null
+          subject_template: string
+          template_category: string | null
+          template_name: string
+          template_type: string
+          tenant_id: string
+          updated_at: string | null
+          usage_restrictions: string | null
+          variables: Json | null
+          version: number | null
+        }
+        Insert: {
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          body_template: string
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_active?: boolean | null
+          language_code?: string | null
+          legal_review_required?: boolean | null
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          subject_template: string
+          template_category?: string | null
+          template_name: string
+          template_type: string
+          tenant_id: string
+          updated_at?: string | null
+          usage_restrictions?: string | null
+          variables?: Json | null
+          version?: number | null
+        }
+        Update: {
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          body_template?: string
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_active?: boolean | null
+          language_code?: string | null
+          legal_review_required?: boolean | null
+          legal_reviewed_at?: string | null
+          legal_reviewed_by?: string | null
+          subject_template?: string
+          template_category?: string | null
+          template_name?: string
+          template_type?: string
+          tenant_id?: string
+          updated_at?: string | null
+          usage_restrictions?: string | null
+          variables?: Json | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_communication_templates_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_communication_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_communication_templates_legal_reviewed_by_fkey"
+            columns: ["legal_reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_communication_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_communication_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ethics_communications: {
         Row: {
           attachments: Json | null
@@ -5459,6 +6474,662 @@ export type Database = {
           },
         ]
       }
+      ethics_corrective_actions: {
+        Row: {
+          action_category: string
+          action_description: string
+          action_title: string
+          action_type: string
+          actual_cost: number | null
+          approval_required: boolean | null
+          approved_at: string | null
+          approved_by: string | null
+          assigned_to_id: string | null
+          communication_plan: string | null
+          completed_date: string | null
+          created_at: string | null
+          due_date: string | null
+          effectiveness_measure: string | null
+          effectiveness_rating: number | null
+          estimated_cost: number | null
+          ethics_report_id: string
+          id: string
+          lessons_learned: string | null
+          monitoring_plan: string | null
+          priority: string | null
+          recommendations: string | null
+          related_policies: Json | null
+          related_training: Json | null
+          responsible_party_id: string
+          started_date: string | null
+          status: string | null
+          success_criteria: string | null
+          target_department: string | null
+          target_individual: string | null
+          target_process: string | null
+          tenant_id: string
+          updated_at: string | null
+          verification_date: string | null
+          verification_method: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          action_category: string
+          action_description: string
+          action_title: string
+          action_type: string
+          actual_cost?: number | null
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to_id?: string | null
+          communication_plan?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          effectiveness_measure?: string | null
+          effectiveness_rating?: number | null
+          estimated_cost?: number | null
+          ethics_report_id: string
+          id?: string
+          lessons_learned?: string | null
+          monitoring_plan?: string | null
+          priority?: string | null
+          recommendations?: string | null
+          related_policies?: Json | null
+          related_training?: Json | null
+          responsible_party_id: string
+          started_date?: string | null
+          status?: string | null
+          success_criteria?: string | null
+          target_department?: string | null
+          target_individual?: string | null
+          target_process?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          verification_date?: string | null
+          verification_method?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          action_category?: string
+          action_description?: string
+          action_title?: string
+          action_type?: string
+          actual_cost?: number | null
+          approval_required?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to_id?: string | null
+          communication_plan?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          effectiveness_measure?: string | null
+          effectiveness_rating?: number | null
+          estimated_cost?: number | null
+          ethics_report_id?: string
+          id?: string
+          lessons_learned?: string | null
+          monitoring_plan?: string | null
+          priority?: string | null
+          recommendations?: string | null
+          related_policies?: Json | null
+          related_training?: Json | null
+          responsible_party_id?: string
+          started_date?: string | null
+          status?: string | null
+          success_criteria?: string | null
+          target_department?: string | null
+          target_individual?: string | null
+          target_process?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          verification_date?: string | null
+          verification_method?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_corrective_actions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_assigned_to_id_fkey"
+            columns: ["assigned_to_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_responsible_party_id_fkey"
+            columns: ["responsible_party_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_target_individual_fkey"
+            columns: ["target_individual"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ethics_corrective_actions_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ethics_evidence: {
+        Row: {
+          access_reason: string | null
+          access_restricted: boolean | null
+          chain_of_custody: Json | null
+          collected_by: string
+          collected_date: string
+          created_at: string | null
+          destruction_date: string | null
+          ethics_report_id: string
+          evidence_description: string
+          evidence_location: string | null
+          evidence_source: string
+          evidence_type: string
+          file_hash: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          investigation_plan_id: string | null
+          legal_hold: boolean | null
+          legal_hold_reason: string | null
+          metadata: Json | null
+          preservation_status: string | null
+          privilege_type: string | null
+          privileged: boolean | null
+          retention_period_months: number | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_reason?: string | null
+          access_restricted?: boolean | null
+          chain_of_custody?: Json | null
+          collected_by: string
+          collected_date: string
+          created_at?: string | null
+          destruction_date?: string | null
+          ethics_report_id: string
+          evidence_description: string
+          evidence_location?: string | null
+          evidence_source: string
+          evidence_type: string
+          file_hash?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          investigation_plan_id?: string | null
+          legal_hold?: boolean | null
+          legal_hold_reason?: string | null
+          metadata?: Json | null
+          preservation_status?: string | null
+          privilege_type?: string | null
+          privileged?: boolean | null
+          retention_period_months?: number | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_reason?: string | null
+          access_restricted?: boolean | null
+          chain_of_custody?: Json | null
+          collected_by?: string
+          collected_date?: string
+          created_at?: string | null
+          destruction_date?: string | null
+          ethics_report_id?: string
+          evidence_description?: string
+          evidence_location?: string | null
+          evidence_source?: string
+          evidence_type?: string
+          file_hash?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          investigation_plan_id?: string | null
+          legal_hold?: boolean | null
+          legal_hold_reason?: string | null
+          metadata?: Json | null
+          preservation_status?: string | null
+          privilege_type?: string | null
+          privileged?: boolean | null
+          retention_period_months?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_evidence_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_evidence_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_evidence_investigation_plan_id_fkey"
+            columns: ["investigation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_investigation_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ethics_interviews: {
+        Row: {
+          co_interviewer_id: string | null
+          confidentiality_level: string | null
+          created_at: string | null
+          credibility_notes: string | null
+          document_requests: string | null
+          ethics_report_id: string
+          evidence_mentioned: Json | null
+          follow_up_items: string | null
+          id: string
+          interview_agenda: string | null
+          interview_date: string
+          interview_end_time: string | null
+          interview_location: string | null
+          interview_method: string
+          interview_quality: string | null
+          interview_start_time: string | null
+          interviewer_id: string
+          investigation_plan_id: string | null
+          key_findings: string | null
+          key_questions: string | null
+          legal_concerns: string | null
+          other_witnesses_mentioned: Json | null
+          privileged_information: boolean | null
+          recording_exists: boolean | null
+          recording_permitted: boolean | null
+          tenant_id: string
+          transcript_exists: boolean | null
+          updated_at: string | null
+          witness_demeanor: string | null
+          witness_id: string
+          witness_responses: string | null
+        }
+        Insert: {
+          co_interviewer_id?: string | null
+          confidentiality_level?: string | null
+          created_at?: string | null
+          credibility_notes?: string | null
+          document_requests?: string | null
+          ethics_report_id: string
+          evidence_mentioned?: Json | null
+          follow_up_items?: string | null
+          id?: string
+          interview_agenda?: string | null
+          interview_date: string
+          interview_end_time?: string | null
+          interview_location?: string | null
+          interview_method: string
+          interview_quality?: string | null
+          interview_start_time?: string | null
+          interviewer_id: string
+          investigation_plan_id?: string | null
+          key_findings?: string | null
+          key_questions?: string | null
+          legal_concerns?: string | null
+          other_witnesses_mentioned?: Json | null
+          privileged_information?: boolean | null
+          recording_exists?: boolean | null
+          recording_permitted?: boolean | null
+          tenant_id: string
+          transcript_exists?: boolean | null
+          updated_at?: string | null
+          witness_demeanor?: string | null
+          witness_id: string
+          witness_responses?: string | null
+        }
+        Update: {
+          co_interviewer_id?: string | null
+          confidentiality_level?: string | null
+          created_at?: string | null
+          credibility_notes?: string | null
+          document_requests?: string | null
+          ethics_report_id?: string
+          evidence_mentioned?: Json | null
+          follow_up_items?: string | null
+          id?: string
+          interview_agenda?: string | null
+          interview_date?: string
+          interview_end_time?: string | null
+          interview_location?: string | null
+          interview_method?: string
+          interview_quality?: string | null
+          interview_start_time?: string | null
+          interviewer_id?: string
+          investigation_plan_id?: string | null
+          key_findings?: string | null
+          key_questions?: string | null
+          legal_concerns?: string | null
+          other_witnesses_mentioned?: Json | null
+          privileged_information?: boolean | null
+          recording_exists?: boolean | null
+          recording_permitted?: boolean | null
+          tenant_id?: string
+          transcript_exists?: boolean | null
+          updated_at?: string | null
+          witness_demeanor?: string | null
+          witness_id?: string
+          witness_responses?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_interviews_co_interviewer_id_fkey"
+            columns: ["co_interviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_interviewer_id_fkey"
+            columns: ["interviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_investigation_plan_id_fkey"
+            columns: ["investigation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_investigation_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ethics_interviews_witness_id_fkey"
+            columns: ["witness_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_witnesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ethics_investigation_plans: {
+        Row: {
+          actual_completion_date: string | null
+          actual_start_date: string | null
+          assigned_investigator_id: string | null
+          budget_allocated: number | null
+          budget_consumed: number | null
+          confidentiality_requirements: string | null
+          created_at: string | null
+          created_by: string
+          document_review_plan: string | null
+          estimated_duration_days: number | null
+          ethics_report_id: string
+          evidence_preservation_plan: string | null
+          expert_consultation_plan: string | null
+          external_investigator_contact: string | null
+          external_investigator_firm: string | null
+          id: string
+          investigation_methodology: string | null
+          investigation_objectives: string
+          investigation_scope: string
+          investigation_type: string
+          legal_considerations: string | null
+          planned_completion_date: string | null
+          planned_start_date: string | null
+          regulatory_implications: string | null
+          risk_assessment: string | null
+          status: string | null
+          tenant_id: string
+          updated_at: string | null
+          witness_interview_plan: string | null
+        }
+        Insert: {
+          actual_completion_date?: string | null
+          actual_start_date?: string | null
+          assigned_investigator_id?: string | null
+          budget_allocated?: number | null
+          budget_consumed?: number | null
+          confidentiality_requirements?: string | null
+          created_at?: string | null
+          created_by: string
+          document_review_plan?: string | null
+          estimated_duration_days?: number | null
+          ethics_report_id: string
+          evidence_preservation_plan?: string | null
+          expert_consultation_plan?: string | null
+          external_investigator_contact?: string | null
+          external_investigator_firm?: string | null
+          id?: string
+          investigation_methodology?: string | null
+          investigation_objectives: string
+          investigation_scope: string
+          investigation_type: string
+          legal_considerations?: string | null
+          planned_completion_date?: string | null
+          planned_start_date?: string | null
+          regulatory_implications?: string | null
+          risk_assessment?: string | null
+          status?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          witness_interview_plan?: string | null
+        }
+        Update: {
+          actual_completion_date?: string | null
+          actual_start_date?: string | null
+          assigned_investigator_id?: string | null
+          budget_allocated?: number | null
+          budget_consumed?: number | null
+          confidentiality_requirements?: string | null
+          created_at?: string | null
+          created_by?: string
+          document_review_plan?: string | null
+          estimated_duration_days?: number | null
+          ethics_report_id?: string
+          evidence_preservation_plan?: string | null
+          expert_consultation_plan?: string | null
+          external_investigator_contact?: string | null
+          external_investigator_firm?: string | null
+          id?: string
+          investigation_methodology?: string | null
+          investigation_objectives?: string
+          investigation_scope?: string
+          investigation_type?: string
+          legal_considerations?: string | null
+          planned_completion_date?: string | null
+          planned_start_date?: string | null
+          regulatory_implications?: string | null
+          risk_assessment?: string | null
+          status?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          witness_interview_plan?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_investigation_plans_assigned_investigator_id_fkey"
+            columns: ["assigned_investigator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_investigation_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_investigation_plans_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_investigation_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_investigation_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ethics_metrics: {
+        Row: {
+          calculation_method: string | null
+          created_at: string | null
+          data_sources: Json | null
+          id: string
+          metric_benchmark: number | null
+          metric_category: string
+          metric_name: string
+          metric_period: string
+          metric_target: number | null
+          metric_trend: string | null
+          metric_value: number
+          notes: string | null
+          period_end_date: string
+          period_start_date: string
+          quality_indicators: Json | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          calculation_method?: string | null
+          created_at?: string | null
+          data_sources?: Json | null
+          id?: string
+          metric_benchmark?: number | null
+          metric_category: string
+          metric_name: string
+          metric_period: string
+          metric_target?: number | null
+          metric_trend?: string | null
+          metric_value: number
+          notes?: string | null
+          period_end_date: string
+          period_start_date: string
+          quality_indicators?: Json | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          calculation_method?: string | null
+          created_at?: string | null
+          data_sources?: Json | null
+          id?: string
+          metric_benchmark?: number | null
+          metric_category?: string
+          metric_name?: string
+          metric_period?: string
+          metric_target?: number | null
+          metric_trend?: string | null
+          metric_value?: number
+          notes?: string | null
+          period_end_date?: string
+          period_start_date?: string
+          quality_indicators?: Json | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ethics_notification_templates: {
         Row: {
           body_html: string | null
@@ -5529,104 +7200,343 @@ export type Database = {
           },
         ]
       }
+      ethics_regulatory_notifications: {
+        Row: {
+          business_impact_assessment: string | null
+          communication_restrictions: string | null
+          confidentiality_requested: boolean | null
+          created_at: string | null
+          created_by: string
+          ethics_report_id: string
+          follow_up_deadline: string | null
+          follow_up_required: boolean | null
+          id: string
+          legal_counsel_involved: boolean | null
+          notification_content: string | null
+          notification_deadline: string | null
+          notification_status: string | null
+          notification_trigger: string
+          notification_type: string
+          outside_counsel_id: string | null
+          privilege_concerns: boolean | null
+          public_disclosure_risk: string | null
+          regulator_response: string | null
+          regulatory_body: string
+          response_date: string | null
+          submission_date: string | null
+          submission_method: string | null
+          submission_reference: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_impact_assessment?: string | null
+          communication_restrictions?: string | null
+          confidentiality_requested?: boolean | null
+          created_at?: string | null
+          created_by: string
+          ethics_report_id: string
+          follow_up_deadline?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          legal_counsel_involved?: boolean | null
+          notification_content?: string | null
+          notification_deadline?: string | null
+          notification_status?: string | null
+          notification_trigger: string
+          notification_type: string
+          outside_counsel_id?: string | null
+          privilege_concerns?: boolean | null
+          public_disclosure_risk?: string | null
+          regulator_response?: string | null
+          regulatory_body: string
+          response_date?: string | null
+          submission_date?: string | null
+          submission_method?: string | null
+          submission_reference?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_impact_assessment?: string | null
+          communication_restrictions?: string | null
+          confidentiality_requested?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          ethics_report_id?: string
+          follow_up_deadline?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          legal_counsel_involved?: boolean | null
+          notification_content?: string | null
+          notification_deadline?: string | null
+          notification_status?: string | null
+          notification_trigger?: string
+          notification_type?: string
+          outside_counsel_id?: string | null
+          privilege_concerns?: boolean | null
+          public_disclosure_risk?: string | null
+          regulator_response?: string | null
+          regulatory_body?: string
+          response_date?: string | null
+          submission_date?: string | null
+          submission_method?: string | null
+          submission_reference?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_regulatory_notifications_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_regulatory_notifications_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_regulatory_notifications_outside_counsel_id_fkey"
+            columns: ["outside_counsel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_regulatory_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_regulatory_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ethics_reports: {
         Row: {
           assigned_to: string | null
+          attorney_client_privileged: boolean | null
+          business_unit_affected: string | null
           category: string
           closure_reason: string | null
+          compliance_impact: string | null
+          confidentiality_level: string | null
           created_at: string
           created_by_user_id: string | null
           description: string
           due_date: string | null
           evidence_files: Json | null
+          external_counsel_id: string | null
+          financial_impact_estimate: number | null
+          follow_up_required: boolean | null
+          geographic_scope: string | null
           id: string
+          investigation_notes: string | null
           investigation_summary: string | null
+          investigator_assigned_id: string | null
           is_anonymous: boolean
           last_activity_at: string | null
+          legal_privilege_claimed: boolean | null
+          legal_privilege_reason: string | null
+          legal_review_completed_at: string | null
+          legal_review_required: boolean | null
+          legal_reviewer_id: string | null
+          litigation_risk: string | null
+          media_attention_risk: string | null
+          metadata_collected_at: string | null
           priority: string | null
           protocol_number: string | null
+          regulatory_risk: string | null
+          reporter_department: string | null
+          reporter_device_info: string | null
           reporter_email: string | null
+          reporter_employee_id: string | null
+          reporter_ip_address: string | null
+          reporter_location: string | null
           reporter_name: string | null
           reporter_phone: string | null
+          reporter_position: string | null
+          reporter_relationship_to_subject: string | null
           reporter_type: string | null
+          reporter_user_agent: string | null
+          reputational_risk: string | null
           resolution: string | null
           resolved_at: string | null
+          risk_assessment: string | null
+          risk_score: number | null
           satisfied_resolution: boolean | null
           severity: string
           sla_breach: boolean | null
           source: string | null
+          stakeholders_affected: Json | null
           status: string
+          submission_source: string | null
+          submission_timestamp: string | null
           tags: string[] | null
           tenant_id: string | null
           title: string
           updated_at: string
+          work_product_privileged: boolean | null
         }
         Insert: {
           assigned_to?: string | null
+          attorney_client_privileged?: boolean | null
+          business_unit_affected?: string | null
           category: string
           closure_reason?: string | null
+          compliance_impact?: string | null
+          confidentiality_level?: string | null
           created_at?: string
           created_by_user_id?: string | null
           description: string
           due_date?: string | null
           evidence_files?: Json | null
+          external_counsel_id?: string | null
+          financial_impact_estimate?: number | null
+          follow_up_required?: boolean | null
+          geographic_scope?: string | null
           id?: string
+          investigation_notes?: string | null
           investigation_summary?: string | null
+          investigator_assigned_id?: string | null
           is_anonymous?: boolean
           last_activity_at?: string | null
+          legal_privilege_claimed?: boolean | null
+          legal_privilege_reason?: string | null
+          legal_review_completed_at?: string | null
+          legal_review_required?: boolean | null
+          legal_reviewer_id?: string | null
+          litigation_risk?: string | null
+          media_attention_risk?: string | null
+          metadata_collected_at?: string | null
           priority?: string | null
           protocol_number?: string | null
+          regulatory_risk?: string | null
+          reporter_department?: string | null
+          reporter_device_info?: string | null
           reporter_email?: string | null
+          reporter_employee_id?: string | null
+          reporter_ip_address?: string | null
+          reporter_location?: string | null
           reporter_name?: string | null
           reporter_phone?: string | null
+          reporter_position?: string | null
+          reporter_relationship_to_subject?: string | null
           reporter_type?: string | null
+          reporter_user_agent?: string | null
+          reputational_risk?: string | null
           resolution?: string | null
           resolved_at?: string | null
+          risk_assessment?: string | null
+          risk_score?: number | null
           satisfied_resolution?: boolean | null
           severity?: string
           sla_breach?: boolean | null
           source?: string | null
+          stakeholders_affected?: Json | null
           status?: string
+          submission_source?: string | null
+          submission_timestamp?: string | null
           tags?: string[] | null
           tenant_id?: string | null
           title: string
           updated_at?: string
+          work_product_privileged?: boolean | null
         }
         Update: {
           assigned_to?: string | null
+          attorney_client_privileged?: boolean | null
+          business_unit_affected?: string | null
           category?: string
           closure_reason?: string | null
+          compliance_impact?: string | null
+          confidentiality_level?: string | null
           created_at?: string
           created_by_user_id?: string | null
           description?: string
           due_date?: string | null
           evidence_files?: Json | null
+          external_counsel_id?: string | null
+          financial_impact_estimate?: number | null
+          follow_up_required?: boolean | null
+          geographic_scope?: string | null
           id?: string
+          investigation_notes?: string | null
           investigation_summary?: string | null
+          investigator_assigned_id?: string | null
           is_anonymous?: boolean
           last_activity_at?: string | null
+          legal_privilege_claimed?: boolean | null
+          legal_privilege_reason?: string | null
+          legal_review_completed_at?: string | null
+          legal_review_required?: boolean | null
+          legal_reviewer_id?: string | null
+          litigation_risk?: string | null
+          media_attention_risk?: string | null
+          metadata_collected_at?: string | null
           priority?: string | null
           protocol_number?: string | null
+          regulatory_risk?: string | null
+          reporter_department?: string | null
+          reporter_device_info?: string | null
           reporter_email?: string | null
+          reporter_employee_id?: string | null
+          reporter_ip_address?: string | null
+          reporter_location?: string | null
           reporter_name?: string | null
           reporter_phone?: string | null
+          reporter_position?: string | null
+          reporter_relationship_to_subject?: string | null
           reporter_type?: string | null
+          reporter_user_agent?: string | null
+          reputational_risk?: string | null
           resolution?: string | null
           resolved_at?: string | null
+          risk_assessment?: string | null
+          risk_score?: number | null
           satisfied_resolution?: boolean | null
           severity?: string
           sla_breach?: boolean | null
           source?: string | null
+          stakeholders_affected?: Json | null
           status?: string
+          submission_source?: string | null
+          submission_timestamp?: string | null
           tags?: string[] | null
           tenant_id?: string | null
           title?: string
           updated_at?: string
+          work_product_privileged?: boolean | null
         }
         Relationships: [
           {
             foreignKeyName: "ethics_reports_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_reports_external_counsel_id_fkey"
+            columns: ["external_counsel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_reports_legal_reviewer_id_fkey"
+            columns: ["legal_reviewer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5766,6 +7676,194 @@ export type Database = {
           },
         ]
       }
+      ethics_witnesses: {
+        Row: {
+          confidentiality_agreement: boolean | null
+          contact_information: Json | null
+          cooperation_level: string | null
+          created_at: string | null
+          credibility_assessment: string | null
+          ethics_report_id: string
+          follow_up_notes: string | null
+          follow_up_required: boolean | null
+          id: string
+          interview_date: string | null
+          interview_duration_minutes: number | null
+          interview_location: string | null
+          interview_method: string | null
+          interview_priority: string | null
+          interview_status: string | null
+          interview_summary: string | null
+          interviewer_id: string | null
+          investigation_plan_id: string | null
+          is_anonymous: boolean | null
+          potential_bias: string | null
+          protection_measures: string | null
+          relationship_to_case: string | null
+          retaliation_concerns: boolean | null
+          tenant_id: string
+          updated_at: string | null
+          witness_department: string | null
+          witness_location: string | null
+          witness_name: string | null
+          witness_title: string | null
+          witness_type: string
+        }
+        Insert: {
+          confidentiality_agreement?: boolean | null
+          contact_information?: Json | null
+          cooperation_level?: string | null
+          created_at?: string | null
+          credibility_assessment?: string | null
+          ethics_report_id: string
+          follow_up_notes?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          interview_date?: string | null
+          interview_duration_minutes?: number | null
+          interview_location?: string | null
+          interview_method?: string | null
+          interview_priority?: string | null
+          interview_status?: string | null
+          interview_summary?: string | null
+          interviewer_id?: string | null
+          investigation_plan_id?: string | null
+          is_anonymous?: boolean | null
+          potential_bias?: string | null
+          protection_measures?: string | null
+          relationship_to_case?: string | null
+          retaliation_concerns?: boolean | null
+          tenant_id: string
+          updated_at?: string | null
+          witness_department?: string | null
+          witness_location?: string | null
+          witness_name?: string | null
+          witness_title?: string | null
+          witness_type: string
+        }
+        Update: {
+          confidentiality_agreement?: boolean | null
+          contact_information?: Json | null
+          cooperation_level?: string | null
+          created_at?: string | null
+          credibility_assessment?: string | null
+          ethics_report_id?: string
+          follow_up_notes?: string | null
+          follow_up_required?: boolean | null
+          id?: string
+          interview_date?: string | null
+          interview_duration_minutes?: number | null
+          interview_location?: string | null
+          interview_method?: string | null
+          interview_priority?: string | null
+          interview_status?: string | null
+          interview_summary?: string | null
+          interviewer_id?: string | null
+          investigation_plan_id?: string | null
+          is_anonymous?: boolean | null
+          potential_bias?: string | null
+          protection_measures?: string | null
+          relationship_to_case?: string | null
+          retaliation_concerns?: boolean | null
+          tenant_id?: string
+          updated_at?: string | null
+          witness_department?: string | null
+          witness_location?: string | null
+          witness_name?: string | null
+          witness_title?: string | null
+          witness_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ethics_witnesses_ethics_report_id_fkey"
+            columns: ["ethics_report_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_witnesses_interviewer_id_fkey"
+            columns: ["interviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_witnesses_investigation_plan_id_fkey"
+            columns: ["investigation_plan_id"]
+            isOneToOne: false
+            referencedRelation: "ethics_investigation_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_witnesses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ethics_witnesses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      evidencias_auditoria: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          data_upload: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          tamanho: number | null
+          tenant_id: string
+          tipo: string | null
+          trabalho_id: string | null
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          data_upload?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          tamanho?: number | null
+          tenant_id: string
+          tipo?: string | null
+          trabalho_id?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          data_upload?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tamanho?: number | null
+          tenant_id?: string
+          tipo?: string | null
+          trabalho_id?: string | null
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidencias_auditoria_trabalho_id_fkey"
+            columns: ["trabalho_id"]
+            isOneToOne: false
+            referencedRelation: "trabalhos_auditoria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       execucoes_teste: {
         Row: {
           arquivos_evidencia: Json | null
@@ -5873,13 +7971,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "execucoes_teste_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos_auditoria"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "execucoes_teste_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5892,13 +7983,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "execucoes_teste_teste_id_fkey"
-            columns: ["teste_id"]
-            isOneToOne: false
-            referencedRelation: "testes_auditoria"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "execucoes_teste_updated_by_fkey"
@@ -6067,6 +8151,68 @@ export type Database = {
           },
         ]
       }
+      framework_mappings: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          source_requirement_id: string
+          target_requirement_id: string
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source_requirement_id: string
+          target_requirement_id: string
+          tenant_id: string
+          type?: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source_requirement_id?: string
+          target_requirement_id?: string
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "framework_mappings_source_requirement_id_fkey"
+            columns: ["source_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requisitos_compliance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_mappings_target_requirement_id_fkey"
+            columns: ["target_requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requisitos_compliance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "framework_mappings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       frameworks_compliance: {
         Row: {
           categoria: string | null
@@ -6079,6 +8225,7 @@ export type Database = {
           documentos_relacionados: string[] | null
           escopo_aplicacao: string[] | null
           id: string
+          is_standard: boolean | null
           jurisdicao: string | null
           metadados: Json | null
           nivel_aplicabilidade: string | null
@@ -6087,7 +8234,7 @@ export type Database = {
           status: string | null
           subcategoria: string | null
           tags: string[] | null
-          tenant_id: string
+          tenant_id: string | null
           tipo: string | null
           updated_at: string | null
           updated_by: string | null
@@ -6105,6 +8252,7 @@ export type Database = {
           documentos_relacionados?: string[] | null
           escopo_aplicacao?: string[] | null
           id?: string
+          is_standard?: boolean | null
           jurisdicao?: string | null
           metadados?: Json | null
           nivel_aplicabilidade?: string | null
@@ -6113,7 +8261,7 @@ export type Database = {
           status?: string | null
           subcategoria?: string | null
           tags?: string[] | null
-          tenant_id: string
+          tenant_id?: string | null
           tipo?: string | null
           updated_at?: string | null
           updated_by?: string | null
@@ -6131,6 +8279,7 @@ export type Database = {
           documentos_relacionados?: string[] | null
           escopo_aplicacao?: string[] | null
           id?: string
+          is_standard?: boolean | null
           jurisdicao?: string | null
           metadados?: Json | null
           nivel_aplicabilidade?: string | null
@@ -6139,7 +8288,7 @@ export type Database = {
           status?: string | null
           subcategoria?: string | null
           tags?: string[] | null
-          tenant_id?: string
+          tenant_id?: string | null
           tipo?: string | null
           updated_at?: string | null
           updated_by?: string | null
@@ -6577,6 +8726,68 @@ export type Database = {
           },
         ]
       }
+      group_members: {
+        Row: {
+          added_at: string | null
+          added_by: string | null
+          group_id: string
+          id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          added_by?: string | null
+          group_id: string
+          id?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string | null
+          group_id?: string
+          id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       historico_notificacoes_compliance: {
         Row: {
           assunto: string
@@ -6666,6 +8877,179 @@ export type Database = {
           },
           {
             foreignKeyName: "historico_notificacoes_compliance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      incident_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          incident_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          incident_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          incident_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_comments_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incident_history: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          incident_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          incident_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          incident_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_history_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          affected_systems: string[] | null
+          assignee_id: string | null
+          business_impact: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          detection_date: string | null
+          id: string
+          priority: string
+          reporter_id: string | null
+          resolution_date: string | null
+          severity: string | null
+          status: string
+          target_resolution_date: string | null
+          tenant_id: string | null
+          title: string
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          affected_systems?: string[] | null
+          assignee_id?: string | null
+          business_impact?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          detection_date?: string | null
+          id?: string
+          priority?: string
+          reporter_id?: string | null
+          resolution_date?: string | null
+          severity?: string | null
+          status?: string
+          target_resolution_date?: string | null
+          tenant_id?: string | null
+          title: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          affected_systems?: string[] | null
+          assignee_id?: string | null
+          business_impact?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          detection_date?: string | null
+          id?: string
+          priority?: string
+          reporter_id?: string | null
+          resolution_date?: string | null
+          severity?: string | null
+          status?: string
+          target_resolution_date?: string | null
+          tenant_id?: string | null
+          title?: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
@@ -7711,6 +10095,39 @@ export type Database = {
           },
         ]
       }
+      modules: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       monitoramento_conformidade: {
         Row: {
           aprovador_alertas: string | null
@@ -8108,6 +10525,63 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          message: string | null
+          metadata: Json | null
+          module: string
+          priority: string | null
+          status: string | null
+          tenant_id: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          module: string
+          priority?: string | null
+          status?: string | null
+          tenant_id: string
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          module?: string
+          priority?: string | null
+          status?: string | null
+          tenant_id?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       objetivos_estrategicos: {
         Row: {
           categoria: string | null
@@ -8327,101 +10801,96 @@ export type Database = {
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
           },
-          {
-            foreignKeyName: "orcamento_auditoria_trabalho_id_fkey"
-            columns: ["trabalho_id"]
-            isOneToOne: false
-            referencedRelation: "trabalhos_auditoria"
-            referencedColumns: ["id"]
-          },
         ]
       }
       planos_acao: {
         Row: {
-          apontamento_id: string
-          arquivos_evidencia: Json | null
-          avaliado_por: string | null
-          comentario_auditoria: string | null
-          comentario_responsavel: string | null
+          apontamento_id: string | null
+          area_responsavel: string | null
+          codigo: string
           created_at: string | null
           created_by: string | null
-          data_avaliacao: string | null
-          data_conclusao: string | null
-          data_vencimento: string
-          descricao_acao: string
-          evidencias_conclusao: string[] | null
+          custo_estimado: number | null
+          data_conclusao_real: string | null
+          data_fim_planejada: string | null
+          data_inicio_planejada: string | null
+          data_inicio_real: string | null
+          descricao: string
+          evidencias_implementacao: string[] | null
           id: string
-          metadados: Json | null
-          percentual_conclusao: number | null
-          responsavel_id: string
-          resultado_avaliacao: string | null
+          marcos: string[] | null
+          observacoes: string | null
+          prazo_implementacao: string | null
+          prioridade: string | null
+          progresso: number | null
+          projeto_id: string
+          recursos_necessarios: string[] | null
+          responsavel: string
           status: string | null
           tenant_id: string
-          ultima_atualizacao_responsavel: string | null
+          titulo: string
           updated_at: string | null
-          updated_by: string | null
         }
         Insert: {
-          apontamento_id: string
-          arquivos_evidencia?: Json | null
-          avaliado_por?: string | null
-          comentario_auditoria?: string | null
-          comentario_responsavel?: string | null
+          apontamento_id?: string | null
+          area_responsavel?: string | null
+          codigo: string
           created_at?: string | null
           created_by?: string | null
-          data_avaliacao?: string | null
-          data_conclusao?: string | null
-          data_vencimento: string
-          descricao_acao: string
-          evidencias_conclusao?: string[] | null
+          custo_estimado?: number | null
+          data_conclusao_real?: string | null
+          data_fim_planejada?: string | null
+          data_inicio_planejada?: string | null
+          data_inicio_real?: string | null
+          descricao: string
+          evidencias_implementacao?: string[] | null
           id?: string
-          metadados?: Json | null
-          percentual_conclusao?: number | null
-          responsavel_id: string
-          resultado_avaliacao?: string | null
+          marcos?: string[] | null
+          observacoes?: string | null
+          prazo_implementacao?: string | null
+          prioridade?: string | null
+          progresso?: number | null
+          projeto_id: string
+          recursos_necessarios?: string[] | null
+          responsavel: string
           status?: string | null
           tenant_id: string
-          ultima_atualizacao_responsavel?: string | null
+          titulo: string
           updated_at?: string | null
-          updated_by?: string | null
         }
         Update: {
-          apontamento_id?: string
-          arquivos_evidencia?: Json | null
-          avaliado_por?: string | null
-          comentario_auditoria?: string | null
-          comentario_responsavel?: string | null
+          apontamento_id?: string | null
+          area_responsavel?: string | null
+          codigo?: string
           created_at?: string | null
           created_by?: string | null
-          data_avaliacao?: string | null
-          data_conclusao?: string | null
-          data_vencimento?: string
-          descricao_acao?: string
-          evidencias_conclusao?: string[] | null
+          custo_estimado?: number | null
+          data_conclusao_real?: string | null
+          data_fim_planejada?: string | null
+          data_inicio_planejada?: string | null
+          data_inicio_real?: string | null
+          descricao?: string
+          evidencias_implementacao?: string[] | null
           id?: string
-          metadados?: Json | null
-          percentual_conclusao?: number | null
-          responsavel_id?: string
-          resultado_avaliacao?: string | null
+          marcos?: string[] | null
+          observacoes?: string | null
+          prazo_implementacao?: string | null
+          prioridade?: string | null
+          progresso?: number | null
+          projeto_id?: string
+          recursos_necessarios?: string[] | null
+          responsavel?: string
           status?: string | null
           tenant_id?: string
-          ultima_atualizacao_responsavel?: string | null
+          titulo?: string
           updated_at?: string | null
-          updated_by?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "planos_acao_apontamento_id_fkey"
             columns: ["apontamento_id"]
             isOneToOne: false
-            referencedRelation: "apontamentos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "planos_acao_avaliado_por_fkey"
-            columns: ["avaliado_por"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "apontamentos_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -8432,10 +10901,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "planos_acao_responsavel_id_fkey"
-            columns: ["responsavel_id"]
+            foreignKeyName: "planos_acao_projeto_id_fkey"
+            columns: ["projeto_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "projetos_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -8451,13 +10920,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "planos_acao_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -9262,7 +11724,7 @@ export type Database = {
           comments: string | null
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           policy_id: string
           publication_id: string
           tenant_id: string
@@ -9275,7 +11737,7 @@ export type Database = {
           comments?: string | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           policy_id: string
           publication_id: string
           tenant_id: string
@@ -9288,7 +11750,7 @@ export type Database = {
           comments?: string | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           policy_id?: string
           publication_id?: string
           tenant_id?: string
@@ -9412,6 +11874,50 @@ export type Database = {
           },
         ]
       }
+      policy_audits: {
+        Row: {
+          adequacy_percentage: number | null
+          created_at: string | null
+          framework_id: string | null
+          framework_name: string | null
+          id: string
+          policy_id: string
+          status: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          adequacy_percentage?: number | null
+          created_at?: string | null
+          framework_id?: string | null
+          framework_name?: string | null
+          id?: string
+          policy_id: string
+          status: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          adequacy_percentage?: number | null
+          created_at?: string | null
+          framework_id?: string | null
+          framework_name?: string | null
+          id?: string
+          policy_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_audits_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       policy_change_history: {
         Row: {
           change_description: string | null
@@ -9479,6 +11985,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      policy_control_matches: {
+        Row: {
+          adequacy_score: number | null
+          audit_id: string
+          control_code: string | null
+          control_description: string | null
+          created_at: string | null
+          detected_evidence: string | null
+          framework_requirement_code: string | null
+          framework_requirement_id: string | null
+          id: string
+          maturity_level: string | null
+          status: string | null
+          updated_at: string | null
+          user_notes: string | null
+        }
+        Insert: {
+          adequacy_score?: number | null
+          audit_id: string
+          control_code?: string | null
+          control_description?: string | null
+          created_at?: string | null
+          detected_evidence?: string | null
+          framework_requirement_code?: string | null
+          framework_requirement_id?: string | null
+          id?: string
+          maturity_level?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_notes?: string | null
+        }
+        Update: {
+          adequacy_score?: number | null
+          audit_id?: string
+          control_code?: string | null
+          control_description?: string | null
+          created_at?: string | null
+          detected_evidence?: string | null
+          framework_requirement_code?: string | null
+          framework_requirement_id?: string | null
+          id?: string
+          maturity_level?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_control_matches_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "policy_audits"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10351,13 +12913,6 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
-            foreignKeyName: "procedimentos_auditoria_trabalho_id_fkey"
-            columns: ["trabalho_id"]
-            isOneToOne: false
-            referencedRelation: "trabalhos_auditoria"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "procedimentos_auditoria_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
@@ -10468,6 +13023,51 @@ export type Database = {
           },
         ]
       }
+      processos: {
+        Row: {
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          responsavel: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          responsavel?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          responsavel?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -10566,106 +13166,108 @@ export type Database = {
       }
       projetos_auditoria: {
         Row: {
-          apontamentos_altos: number | null
-          apontamentos_baixos: number | null
-          apontamentos_criticos: number | null
-          apontamentos_medios: number | null
-          chefe_auditoria: string
+          area_auditada: string | null
+          chefe_auditoria: string | null
           codigo: string
+          completude_achados: number | null
+          completude_execucao: number | null
+          completude_followup: number | null
+          completude_planejamento: number | null
+          completude_relatorio: number | null
           created_at: string | null
           created_by: string | null
-          data_fim_planejada: string
+          criterios_auditoria: string[] | null
+          data_fim_planejada: string | null
           data_fim_real: string | null
-          data_inicio: string
+          data_inicio: string | null
           descricao: string | null
-          equipe_ids: string[] | null
+          equipe_auditoria: string[] | null
           escopo: string | null
           fase_atual: string | null
-          horas_orcadas: number | null
-          horas_realizadas: number | null
+          fases_visitadas: Json | null
           id: string
           metadados: Json | null
+          metodologia: string | null
           objetivos: string[] | null
-          rating_geral: string | null
+          orcamento_estimado: number | null
+          prioridade: string | null
+          progresso_geral: number | null
           status: string | null
           tenant_id: string
           tipo_auditoria: string | null
           titulo: string
-          total_apontamentos: number | null
-          universo_auditavel_id: string
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
-          apontamentos_altos?: number | null
-          apontamentos_baixos?: number | null
-          apontamentos_criticos?: number | null
-          apontamentos_medios?: number | null
-          chefe_auditoria: string
+          area_auditada?: string | null
+          chefe_auditoria?: string | null
           codigo: string
+          completude_achados?: number | null
+          completude_execucao?: number | null
+          completude_followup?: number | null
+          completude_planejamento?: number | null
+          completude_relatorio?: number | null
           created_at?: string | null
           created_by?: string | null
-          data_fim_planejada: string
+          criterios_auditoria?: string[] | null
+          data_fim_planejada?: string | null
           data_fim_real?: string | null
-          data_inicio: string
+          data_inicio?: string | null
           descricao?: string | null
-          equipe_ids?: string[] | null
+          equipe_auditoria?: string[] | null
           escopo?: string | null
           fase_atual?: string | null
-          horas_orcadas?: number | null
-          horas_realizadas?: number | null
+          fases_visitadas?: Json | null
           id?: string
           metadados?: Json | null
+          metodologia?: string | null
           objetivos?: string[] | null
-          rating_geral?: string | null
+          orcamento_estimado?: number | null
+          prioridade?: string | null
+          progresso_geral?: number | null
           status?: string | null
           tenant_id: string
           tipo_auditoria?: string | null
           titulo: string
-          total_apontamentos?: number | null
-          universo_auditavel_id: string
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
-          apontamentos_altos?: number | null
-          apontamentos_baixos?: number | null
-          apontamentos_criticos?: number | null
-          apontamentos_medios?: number | null
-          chefe_auditoria?: string
+          area_auditada?: string | null
+          chefe_auditoria?: string | null
           codigo?: string
+          completude_achados?: number | null
+          completude_execucao?: number | null
+          completude_followup?: number | null
+          completude_planejamento?: number | null
+          completude_relatorio?: number | null
           created_at?: string | null
           created_by?: string | null
-          data_fim_planejada?: string
+          criterios_auditoria?: string[] | null
+          data_fim_planejada?: string | null
           data_fim_real?: string | null
-          data_inicio?: string
+          data_inicio?: string | null
           descricao?: string | null
-          equipe_ids?: string[] | null
+          equipe_auditoria?: string[] | null
           escopo?: string | null
           fase_atual?: string | null
-          horas_orcadas?: number | null
-          horas_realizadas?: number | null
+          fases_visitadas?: Json | null
           id?: string
           metadados?: Json | null
+          metodologia?: string | null
           objetivos?: string[] | null
-          rating_geral?: string | null
+          orcamento_estimado?: number | null
+          prioridade?: string | null
+          progresso_geral?: number | null
           status?: string | null
           tenant_id?: string
           tipo_auditoria?: string | null
           titulo?: string
-          total_apontamentos?: number | null
-          universo_auditavel_id?: string
           updated_at?: string | null
           updated_by?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "projetos_auditoria_chefe_auditoria_fkey"
-            columns: ["chefe_auditoria"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "projetos_auditoria_created_by_fkey"
             columns: ["created_by"]
@@ -10686,13 +13288,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "projetos_auditoria_universo_auditavel_id_fkey"
-            columns: ["universo_auditavel_id"]
-            isOneToOne: false
-            referencedRelation: "universo_auditavel"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "projetos_auditoria_updated_by_fkey"
@@ -10831,6 +13426,149 @@ export type Database = {
           },
         ]
       }
+      relatorios_auditoria: {
+        Row: {
+          apontamentos_altos: number | null
+          apontamentos_criticos: number | null
+          aprovado_por: string | null
+          arquivo_url: string | null
+          autor_id: string | null
+          compliance_score: number | null
+          conclusoes: string | null
+          created_at: string | null
+          created_by: string | null
+          data_aprovacao: string | null
+          data_publicacao: string | null
+          destinatarios: string[] | null
+          escopo_metodologia: string | null
+          id: string
+          introducao: string | null
+          projeto_id: string | null
+          recomendacoes: string | null
+          resultados_principais: string | null
+          resumo_executivo: string | null
+          revisor_id: string | null
+          status: string | null
+          template_usado: string | null
+          tenant_id: string
+          tipo: string | null
+          titulo: string
+          total_apontamentos: number | null
+          updated_at: string | null
+          versao: string | null
+        }
+        Insert: {
+          apontamentos_altos?: number | null
+          apontamentos_criticos?: number | null
+          aprovado_por?: string | null
+          arquivo_url?: string | null
+          autor_id?: string | null
+          compliance_score?: number | null
+          conclusoes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_aprovacao?: string | null
+          data_publicacao?: string | null
+          destinatarios?: string[] | null
+          escopo_metodologia?: string | null
+          id?: string
+          introducao?: string | null
+          projeto_id?: string | null
+          recomendacoes?: string | null
+          resultados_principais?: string | null
+          resumo_executivo?: string | null
+          revisor_id?: string | null
+          status?: string | null
+          template_usado?: string | null
+          tenant_id: string
+          tipo?: string | null
+          titulo: string
+          total_apontamentos?: number | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Update: {
+          apontamentos_altos?: number | null
+          apontamentos_criticos?: number | null
+          aprovado_por?: string | null
+          arquivo_url?: string | null
+          autor_id?: string | null
+          compliance_score?: number | null
+          conclusoes?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          data_aprovacao?: string | null
+          data_publicacao?: string | null
+          destinatarios?: string[] | null
+          escopo_metodologia?: string | null
+          id?: string
+          introducao?: string | null
+          projeto_id?: string | null
+          recomendacoes?: string | null
+          resultados_principais?: string | null
+          resumo_executivo?: string | null
+          revisor_id?: string | null
+          status?: string | null
+          template_usado?: string | null
+          tenant_id?: string
+          tipo?: string | null
+          titulo?: string
+          total_apontamentos?: number | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_auditoria_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos_auditoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_revisor_id_fkey"
+            columns: ["revisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_auditoria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       relatorios_conformidade: {
         Row: {
           automatico: boolean | null
@@ -10947,6 +13685,56 @@ export type Database = {
           },
         ]
       }
+      remediation_tasks: {
+        Row: {
+          assigned_team: string | null
+          assigned_to: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          proposed_vulnerability_status: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          vulnerability_id: string
+        }
+        Insert: {
+          assigned_team?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          proposed_vulnerability_status?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          vulnerability_id: string
+        }
+        Update: {
+          assigned_team?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          proposed_vulnerability_status?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remediation_tasks_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       requisitos_compliance: {
         Row: {
           categoria: string | null
@@ -10970,7 +13758,7 @@ export type Database = {
           responsavel_conformidade: string | null
           status: string | null
           subcategoria: string | null
-          tenant_id: string
+          tenant_id: string | null
           tipo_controle: string | null
           tipos_evidencia_esperada: string[] | null
           titulo: string
@@ -10999,7 +13787,7 @@ export type Database = {
           responsavel_conformidade?: string | null
           status?: string | null
           subcategoria?: string | null
-          tenant_id: string
+          tenant_id?: string | null
           tipo_controle?: string | null
           tipos_evidencia_esperada?: string[] | null
           titulo: string
@@ -11028,7 +13816,7 @@ export type Database = {
           responsavel_conformidade?: string | null
           status?: string | null
           subcategoria?: string | null
-          tenant_id?: string
+          tenant_id?: string | null
           tipo_controle?: string | null
           tipos_evidencia_esperada?: string[] | null
           titulo?: string
@@ -11087,107 +13875,6 @@ export type Database = {
           },
           {
             foreignKeyName: "requisitos_compliance_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      riscos_auditoria: {
-        Row: {
-          apetite: number | null
-          categoria: string | null
-          codigo: string
-          created_at: string | null
-          created_by: string | null
-          descricao: string
-          id: string
-          impacto: number | null
-          impacto_residual: number | null
-          metadados: Json | null
-          probabilidade: number | null
-          probabilidade_residual: number | null
-          risco_inerente: number | null
-          risco_residual: number | null
-          status: string | null
-          subcategoria: string | null
-          tenant_id: string
-          titulo: string
-          tolerancia: string | null
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          apetite?: number | null
-          categoria?: string | null
-          codigo: string
-          created_at?: string | null
-          created_by?: string | null
-          descricao: string
-          id?: string
-          impacto?: number | null
-          impacto_residual?: number | null
-          metadados?: Json | null
-          probabilidade?: number | null
-          probabilidade_residual?: number | null
-          risco_inerente?: number | null
-          risco_residual?: number | null
-          status?: string | null
-          subcategoria?: string | null
-          tenant_id: string
-          titulo: string
-          tolerancia?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          apetite?: number | null
-          categoria?: string | null
-          codigo?: string
-          created_at?: string | null
-          created_by?: string | null
-          descricao?: string
-          id?: string
-          impacto?: number | null
-          impacto_residual?: number | null
-          metadados?: Json | null
-          probabilidade?: number | null
-          probabilidade_residual?: number | null
-          risco_inerente?: number | null
-          risco_residual?: number | null
-          status?: string | null
-          subcategoria?: string | null
-          tenant_id?: string
-          titulo?: string
-          tolerancia?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "riscos_auditoria_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "riscos_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "riscos_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_encryption_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "riscos_auditoria_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -11434,13 +14121,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "riscos_planejamento_auditoria_trabalho_id_fkey"
-            columns: ["trabalho_id"]
-            isOneToOne: false
-            referencedRelation: "trabalhos_auditoria"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -11921,6 +14601,69 @@ export type Database = {
           methodology_type?: string
           name?: string
           parameters?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          analysis_data: Json | null
+          assigned_to: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          impact_score: number | null
+          likelihood_score: number | null
+          probability: number | null
+          risk_category: string | null
+          risk_level: string | null
+          risk_score: number | null
+          severity: string | null
+          status: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          analysis_data?: Json | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact_score?: number | null
+          likelihood_score?: number | null
+          probability?: number | null
+          risk_category?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          severity?: string | null
+          status?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          analysis_data?: Json | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          impact_score?: number | null
+          likelihood_score?: number | null
+          probability?: number | null
+          risk_category?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          severity?: string | null
+          status?: string | null
+          tenant_id?: string
+          title?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -13082,6 +15825,81 @@ export type Database = {
         }
         Relationships: []
       }
+      sistemas: {
+        Row: {
+          autenticacao_sso: boolean | null
+          created_at: string | null
+          criticidade: string | null
+          dados_sensiveis: boolean | null
+          descricao: string | null
+          documentacao_link: string | null
+          fornecedor: string | null
+          id: string
+          internet_facing: boolean | null
+          nome: string
+          responsavel_negocio: string | null
+          responsavel_tecnico: string | null
+          status: string | null
+          tenant_id: string
+          tipo: string | null
+          updated_at: string | null
+          versao: string | null
+        }
+        Insert: {
+          autenticacao_sso?: boolean | null
+          created_at?: string | null
+          criticidade?: string | null
+          dados_sensiveis?: boolean | null
+          descricao?: string | null
+          documentacao_link?: string | null
+          fornecedor?: string | null
+          id?: string
+          internet_facing?: boolean | null
+          nome: string
+          responsavel_negocio?: string | null
+          responsavel_tecnico?: string | null
+          status?: string | null
+          tenant_id: string
+          tipo?: string | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Update: {
+          autenticacao_sso?: boolean | null
+          created_at?: string | null
+          criticidade?: string | null
+          dados_sensiveis?: boolean | null
+          descricao?: string | null
+          documentacao_link?: string | null
+          fornecedor?: string | null
+          id?: string
+          internet_facing?: boolean | null
+          nome?: string
+          responsavel_negocio?: string | null
+          responsavel_tecnico?: string | null
+          status?: string | null
+          tenant_id?: string
+          tipo?: string | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sistemas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sistemas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       sso_providers: {
         Row: {
           attribute_mapping: Json | null
@@ -13199,6 +16017,45 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      templates_relatorios: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          estrutura: Json | null
+          id: string
+          nome: string
+          tenant_id: string
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          estrutura?: Json | null
+          id?: string
+          nome: string
+          tenant_id: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          estrutura?: Json | null
+          id?: string
+          nome?: string
+          tenant_id?: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tenant_crypto_keys: {
         Row: {
@@ -13344,6 +16201,58 @@ export type Database = {
           },
         ]
       }
+      tenant_modules: {
+        Row: {
+          configuration: Json | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          module_key: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          configuration?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          configuration?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_modules_module_key_fkey"
+            columns: ["module_key"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "tenant_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_modules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           contact_email: string
@@ -13388,114 +16297,59 @@ export type Database = {
       }
       testes_auditoria: {
         Row: {
-          codigo: string
-          controle_id: string
+          amostra: number | null
+          conclusao: string | null
           created_at: string | null
           created_by: string | null
-          criterio_selecao: string | null
-          ferramentas_necessarias: string[] | null
-          frequencia: string | null
-          horas_estimadas: number | null
           id: string
-          metadados: Json | null
-          metodologia: string | null
-          nivel_experiencia: string | null
-          objetivo: string
-          periodo_execucao: string | null
-          procedimento: string
-          skills_necessarias: string[] | null
+          nome: string
+          objetivo: string | null
+          populacao: number | null
+          procedimento: string | null
+          projeto_id: string
+          resultado: string | null
           status: string | null
-          tamanho_amostra_minimo: number | null
           tenant_id: string
-          tipo_amostra: string | null
-          titulo: string
           updated_at: string | null
-          updated_by: string | null
         }
         Insert: {
-          codigo: string
-          controle_id: string
+          amostra?: number | null
+          conclusao?: string | null
           created_at?: string | null
           created_by?: string | null
-          criterio_selecao?: string | null
-          ferramentas_necessarias?: string[] | null
-          frequencia?: string | null
-          horas_estimadas?: number | null
           id?: string
-          metadados?: Json | null
-          metodologia?: string | null
-          nivel_experiencia?: string | null
-          objetivo: string
-          periodo_execucao?: string | null
-          procedimento: string
-          skills_necessarias?: string[] | null
+          nome: string
+          objetivo?: string | null
+          populacao?: number | null
+          procedimento?: string | null
+          projeto_id: string
+          resultado?: string | null
           status?: string | null
-          tamanho_amostra_minimo?: number | null
           tenant_id: string
-          tipo_amostra?: string | null
-          titulo: string
           updated_at?: string | null
-          updated_by?: string | null
         }
         Update: {
-          codigo?: string
-          controle_id?: string
+          amostra?: number | null
+          conclusao?: string | null
           created_at?: string | null
           created_by?: string | null
-          criterio_selecao?: string | null
-          ferramentas_necessarias?: string[] | null
-          frequencia?: string | null
-          horas_estimadas?: number | null
           id?: string
-          metadados?: Json | null
-          metodologia?: string | null
-          nivel_experiencia?: string | null
-          objetivo?: string
-          periodo_execucao?: string | null
-          procedimento?: string
-          skills_necessarias?: string[] | null
+          nome?: string
+          objetivo?: string | null
+          populacao?: number | null
+          procedimento?: string | null
+          projeto_id?: string
+          resultado?: string | null
           status?: string | null
-          tamanho_amostra_minimo?: number | null
           tenant_id?: string
-          tipo_amostra?: string | null
-          titulo?: string
           updated_at?: string | null
-          updated_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "testes_auditoria_controle_id_fkey"
-            columns: ["controle_id"]
+            foreignKeyName: "testes_auditoria_projeto_id_fkey"
+            columns: ["projeto_id"]
             isOneToOne: false
-            referencedRelation: "controles_auditoria"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "testes_auditoria_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "testes_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "testes_auditoria_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_encryption_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "testes_auditoria_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "projetos_auditoria"
             referencedColumns: ["id"]
           },
         ]
@@ -13663,115 +16517,81 @@ export type Database = {
       }
       trabalhos_auditoria: {
         Row: {
-          area_auditada: string
-          auditor_lider: string
+          amostra_criterios: string | null
+          amostra_tamanho: number | null
           codigo: string
+          conclusoes: string | null
+          controle_testado: string | null
           created_at: string | null
           created_by: string | null
-          data_fim_planejada: string
-          data_inicio_planejada: string
-          dependencias_externas: string[] | null
-          descricao: string
-          duracao_dias: number | null
-          equipe_auditores: string[] | null
-          escopo: string
-          frequencia: string | null
-          horas_planejadas: number
+          data_conclusao: string | null
+          data_inicio: string | null
+          descricao: string | null
+          horas_planejadas: number | null
+          horas_trabalhadas: number | null
           id: string
-          metadados: Json | null
-          nivel_risco: string | null
-          objetivos: string[]
           observacoes: string | null
-          orcamento_estimado: number | null
-          percentual_conclusao: number | null
-          plano_anual_id: string | null
-          prerequisitos: string[] | null
-          prioridade: number | null
-          recursos_necessarios: string[] | null
+          procedimentos: string | null
+          projeto_id: string
+          referencias: string[] | null
+          responsavel: string | null
           status: string | null
           tenant_id: string
-          tipo_auditoria: string
+          tipo: string | null
           titulo: string
-          unidade_organizacional: string | null
           updated_at: string | null
-          updated_by: string | null
         }
         Insert: {
-          area_auditada: string
-          auditor_lider: string
+          amostra_criterios?: string | null
+          amostra_tamanho?: number | null
           codigo: string
+          conclusoes?: string | null
+          controle_testado?: string | null
           created_at?: string | null
           created_by?: string | null
-          data_fim_planejada: string
-          data_inicio_planejada: string
-          dependencias_externas?: string[] | null
-          descricao: string
-          duracao_dias?: number | null
-          equipe_auditores?: string[] | null
-          escopo: string
-          frequencia?: string | null
-          horas_planejadas: number
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          horas_planejadas?: number | null
+          horas_trabalhadas?: number | null
           id?: string
-          metadados?: Json | null
-          nivel_risco?: string | null
-          objetivos: string[]
           observacoes?: string | null
-          orcamento_estimado?: number | null
-          percentual_conclusao?: number | null
-          plano_anual_id?: string | null
-          prerequisitos?: string[] | null
-          prioridade?: number | null
-          recursos_necessarios?: string[] | null
+          procedimentos?: string | null
+          projeto_id: string
+          referencias?: string[] | null
+          responsavel?: string | null
           status?: string | null
           tenant_id: string
-          tipo_auditoria: string
+          tipo?: string | null
           titulo: string
-          unidade_organizacional?: string | null
           updated_at?: string | null
-          updated_by?: string | null
         }
         Update: {
-          area_auditada?: string
-          auditor_lider?: string
+          amostra_criterios?: string | null
+          amostra_tamanho?: number | null
           codigo?: string
+          conclusoes?: string | null
+          controle_testado?: string | null
           created_at?: string | null
           created_by?: string | null
-          data_fim_planejada?: string
-          data_inicio_planejada?: string
-          dependencias_externas?: string[] | null
-          descricao?: string
-          duracao_dias?: number | null
-          equipe_auditores?: string[] | null
-          escopo?: string
-          frequencia?: string | null
-          horas_planejadas?: number
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          horas_planejadas?: number | null
+          horas_trabalhadas?: number | null
           id?: string
-          metadados?: Json | null
-          nivel_risco?: string | null
-          objetivos?: string[]
           observacoes?: string | null
-          orcamento_estimado?: number | null
-          percentual_conclusao?: number | null
-          plano_anual_id?: string | null
-          prerequisitos?: string[] | null
-          prioridade?: number | null
-          recursos_necessarios?: string[] | null
+          procedimentos?: string | null
+          projeto_id?: string
+          referencias?: string[] | null
+          responsavel?: string | null
           status?: string | null
           tenant_id?: string
-          tipo_auditoria?: string
+          tipo?: string | null
           titulo?: string
-          unidade_organizacional?: string | null
           updated_at?: string | null
-          updated_by?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "trabalhos_auditoria_auditor_lider_fkey"
-            columns: ["auditor_lider"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "trabalhos_auditoria_created_by_fkey"
             columns: ["created_by"]
@@ -13780,10 +16600,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "trabalhos_auditoria_plano_anual_id_fkey"
-            columns: ["plano_anual_id"]
+            foreignKeyName: "trabalhos_auditoria_projeto_id_fkey"
+            columns: ["projeto_id"]
             isOneToOne: false
-            referencedRelation: "planos_auditoria_anuais"
+            referencedRelation: "projetos_auditoria"
             referencedColumns: ["id"]
           },
           {
@@ -13799,13 +16619,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "trabalhos_auditoria_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -13956,115 +16769,6 @@ export type Database = {
           },
         ]
       }
-      universo_auditavel: {
-        Row: {
-          codigo: string
-          created_at: string | null
-          created_by: string | null
-          criticidade: string | null
-          descricao: string | null
-          frequencia_auditoria: number | null
-          id: string
-          metadados: Json | null
-          nivel: number
-          nome: string
-          proxima_auditoria: string | null
-          responsavel_id: string | null
-          status: string | null
-          tenant_id: string
-          tipo: string
-          ultima_auditoria: string | null
-          universo_pai: string | null
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          codigo: string
-          created_at?: string | null
-          created_by?: string | null
-          criticidade?: string | null
-          descricao?: string | null
-          frequencia_auditoria?: number | null
-          id?: string
-          metadados?: Json | null
-          nivel?: number
-          nome: string
-          proxima_auditoria?: string | null
-          responsavel_id?: string | null
-          status?: string | null
-          tenant_id: string
-          tipo: string
-          ultima_auditoria?: string | null
-          universo_pai?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          codigo?: string
-          created_at?: string | null
-          created_by?: string | null
-          criticidade?: string | null
-          descricao?: string | null
-          frequencia_auditoria?: number | null
-          id?: string
-          metadados?: Json | null
-          nivel?: number
-          nome?: string
-          proxima_auditoria?: string | null
-          responsavel_id?: string | null
-          status?: string | null
-          tenant_id?: string
-          tipo?: string
-          ultima_auditoria?: string | null
-          universo_pai?: string | null
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "universo_auditavel_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "universo_auditavel_responsavel_id_fkey"
-            columns: ["responsavel_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "universo_auditavel_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "universo_auditavel_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_encryption_status"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "universo_auditavel_universo_pai_fkey"
-            columns: ["universo_pai"]
-            isOneToOne: false
-            referencedRelation: "universo_auditavel"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "universo_auditavel_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_roles: {
         Row: {
           created_at: string
@@ -14101,6 +16805,117 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_encryption_status"
             referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      vendor_assessments: {
+        Row: {
+          assessment_name: string
+          assessment_type: string | null
+          completion_date: string | null
+          created_at: string | null
+          created_by: string | null
+          due_date: string | null
+          evidence_attachments: Json | null
+          framework_id: string | null
+          id: string
+          internal_review_status: string | null
+          metadata: Json | null
+          overall_score: number | null
+          priority: string | null
+          progress_percentage: number | null
+          public_link: string | null
+          public_link_expires_at: string | null
+          responses: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          risk_level: string | null
+          start_date: string | null
+          status: string | null
+          submission_summary: string | null
+          tenant_id: string
+          updated_at: string | null
+          updated_by: string | null
+          vendor_id: string
+          vendor_submitted_at: string | null
+        }
+        Insert: {
+          assessment_name: string
+          assessment_type?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          evidence_attachments?: Json | null
+          framework_id?: string | null
+          id?: string
+          internal_review_status?: string | null
+          metadata?: Json | null
+          overall_score?: number | null
+          priority?: string | null
+          progress_percentage?: number | null
+          public_link?: string | null
+          public_link_expires_at?: string | null
+          responses?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          risk_level?: string | null
+          start_date?: string | null
+          status?: string | null
+          submission_summary?: string | null
+          tenant_id: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vendor_id: string
+          vendor_submitted_at?: string | null
+        }
+        Update: {
+          assessment_name?: string
+          assessment_type?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          evidence_attachments?: Json | null
+          framework_id?: string | null
+          id?: string
+          internal_review_status?: string | null
+          metadata?: Json | null
+          overall_score?: number | null
+          priority?: string | null
+          progress_percentage?: number | null
+          public_link?: string | null
+          public_link_expires_at?: string | null
+          responses?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          risk_level?: string | null
+          start_date?: string | null
+          status?: string | null
+          submission_summary?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          vendor_id?: string
+          vendor_submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_assessments_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registry"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -15066,6 +17881,51 @@ export type Database = {
           },
         ]
       }
+      vendor_risk_messages: {
+        Row: {
+          assessment_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          sender_type: string
+          vendor_id: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          sender_type: string
+          vendor_id: string
+        }
+        Update: {
+          assessment_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          sender_type?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_risk_messages_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_risk_messages_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_risks: {
         Row: {
           alex_analysis: Json | null
@@ -15215,152 +18075,409 @@ export type Database = {
         }
         Relationships: []
       }
-      incidents: {
+      vulnerabilities: {
         Row: {
-          assignee_id: string | null
-          category: string
+          app_id: string | null
+          asset_ip: unknown
+          asset_name: string
+          asset_type: string | null
+          asset_url: string | null
+          assigned_group_id: string | null
+          assigned_to: string | null
+          classification_rule_id: string | null
           created_at: string | null
+          created_by: string | null
+          cve_id: string | null
+          cvss_score: number | null
           description: string | null
+          due_date: string | null
+          first_found_date: string | null
           id: string
-          priority: string
-          reporter_id: string | null
+          last_found_date: string | null
+          port: number | null
+          priority_score: number | null
+          protocol: string | null
+          raw_data: Json | null
+          references: string[] | null
+          resolved_at: string | null
+          risk_assessment_data: Json | null
+          risk_score: number | null
+          root_cause_category: string | null
+          root_cause_details: string | null
+          severity: string
+          sla_breach: boolean | null
+          solution: string | null
+          source_tool: string
+          source_type: string
           status: string
-          tenant_id: string | null
-          target_resolution_date: string | null
+          tenant_id: string
           title: string
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
-          assignee_id?: string | null
-          category?: string
+          app_id?: string | null
+          asset_ip?: unknown
+          asset_name: string
+          asset_type?: string | null
+          asset_url?: string | null
+          assigned_group_id?: string | null
+          assigned_to?: string | null
+          classification_rule_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cve_id?: string | null
+          cvss_score?: number | null
           description?: string | null
+          due_date?: string | null
+          first_found_date?: string | null
           id?: string
-          priority?: string
-          reporter_id?: string | null
+          last_found_date?: string | null
+          port?: number | null
+          priority_score?: number | null
+          protocol?: string | null
+          raw_data?: Json | null
+          references?: string[] | null
+          resolved_at?: string | null
+          risk_assessment_data?: Json | null
+          risk_score?: number | null
+          root_cause_category?: string | null
+          root_cause_details?: string | null
+          severity: string
+          sla_breach?: boolean | null
+          solution?: string | null
+          source_tool: string
+          source_type: string
           status?: string
-          tenant_id?: string | null
-          target_resolution_date?: string | null
+          tenant_id: string
           title: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
-          assignee_id?: string | null
-          category?: string
+          app_id?: string | null
+          asset_ip?: unknown
+          asset_name?: string
+          asset_type?: string | null
+          asset_url?: string | null
+          assigned_group_id?: string | null
+          assigned_to?: string | null
+          classification_rule_id?: string | null
           created_at?: string | null
+          created_by?: string | null
+          cve_id?: string | null
+          cvss_score?: number | null
           description?: string | null
+          due_date?: string | null
+          first_found_date?: string | null
           id?: string
-          priority?: string
-          reporter_id?: string | null
+          last_found_date?: string | null
+          port?: number | null
+          priority_score?: number | null
+          protocol?: string | null
+          raw_data?: Json | null
+          references?: string[] | null
+          resolved_at?: string | null
+          risk_assessment_data?: Json | null
+          risk_score?: number | null
+          root_cause_category?: string | null
+          root_cause_details?: string | null
+          severity?: string
+          sla_breach?: boolean | null
+          solution?: string | null
+          source_tool?: string
+          source_type?: string
           status?: string
-          tenant_id?: string | null
-          target_resolution_date?: string | null
+          tenant_id?: string
           title?: string
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "incidents_assignee_id_fkey"
-            columns: ["assignee_id"]
+            foreignKeyName: "vulnerabilities_assigned_group_id_fkey"
+            columns: ["assigned_group_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "incidents_reporter_id_fkey"
-            columns: ["reporter_id"]
+            foreignKeyName: "vulnerabilities_classification_rule_id_fkey"
+            columns: ["classification_rule_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "vulnerability_classification_templates"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "incidents_tenant_id_fkey"
+            foreignKeyName: "vulnerabilities_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "vulnerabilities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
-      incident_comments: {
+      vulnerability_action_items: {
+        Row: {
+          assigned_to: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          is_completed: boolean | null
+          task_id: string | null
+          title: string
+          updated_at: string | null
+          vulnerability_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          task_id?: string | null
+          title: string
+          updated_at?: string | null
+          vulnerability_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean | null
+          task_id?: string | null
+          title?: string
+          updated_at?: string | null
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_action_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "remediation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_action_items_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_attachments: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          size: number | null
+          task_id: string | null
+          uploaded_by: string | null
+          vulnerability_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          size?: number | null
+          task_id?: string | null
+          uploaded_by?: string | null
+          vulnerability_id: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          size?: number | null
+          task_id?: string | null
+          uploaded_by?: string | null
+          vulnerability_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "remediation_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_attachments_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
+            isOneToOne: false
+            referencedRelation: "vulnerabilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vulnerability_classification_templates: {
+        Row: {
+          actions: Json | null
+          analysis_template: string | null
+          application_criteria: Json | null
+          asset_criteria: Json | null
+          created_at: string | null
+          created_by: string | null
+          criticality_criteria: Json | null
+          description: string | null
+          enabled: boolean | null
+          execution_count: number | null
+          id: string
+          last_executed: string | null
+          name: string
+          priority: number | null
+          recommendation_template: string | null
+          success_rate: number | null
+          tenant_id: string
+          updated_at: string | null
+          vulnerability_class: string
+          vulnerability_classes: string[] | null
+        }
+        Insert: {
+          actions?: Json | null
+          analysis_template?: string | null
+          application_criteria?: Json | null
+          asset_criteria?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          criticality_criteria?: Json | null
+          description?: string | null
+          enabled?: boolean | null
+          execution_count?: number | null
+          id?: string
+          last_executed?: string | null
+          name: string
+          priority?: number | null
+          recommendation_template?: string | null
+          success_rate?: number | null
+          tenant_id: string
+          updated_at?: string | null
+          vulnerability_class: string
+          vulnerability_classes?: string[] | null
+        }
+        Update: {
+          actions?: Json | null
+          analysis_template?: string | null
+          application_criteria?: Json | null
+          asset_criteria?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          criticality_criteria?: Json | null
+          description?: string | null
+          enabled?: boolean | null
+          execution_count?: number | null
+          id?: string
+          last_executed?: string | null
+          name?: string
+          priority?: number | null
+          recommendation_template?: string | null
+          success_rate?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+          vulnerability_class?: string
+          vulnerability_classes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vulnerability_classification_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vulnerability_classification_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_encryption_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      vulnerability_comments: {
         Row: {
           content: string
           created_at: string | null
           id: string
-          incident_id: string | null
+          updated_at: string | null
           user_id: string | null
+          vulnerability_id: string
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
-          incident_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
+          vulnerability_id: string
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
-          incident_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
+          vulnerability_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "incident_comments_incident_id_fkey"
-            columns: ["incident_id"]
+            foreignKeyName: "vulnerability_comments_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
             isOneToOne: false
-            referencedRelation: "incidents"
+            referencedRelation: "vulnerabilities"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "incident_comments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
         ]
       }
-      incident_history: {
+      vulnerability_status_history: {
         Row: {
-          action: string
-          created_at: string | null
-          details: Json | null
+          changed_at: string | null
+          changed_by: string | null
           id: string
-          incident_id: string | null
-          user_id: string | null
+          new_status: string
+          old_status: string | null
+          vulnerability_id: string
         }
         Insert: {
-          action: string
-          created_at?: string | null
-          details?: Json | null
+          changed_at?: string | null
+          changed_by?: string | null
           id?: string
-          incident_id?: string | null
-          user_id?: string | null
+          new_status: string
+          old_status?: string | null
+          vulnerability_id: string
         }
         Update: {
-          action?: string
-          created_at?: string | null
-          details?: Json | null
+          changed_at?: string | null
+          changed_by?: string | null
           id?: string
-          incident_id?: string | null
-          user_id?: string | null
+          new_status?: string
+          old_status?: string | null
+          vulnerability_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "incident_history_incident_id_fkey"
-            columns: ["incident_id"]
+            foreignKeyName: "vulnerability_status_history_vulnerability_id_fkey"
+            columns: ["vulnerability_id"]
             isOneToOne: false
-            referencedRelation: "incidents"
+            referencedRelation: "vulnerabilities"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "incident_history_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
         ]
       }
       webhook_endpoints: {
@@ -15483,6 +18600,33 @@ export type Database = {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       v_crypto_field_mappings: {
         Row: {
           created_at: string | null
@@ -15591,20 +18735,39 @@ export type Database = {
           },
         ]
       }
+      vw_action_plans_unified: {
+        Row: {
+          codigo: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string | null
+          module: string | null
+          origin_id: string | null
+          origin_name: string | null
+          percentual_conclusao: number | null
+          priority: string | null
+          responsible_avatar: string | null
+          responsible_email: string | null
+          responsible_id: string | null
+          responsible_name: string | null
+          status: string | null
+          tenant_id: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      apply_font_globally: {
-        Args: { font_id: string }
-        Returns: boolean
-      }
+      admin_get_global_stats: { Args: never; Returns: Json }
+      admin_get_security_metrics: { Args: never; Returns: Json }
+      admin_list_active_sessions: { Args: never; Returns: Json }
+      apply_font_globally: { Args: { font_id: string }; Returns: boolean }
       apply_theme: {
         Args: { tenant_uuid?: string; theme_uuid: string }
         Returns: boolean
       }
-      apply_theme_globally: {
-        Args: { theme_id: string }
-        Returns: boolean
-      }
+      apply_theme_globally: { Args: { theme_id: string }; Returns: boolean }
       calcular_estatisticas_compliance: {
         Args: { tenant_uuid: string }
         Returns: {
@@ -15656,25 +18819,62 @@ export type Database = {
           total_score: number
         }[]
       }
+      calculate_error_projection: {
+        Args: {
+          errors_found: number
+          population_size: number
+          sample_size: number
+          sampling_method?: string
+          total_error_value: number
+        }
+        Returns: number
+      }
+      calculate_mus_sample_size: {
+        Args: {
+          confidence_level?: number
+          expected_misstatement?: number
+          materiality: number
+          population_value: number
+          tolerable_misstatement: number
+        }
+        Returns: number
+      }
       calculate_next_notification_date: {
         Args: { p_action_plan_id: string; p_frequency: string }
         Returns: string
       }
-      calculate_policy_metrics: {
-        Args: { policy_uuid: string }
-        Returns: Json
-      }
-      calculate_privacy_metrics: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      calculate_policy_metrics: { Args: { policy_uuid: string }; Returns: Json }
+      calculate_privacy_metrics: { Args: never; Returns: Json }
       calculate_prompt_quality_score: {
         Args: { prompt_uuid: string }
+        Returns: number
+      }
+      calculate_random_sample_size: {
+        Args: {
+          confidence_level?: number
+          expected_error_rate?: number
+          population_size: number
+          tolerable_error_rate?: number
+        }
         Returns: number
       }
       calculate_risk_level: {
         Args: { impact_score: number; likelihood_score: number }
         Returns: string
+      }
+      calculate_systematic_interval: {
+        Args: { population_size: number; sample_size: number }
+        Returns: number
+      }
+      calculate_upper_error_limit: {
+        Args: {
+          confidence_level?: number
+          errors_found?: number
+          population_size: number
+          projected_error: number
+          sample_size: number
+        }
+        Returns: number
       }
       calculate_vendor_risk_score: {
         Args: { vendor_id: string }
@@ -15684,12 +18884,9 @@ export type Database = {
         Args: { _manager_id: string; _target_user_id: string }
         Returns: boolean
       }
-      capture_native_ui_theme: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      capture_native_ui_theme: { Args: never; Returns: string }
       check_ethics_sla: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           days_elapsed: number
           days_overdue: number
@@ -15700,18 +18897,23 @@ export type Database = {
           tenant_id: string
         }[]
       }
-      cleanup_expired_ai_conversations: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      cleanup_expired_key_cache: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      cleanup_old_audit_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_expired_ai_conversations: { Args: never; Returns: number }
+      cleanup_expired_key_cache: { Args: never; Returns: number }
+      cleanup_old_audit_logs: { Args: never; Returns: number }
+      clone_framework:
+        | {
+            Args: {
+              p_framework_id: string
+              p_target_tenant_id: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | { Args: { source_framework_id: string }; Returns: string }
+        | {
+            Args: { source_framework_id: string; target_tenant_id: string }
+            Returns: string
+          }
       create_risk_registration_bypass_rls: {
         Args: { p_created_by: string; p_tenant_id: string }
         Returns: string
@@ -15731,6 +18933,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      debug_get_headers: { Args: never; Returns: Json }
       decrypt_field_data: {
         Args: {
           p_encrypted_text: string
@@ -15778,10 +18981,7 @@ export type Database = {
         Args: { p_plaintext: string; p_purpose?: string; p_tenant_id: string }
         Returns: string
       }
-      enviar_notificacoes_pendentes: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      enviar_notificacoes_pendentes: { Args: never; Returns: number }
       force_inherit_global_theme: {
         Args: { tenant_id: string }
         Returns: undefined
@@ -15790,30 +18990,32 @@ export type Database = {
         Args: { p_module: string; p_sequence?: number; p_tenant_id: string }
         Returns: string
       }
-      generate_crypto_salt: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_crypto_salt: { Args: never; Returns: string }
       generate_ethics_protocol: {
         Args: { p_tenant_id: string }
         Returns: string
       }
-      generate_tenant_master_key: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_active_theme: {
-        Args: { tenant_uuid?: string }
-        Returns: Json
+      generate_tenant_master_key: { Args: never; Returns: string }
+      get_active_theme: { Args: { tenant_uuid?: string }; Returns: Json }
+      get_ai_dashboard_metrics: {
+        Args: { p_tenant_id?: string }
+        Returns: {
+          active_prompts_count: number
+          active_providers_count: number
+          total_cost_today: number
+          total_requests_today: number
+          total_tokens_today: number
+        }[]
       }
       get_ai_usage_stats: {
         Args: { days_back?: number; tenant_uuid: string }
         Returns: Json
       }
-      get_current_tenant: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_auth_tenant_id: { Args: never; Returns: string }
+      get_current_tenant: { Args: never; Returns: string }
+      get_database_size: { Args: never; Returns: string }
+      get_detailed_db_stats: { Args: never; Returns: Json }
+      get_diagnostic_stats: { Args: never; Returns: Json }
       get_encryption_purpose: {
         Args: { p_field_name: string; p_table_name: string }
         Returns: string
@@ -15837,10 +19039,48 @@ export type Database = {
           table_name: string
         }[]
       }
-      get_integration_stats: {
-        Args: { tenant_uuid: string }
-        Returns: Json
+      get_integration_stats: { Args: { tenant_uuid: string }; Returns: Json }
+      get_or_create_framework:
+        | {
+            Args: {
+              p_codigo: string
+              p_descricao: string
+              p_nome: string
+              p_tenant_id: string
+              p_tipo: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_descricao: string
+              p_nome: string
+              p_tenant_id: string
+              p_tipo: string
+            }
+            Returns: string
+          }
+      get_public_assessment_data: { Args: { p_link: string }; Returns: Json[] }
+      get_public_assessment_messages: {
+        Args: { p_link: string }
+        Returns: {
+          assessment_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          sender_type: string
+          vendor_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vendor_risk_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
+      get_security_stats: { Args: never; Returns: Json }
+      get_system_metrics: { Args: never; Returns: Json }
       get_tenant_settings: {
         Args: { category_filter?: string; tenant_uuid: string }
         Returns: {
@@ -15851,12 +19091,17 @@ export type Database = {
           setting_value: Json
         }[]
       }
+      get_user_complete_profile: { Args: never; Returns: Json }
       get_vendor_dashboard_metrics: {
         Args: { tenant_uuid: string }
         Returns: Json
       }
       get_vendor_risk_distribution: {
         Args: { tenant_uuid: string }
+        Returns: Json
+      }
+      get_vulnerability_metrics: {
+        Args: { p_tenant_id: string }
         Returns: Json
       }
       has_role: {
@@ -15886,10 +19131,7 @@ export type Database = {
         }
         Returns: string
       }
-      is_platform_admin: {
-        Args: { user_id_param: string }
-        Returns: boolean
-      }
+      is_platform_admin: { Args: { user_id_param: string }; Returns: boolean }
       log_activity: {
         Args: {
           p_action: string
@@ -15897,15 +19139,11 @@ export type Database = {
           p_ip_address?: unknown
           p_resource_id?: string
           p_resource_type: string
-          p_user_agent?: string
-          p_user_id: string
+          p_user_id?: string
         }
-        Returns: string
+        Returns: undefined
       }
-      make_user_admin: {
-        Args: { email_to_promote: string }
-        Returns: boolean
-      }
+      make_user_admin: { Args: { email_to_promote: string }; Returns: boolean }
       processar_evento_notificacao: {
         Args: {
           objeto_id_param: string
@@ -15915,10 +19153,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      processar_notificacoes_compliance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      processar_notificacoes_compliance: { Args: never; Returns: number }
       processar_template: {
         Args: { objeto: Record<string, unknown>; template: string }
         Returns: string
@@ -15941,6 +19176,11 @@ export type Database = {
         Args: { action: string; tenant_data?: Json; tenant_id_param?: string }
         Returns: Json
       }
+      run_privacy_scan: { Args: never; Returns: Json }
+      send_public_assessment_message: {
+        Args: { p_content: string; p_link: string }
+        Returns: Json
+      }
       setup_default_theme_for_tenant: {
         Args: { tenant_id: string }
         Returns: undefined
@@ -15949,14 +19189,8 @@ export type Database = {
         Args: { theme_id: string }
         Returns: undefined
       }
-      sync_theme_state: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      test_dpia_metrics: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      sync_theme_state: { Args: never; Returns: boolean }
+      test_dpia_metrics: { Args: never; Returns: Json }
       update_action_plan_progress: {
         Args: { p_action_plan_id: string }
         Returns: number
@@ -15974,27 +19208,38 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_template_statistics: { Args: never; Returns: undefined }
+      update_vendor_assessment_public: {
+        Args: {
+          p_id: string
+          p_progress: number
+          p_responses: Json
+          p_status: string
+          p_submission_summary?: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
-      | "admin"
-      | "ciso"
-      | "risk_manager"
-      | "compliance_officer"
-      | "auditor"
-      | "user"
-      | "super_admin"
+        | "admin"
+        | "ciso"
+        | "risk_manager"
+        | "compliance_officer"
+        | "auditor"
+        | "user"
+        | "super_admin"
       assessment_status:
-      | "Não Iniciado"
-      | "Em Andamento"
-      | "Em Revisão"
-      | "Concluído"
+        | "Não Iniciado"
+        | "Em Andamento"
+        | "Em Revisão"
+        | "Concluído"
       audit_action_enum:
-      | "create"
-      | "update"
-      | "delete"
-      | "activate"
-      | "deactivate"
+        | "create"
+        | "update"
+        | "delete"
+        | "activate"
+        | "deactivate"
       maturity_level: "1" | "2" | "3" | "4" | "5"
       platform_role: "platform_admin" | "tenant_admin" | "user"
       risk_level_enum: "Muito Alto" | "Alto" | "Médio" | "Baixo" | "Muito Baixo"
@@ -16012,116 +19257,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-  : never = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-  ? R
-  : never
+    ? R
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R
-    }
-  ? R
-  : never
-  : never
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
+      Insert: infer I
+    }
+    ? I
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Update: infer U
-  }
-  ? U
-  : never
+      Update: infer U
+    }
+    ? U
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Update: infer U
-  }
-  ? U
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-  | keyof DefaultSchema["Enums"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof DefaultSchema["CompositeTypes"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
