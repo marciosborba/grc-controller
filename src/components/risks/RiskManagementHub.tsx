@@ -40,8 +40,6 @@ import { RiskProcessGuide } from './RiskProcessGuide';
 import { IntegratedRiskManagement } from './IntegratedRiskManagement';
 import RiskManagementPage from './RiskManagementPage';
 import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
-import { AlexRiskGuidedProcessSimple } from './AlexRiskGuidedProcessSimple';
-import { AlexRiskTest } from './AlexRiskTest';
 
 interface DashboardMetrics {
   total_risks: number;

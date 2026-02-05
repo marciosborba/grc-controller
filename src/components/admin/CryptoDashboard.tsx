@@ -1,1 +1,559 @@
-/**\n * DASHBOARD DE MONITORAMENTO DE CRIPTOGRAFIA\n * \n * Dashboard centralizado para monitorar o sistema de criptografia\n * por tenant em toda a plataforma.\n */\n\nimport React, { useState, useEffect } from 'react';\nimport { useAuth} from '@/contexts/AuthContextOptimized';\nimport { tenantCrypto } from '@/utils/tenantCrypto';\nimport { toast } from 'sonner';\nimport {\n  Card,\n  CardContent,\n  CardDescription,\n  CardHeader,\n  CardTitle,\n} from '@/components/ui/card';\nimport { Button } from '@/components/ui/button';\nimport { Badge } from '@/components/ui/badge';\nimport {\n  Select,\n  SelectContent,\n  SelectItem,\n  SelectTrigger,\n  SelectValue,\n} from '@/components/ui/select';\nimport { Separator } from '@/components/ui/separator';\nimport { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';\nimport { \n  Shield,\n  Activity,\n  TrendingUp,\n  TrendingDown,\n  AlertTriangle,\n  CheckCircle,\n  Clock,\n  Database,\n  Users,\n  Key,\n  Zap,\n  BarChart3,\n  RefreshCw,\n  Download,\n  Calendar,\n  Timer,\n  Lock,\n  Unlock,\n  RotateCcw,\n  Plus,\n  Eye,\n  Server,\n  HardDrive,\n  Cpu,\n  Gauge\n} from 'lucide-react';\nimport { supabase } from '@/integrations/supabase/client';\nimport { cn } from '@/lib/utils';\n\ninterface TenantCryptoOverview {\n  tenantId: string;\n  tenantName: string;\n  totalKeys: number;\n  activeKeys: number;\n  keysNeedingRotation: number;\n  lastActivity: string;\n  totalOperations: number;\n  successRate: number;\n  avgPerformance: number;\n}\n\ninterface SystemStats {\n  totalTenants: number;\n  totalKeys: number;\n  totalOperations: number;\n  avgSuccessRate: number;\n  avgPerformance: number;\n  cacheHitRate: number;\n  memoryUsage: number;\n  keysNeedingRotation: number;\n}\n\ninterface PerformanceMetric {\n  date: string;\n  operations: number;\n  avgPerformance: number;\n  successRate: number;\n  cacheHitRate: number;\n}\n\nconst CryptoDashboard: React.FC = () => {\n  const { user } = useAuth();\n  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);\n  const [tenantOverviews, setTenantOverviews] = useState<TenantCryptoOverview[]>([]);\n  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([]);\n  const [loading, setLoading] = useState(false);\n  const [selectedPeriod, setSelectedPeriod] = useState('7'); // dias\n  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);\n  \n  const hasPermission = user?.isPlatformAdmin || false;\n  \n  // Carregar estatisticas do sistema\n  const loadSystemStats = async () => {\n    try {\n      setLoading(true);\n      \n      // Buscar todos os tenants\n      const { data: tenants, error: tenantsError } = await supabase\n        .from('tenants')\n        .select('id, name')\n        .eq('is_active', true);\n      \n      if (tenantsError) throw tenantsError;\n      \n      // Estatisticas do cache\n      const cacheStats = tenantCrypto.getCacheStats();\n      \n      // Buscar estatisticas de chaves por tenant\n      const tenantStats: TenantCryptoOverview[] = [];\n      let totalKeys = 0;\n      let totalOperations = 0;\n      let totalSuccessRate = 0;\n      let totalPerformance = 0;\n      let keysNeedingRotation = 0;\n      \n      for (const tenant of tenants) {\n        try {\n          const keyInfo = await tenantCrypto.getTenantKeyInfo(tenant.id);\n          const cryptoStats = await tenantCrypto.getCryptoStats(tenant.id, parseInt(selectedPeriod));\n          \n          const activeKeys = keyInfo.filter(k => k.status === 'OK').length;\n          const needingRotation = keyInfo.filter(k => k.status === 'ROTATION_NEEDED').length;\n          \n          const tenantOperations = cryptoStats.reduce((sum, stat) => sum + stat.operationCount, 0);\n          const tenantSuccessCount = cryptoStats.reduce((sum, stat) => sum + stat.successCount, 0);\n          const tenantSuccessRate = tenantOperations > 0 ? (tenantSuccessCount / tenantOperations) * 100 : 100;\n          const tenantAvgPerformance = cryptoStats.length > 0 \n            ? cryptoStats.reduce((sum, stat) => sum + stat.avgPerformanceMs, 0) / cryptoStats.length \n            : 0;\n          \n          const lastActivity = cryptoStats.length > 0 \n            ? cryptoStats.sort((a, b) => new Date(b.operationDate).getTime() - new Date(a.operationDate).getTime())[0].operationDate\n            : new Date().toISOString();\n          \n          tenantStats.push({\n            tenantId: tenant.id,\n            tenantName: tenant.name,\n            totalKeys: keyInfo.length,\n            activeKeys,\n            keysNeedingRotation: needingRotation,\n            lastActivity,\n            totalOperations: tenantOperations,\n            successRate: tenantSuccessRate,\n            avgPerformance: tenantAvgPerformance\n          });\n          \n          totalKeys += keyInfo.length;\n          totalOperations += tenantOperations;\n          totalSuccessRate += tenantSuccessRate;\n          totalPerformance += tenantAvgPerformance;\n          keysNeedingRotation += needingRotation;\n          \n        } catch (error) {\n          console.warn(`Erro ao carregar dados do tenant ${tenant.name}:`, error);\n        }\n      }\n      \n      const avgSuccessRate = tenants.length > 0 ? totalSuccessRate / tenants.length : 100;\n      const avgPerformance = tenants.length > 0 ? totalPerformance / tenants.length : 0;\n      \n      setSystemStats({\n        totalTenants: tenants.length,\n        totalKeys,\n        totalOperations,\n        avgSuccessRate,\n        avgPerformance,\n        cacheHitRate: cacheStats.hitRate,\n        memoryUsage: cacheStats.memoryUsage,\n        keysNeedingRotation\n      });\n      \n      setTenantOverviews(tenantStats);\n      \n    } catch (error: any) {\n      console.error('Erro ao carregar estatisticas do sistema:', error);\n      toast.error('Erro ao carregar estatisticas do sistema');\n    } finally {\n      setLoading(false);\n    }\n  };\n  \n  // Carregar metricas de performance\n  const loadPerformanceMetrics = async () => {\n    try {\n      // Simular dados de performance (em implementacao real, buscar do banco)\n      const days = parseInt(selectedPeriod);\n      const metrics: PerformanceMetric[] = [];\n      \n      for (let i = days - 1; i >= 0; i--) {\n        const date = new Date();\n        date.setDate(date.getDate() - i);\n        \n        // Simular dados (substituir por consulta real)\n        metrics.push({\n          date: date.toISOString().split('T')[0],\n          operations: Math.floor(Math.random() * 1000) + 500,\n          avgPerformance: Math.floor(Math.random() * 50) + 10,\n          successRate: 95 + Math.random() * 5,\n          cacheHitRate: 85 + Math.random() * 15\n        });\n      }\n      \n      setPerformanceMetrics(metrics);\n      \n    } catch (error: any) {\n      console.error('Erro ao carregar metricas de performance:', error);\n    }\n  };\n  \n  // Exportar relatorio\n  const exportReport = async () => {\n    try {\n      const report = {\n        generatedAt: new Date().toISOString(),\n        period: `${selectedPeriod} dias`,\n        systemStats,\n        tenantOverviews,\n        performanceMetrics\n      };\n      \n      const blob = new Blob([JSON.stringify(report, null, 2)], {\n        type: 'application/json'\n      });\n      \n      const url = URL.createObjectURL(blob);\n      const a = document.createElement('a');\n      a.href = url;\n      a.download = `crypto-dashboard-report-${new Date().toISOString().split('T')[0]}.json`;\n      document.body.appendChild(a);\n      a.click();\n      document.body.removeChild(a);\n      URL.revokeObjectURL(url);\n      \n      toast.success('Relatorio exportado com sucesso');\n      \n    } catch (error: any) {\n      console.error('Erro ao exportar relatorio:', error);\n      toast.error('Erro ao exportar relatorio');\n    }\n  };\n  \n  // Obter cor do status\n  const getStatusColor = (value: number, thresholds: { good: number; warning: number }) => {\n    if (value >= thresholds.good) return 'text-green-600';\n    if (value >= thresholds.warning) return 'text-yellow-600';\n    return 'text-red-600';\n  };\n  \n  // Obter icone do status\n  const getStatusIcon = (value: number, thresholds: { good: number; warning: number }) => {\n    if (value >= thresholds.good) return <CheckCircle className=\"h-4 w-4 text-green-600\" />;\n    if (value >= thresholds.warning) return <Clock className=\"h-4 w-4 text-yellow-600\" />;\n    return <AlertTriangle className=\"h-4 w-4 text-red-600\" />;\n  };\n  \n  // Carregar dados iniciais\n  useEffect(() => {\n    if (hasPermission) {\n      loadSystemStats();\n      loadPerformanceMetrics();\n    }\n  }, [hasPermission, selectedPeriod]);\n  \n  // Auto-refresh\n  useEffect(() => {\n    if (hasPermission) {\n      const interval = setInterval(() => {\n        loadSystemStats();\n        loadPerformanceMetrics();\n      }, 60000); // A cada minuto\n      \n      setRefreshInterval(interval);\n      \n      return () => {\n        if (interval) clearInterval(interval);\n      };\n    }\n  }, [hasPermission, selectedPeriod]);\n  \n  if (!hasPermission) {\n    return (\n      <Card>\n        <CardContent className=\"p-6\">\n          <div className=\"text-center text-muted-foreground\">\n            <Shield className=\"mx-auto h-12 w-12 mb-4\" />\n            <p>Acesso restrito a administradores da plataforma.</p>\n          </div>\n        </CardContent>\n      </Card>\n    );\n  }\n  \n  return (\n    <div className=\"space-y-6\">\n      {/* Header */}\n      <div className=\"flex items-center justify-between\">\n        <div>\n          <h2 className=\"text-2xl font-bold flex items-center gap-2\">\n            <Shield className=\"h-6 w-6 text-primary\" />\n            Dashboard de Criptografia\n          </h2>\n          <p className=\"text-muted-foreground\">\n            Monitoramento centralizado do sistema de criptografia por tenant\n          </p>\n        </div>\n        <div className=\"flex items-center gap-2\">\n          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>\n            <SelectTrigger className=\"w-32\">\n              <SelectValue />\n            </SelectTrigger>\n            <SelectContent>\n              <SelectItem value=\"1\">1 dia</SelectItem>\n              <SelectItem value=\"7\">7 dias</SelectItem>\n              <SelectItem value=\"30\">30 dias</SelectItem>\n              <SelectItem value=\"90\">90 dias</SelectItem>\n            </SelectContent>\n          </Select>\n          <Button\n            variant=\"outline\"\n            size=\"sm\"\n            onClick={() => {\n              loadSystemStats();\n              loadPerformanceMetrics();\n            }}\n            disabled={loading}\n          >\n            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />\n            Atualizar\n          </Button>\n          <Button\n            variant=\"outline\"\n            size=\"sm\"\n            onClick={exportReport}\n          >\n            <Download className=\"h-4 w-4 mr-2\" />\n            Exportar\n          </Button>\n        </div>\n      </div>\n      \n      {/* Estatisticas Gerais */}\n      {systemStats && (\n        <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4\">\n          <Card>\n            <CardContent className=\"p-6\">\n              <div className=\"flex items-center justify-between\">\n                <div>\n                  <p className=\"text-sm font-medium text-muted-foreground\">Total de Tenants</p>\n                  <p className=\"text-2xl font-bold\">{systemStats.totalTenants}</p>\n                </div>\n                <Users className=\"h-8 w-8 text-blue-500\" />\n              </div>\n            </CardContent>\n          </Card>\n          \n          <Card>\n            <CardContent className=\"p-6\">\n              <div className=\"flex items-center justify-between\">\n                <div>\n                  <p className=\"text-sm font-medium text-muted-foreground\">Total de Chaves</p>\n                  <p className=\"text-2xl font-bold\">{systemStats.totalKeys}</p>\n                  {systemStats.keysNeedingRotation > 0 && (\n                    <p className=\"text-xs text-red-600\">\n                      {systemStats.keysNeedingRotation} precisam rotacao\n                    </p>\n                  )}\n                </div>\n                <Key className=\"h-8 w-8 text-green-500\" />\n              </div>\n            </CardContent>\n          </Card>\n          \n          <Card>\n            <CardContent className=\"p-6\">\n              <div className=\"flex items-center justify-between\">\n                <div>\n                  <p className=\"text-sm font-medium text-muted-foreground\">Taxa de Sucesso</p>\n                  <p className={`text-2xl font-bold ${getStatusColor(systemStats.avgSuccessRate, { good: 95, warning: 90 })}`}>\n                    {systemStats.avgSuccessRate.toFixed(1)}%\n                  </p>\n                </div>\n                {getStatusIcon(systemStats.avgSuccessRate, { good: 95, warning: 90 })}\n              </div>\n            </CardContent>\n          </Card>\n          \n          <Card>\n            <CardContent className=\"p-6\">\n              <div className=\"flex items-center justify-between\">\n                <div>\n                  <p className=\"text-sm font-medium text-muted-foreground\">Performance Media</p>\n                  <p className={`text-2xl font-bold ${getStatusColor(100 - systemStats.avgPerformance, { good: 50, warning: 25 })}`}>\n                    {systemStats.avgPerformance.toFixed(0)}ms\n                  </p>\n                </div>\n                <Timer className=\"h-8 w-8 text-purple-500\" />\n              </div>\n            </CardContent>\n          </Card>\n        </div>\n      )}\n      \n      {/* Estatisticas do Cache */}\n      {systemStats && (\n        <Card>\n          <CardHeader>\n            <CardTitle className=\"flex items-center gap-2\">\n              <Database className=\"h-5 w-5\" />\n              Estatisticas do Cache\n            </CardTitle>\n          </CardHeader>\n          <CardContent>\n            <div className=\"grid grid-cols-1 md:grid-cols-3 gap-4\">\n              <div className=\"text-center p-4 bg-muted/50 rounded-lg\">\n                <div className={`text-2xl font-bold ${getStatusColor(systemStats.cacheHitRate, { good: 90, warning: 75 })}`}>\n                  {systemStats.cacheHitRate.toFixed(1)}%\n                </div>\n                <div className=\"text-sm text-muted-foreground\">Taxa de Acerto</div>\n              </div>\n              <div className=\"text-center p-4 bg-muted/50 rounded-lg\">\n                <div className=\"text-2xl font-bold text-blue-600\">\n                  {(systemStats.memoryUsage / 1024 / 1024).toFixed(1)}MB\n                </div>\n                <div className=\"text-sm text-muted-foreground\">Uso de Memoria</div>\n              </div>\n              <div className=\"text-center p-4 bg-muted/50 rounded-lg\">\n                <div className=\"text-2xl font-bold text-green-600\">\n                  {systemStats.totalOperations.toLocaleString()}\n                </div>\n                <div className=\"text-sm text-muted-foreground\">Total de Operacoes</div>\n              </div>\n            </div>\n          </CardContent>\n        </Card>\n      )}\n      \n      {/* Metricas de Performance */}\n      {performanceMetrics.length > 0 && (\n        <Card>\n          <CardHeader>\n            <CardTitle className=\"flex items-center gap-2\">\n              <BarChart3 className=\"h-5 w-5\" />\n              Metricas de Performance ({selectedPeriod} dias)\n            </CardTitle>\n          </CardHeader>\n          <CardContent>\n            <div className=\"space-y-4\">\n              {/* Grafico simples com barras */}\n              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">\n                <div>\n                  <h4 className=\"text-sm font-medium mb-2\">Operacoes por Dia</h4>\n                  <div className=\"space-y-2\">\n                    {performanceMetrics.map((metric, index) => (\n                      <div key={index} className=\"flex items-center gap-2\">\n                        <span className=\"text-xs w-16\">\n                          {new Date(metric.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}\n                        </span>\n                        <div className=\"flex-1 bg-gray-200 rounded-full h-2\">\n                          <div\n                            className=\"bg-blue-500 h-2 rounded-full\"\n                            style={{\n                              width: `${(metric.operations / Math.max(...performanceMetrics.map(m => m.operations))) * 100}%`\n                            }}\n                          />\n                        </div>\n                        <span className=\"text-xs w-12 text-right\">{metric.operations}</span>\n                      </div>\n                    ))}\n                  </div>\n                </div>\n                \n                <div>\n                  <h4 className=\"text-sm font-medium mb-2\">Performance Media (ms)</h4>\n                  <div className=\"space-y-2\">\n                    {performanceMetrics.map((metric, index) => (\n                      <div key={index} className=\"flex items-center gap-2\">\n                        <span className=\"text-xs w-16\">\n                          {new Date(metric.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}\n                        </span>\n                        <div className=\"flex-1 bg-gray-200 rounded-full h-2\">\n                          <div\n                            className={`h-2 rounded-full ${\n                              metric.avgPerformance <= 20 ? 'bg-green-500' :\n                              metric.avgPerformance <= 50 ? 'bg-yellow-500' : 'bg-red-500'\n                            }`}\n                            style={{\n                              width: `${(metric.avgPerformance / Math.max(...performanceMetrics.map(m => m.avgPerformance))) * 100}%`\n                            }}\n                          />\n                        </div>\n                        <span className=\"text-xs w-12 text-right\">{metric.avgPerformance.toFixed(0)}</span>\n                      </div>\n                    ))}\n                  </div>\n                </div>\n              </div>\n            </div>\n          </CardContent>\n        </Card>\n      )}\n      \n      {/* Visao Geral por Tenant */}\n      <Card>\n        <CardHeader>\n          <CardTitle className=\"flex items-center gap-2\">\n            <Activity className=\"h-5 w-5\" />\n            Visao Geral por Tenant\n          </CardTitle>\n          <CardDescription>\n            Status das chaves criptograficas e performance por tenant\n          </CardDescription>\n        </CardHeader>\n        <CardContent>\n          {loading ? (\n            <div className=\"text-center py-8\">\n              <RefreshCw className=\"h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground\" />\n              <p className=\"text-sm text-muted-foreground\">Carregando dados dos tenants...</p>\n            </div>\n          ) : tenantOverviews.length === 0 ? (\n            <div className=\"text-center py-8\">\n              <Users className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground\" />\n              <p className=\"text-sm text-muted-foreground\">Nenhum tenant encontrado</p>\n            </div>\n          ) : (\n            <div className=\"border rounded-lg\">\n              <Table>\n                <TableHeader>\n                  <TableRow>\n                    <TableHead>Tenant</TableHead>\n                    <TableHead>Chaves</TableHead>\n                    <TableHead>Status</TableHead>\n                    <TableHead>Operacoes</TableHead>\n                    <TableHead>Taxa de Sucesso</TableHead>\n                    <TableHead>Performance</TableHead>\n                    <TableHead>Ultima Atividade</TableHead>\n                  </TableRow>\n                </TableHeader>\n                <TableBody>\n                  {tenantOverviews.map((overview) => (\n                    <TableRow key={overview.tenantId}>\n                      <TableCell className=\"font-medium\">\n                        {overview.tenantName}\n                      </TableCell>\n                      <TableCell>\n                        <div className=\"flex items-center gap-2\">\n                          <span>{overview.activeKeys}/{overview.totalKeys}</span>\n                          {overview.keysNeedingRotation > 0 && (\n                            <Badge variant=\"destructive\" className=\"text-xs\">\n                              {overview.keysNeedingRotation} rotacao\n                            </Badge>\n                          )}\n                        </div>\n                      </TableCell>\n                      <TableCell>\n                        {overview.keysNeedingRotation > 0 ? (\n                          <Badge variant=\"destructive\">Atencao</Badge>\n                        ) : overview.activeKeys === overview.totalKeys ? (\n                          <Badge variant=\"default\">OK</Badge>\n                        ) : (\n                          <Badge variant=\"secondary\">Parcial</Badge>\n                        )}\n                      </TableCell>\n                      <TableCell>{overview.totalOperations.toLocaleString()}</TableCell>\n                      <TableCell>\n                        <span className={getStatusColor(overview.successRate, { good: 95, warning: 90 })}>\n                          {overview.successRate.toFixed(1)}%\n                        </span>\n                      </TableCell>\n                      <TableCell>\n                        <span className={getStatusColor(100 - overview.avgPerformance, { good: 50, warning: 25 })}>\n                          {overview.avgPerformance.toFixed(0)}ms\n                        </span>\n                      </TableCell>\n                      <TableCell className=\"text-muted-foreground\">\n                        {new Date(overview.lastActivity).toLocaleDateString('pt-BR')}\n                      </TableCell>\n                    </TableRow>\n                  ))}\n                </TableBody>\n              </Table>\n            </div>\n          )}\n        </CardContent>\n      </Card>\n    </div>\n  );\n};\n\nexport default CryptoDashboard;\n"
+/**
+ * DASHBOARD DE MONITORAMENTO DE CRIPTOGRAFIA
+ * 
+ * Dashboard centralizado para monitorar o sistema de criptografia
+ * por tenant em toda a plataforma.
+ */
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { tenantCrypto } from '@/utils/tenantCrypto';
+import { toast } from 'sonner';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { 
+  Shield,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Database,
+  Users,
+  Key,
+  BarChart3,
+  RefreshCw,
+  Download,
+  Timer
+} from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface TenantCryptoOverview {
+  tenantId: string;
+  tenantName: string;
+  totalKeys: number;
+  activeKeys: number;
+  keysNeedingRotation: number;
+  lastActivity: string;
+  totalOperations: number;
+  successRate: number;
+  avgPerformance: number;
+}
+
+interface SystemStats {
+  totalTenants: number;
+  totalKeys: number;
+  totalOperations: number;
+  avgSuccessRate: number;
+  avgPerformance: number;
+  cacheHitRate: number;
+  memoryUsage: number;
+  keysNeedingRotation: number;
+}
+
+interface PerformanceMetric {
+  date: string;
+  operations: number;
+  avgPerformance: number;
+  successRate: number;
+  cacheHitRate: number;
+}
+
+const CryptoDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [tenantOverviews, setTenantOverviews] = useState<TenantCryptoOverview[]>([]);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('7');
+  
+  const hasPermission = user?.isPlatformAdmin || false;
+  
+  const loadSystemStats = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: tenants, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .eq('is_active', true);
+      
+      if (tenantsError) throw tenantsError;
+      
+      const cacheStats = tenantCrypto.getCacheStats();
+      
+      const tenantStats: TenantCryptoOverview[] = [];
+      let totalKeys = 0;
+      let totalOperations = 0;
+      let totalSuccessRate = 0;
+      let totalPerformance = 0;
+      let keysNeedingRotation = 0;
+      
+      for (const tenant of tenants || []) {
+        try {
+          const keyInfo = await tenantCrypto.getTenantKeyInfo(tenant.id);
+          const cryptoStats = await tenantCrypto.getCryptoStats(tenant.id, parseInt(selectedPeriod));
+          
+          const activeKeys = keyInfo.filter(k => k.status === 'OK').length;
+          const needingRotation = keyInfo.filter(k => k.status === 'ROTATION_NEEDED').length;
+          
+          const tenantOperations = cryptoStats.reduce((sum, stat) => sum + stat.operationCount, 0);
+          const tenantSuccessCount = cryptoStats.reduce((sum, stat) => sum + stat.successCount, 0);
+          const tenantSuccessRate = tenantOperations > 0 ? (tenantSuccessCount / tenantOperations) * 100 : 100;
+          const tenantAvgPerformance = cryptoStats.length > 0 
+            ? cryptoStats.reduce((sum, stat) => sum + stat.avgPerformanceMs, 0) / cryptoStats.length 
+            : 0;
+          
+          const lastActivity = cryptoStats.length > 0 
+            ? cryptoStats.sort((a, b) => new Date(b.operationDate).getTime() - new Date(a.operationDate).getTime())[0].operationDate
+            : new Date().toISOString();
+          
+          tenantStats.push({
+            tenantId: tenant.id,
+            tenantName: tenant.name,
+            totalKeys: keyInfo.length,
+            activeKeys,
+            keysNeedingRotation: needingRotation,
+            lastActivity,
+            totalOperations: tenantOperations,
+            successRate: tenantSuccessRate,
+            avgPerformance: tenantAvgPerformance
+          });
+          
+          totalKeys += keyInfo.length;
+          totalOperations += tenantOperations;
+          totalSuccessRate += tenantSuccessRate;
+          totalPerformance += tenantAvgPerformance;
+          keysNeedingRotation += needingRotation;
+          
+        } catch (error) {
+          console.warn(`Erro ao carregar dados do tenant ${tenant.name}:`, error);
+        }
+      }
+      
+      const tenantsCount = tenants?.length || 0;
+      const avgSuccessRate = tenantsCount > 0 ? totalSuccessRate / tenantsCount : 100;
+      const avgPerformance = tenantsCount > 0 ? totalPerformance / tenantsCount : 0;
+      
+      setSystemStats({
+        totalTenants: tenantsCount,
+        totalKeys,
+        totalOperations,
+        avgSuccessRate,
+        avgPerformance,
+        cacheHitRate: cacheStats.hitRate,
+        memoryUsage: cacheStats.memoryUsage,
+        keysNeedingRotation
+      });
+      
+      setTenantOverviews(tenantStats);
+      
+    } catch (error: any) {
+      console.error('Erro ao carregar estatisticas do sistema:', error);
+      toast.error('Erro ao carregar estatisticas do sistema');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loadPerformanceMetrics = async () => {
+    try {
+      const days = parseInt(selectedPeriod);
+      const metrics: PerformanceMetric[] = [];
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        
+        metrics.push({
+          date: date.toISOString().split('T')[0],
+          operations: Math.floor(Math.random() * 1000) + 500,
+          avgPerformance: Math.floor(Math.random() * 50) + 10,
+          successRate: 95 + Math.random() * 5,
+          cacheHitRate: 85 + Math.random() * 15
+        });
+      }
+      
+      setPerformanceMetrics(metrics);
+      
+    } catch (error: any) {
+      console.error('Erro ao carregar metricas de performance:', error);
+    }
+  };
+  
+  const exportReport = async () => {
+    try {
+      const report = {
+        generatedAt: new Date().toISOString(),
+        period: `${selectedPeriod} dias`,
+        systemStats,
+        tenantOverviews,
+        performanceMetrics
+      };
+      
+      const blob = new Blob([JSON.stringify(report, null, 2)], {
+        type: 'application/json'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `crypto-dashboard-report-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Relatorio exportado com sucesso');
+      
+    } catch (error: any) {
+      console.error('Erro ao exportar relatorio:', error);
+      toast.error('Erro ao exportar relatorio');
+    }
+  };
+  
+  const getStatusColor = (value: number, thresholds: { good: number; warning: number }) => {
+    if (value >= thresholds.good) return 'text-green-600';
+    if (value >= thresholds.warning) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+  
+  const getStatusIcon = (value: number, thresholds: { good: number; warning: number }) => {
+    if (value >= thresholds.good) return <CheckCircle className="h-4 w-4 text-green-600" />;
+    if (value >= thresholds.warning) return <Clock className="h-4 w-4 text-yellow-600" />;
+    return <AlertTriangle className="h-4 w-4 text-red-600" />;
+  };
+  
+  useEffect(() => {
+    if (hasPermission) {
+      loadSystemStats();
+      loadPerformanceMetrics();
+    }
+  }, [hasPermission, selectedPeriod]);
+  
+  useEffect(() => {
+    if (hasPermission) {
+      const interval = setInterval(() => {
+        loadSystemStats();
+        loadPerformanceMetrics();
+      }, 60000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [hasPermission, selectedPeriod]);
+  
+  if (!hasPermission) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-muted-foreground">
+            <Shield className="mx-auto h-12 w-12 mb-4" />
+            <p>Acesso restrito a administradores da plataforma.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <Shield className="h-6 w-6 text-primary" />
+            Dashboard de Criptografia
+          </h2>
+          <p className="text-muted-foreground">
+            Monitoramento centralizado do sistema de criptografia por tenant
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 dia</SelectItem>
+              <SelectItem value="7">7 dias</SelectItem>
+              <SelectItem value="30">30 dias</SelectItem>
+              <SelectItem value="90">90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              loadSystemStats();
+              loadPerformanceMetrics();
+            }}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportReport}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar
+          </Button>
+        </div>
+      </div>
+      
+      {/* Estatisticas Gerais */}
+      {systemStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Tenants</p>
+                  <p className="text-2xl font-bold">{systemStats.totalTenants}</p>
+                </div>
+                <Users className="h-8 w-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total de Chaves</p>
+                  <p className="text-2xl font-bold">{systemStats.totalKeys}</p>
+                  {systemStats.keysNeedingRotation > 0 && (
+                    <p className="text-xs text-red-600">
+                      {systemStats.keysNeedingRotation} precisam rotacao
+                    </p>
+                  )}
+                </div>
+                <Key className="h-8 w-8 text-green-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Taxa de Sucesso</p>
+                  <p className={`text-2xl font-bold ${getStatusColor(systemStats.avgSuccessRate, { good: 95, warning: 90 })}`}>
+                    {systemStats.avgSuccessRate.toFixed(1)}%
+                  </p>
+                </div>
+                {getStatusIcon(systemStats.avgSuccessRate, { good: 95, warning: 90 })}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Performance Media</p>
+                  <p className={`text-2xl font-bold ${getStatusColor(100 - systemStats.avgPerformance, { good: 50, warning: 25 })}`}>
+                    {systemStats.avgPerformance.toFixed(0)}ms
+                  </p>
+                </div>
+                <Timer className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {/* Estatisticas do Cache */}
+      {systemStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Estatisticas do Cache
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className={`text-2xl font-bold ${getStatusColor(systemStats.cacheHitRate, { good: 90, warning: 75 })}`}>
+                  {systemStats.cacheHitRate.toFixed(1)}%
+                </div>
+                <div className="text-sm text-muted-foreground">Taxa de Acerto</div>
+              </div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
+                  {(systemStats.memoryUsage / 1024 / 1024).toFixed(1)}MB
+                </div>
+                <div className="text-sm text-muted-foreground">Uso de Memoria</div>
+              </div>
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {systemStats.totalOperations.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">Total de Operacoes</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Metricas de Performance */}
+      {performanceMetrics.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Metricas de Performance ({selectedPeriod} dias)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Operacoes por Dia</h4>
+                  <div className="space-y-2">
+                    {performanceMetrics.map((metric, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-xs w-16">
+                          {new Date(metric.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full"
+                            style={{
+                              width: `${(metric.operations / Math.max(...performanceMetrics.map(m => m.operations))) * 100}%`
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs w-12 text-right">{metric.operations}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Performance Media (ms)</h4>
+                  <div className="space-y-2">
+                    {performanceMetrics.map((metric, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="text-xs w-16">
+                          {new Date(metric.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${
+                              metric.avgPerformance <= 20 ? 'bg-green-500' :
+                              metric.avgPerformance <= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{
+                              width: `${(metric.avgPerformance / Math.max(...performanceMetrics.map(m => m.avgPerformance))) * 100}%`
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs w-12 text-right">{metric.avgPerformance.toFixed(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Visao Geral por Tenant */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Visao Geral por Tenant
+          </CardTitle>
+          <CardDescription>
+            Status das chaves criptograficas e performance por tenant
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">
+              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Carregando dados dos tenants...</p>
+            </div>
+          ) : tenantOverviews.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Nenhum tenant encontrado</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tenant</TableHead>
+                    <TableHead>Chaves</TableHead>
+                    <TableHead>Operacoes</TableHead>
+                    <TableHead>Taxa Sucesso</TableHead>
+                    <TableHead>Performance</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tenantOverviews.map((tenant) => (
+                    <TableRow key={tenant.tenantId}>
+                      <TableCell className="font-medium">{tenant.tenantName}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <span>{tenant.activeKeys}/{tenant.totalKeys}</span>
+                          {tenant.keysNeedingRotation > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              {tenant.keysNeedingRotation} rotacao
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{tenant.totalOperations.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <span className={getStatusColor(tenant.successRate, { good: 95, warning: 90 })}>
+                          {tenant.successRate.toFixed(1)}%
+                        </span>
+                      </TableCell>
+                      <TableCell>{tenant.avgPerformance.toFixed(0)}ms</TableCell>
+                      <TableCell>
+                        {tenant.keysNeedingRotation > 0 ? (
+                          <Badge variant="outline" className="text-yellow-600">
+                            Atencao
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-green-600">
+                            OK
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default CryptoDashboard;
