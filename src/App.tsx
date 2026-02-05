@@ -80,7 +80,7 @@ const AssessmentExecutionEngine = lazy(() => import("@/components/assessments/As
 const AssessmentWizard = lazy(() => import("@/components/assessments/AssessmentWizard"));
 const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
 // Componente corrigido após fix do RLS
-import AssessmentsListWorking from "@/components/assessments/AssessmentsListWorking";
+const AssessmentsListWorking = lazy(() => import("@/components/assessments/AssessmentsListWorking"));
 const QuestionsManagement = lazy(() => import("@/components/assessments/QuestionsManagement"));
 const ActionPlansManagement = lazy(() => import("@/components/assessments/ActionPlansManagement"));
 const ActionPlansManagementProfessional = lazy(() => import("@/components/assessments/ActionPlansManagementProfessional"));
@@ -121,11 +121,10 @@ const AIUsagePage = lazy(() => import("@/components/ai/AIUsagePage"));
 const AISettingsPage = lazy(() => import("@/components/ai/AISettingsPage"));
 const AIAuditPage = lazy(() => import("@/components/ai/AIAuditPage"));
 
-// Import direto para teste (sem lazy loading)
-import AIManagerNew from "@/components/ai/AIManagerNew";
-import AIManagementPageDirect from "@/components/ai/AIManagementPage";
-import UserStatusCheck from "@/components/UserStatusCheck";
-import FixUserPermissions from "@/components/FixUserPermissions";
+const AIManagerNew = lazy(() => import("@/components/ai/AIManagerNew"));
+const AIManagementPageDirect = lazy(() => import("@/components/ai/AIManagementPage"));
+const UserStatusCheck = lazy(() => import("@/components/UserStatusCheck"));
+const FixUserPermissions = lazy(() => import("@/components/FixUserPermissions"));
 
 
 // Ethics Module - Complete
@@ -392,7 +391,11 @@ const App = () => (
                             <AssessmentExecutionEngine />
                           </Suspense>
                         } />
-                        <Route path="assessments/list" element={<AssessmentsListWorking />} />
+                        <Route path="assessments/list" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AssessmentsListWorking />
+                          </Suspense>
+                        } />
                         <Route path="assessments/questions" element={
                           <Suspense fallback={<PageLoader />}>
                             <QuestionsManagement />

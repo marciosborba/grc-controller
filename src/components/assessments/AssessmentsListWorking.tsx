@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
+import {
   Play,
   Eye,
   Edit,
@@ -50,7 +50,7 @@ interface Assessment {
 export default function AssessmentsListWorking() {
   const { user } = useAuth();
   const { selectedTenantId } = useTenantSelector();
-  
+
   // Para super usuários, usar selectedTenantId do seletor
   // Para usuários normais, usar tenantId do perfil
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
@@ -147,27 +147,27 @@ export default function AssessmentsListWorking() {
     }
   };
 
-  const filteredAssessments = assessments.filter(assessment => {
-    const matchesSearch = !searchTerm || 
+  const filteredAssessments = useMemo(() => assessments.filter(assessment => {
+    const matchesSearch = !searchTerm ||
       assessment.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       assessment.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       assessment.framework?.nome.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || assessment.status === statusFilter;
-    
-    const matchesFramework = frameworkFilter === 'all' || 
+
+    const matchesFramework = frameworkFilter === 'all' ||
       assessment.framework?.tipo_framework === frameworkFilter;
 
     return matchesSearch && matchesStatus && matchesFramework;
-  });
+  }), [assessments, searchTerm, statusFilter, frameworkFilter]);
 
-  const uniqueFrameworks = Array.from(
+  const uniqueFrameworks = useMemo(() => Array.from(
     new Set(assessments.map(a => a.framework?.tipo_framework).filter(Boolean))
-  );
+  ), [assessments]);
 
-  const uniqueStatuses = Array.from(
+  const uniqueStatuses = useMemo(() => Array.from(
     new Set(assessments.map(a => a.status))
-  );
+  ), [assessments]);
 
   if (loading) {
     return (
@@ -194,7 +194,7 @@ export default function AssessmentsListWorking() {
             <h1 className="text-2xl font-bold">Lista de Assessments</h1>
           </div>
         </div>
-        
+
         <Card>
           <CardContent className="text-center py-8">
             <AlertTriangle className="h-12 w-12 text-orange-600 mx-auto mb-4" />
@@ -272,8 +272,8 @@ export default function AssessmentsListWorking() {
                 ))}
               </SelectContent>
             </Select>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSearchTerm('');
                 setStatusFilter('all');
@@ -317,11 +317,11 @@ export default function AssessmentsListWorking() {
                       <h3 className="text-lg font-semibold">{assessment.titulo}</h3>
                       {getStatusBadge(assessment.status)}
                     </div>
-                    
+
                     <p className="text-sm text-muted-foreground mb-3">
                       {assessment.codigo} • {assessment.framework?.nome}
                     </p>
-                    
+
                     {assessment.descricao && (
                       <p className="text-sm text-muted-foreground mb-4">
                         {assessment.descricao}
@@ -336,7 +336,7 @@ export default function AssessmentsListWorking() {
                         </div>
                         <Progress value={assessment.percentual_conclusao} className="h-2" />
                       </div>
-                      
+
                       {assessment.percentual_maturidade !== null && (
                         <div>
                           <div className="flex items-center justify-between text-sm mb-1">
@@ -375,7 +375,7 @@ export default function AssessmentsListWorking() {
                       <Play className="h-3 w-3 mr-1" />
                       {assessment.status === 'concluido' ? 'Visualizar' : 'Executar'}
                     </Button>
-                    
+
                     <Button
                       size="sm"
                       variant="outline"
@@ -384,7 +384,7 @@ export default function AssessmentsListWorking() {
                       <Eye className="h-3 w-3 mr-1" />
                       Relatório
                     </Button>
-                    
+
                     {assessment.status !== 'concluido' && assessment.status !== 'cancelado' && (
                       <Button
                         size="sm"
@@ -429,7 +429,7 @@ export default function AssessmentsListWorking() {
             <div>
               <p className="text-2xl font-bold text-purple-600">
                 {Math.round(
-                  assessments.reduce((sum, a) => sum + (a.percentual_maturidade || 0), 0) / 
+                  assessments.reduce((sum, a) => sum + (a.percentual_maturidade || 0), 0) /
                   (assessments.length || 1)
                 )}%
               </p>
