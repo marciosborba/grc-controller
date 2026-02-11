@@ -161,12 +161,12 @@ export default function ModernDashboard() {
 
             {/* Secondary Grid - Risk Matrix & Evolution (Side-by-Side) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-[600px]">
+                <div className="h-[900px]">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <RiskMatrixWidget />
                     </Suspense>
                 </div>
-                <div className="h-[600px]">
+                <div className="h-[900px]">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <RiskEvolutionWidget />
                     </Suspense>
