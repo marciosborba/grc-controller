@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
-import { useTenantSelector } from '@/contexts/TenantSelectorContext';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+
 import {
     Tooltip,
     TooltipContent,
@@ -49,7 +50,7 @@ interface RiskMatrixConfig {
 
 export const RiskMatrixWidget = () => {
     const { user } = useAuth();
-    const { selectedTenantId } = useTenantSelector();
+    const selectedTenantId = useCurrentTenantId();
     const navigate = useNavigate();
 
     const [risks, setRisks] = useState<Risk[]>([]);
