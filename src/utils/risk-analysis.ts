@@ -1,16 +1,26 @@
-import type { 
-  RiskAnalysisData, 
-  RiskAssessmentAnswer, 
-  RiskLevel, 
+import type {
+  RiskAnalysisData,
+  RiskAssessmentAnswer,
+  RiskLevel,
   MatrixSize,
-  GUTAnalysis 
+  GUTAnalysis
 } from '@/types/risk-management';
 import { supabase } from '@/integrations/supabase/client';
+
+interface RiskLevelConfig {
+  id: string;
+  name: string;
+  value: number;
+  color: string;
+  minValue: number;
+  maxValue: number;
+}
 
 interface TenantRiskMatrixConfig {
   type: '4x4' | '5x5';
   impact_labels: string[];
   likelihood_labels: string[];
+  risk_levels_custom?: RiskLevelConfig[];
 }
 
 // Função para obter configuração da matriz da tenant
@@ -73,7 +83,7 @@ export const calculateQualitativeRiskLevel = (
   const prob = Math.round(probabilityScore);
   const impact = Math.round(impactScore);
   const score = prob * impact;
-  
+
   if (matrixSize === '4x4') {
     // Matriz 4x4 - Nova classificação
     // 1 a 2 = Baixo
@@ -131,8 +141,8 @@ export const processRiskAnalysis = (
   const probabilityScore = calculateAverageScore(probabilityAnswers);
   const impactScore = calculateAverageScore(impactAnswers);
   const qualitativeRiskLevel = calculateQualitativeRiskLevel(
-    probabilityScore, 
-    impactScore, 
+    probabilityScore,
+    impactScore,
     matrixSize
   );
 
@@ -177,16 +187,16 @@ export const processRiskAnalysisWithTenantConfig = async (
     probabilityAnswersCount: probabilityAnswers.length,
     impactAnswersCount: impactAnswers.length
   });
-  
+
   const config = await getTenantMatrixConfig(tenantId);
-  
+
   // Usando configuração da tenant para análise
   console.log('⚙️ [RISK] Usando configuração da tenant:', {
     tenantId,
     matrixType: config.type,
     config
   });
-  
+
   const result = processRiskAnalysis(
     riskType,
     config.type,
@@ -196,13 +206,13 @@ export const processRiskAnalysisWithTenantConfig = async (
     gutUrgency,
     gutTendency
   );
-  
+
   console.log('✅ [RISK] Análise processada com sucesso:', {
     qualitativeRiskLevel: result.qualitativeRiskLevel,
     probabilityScore: result.probabilityScore,
     impactScore: result.impactScore
   });
-  
+
   return result;
 };
 
@@ -259,7 +269,7 @@ export const findRiskPositionInMatrix = (
   const maxValue = matrixSize === '4x4' ? 4 : 5;
   const prob = Math.max(1, Math.min(maxValue, Math.round(probabilityScore)));
   const impact = Math.max(1, Math.min(maxValue, Math.round(impactScore)));
-  
+
   return {
     x: prob - 1, // Converter para índice baseado em 0
     y: maxValue - impact // Inverter porque a matriz é exibida de cima para baixo

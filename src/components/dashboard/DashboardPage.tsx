@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 // Lazy load dashboards to reduce initial bundle size
 const IntegratedExecutiveDashboardFixed = lazy(() => import('./IntegratedExecutiveDashboardFixed'));
@@ -11,6 +11,7 @@ const ExecutiveDashboard = lazy(() => import('./ExecutiveDashboard'));
 const RiskManagerDashboard = lazy(() => import('./RiskManagerDashboard'));
 const ComplianceDashboard = lazy(() => import('./ComplianceDashboard'));
 const AuditorDashboard = lazy(() => import('./AuditorDashboard'));
+const ModernDashboard = lazy(() => import('./ModernDashboard'));
 
 // Lightweight loader for dashboard switching
 const DashboardLoader = () => (
@@ -24,10 +25,9 @@ const DashboardPage = () => {
 
   if (!user) return null;
 
-  // Use the original dashboard with only the 3 specific fixes applied
   return (
     <Suspense fallback={<DashboardLoader />}>
-      <IntegratedExecutiveDashboardFixed />
+      <ModernDashboard />
     </Suspense>
   );
 };

@@ -273,16 +273,7 @@
   }
 
   /* More aggressive dark mode border override */
-  html.dark *,
-  .dark * {
-    border-color: hsl(215 10% 22%) !important;
-  }
 
-  /* Specific overrides for light elements in dark mode */
-  html.dark [style*="border"],
-  .dark [style*="border"] {
-    border-color: hsl(215 10% 22%) !important;
-  }
 
   /* Sidebar consistency with cards in dark mode */
   .dark [data-sidebar="sidebar"] {
