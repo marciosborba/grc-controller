@@ -45,11 +45,11 @@ export default function ModernDashboard() {
                             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">GRC Intelligence</span>
                         </div>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white mt-1">
-                        Dashboard <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Executivo</span>
+                    <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground mt-1">
+                        Dashboard Executivo
                     </h1>
-                    <p className="text-slate-400 mt-3 max-w-2xl text-lg font-light leading-relaxed">
-                        Visão holística de <span className="text-slate-200 font-medium">Governança</span>, <span className="text-slate-200 font-medium">Riscos</span> e <span className="text-slate-200 font-medium">Conformidade</span> para alta gestão.
+                    <p className="text-muted-foreground mt-3 max-w-2xl text-lg font-light leading-relaxed">
+                        Visão holística de <span className="text-foreground font-medium">Governança</span>, <span className="text-foreground font-medium">Riscos</span> e <span className="text-foreground font-medium">Conformidade</span> para alta gestão.
                     </p>
                 </div>
 

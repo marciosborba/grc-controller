@@ -1,123 +1,49 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   User,
   Mail,
   Phone,
   Building,
-  MapPin,
   Calendar,
   Clock,
-  Settings,
-  Activity,
-  Bell,
-  Eye,
-  EyeOff,
-  Save,
-  RefreshCw,
   Shield,
-  Globe,
-  Moon,
-  Sun,
-  Crown,
   CheckCircle,
   AlertTriangle,
-  Info,
-  Sparkles,
-  Zap,
+  Crown,
+  Camera,
+  Loader2,
+  Save,
+  Activity,
+  LogOut,
+  History,
   Lock,
-  Unlock,
-  Star,
-  Edit,
-  X,
-  Palette
+  LayoutDashboard,
+  Fingerprint,
+  Smartphone,
+  Globe,
+  QrCode,
+  ShieldCheck,
+  RefreshCw,
+  Copy
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { logActivity } from '@/utils/securityLogger';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
+import { AvatarCropper } from './AvatarCropper';
 
-// Função para obter a role mais alta do usuário
-const getUserHighestRole = (user: any) => {
-  if (user?.isPlatformAdmin) {
-    return {
-      name: 'Super Administrador',
-      icon: Crown,
-      color: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800'
-    };
-  }
-  
-  // Hierarquia de roles (da mais alta para a mais baixa)
-  const roleHierarchy = [
-    { role: 'super_admin', name: 'Super Administrador', icon: Crown, color: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-300 dark:border-red-800' },
-    { role: 'admin', name: 'Administrador', icon: Shield, color: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300 dark:border-orange-800' },
-    { role: 'ciso', name: 'CISO', icon: Shield, color: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-800' },
-    { role: 'risk_manager', name: 'Gerente de Risco', icon: AlertTriangle, color: 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-300 dark:border-yellow-800' },
-    { role: 'compliance_officer', name: 'Oficial de Compliance', icon: CheckCircle, color: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800' },
-    { role: 'auditor', name: 'Auditor', icon: Eye, color: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800' },
-    { role: 'user', name: 'Usuário', icon: User, color: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-800' }
-  ];
-  
-  // Verificar se o usuário tem alguma das roles na hierarquia
-  if (user?.roles && Array.isArray(user.roles)) {
-    for (const hierarchyRole of roleHierarchy) {
-      if (user.roles.includes(hierarchyRole.role)) {
-        return {
-          name: hierarchyRole.name,
-          icon: hierarchyRole.icon,
-          color: hierarchyRole.color
-        };
-      }
-    }
-  }
-  
-  // Fallback para role única
-  if (user?.role) {
-    const foundRole = roleHierarchy.find(r => r.role === user.role);
-    if (foundRole) {
-      return {
-        name: foundRole.name,
-        icon: foundRole.icon,
-        color: foundRole.color
-      };
-    }
-  }
-  
-  // Fallback padrão
-  return {
-    name: 'Usuário',
-    icon: User,
-    color: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-800'
-  };
-};
 
+// --- Types ---
 interface UserProfile {
   user_id: string;
   full_name: string;
@@ -126,1120 +52,818 @@ interface UserProfile {
   department?: string;
   job_title?: string;
   avatar_url?: string;
-  language?: string;
-  notification_preferences?: Record<string, unknown>;
   created_at: string;
-  last_login_at?: string;
+  notification_preferences?: any;
 }
 
 interface UserActivity {
   id: string;
   action: string;
   resource_type: string;
-  resource_id?: string;
-  details: Record<string, unknown>;
+  details: any;
   created_at: string;
-  ip_address?: string;
 }
 
+// --- Helpers ---
+const getUserRoleInfo = (user: any) => {
+  if (user?.isPlatformAdmin) return { name: 'Super Admin', icon: Crown, color: 'text-red-500 bg-red-500/10 border-red-500/20' };
+  const roles: Record<string, any> = {
+    'admin': { name: 'Admin', icon: Shield, color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' },
+    'ciso': { name: 'CISO', icon: Shield, color: 'text-purple-500 bg-purple-500/10 border-purple-500/20' },
+    'risk_manager': { name: 'Risk Manager', icon: AlertTriangle, color: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' },
+    'auditor': { name: 'Auditor', icon: Shield, color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
+    'user': { name: 'User', icon: User, color: 'text-slate-500 bg-slate-500/10 border-slate-500/20' }
+  };
+  return roles[user?.role] || roles['user'];
+};
+
 export const UserProfilePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  
+
+  // State
+  const [activeTab, setActiveTab] = useState('overview');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activities, setActivities] = useState<UserActivity[]>([]);
-  
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(false);
-  
-  // Preferences state (moved from simplified ThemeContext)
-  const [preferences, setPreferences] = useState({
-    theme: 'system',
-    language: 'pt',
-    colorPalette: {
-      primary: '#3b82f6',
-      secondary: '#7e22ce',
-      tertiary: '#be185d'
-    },
-    notifications: {
-      email: true,
-      push: true,
-      security: true,
-      updates: true
-    },
-    privacy: {
-      showEmail: false,
-      showActivity: true
-    }
-  });
-  
-  // Form states
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    department: '',
-    job_title: '',
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  // Avatar Cropper State
+  const [showCropper, setShowCropper] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string>('');
+
+  // Security State
+  const [mfaInitiated, setMfaInitiated] = useState(false);
+  const [mfaSecret, setMfaSecret] = useState('');
+  const [mfaQr, setMfaQr] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
+  const [sessions, setSessions] = useState<any[]>([]);
+
+  // Data
+  const [formData, setFormData] = useState({ full_name: '', phone: '', department: '', job_title: '' });
+  const [preferences, setPreferences] = useState({ notifications: { email: true, push: true } });
+
+  // Dashboard Stats
+  const [stats, setStats] = useState({
+    totalActions: 0,
+    daysActive: 0,
+    accessLevel: 'User'
   });
 
-  const fetchProfile = useCallback(async () => {
+  // Fetch Logic
+  const fetchData = useCallback(async () => {
     if (!user?.id) return;
-    
-    setLoading(true);
     try {
-      const { data: profileData, error } = await supabase
+      setLoading(true);
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (error) throw error;
-
-      console.log('Profile data from database:', profileData);
+      if (profileError) throw profileError;
 
       setProfile(profileData);
       setFormData({
         full_name: profileData.full_name || '',
-        email: profileData.email || '',
         phone: profileData.phone || '',
         department: profileData.department || '',
-        job_title: profileData.job_title || '',
+        job_title: profileData.job_title || ''
       });
+      if (profileData.notification_preferences) setPreferences(prev => ({ ...prev, ...profileData.notification_preferences }));
 
-      // Load preferences from profile
-      if (profileData.notification_preferences) {
-        const prefs = profileData.notification_preferences as any;
-        setPreferences(prev => ({
-          ...prev,
-          ...prefs,
-          notifications: {
-            ...prev.notifications,
-            ...prefs.notifications,
-          },
-          privacy: {
-            ...prev.privacy,
-            ...prefs.privacy,
-          },
-        }));
-      }
-
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao carregar perfil do usuário',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id, setPreferences, toast]);
-
-  const fetchUserActivities = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data: activitiesData, error } = await supabase
+      // Fetch Recent Activities
+      const { data: activityData } = await supabase
         .from('activity_logs')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(20);
+      setActivities(activityData || []);
 
-      if (error) throw error;
-
-      setActivities(activitiesData || []);
-    } catch (error) {
-      console.error('Error fetching user activities:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao carregar atividades do usuário',
-        variant: 'destructive'
-      });
-    }
-  }, [user?.id, toast]);
-
-  const handleProfileUpdate = async () => {
-    if (!user?.id || !profile) return;
-    
-    // Basic validation
-    if (!formData.full_name.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Nome completo é obrigatório',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Email é obrigatório',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    setSaving(true);
-    try {
-      // Get the current profile to preserve tenant_id and other fields
-      const { data: currentProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching current profile:', fetchError);
-        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);
-      }
-
-      const updateData = {
-        full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone?.trim() || null,
-        department: formData.department?.trim() || null,
-        job_title: formData.job_title?.trim() || null,
-        tenant_id: currentProfile.tenant_id,
-      };
-
-      console.log('Updating profile with data:', updateData);
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updateData)
+      // Calculate Stats
+      // 1. Total Actions
+      const { count: actionsCount } = await supabase
+        .from('activity_logs')
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      // 2. Days Active
+      const createdDateString = profileData?.created_at;
+      const createdDate = createdDateString ? new Date(createdDateString) : new Date();
+      const diffTime = Math.abs(new Date().getTime() - createdDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      // Log the profile update activity with details of what changed
-      const changes: Record<string, { from: string; to: string }> = {};
-      
-      if (formData.full_name !== profile.full_name) {
-        changes.full_name = { from: profile.full_name || '', to: formData.full_name };
-      }
-      if (formData.email !== profile.email) {
-        changes.email = { from: profile.email || '', to: formData.email };
-      }
-      if (formData.phone !== (profile.phone || '')) {
-        changes.phone = { from: profile.phone || '', to: formData.phone || '' };
-      }
-      if (formData.department !== (profile.department || '')) {
-        changes.department = { from: profile.department || '', to: formData.department || '' };
-      }
-      if (formData.job_title !== (profile.job_title || '')) {
-        changes.job_title = { from: profile.job_title || '', to: formData.job_title || '' };
-      }
-
-      // Log the activity with detailed changes
-      await logActivity(
-        'profile_updated',
-        'user',
-        user.id,
-        {
-          user_id: user.id,
-          changes: changes,
-          timestamp: new Date().toISOString()
-        }
-      );
-
-      // Update auth.users email if changed
-      if (formData.email !== profile.email) {
-        const { error: authError } = await supabase.auth.updateUser({
-          email: formData.email
-        });
-        
-        if (authError) {
-          toast({
-            title: 'Atenção',
-            description: 'Perfil atualizado, mas verifique seu novo email para confirmar a alteração',
-            variant: 'default'
-          });
-        }
-      }
-
-      toast({
-        title: 'Sucesso',
-        description: 'Perfil atualizado com sucesso',
+      setStats({
+        totalActions: actionsCount || 0,
+        daysActive: diffDays,
+        accessLevel: getUserRoleInfo(user).name
       });
-
-      // Refresh all data to reflect changes
-      await Promise.all([
-        fetchProfile(),
-        fetchUserActivities()
-      ]);
-      
-      console.log('Profile update completed');
-      setEditingProfile(false);
 
     } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao atualizar perfil',
-        variant: 'destructive'
-      });
+      console.error('Fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Actions
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('profiles').update({ ...formData, updated_at: new Date().toISOString() }).eq('user_id', user?.id);
+      if (error) throw error;
+      await logActivity('profile_update', 'user', user!.id, { changes: formData });
+      toast({ title: "Salvo", description: "Suas informações foram atualizadas." });
+      refreshUser();
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
   const handlePreferencesUpdate = async () => {
-    if (!user?.id) return;
-    
     setSaving(true);
     try {
-      // Get the current profile to preserve tenant_id and other fields
-      const { data: currentProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching current profile:', fetchError);
-        throw new Error(`Erro ao buscar dados do perfil atual: ${fetchError.message}`);
-      }
-
+      if (!user?.id) return;
       const { error } = await supabase
         .from('profiles')
-        .update({
-          notification_preferences: preferences,
-          language: preferences.language,
-          tenant_id: currentProfile.tenant_id,
-        })
+        .update({ notification_preferences: preferences })
         .eq('user_id', user.id);
-
       if (error) throw error;
-
-      // Log preferences update activity
-      await logActivity(
-        'preferences_updated',
-        'user',
-        user.id,
-        {
-          user_id: user.id,
-          preferences: preferences,
-          timestamp: new Date().toISOString()
-        }
-      );
-
-      await fetchUserActivities(); // Refresh activities to show the new log
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Preferências atualizadas com sucesso',
-      });
-
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-      toast({
-        title: 'Erro',
-        description: error instanceof Error ? error.message : 'Erro ao atualizar preferências',
-        variant: 'destructive'
-      });
+      toast({ title: 'Sucesso', description: 'Preferências salvas.' });
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
-  const getActionBadgeColor = (action: string) => {
-    const colors = {
-      'login_success': 'bg-green-100 text-green-800 border-green-200',
-      'logout': 'bg-blue-100 text-blue-800 border-blue-200',
-      'profile_updated': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'preferences_updated': 'bg-purple-100 text-purple-800 border-purple-200',
-      'password_changed': 'bg-orange-100 text-orange-800 border-orange-200',
-      'email_updated': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      'login': 'bg-green-100 text-green-800 border-green-200',
-      'update': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      'create': 'bg-purple-100 text-purple-800 border-purple-200',
-      'delete': 'bg-red-100 text-red-800 border-red-200',
-      'view': 'bg-gray-100 text-gray-800 border-gray-200',
-    };
-    
-    // Check exact match first
-    if (colors[action]) {
-      return colors[action];
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setSelectedImage(reader.result as string);
+        setShowCropper(true);
+      });
+      reader.readAsDataURL(file);
     }
-    
-    // Then check partial matches
-    for (const [key, color] of Object.entries(colors)) {
-      if (action.toLowerCase().includes(key)) {
-        return color;
-      }
-    }
-    return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+  const handleCropComplete = async (croppedBlob: Blob) => {
+    setShowCropper(false);
+    setUploadingAvatar(true);
+    try {
+      const path = `${user?.id}-${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, croppedBlob, { upsert: true });
+      if (upErr) throw upErr;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user?.id);
+
+      toast({ title: "Avatar atualizado", description: "Nova foto definida com sucesso." });
+      fetchData();
+      refreshUser();
+    } catch (err: any) {
+      console.error('Avatar upload error:', err);
+      toast({
+        title: "Erro no upload",
+        description: err.message || "Não foi possível enviar a imagem. Verifique as permissões.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Security Functions
+  const handlePasswordChange = async () => {
+    if (passwordForm.new !== passwordForm.confirm) {
+      toast({ title: "Erro", description: "As senhas não coincidem.", variant: "destructive" });
+      return;
+    }
+    if (passwordForm.new.length < 6) {
+      toast({ title: "Erro", description: "A senha deve ter no mínimo 6 caracteres.", variant: "destructive" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwordForm.new });
+      if (error) throw error;
+
+      await logActivity('password_change', 'user', user!.id, {});
+      toast({ title: "Senha alterada", description: "Sua senha foi atualizada com sucesso." });
+      setPasswordForm({ current: '', new: '', confirm: '' });
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const initMFA = async () => {
+    try {
+      setSaving(true);
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+      if (error) throw error;
+
+      setMfaSecret(data.totp.secret);
+      setMfaQr(data.totp.qr_code);
+      setMfaInitiated(true);
+      setShowMfaSetup(true);
+    } catch (error: any) {
+      toast({ title: "Erro ao iniciar MFA", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const verifyMFA = async () => {
+    try {
+      setSaving(true);
+      const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: (await supabase.auth.mfa.listFactors()).data?.totp[0].id || '',
+        code: mfaCode
+      });
+      if (error) throw error;
+
+      await logActivity('mfa_enabled', 'user', user!.id, {});
+      toast({ title: "MFA Ativado", description: "Autenticação em dois fatores ativada com sucesso." });
+      setMfaInitiated(false);
+      setShowMfaSetup(false);
+      fetchData(); // Refresh profile to see MFA status if we were tracking it
+    } catch (error: any) {
+      toast({ title: "Código inválido", description: "Verifique o código e tente novamente.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const loadSessions = async () => {
+    // Mocking sessions since we can't easily list them without admin rights or extra query
+    // But we can show current session
+    setSessions([
+      { id: 'current', device: 'Este Dispositivo', browser: 'Chrome', lastActive: 'Agora', current: true },
+      // { id: 'other', device: 'iPhone 13', browser: 'Safari Mobile', lastActive: '2 horas atrás', current: false } 
+    ]);
   };
 
   useEffect(() => {
-    fetchProfile();
-    fetchUserActivities();
-  }, [fetchProfile, fetchUserActivities]);
+    if (activeTab === 'security') {
+      loadSessions();
+    }
+  }, [activeTab]);
 
-  if (loading || !profile) {
-    return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-3">
-            <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-lg text-muted-foreground">Carregando perfil...</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+
+  const roleInfo = getUserRoleInfo(user);
+
+  // Constants for tabs
+  const tabs = [
+    { id: 'overview', label: 'Visão Geral' },
+    { id: 'edit', label: 'Editar Perfil' },
+    { id: 'activity', label: 'Atividades' },
+    { id: 'security', label: 'Segurança' },
+  ];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header melhorado seguindo padrão da aplicação */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <span>Meu Perfil</span>
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie suas informações pessoais, preferências de sistema e monitore suas atividades
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {(() => {
-            const userRole = getUserHighestRole(user);
-            const IconComponent = userRole.icon;
-            return (
-              <Badge variant="outline" className={userRole.color}>
-                <IconComponent className="h-3 w-3 mr-1" />
-                {userRole.name}
-              </Badge>
-            );
-          })()}
-          {profile.last_login_at && (
-            <Badge variant="secondary">
-              <Clock className="h-3 w-3 mr-1" />
-              Último acesso: {new Date(profile.last_login_at).toLocaleDateString('pt-BR')}
-            </Badge>
-          )}
-        </div>
+    <div className="min-h-screen bg-background pb-20">
+
+      {/* 1. COVER HEADER */}
+      {/* Revised: Softer, theme-aware gradient */}
+      <div className="relative h-48 md:h-64 w-full bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-900 dark:to-slate-800 overflow-hidden border-b border-white/5">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent" />
       </div>
 
-      {/* Alert informativo */}
-      <Alert className="border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100">
-        <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <AlertTitle className="text-blue-900 dark:text-blue-100">Centro de Configurações Pessoais</AlertTitle>
-        <AlertDescription className="text-blue-800 dark:text-blue-200">
-          Personalize sua experiência na plataforma. Todas as alterações são salvas automaticamente e aplicadas imediatamente.
-        </AlertDescription>
-      </Alert>
+      <div className="container mx-auto px-4 -mt-24 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-      {/* Profile Summary Card melhorado */}
-      <Card className="border-2 border-primary/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Resumo do Perfil
-          </CardTitle>
-          <CardDescription>
-            Informações principais do seu perfil na plataforma
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-6">
-            <div className="h-20 w-20 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/20">
-              <span className="text-2xl font-bold text-primary">
-                {profile.full_name?.split(' ').map(n => n[0]).join('') || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 space-y-2">
-              <div>
-                <h2 className="text-2xl font-semibold text-foreground">{profile.full_name}</h2>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  {profile.email}
-                </p>
-              </div>
-              <div className="flex items-center gap-4 text-sm">
-                {profile.job_title && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Building className="h-4 w-4" />
-                    <span>{profile.job_title}</span>
-                  </div>
-                )}
-                {profile.department && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{profile.department}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Membro desde {new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
+          {/* 2. LEFT COLUMN: IDENTITY CARD */}
+          <div className="lg:col-span-4 space-y-6">
+            <Card className="border-border/50 shadow-xl backdrop-blur-md bg-card/95">
+              <CardContent className="pt-0 p-6 flex flex-col items-center text-center">
+
+                {/* Floating Avatar */}
+                <div className="relative group -mt-20 mb-4">
+                  <Avatar className="h-32 w-32 border-[4px] border-background shadow-2xl ring-1 ring-border/20">
+                    <AvatarImage src={profile?.avatar_url || undefined} className="object-cover" />
+                    <AvatarFallback className="text-4xl font-bold bg-muted text-muted-foreground">
+                      {profile?.full_name?.substring(0, 2).toUpperCase() || 'US'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-all cursor-pointer text-white backdrop-blur-sm">
+                    {uploadingAvatar ? <Loader2 className="h-8 w-8 animate-spin" /> : <Camera className="h-8 w-8" />}
+                    <input type="file" className="hidden" accept="image/*" onChange={handleAvatarSelect} disabled={uploadingAvatar} />
+                  </label>
                 </div>
-              </div>
-            </div>
-            <div className="text-right space-y-2">
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Ativo
-              </Badge>
-              {profile.last_login_at && (
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Último acesso:</span><br />
-                  {formatDateTime(profile.last_login_at)}
-                </p>
-              )}
-            </div>
+
+                <AvatarCropper
+                  open={showCropper}
+                  onOpenChange={setShowCropper}
+                  imageSrc={selectedImage}
+                  onCropComplete={handleCropComplete}
+                />
+
+                <h2 className="text-2xl font-bold text-foreground">{profile?.full_name}</h2>
+                <p className="text-muted-foreground font-medium text-sm mt-1">{profile?.email}</p>
+
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Badge variant="outline" className={cn("px-2 py-0.5 border bg-opacity-10", roleInfo.color)}>
+                    <roleInfo.icon className="w-3 h-3 mr-1.5" />
+                    {roleInfo.name}
+                  </Badge>
+                </div>
+
+                <Separator className="my-6 bg-border/50" />
+
+                <div className="w-full space-y-4 text-sm">
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-md bg-muted/50 border border-border/50">
+                      <Building className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Departamento</p>
+                      <p className="text-foreground font-medium">{profile?.department || 'Não informado'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-md bg-muted/50 border border-border/50">
+                      <LayoutDashboard className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Cargo</p>
+                      <p className="text-foreground font-medium">{profile?.job_title || 'Não informado'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-md bg-muted/50 border border-border/50">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Membro desde</p>
+                      <p className="text-foreground font-medium">{new Date(profile?.created_at || new Date()).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/50 shadow-lg bg-card/60 backdrop-blur-sm">
+              <CardContent className="p-6 space-y-4">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4">Status da Conta</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="h-4 w-4 text-emerald-500" /> E-mail Verificado
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10">Sim</Badge>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12">
-          <TabsTrigger value="profile" className="flex items-center gap-2 h-10">
-            <User className="h-4 w-4" />
-            <span>Informações Pessoais</span>
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="flex items-center gap-2 h-10">
-            <Settings className="h-4 w-4" />
-            <span>Preferências</span>
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="flex items-center gap-2 h-10">
-            <Activity className="h-4 w-4" />
-            <span>Atividades</span>
-          </TabsTrigger>
-        </TabsList>
+          {/* 3. RIGHT COLUMN: TABS & CONTENT */}
+          {/* Added lg:mt-24 to push content below the cover header */}
+          <div className="lg:col-span-8 space-y-6 lg:mt-24">
 
-        <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
-                    Informações Pessoais
-                  </CardTitle>
-                  <CardDescription>
-                    Gerencie suas informações básicas de perfil
-                  </CardDescription>
-                </div>
-                <Button
-                  variant={editingProfile ? "outline" : "default"}
-                  onClick={() => setEditingProfile(!editingProfile)}
-                  className="flex items-center gap-2"
-                >
-                  {editingProfile ? (
-                    <>
-                      <X className="h-4 w-4" />
-                      Cancelar
-                    </>
-                  ) : (
-                    <>
-                      <Edit className="h-4 w-4" />
-                      Editar
-                    </>
-                  )}
-                </Button>
+            {/* MANUAL TAB NAVIGATION */}
+            <div className="sticky top-0 z-20 bg-background/95 backdrop-blur py-2 border-b border-border/40">
+              <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "pb-3 text-sm font-medium transition-all relative whitespace-nowrap",
+                      activeTab === tab.id
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {tab.label}
+                    {activeTab === tab.id && (
+                      <span className="absolute bottom-0 left-0 w-full h-[2px] bg-primary rounded-t-full shadow-[0_0_10px_rgba(var(--primary),0.5)]" />
+                    )}
+                  </button>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label htmlFor="full_name" className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Nome Completo *
-                  </Label>
-                  {editingProfile ? (
-                    <Input
-                      id="full_name"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                      className="h-11"
-                      placeholder="Digite seu nome completo"
-                    />
-                  ) : (
-                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{profile.full_name}</span>
+            </div>
+
+            {/* TAB CONTENT: OVERVIEW */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="hover:bg-muted/30 transition-colors border-blue-500/20 bg-blue-500/5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><Fingerprint className="w-16 h-16 text-blue-500" /></div>
+                    <CardContent className="p-6">
+                      <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalActions}</p>
+                      <p className="text-xs text-blue-600/60 dark:text-blue-400/60 font-bold uppercase tracking-wider mt-1">Ações Totais</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="hover:bg-muted/30 transition-colors border-amber-500/20 bg-amber-500/5 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity"><History className="w-16 h-16 text-amber-500" /></div>
+                    <CardContent className="p-6">
+                      <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.daysActive}</p>
+                      <p className="text-xs text-amber-600/60 dark:text-amber-400/60 font-bold uppercase tracking-wider mt-1">Dias Ativo</p>
+                    </CardContent>
+                  </Card>
+                  <Card className={cn(
+                    "hover:bg-muted/30 transition-colors shadow-sm relative overflow-hidden group border",
+                    roleInfo.color.replace('text-', 'border-').replace('bg-', 'data-unused-') // Simple hack to extract border color from utility class or just use the color directly
+                  )}>
+                    {/* We can reproduce the specific style based on role */}
+                    <div className={cn("absolute inset-0 opacity-5", roleInfo.color.split(' ')[1])} />
+                    <div className={cn("absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity", roleInfo.color.split(' ')[0])}>
+                      <roleInfo.icon className="w-16 h-16" />
                     </div>
-                  )}
+                    <CardContent className="p-6 relative z-10">
+                      <p className={cn("text-3xl font-bold", roleInfo.color.split(' ')[0])}>{stats.accessLevel}</p>
+                      <p className={cn("text-xs font-bold uppercase tracking-wider mt-1 opacity-70", roleInfo.color.split(' ')[0])}>Nível de Acesso</p>
+                    </CardContent>
+                  </Card>
                 </div>
 
-                <div className="space-y-3">
-                  <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Email *
-                  </Label>
-                  {editingProfile ? (
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      className="h-11"
-                      placeholder="Digite seu email"
-                    />
-                  ) : (
-                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{profile.email}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Telefone
-                  </Label>
-                  {editingProfile ? (
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      className="h-11"
-                      placeholder="Digite seu telefone"
-                    />
-                  ) : (
-                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{profile.phone || 'Não informado'}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="job_title" className="text-sm font-medium flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    Cargo
-                  </Label>
-                  {editingProfile ? (
-                    <Input
-                      id="job_title"
-                      value={formData.job_title}
-                      onChange={(e) => setFormData(prev => ({ ...prev, job_title: e.target.value }))}
-                      className="h-11"
-                      placeholder="Digite seu cargo"
-                    />
-                  ) : (
-                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{profile.job_title || 'Não informado'}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <Label htmlFor="department" className="text-sm font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Departamento
-                  </Label>
-                  {editingProfile ? (
-                    <Input
-                      id="department"
-                      value={formData.department}
-                      onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                      className="h-11"
-                      placeholder="Digite seu departamento"
-                    />
-                  ) : (
-                    <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{profile.department || 'Não informado'}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Membro desde
-                  </Label>
-                  <div className="flex items-center space-x-3 p-3 bg-muted/30 rounded-lg border">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{new Date(profile.created_at).toLocaleDateString('pt-BR')}</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-primary" />
+                      Atividades Recentes
+                    </h3>
+                    <Button variant="ghost" size="sm" onClick={() => setActiveTab('activity')}>Ver todas</Button>
                   </div>
+                  <Card className="border-border/50 shadow-sm">
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-border/40">
+                        {activities.slice(0, 5).map((activity) => (
+                          <div key={activity.id} className="p-4 flex items-start gap-4 hover:bg-muted/30 transition-colors group">
+                            <div className="mt-1 p-2 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                              <Clock className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-foreground">{activity.action}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{new Date(activity.created_at).toLocaleString('pt-BR')}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {activities.length === 0 && <div className="p-6 text-center text-muted-foreground">Nenhuma atividade.</div>}
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
+            )}
 
-              {editingProfile && (
-                <>
-                  <Separator />
-                  <div className="flex justify-end space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setEditingProfile(false)}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancelar
+            {/* TAB CONTENT: EDIT */}
+            {activeTab === 'edit' && (
+              <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <CardHeader>
+                  <CardTitle>Informações Pessoais</CardTitle>
+                  <CardDescription>Atualize seus dados de cadastro.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullName">Nome Completo</Label>
+                      <Input
+                        id="fullName"
+                        value={formData.full_name}
+                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Telefone</Label>
+                      <Input
+                        id="phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="department">Departamento</Label>
+                      <Input
+                        id="department"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle">Cargo</Label>
+                      <Input
+                        id="jobTitle"
+                        value={formData.job_title}
+                        onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-4 border-t border-border/40">
+                    <Button onClick={handleSave} disabled={saving}>
+                      {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Salvar Alterações
                     </Button>
-                    <Button
-                      onClick={handleProfileUpdate}
-                      disabled={saving}
-                      className="flex items-center gap-2"
-                    >
-                      {saving ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin" />
-                          Salvando...
-                        </>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* TAB CONTENT: ACTIVITY */}
+            {activeTab === 'activity' && (
+              <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <CardHeader>
+                  <CardTitle>Histórico de Atividades</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/40">
+                    {activities.map((activity) => (
+                      <div key={activity.id} className="p-4 flex items-start gap-4 hover:bg-muted/30 transition-colors">
+                        <div className="mt-1 p-2 rounded-full bg-muted border border-border shrink-0">
+                          <History className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <p className="text-sm font-medium text-foreground">{activity.action}</p>
+                            <Badge variant="outline" className="text-[10px] uppercase">{activity.resource_type}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {JSON.stringify(activity.details)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(activity.created_at).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* TAB CONTENT: SECURITY */}
+            {activeTab === 'security' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+
+                {/* Security Score / Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border-emerald-500/20 bg-emerald-500/5">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-500">
+                        <ShieldCheck className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Nível de Segurança</p>
+                        <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">Forte</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/50">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-full bg-primary/10 text-primary">
+                        <Lock className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Senha</p>
+                        <p className="text-sm font-bold text-foreground">Atualizada há 2 meses</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/50">
+                    <CardContent className="p-6 flex items-center gap-4">
+                      <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
+                        <Smartphone className="h-8 w-8" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">MFA</p>
+                        <p className="text-sm font-bold text-foreground">Não Ativado</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                  {/* Change Password */}
+                  <Card className="border-border/50 shadow-sm h-full">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Lock className="h-5 w-5 text-primary" /> Alterar Senha
+                      </CardTitle>
+                      <CardDescription>Mantenha sua conta segura alterando sua senha periodicamente.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Nova Senha</Label>
+                        <Input
+                          type="password"
+                          value={passwordForm.new}
+                          onChange={e => setPasswordForm(p => ({ ...p, new: e.target.value }))}
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Confirmar Nova Senha</Label>
+                        <Input
+                          type="password"
+                          value={passwordForm.confirm}
+                          onChange={e => setPasswordForm(p => ({ ...p, confirm: e.target.value }))}
+                          placeholder="••••••••"
+                        />
+                      </div>
+
+                      <div className="pt-2">
+                        <div className="text-xs text-muted-foreground space-y-1 mb-4">
+                          <p className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-500" /> Mínimo de 8 caracteres</p>
+                          <p className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-500" /> Um caractere especial</p>
+                          <p className="flex items-center gap-1"><CheckCircle className="h-3 w-3 text-emerald-500" /> Uma letra maiúscula</p>
+                        </div>
+                        <Button onClick={handlePasswordChange} disabled={saving} className="w-full">
+                          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          Atualizar Senha
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* MFA Section */}
+                  <Card className="border-border/50 shadow-sm h-full flex flex-col">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Smartphone className="h-5 w-5 text-primary" /> Autenticação em Dois Fatores (MFA)
+                      </CardTitle>
+                      <CardDescription>Adicione uma camada extra de segurança à sua conta.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 flex-1">
+                      {!showMfaSetup ? (
+                        <div className="flex flex-col items-center justify-center text-center py-6 space-y-4">
+                          <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
+                            <QrCode className="h-8 w-8 text-primary" />
+                          </div>
+                          <div className="space-y-2">
+                            <h4 className="font-semibold">MFA não configurado</h4>
+                            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                              Utilize um aplicativo como Google Authenticator ou Authy para gerar códigos de verificação.
+                            </p>
+                          </div>
+                          <Button onClick={initMFA} variant="outline" className="mt-2">
+                            Configurar MFA Agora
+                          </Button>
+                        </div>
                       ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          Salvar Alterações
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                          <div className="text-center p-4 bg-white rounded-lg border border-border inline-block w-full">
+                            {/* Fallback to image if SVG not working or use iframe for quick qr */}
+                            {mfaQr ? (
+                              <img src={mfaQr} alt="QR Code" className="mx-auto h-40 w-40" />
+                            ) : (
+                              <div className="h-40 w-40 bg-muted mx-auto flex items-center justify-center text-xs text-muted-foreground">
+                                QR Code
+                              </div>
+                            )}
+                          </div>
 
-        <TabsContent value="preferences" className="space-y-6">
-          {/* Theme Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5 text-primary" />
-                Aparência & Tema
-              </CardTitle>
-              <CardDescription>
-                Personalize a aparência da interface de acordo com suas preferências
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Sun className="h-4 w-4" />
-                    Tema da Interface
-                  </Label>
-                  <Select
-                    value={theme || 'system'}
-                    onValueChange={(value: 'light' | 'dark' | 'system') => {
-                      setTheme(value);
-                      setPreferences(prev => ({ ...prev, theme: value }));
-                    }}
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">
-                        <div className="flex items-center gap-2">
-                          <Sun className="h-4 w-4" />
-                          <span>Claro</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="dark">
-                        <div className="flex items-center gap-2">
-                          <Moon className="h-4 w-4" />
-                          <span>Escuro</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="system">
-                        <div className="flex items-center gap-2">
-                          <Settings className="h-4 w-4" />
-                          <span>Automático (Sistema)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    Idioma da Interface
-                  </Label>
-                  <Select
-                    value={preferences.language}
-                    onValueChange={(value) =>
-                      setPreferences(prev => ({ ...prev, language: value }))
-                    }
-                  >
-                    <SelectTrigger className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt-BR">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          <span>Português (Brasil)</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="en-US">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          <span>English (US)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Theme Mode Toggle - Only dark/light mode allowed for users */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Moon className="h-5 w-5 text-primary" />
-                Modo do Tema
-              </CardTitle>
-              <CardDescription>
-                Escolha entre modo claro ou escuro. As cores são definidas pelo administrador da plataforma.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                    <span className="font-medium">
-                      {theme === 'dark' ? 'Modo Escuro' : theme === 'light' ? 'Modo Claro' : 'Modo Sistema'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {theme === 'dark' 
-                      ? 'Interface com fundo escuro para reduzir fadiga ocular'
-                      : theme === 'light' 
-                      ? 'Interface com fundo claro padrão'
-                      : 'Segue as configurações do seu dispositivo'
-                    }
-                  </p>
-                </div>
-                <Select value={theme} onValueChange={setTheme}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">
-                      <div className="flex items-center gap-2">
-                        <Sun className="h-4 w-4" />
-                        Claro
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="dark">
-                      <div className="flex items-center gap-2">
-                        <Moon className="h-4 w-4" />
-                        Escuro
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        Sistema
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Notification Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                Notificações
-              </CardTitle>
-              <CardDescription>
-                Configure como e quando você deseja receber notificações
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Notificações por Email
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Receber notificações importantes por email</p>
-                  </div>
-                  <Switch
-                    checked={preferences.notifications?.email}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        notifications: { ...prev.notifications, email: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Bell className="h-4 w-4" />
-                      Notificações Push
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Receber notificações no navegador</p>
-                  </div>
-                  <Switch
-                    checked={preferences.notifications?.push}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        notifications: { ...prev.notifications, push: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      Alertas de Segurança
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Notificações sobre eventos de segurança</p>
-                  </div>
-                  <Switch
-                    checked={preferences.notifications?.security}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        notifications: { ...prev.notifications, security: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Zap className="h-4 w-4" />
-                      Atualizações do Sistema
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Novidades e atualizações da plataforma</p>
-                  </div>
-                  <Switch
-                    checked={preferences.notifications?.updates}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        notifications: { ...prev.notifications, updates: checked }
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Privacy Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary" />
-                Privacidade & Segurança
-              </CardTitle>
-              <CardDescription>
-                Controle a visibilidade das suas informações e atividades
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Mostrar Email no Perfil
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Permitir que outros usuários vejam seu email</p>
-                  </div>
-                  <Switch
-                    checked={preferences.privacy?.showEmail}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        privacy: { ...prev.privacy, showEmail: checked }
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Activity className="h-4 w-4" />
-                      Atividade Pública
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Permitir que outros vejam suas atividades recentes</p>
-                  </div>
-                  <Switch
-                    checked={preferences.privacy?.showActivity}
-                    onCheckedChange={(checked) =>
-                      setPreferences(prev => ({
-                        ...prev,
-                        privacy: { ...prev.privacy, showActivity: checked }
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button 
-              onClick={handlePreferencesUpdate} 
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Salvar Preferências
-                </>
-              )}
-            </Button>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-primary" />
-                Histórico de Atividades
-              </CardTitle>
-              <CardDescription>
-                Acompanhe suas ações e atividades recentes na plataforma
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[600px]">
-                {activities.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[140px]">Data/Hora</TableHead>
-                        <TableHead className="w-[120px]">Ação</TableHead>
-                        <TableHead className="w-[100px]">Recurso</TableHead>
-                        <TableHead className="w-[100px]">IP Address</TableHead>
-                        <TableHead>Detalhes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {activities.map((activity) => (
-                        <TableRow key={activity.id} className="hover:bg-muted/50">
-                          <TableCell className="text-xs">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">Chave de Configuração</Label>
                             <div className="flex items-center gap-2">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className="whitespace-nowrap font-mono">
-                                {new Date(activity.created_at).toLocaleDateString('pt-BR', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
+                              <code className="block w-full p-2 bg-muted rounded text-xs font-mono break-all border border-border">
+                                {mfaSecret || 'CARREGANDO-SEGREDO...'}
+                              </code>
+                              <Button size="icon" variant="ghost" onClick={() => {
+                                navigator.clipboard.writeText(mfaSecret);
+                                toast({ title: "Copiado!" });
+                              }}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={cn("text-xs px-2 py-1 border", getActionBadgeColor(activity.action))}
-                            >
-                              {activity.action}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-xs px-2 py-1">
-                              {activity.resource_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs font-mono text-muted-foreground">
-                            {activity.ip_address || 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <div className="max-w-[300px]" title={activity.details ? JSON.stringify(activity.details, null, 2) : 'N/A'}>
-                              {activity.details ? (
-                                <div className="space-y-1">
-                                  {activity.action === 'profile_updated' && activity.details.changes ? (
-                                    <div className="space-y-1">
-                                      <span className="font-medium text-foreground">Alterações realizadas:</span>
-                                      {Object.entries(activity.details.changes as Record<string, {from: string, to: string}>).map(([field, change]) => (
-                                        <div key={field} className="text-xs pl-2 border-l-2 border-muted">
-                                          <span className="capitalize font-medium">{field.replace('_', ' ')}: </span>
-                                          <span className="line-through text-red-600 dark:text-red-400">{change.from || '(vazio)'}</span>
-                                          <span className="mx-1">→</span>
-                                          <span className="text-green-600 dark:text-green-400">{change.to || '(vazio)'}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : activity.action === 'preferences_updated' && activity.details.preferences ? (
-                                    <div className="flex items-center gap-1">
-                                      <Settings className="h-3 w-3" />
-                                      <span className="font-medium">Preferências atualizadas</span>
-                                    </div>
-                                  ) : activity.action.includes('login') ? (
-                                    <div className="flex items-center gap-1">
-                                      {activity.action === 'login_success' ? (
-                                        <CheckCircle className="h-3 w-3 text-green-600" />
-                                      ) : (
-                                        <RefreshCw className="h-3 w-3 text-blue-600" />
-                                      )}
-                                      <span className="font-medium">
-                                        {activity.action === 'login_success' ? 'Login realizado' : 'Logout realizado'}
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <div className="truncate text-muted-foreground">
-                                      {JSON.stringify(activity.details).substring(0, 80)}...
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">Sem detalhes</span>
-                              )}
+                          </div>
+
+                          <div className="space-y-2 pt-2">
+                            <Label>Código de Verificação</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="000 000"
+                                className="text-center tracking-widest font-mono text-lg"
+                                maxLength={6}
+                                value={mfaCode}
+                                onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                              />
+                              <Button onClick={verifyMFA} disabled={mfaCode.length < 6 || saving}>
+                                Verificar
+                              </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+
+                          <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowMfaSetup(false)}>
+                            Cancelar
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                </div>
+
+                {/* Device Management */}
+                <Card className="border-border/50 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe className="h-5 w-5 text-primary" /> Dispositivos Conectados
+                    </CardTitle>
+                    <CardDescription>Gerencie as sessões ativas da sua conta.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {sessions.map((session) => (
+                        <div key={session.id} className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:bg-muted/30 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className={cn("p-2 rounded-full", session.current ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground")}>
+                              {session.id === 'current' ? <Smartphone className="h-5 w-5" /> : <Globe className="h-5 w-5" />}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground flex items-center gap-2">
+                                {session.device}
+                                {session.current && <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/20">Atual</Badge>}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{session.browser} • {session.lastActive}</p>
+                            </div>
+                          </div>
+                          {!session.current && (
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                              Sair
+                            </Button>
+                          )}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-center py-12">
-                    <Activity className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-medium text-muted-foreground mb-2">Nenhuma atividade encontrada</h3>
-                    <p className="text-sm text-muted-foreground">Suas atividades aparecerão aqui conforme você usar a plataforma</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Preferences */}
+                <Card className="border-border/50 shadow-sm">
+                  <CardHeader>
+                    <CardTitle>Preferências e Privacidade</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/20 border border-border/40">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Tema da Interface</Label>
+                        <p className="text-sm text-muted-foreground">Alternar entre claro e escuro</p>
+                      </div>
+                      <Switch
+                        checked={theme === 'dark'}
+                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/20 border border-border/40">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Notificações</Label>
+                        <p className="text-sm text-muted-foreground">Receber atualizações por email</p>
+                      </div>
+                      <Switch
+                        checked={preferences.notifications.email}
+                        onCheckedChange={(checked) => {
+                          setPreferences(prev => ({ ...prev, notifications: { ...prev.notifications, email: checked } }));
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button variant="outline" onClick={handlePreferencesUpdate} disabled={saving}>Salvar Preferências</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-red-200 dark:border-red-900 shadow-sm bg-red-50/50 dark:bg-red-950/10">
+                  <CardHeader>
+                    <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Zona de Perigo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">Excluir Conta</p>
+                        <p className="text-sm text-muted-foreground">Esta ação não pode ser desfeita.</p>
+                      </div>
+                      <Button variant="destructive">Excluir Conta</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

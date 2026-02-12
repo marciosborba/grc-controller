@@ -152,14 +152,14 @@ export const RiskEvolutionWidget = () => {
     const CustomAreaTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-slate-900/95 border border-slate-700/50 backdrop-blur-xl p-3 rounded-lg shadow-2xl">
-                    <p className="text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">{label}</p>
+                <div className="bg-popover/95 border border-border/50 backdrop-blur-xl p-3 rounded-lg shadow-2xl">
+                    <p className="text-muted-foreground text-xs font-semibold mb-2 uppercase tracking-wider">{label}</p>
                     <div className="space-y-1.5">
                         {payload.map((entry: any, index: number) => (
                             <div key={index} className="flex items-center gap-2 text-xs">
-                                <div className="w-2 h-2 rounded-full shadow-[0_0_5px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color }} />
-                                <span className="text-slate-300 w-20 truncate">{entry.name}:</span>
-                                <span className="font-bold text-white tabular-nums">{entry.value}</span>
+                                <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+                                <span className="text-muted-foreground w-20 truncate">{entry.name}:</span>
+                                <span className="font-bold text-foreground tabular-nums">{entry.value}</span>
                             </div>
                         ))}
                     </div>
@@ -174,7 +174,7 @@ export const RiskEvolutionWidget = () => {
         <Card className="h-full flex flex-col bg-card border-border shadow-sm overflow-hidden relative group">
             <CardContent className="p-0 h-full">
                 {/* Re-implementing the 'RiskEvolutionContent' structure directly here */}
-                <div className="flex flex-col h-full w-full bg-slate-950/20">
+                <div className="flex flex-col h-full w-full bg-transparent">
                     {/* Premium Header */}
                     <div className="px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex justify-between items-center">
                         <div>
@@ -203,8 +203,8 @@ export const RiskEvolutionWidget = () => {
                                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                         <defs>
                                             {riskLevels.map((level) => (
-                                                <linearGradient key={`grad-${level.id}`} id={`color-${level.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                    <stop offset="5%" stopColor={level.color} stopOpacity={0.3} />
+                                                <linearGradient key={`grad-${level.id}`} id={`color-${level.id.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor={level.color} stopOpacity={0.2} />
                                                     <stop offset="95%" stopColor={level.color} stopOpacity={0} />
                                                 </linearGradient>
                                             ))}
@@ -236,7 +236,7 @@ export const RiskEvolutionWidget = () => {
                                                 stackId="1"
                                                 stroke={level.color}
                                                 strokeWidth={2}
-                                                fill={`url(#color-${level.id})`}
+                                                fill={`url(#color-${level.id.replace(/\s+/g, '-')})`}
                                                 animationDuration={1500}
                                                 animationBegin={index * 200} // Staggered animation
                                                 activeDot={{ r: 5, strokeWidth: 0, fill: level.color, className: "animate-pulse" }}
@@ -248,7 +248,7 @@ export const RiskEvolutionWidget = () => {
                         </div>
 
                         {/* BOTTOM: TREATMENT STATUS DONUT (50%) */}
-                        <div className="flex-1 p-0 flex flex-col min-h-0 border-l border-white/5 bg-gradient-to-t from-black/20 to-transparent">
+                        <div className="flex-1 p-0 flex flex-col min-h-0 border-l border-border/5 dark:border-white/5 dark:bg-gradient-to-t dark:from-black/20 to-transparent">
                             <div className="p-5 pb-0 flex items-center justify-between">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0">
                                     <PieChartIcon className="w-3 h-3 text-blue-500" /> Status de Resposta
@@ -293,7 +293,7 @@ export const RiskEvolutionWidget = () => {
                                                     {payload?.map((entry: any, index: number) => (
                                                         <li key={`item-${index}`} className="flex items-center gap-1.5 cursor-pointer hover:opacity-100 opacity-60 transition-opacity">
                                                             <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
-                                                            <span className="text-[10px] font-medium text-slate-300">{entry.value}</span>
+                                                            <span className="text-[10px] font-medium text-muted-foreground">{entry.value}</span>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -304,10 +304,10 @@ export const RiskEvolutionWidget = () => {
                             </div>
 
                             {/* Bottom Stats Row */}
-                            <div className="grid grid-cols-2 divide-x divide-white/5 border-t border-white/5 bg-black/20 backdrop-blur-sm">
+                            <div className="grid grid-cols-2 divide-x divide-border/10 border-t border-border/10 bg-muted/20 backdrop-blur-sm">
                                 <div className="p-4 flex flex-col items-center justify-center text-center gap-1">
                                     <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total Riscos</span>
-                                    <div className="text-2xl font-black text-white flex items-center gap-2">
+                                    <div className="text-2xl font-black text-foreground flex items-center gap-2">
                                         142
                                         <AlertCircle className="w-3 h-3 text-slate-500" />
                                     </div>

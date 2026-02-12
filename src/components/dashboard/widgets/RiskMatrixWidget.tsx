@@ -173,7 +173,7 @@ export const RiskMatrixWidget = () => {
 
     return (
         <Card className="h-full flex flex-col bg-card border-border shadow-sm overflow-hidden relative group">
-            <div className="flex flex-col h-full w-full bg-slate-950/20">
+            <div className="flex flex-col h-full w-full bg-transparent">
                 <CardHeader className="px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex flex-row items-center justify-between space-y-0">
                     <div className="flex items-center gap-2">
                         <div className="p-1.5 bg-primary/10 rounded-md border border-primary/20">
@@ -210,12 +210,11 @@ export const RiskMatrixWidget = () => {
 
                                 {/* The Matrix Grid */}
                                 <div
-                                    className="grid w-full h-full border border-border rounded-md overflow-hidden"
+                                    className="grid w-full h-full border border-border rounded-md overflow-hidden bg-muted/10"
                                     style={{
                                         gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
                                         gridTemplateRows: `repeat(${gridSize}, 1fr)`,
                                         gap: '2px', // Increased Gap for visual definition
-                                        backgroundColor: '#262626'
                                     }}
                                 >
                                     {matrixGrid.map((row, rowIndex) => (
@@ -235,7 +234,7 @@ export const RiskMatrixWidget = () => {
                                                                 <div
                                                                     className="absolute inset-0 z-0 transition-opacity"
                                                                     style={{
-                                                                        background: `linear-gradient(180deg, ${cell.bg}CC 0%, ${cell.bg}40 100%)`
+                                                                        background: `linear-gradient(180deg, ${cell.bg} 0%, ${cell.bg}D9 100%)`
                                                                     }}
                                                                 />
 

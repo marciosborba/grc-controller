@@ -35,6 +35,7 @@ export interface AuthUser {
   email: string;
   name: string;
   jobTitle?: string;
+  avatar_url?: string; // Added field
   tenantId: string;
   tenant?: Tenant;
   roles: string[];
@@ -46,6 +47,10 @@ export interface AuthUser {
     [key: string]: any;
   };
 }
+
+// ... (existing code)
+
+
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -227,6 +232,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           email: supabaseUser.email || '',
           name: profile?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
           jobTitle: profile?.job_title,
+          avatar_url: profile?.avatar_url,
           tenantId: profile?.tenant_id || 'default',
           roles: userRoles,
           permissions: userPermissions,

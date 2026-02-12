@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, LogOut, User, Settings, RefreshCw } from 'lucide-react';
+import { Bell, Search, LogOut, User, RefreshCw, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,7 +40,7 @@ export const AppHeader = () => {
           <div className="md:hidden">
             <SidebarTrigger className="p-1.5 sm:p-2" />
           </div>
-          
+
           {/* Search - Hidden on mobile */}
           <div className="hidden sm:flex flex-1 max-w-md ml-6 sm:ml-8">
             <div className="relative w-full">
@@ -67,9 +67,9 @@ export const AppHeader = () => {
             <TenantSelector />
           </div>
           {/* Notifications */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="relative h-8 w-8 sm:h-10 sm:w-10"
             onClick={handleNotificationsClick}
             title="Ver notificações"
@@ -91,10 +91,18 @@ export const AppHeader = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-8 sm:h-10 px-1 sm:px-3 space-x-1 sm:space-x-2">
-                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xs sm:text-sm font-medium text-primary">
-                    {user?.name ? getUserInitials(user.name) : 'U'}
-                  </span>
+                <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                  {user?.avatar_url ? (
+                    <img
+                      src={user.avatar_url}
+                      alt={user.name || 'Avatar'}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs sm:text-sm font-medium text-primary">
+                      {user?.name ? getUserInitials(user.name) : 'U'}
+                    </span>
+                  )}
                 </div>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-medium truncate max-w-[120px]">
@@ -114,7 +122,7 @@ export const AppHeader = () => {
                 </div>
                 <DropdownMenuSeparator />
               </div>
-              
+
               {/* Mobile: mostrar tema toggle no menu */}
               <div className="sm:hidden">
                 <DropdownMenuItem className="flex items-center justify-between px-3 py-2">
@@ -123,23 +131,17 @@ export const AppHeader = () => {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </div>
-              
-              <DropdownMenuItem 
+
+              <DropdownMenuItem
                 onClick={handleProfileClick}
                 className="flex items-center space-x-2 cursor-pointer px-3 py-2"
               >
                 <User className="h-4 w-4" />
                 <span className="text-sm">Perfil</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => navigate('/settings')}
-                className="flex items-center space-x-2 cursor-pointer px-3 py-2"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="text-sm">Gestão de Usuários</span>
-              </DropdownMenuItem>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={logout}
                 className="flex items-center space-x-2 text-danger focus:text-danger cursor-pointer px-3 py-2"
               >
