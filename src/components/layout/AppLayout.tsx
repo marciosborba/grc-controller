@@ -9,7 +9,7 @@ const AppLayoutContent = () => {
   const { state } = useSidebar();
   const location = useLocation();
   const isCollapsed = state === 'collapsed';
-  
+
   // Debug: Log route changes com mais detalhes
   useEffect(() => {
     console.log('🗺️ [NAVIGATION] Route changed:', {
@@ -19,13 +19,13 @@ const AppLayoutContent = () => {
       state: location.state,
       timestamp: new Date().toISOString()
     });
-    
+
     // Debug específico para AI Management
     if (location.pathname.includes('ai-management')) {
       console.log('🤖 [AI MANAGEMENT ROUTE] Detectada navegação para AI Management!');
       console.log('👤 [AI MANAGEMENT ROUTE] Rota detectada:', location.pathname);
     }
-    
+
     // Debug específico para IA Manager
     if (location.pathname === '/ai-management') {
       console.log('🤖 [NAVIGATION] === NAVEGAÇÃO PARA IA MANAGER DETECTADA ===');
@@ -34,14 +34,14 @@ const AppLayoutContent = () => {
       console.log('🎯 [NAVIGATION] A rota /ai-management foi alcançada com sucesso!');
       console.log('🤖 [NAVIGATION] === FIM DEBUG NAVEGAÇÃO ===');
     }
-    
+
     // Debug para qualquer 404 ou erro
     if (location.pathname === '/404' || location.pathname.includes('not-found')) {
       console.log('❌ [NAVIGATION] 404 DETECTADO!');
       console.log('🗺️ [NAVIGATION] Rota que causou 404:', location.pathname);
       console.log('📊 [NAVIGATION] State:', location.state);
     }
-    
+
     // Debug para redirecionamentos inesperados
     if (location.pathname !== '/ai-management' && location.state?.from === '/ai-management') {
       console.log('⚠️ [NAVIGATION] REDIRECIONAMENTO DETECTADO!');
@@ -50,11 +50,11 @@ const AppLayoutContent = () => {
       console.log('📊 [NAVIGATION] State:', location.state);
     }
   }, [location]);
-  
+
   return (
     <div className="relative min-h-screen w-full bg-background">
       <AppSidebar />
-      <div className={`absolute inset-y-0 right-0 flex flex-col transition-all duration-300 ${isCollapsed ? 'left-[2.0625rem]' : 'left-[15.0625rem]'}`}>
+      <div className={`absolute inset-y-0 right-0 flex flex-col transition-all duration-300 ${isCollapsed ? 'left-[3rem]' : 'left-[16rem]'}`}>
         <AppHeader />
         <main className="flex-1 pl-6 sm:pl-8 lg:pl-10 pr-4 sm:pr-6 lg:pr-8 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6 lg:pb-8 overflow-auto bg-background">
           <ErrorBoundary>
