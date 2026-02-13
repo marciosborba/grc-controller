@@ -41,6 +41,7 @@ import { logActivity } from '@/utils/securityLogger';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { AvatarCropper } from './AvatarCropper';
+import { MfaSection } from './MfaSection';
 
 
 // --- Types ---
@@ -96,6 +97,7 @@ export const UserProfilePage: React.FC = () => {
 
   // Security State
   const [mfaInitiated, setMfaInitiated] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState('');
   const [mfaSecret, setMfaSecret] = useState('');
   const [mfaQr, setMfaQr] = useState('');
   const [mfaCode, setMfaCode] = useState('');
@@ -273,14 +275,34 @@ export const UserProfilePage: React.FC = () => {
   const initMFA = async () => {
     try {
       setSaving(true);
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+
+      // 1. List existing factors
+      const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+      if (listError) throw listError;
+
+      // 2. Remove unfinished/unverified factors to avoid collision or limit reach
+      if (factors && factors.totp) {
+        for (const factor of factors.totp) {
+          if (factor.status === 'unverified') {
+            await supabase.auth.mfa.unenroll({ factorId: factor.id });
+          }
+        }
+      }
+
+      // 3. Enroll new factor with a friendly name
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: `GRC Controller (${new Date().toLocaleTimeString()})` // Unique name
+      });
       if (error) throw error;
 
+      setMfaFactorId(data.id);
       setMfaSecret(data.totp.secret);
       setMfaQr(data.totp.qr_code);
       setMfaInitiated(true);
       setShowMfaSetup(true);
     } catch (error: any) {
+      console.error("MFA Init Error:", error);
       toast({ title: "Erro ao iniciar MFA", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
@@ -290,8 +312,13 @@ export const UserProfilePage: React.FC = () => {
   const verifyMFA = async () => {
     try {
       setSaving(true);
+
+      if (!mfaFactorId) {
+        throw new Error("ID do fator não encontrado. Tente configurar novamente.");
+      }
+
       const { data, error } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: (await supabase.auth.mfa.listFactors()).data?.totp[0].id || '',
+        factorId: mfaFactorId,
         code: mfaCode
       });
       if (error) throw error;
@@ -300,8 +327,10 @@ export const UserProfilePage: React.FC = () => {
       toast({ title: "MFA Ativado", description: "Autenticação em dois fatores ativada com sucesso." });
       setMfaInitiated(false);
       setShowMfaSetup(false);
+      setMfaFactorId(''); // Clear ID after success
       fetchData(); // Refresh profile to see MFA status if we were tracking it
     } catch (error: any) {
+      console.error("MFA Verify Error:", error);
       toast({ title: "Código inválido", description: "Verifique o código e tente novamente.", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -694,82 +723,19 @@ export const UserProfilePage: React.FC = () => {
                     </CardContent>
                   </Card>
 
-                  {/* MFA Section */}
-                  <Card className="border-border/50 shadow-sm h-full flex flex-col">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Smartphone className="h-5 w-5 text-primary" /> Autenticação em Dois Fatores (MFA)
-                      </CardTitle>
-                      <CardDescription>Adicione uma camada extra de segurança à sua conta.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 flex-1">
-                      {!showMfaSetup ? (
-                        <div className="flex flex-col items-center justify-center text-center py-6 space-y-4">
-                          <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center">
-                            <QrCode className="h-8 w-8 text-primary" />
-                          </div>
-                          <div className="space-y-2">
-                            <h4 className="font-semibold">MFA não configurado</h4>
-                            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                              Utilize um aplicativo como Google Authenticator ou Authy para gerar códigos de verificação.
-                            </p>
-                          </div>
-                          <Button onClick={initMFA} variant="outline" className="mt-2">
-                            Configurar MFA Agora
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                          <div className="text-center p-4 bg-white rounded-lg border border-border inline-block w-full">
-                            {/* Fallback to image if SVG not working or use iframe for quick qr */}
-                            {mfaQr ? (
-                              <img src={mfaQr} alt="QR Code" className="mx-auto h-40 w-40" />
-                            ) : (
-                              <div className="h-40 w-40 bg-muted mx-auto flex items-center justify-center text-xs text-muted-foreground">
-                                QR Code
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-xs font-semibold uppercase text-muted-foreground">Chave de Configuração</Label>
-                            <div className="flex items-center gap-2">
-                              <code className="block w-full p-2 bg-muted rounded text-xs font-mono break-all border border-border">
-                                {mfaSecret || 'CARREGANDO-SEGREDO...'}
-                              </code>
-                              <Button size="icon" variant="ghost" onClick={() => {
-                                navigator.clipboard.writeText(mfaSecret);
-                                toast({ title: "Copiado!" });
-                              }}>
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2 pt-2">
-                            <Label>Código de Verificação</Label>
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="000 000"
-                                className="text-center tracking-widest font-mono text-lg"
-                                maxLength={6}
-                                value={mfaCode}
-                                onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                              />
-                              <Button onClick={verifyMFA} disabled={mfaCode.length < 6 || saving}>
-                                Verificar
-                              </Button>
-                            </div>
-                          </div>
-
-                          <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowMfaSetup(false)}>
-                            Cancelar
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
+                  <MfaSection
+                    user={user}
+                    initMFA={initMFA}
+                    verifyMFA={verifyMFA}
+                    mfaInitiated={mfaInitiated}
+                    showMfaSetup={showMfaSetup}
+                    setShowMfaSetup={setShowMfaSetup}
+                    mfaSecret={mfaSecret}
+                    mfaQr={mfaQr}
+                    mfaCode={mfaCode}
+                    setMfaCode={setMfaCode}
+                    saving={saving}
+                  />
                 </div>
 
                 {/* Device Management */}
@@ -837,24 +803,6 @@ export const UserProfilePage: React.FC = () => {
                     </div>
                     <div className="flex justify-end">
                       <Button variant="outline" onClick={handlePreferencesUpdate} disabled={saving}>Salvar Preferências</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-red-200 dark:border-red-900 shadow-sm bg-red-50/50 dark:bg-red-950/10">
-                  <CardHeader>
-                    <CardTitle className="text-red-600 dark:text-red-400 flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5" />
-                      Zona de Perigo
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-foreground">Excluir Conta</p>
-                        <p className="text-sm text-muted-foreground">Esta ação não pode ser desfeita.</p>
-                      </div>
-                      <Button variant="destructive">Excluir Conta</Button>
                     </div>
                   </CardContent>
                 </Card>

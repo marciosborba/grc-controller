@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -12,6 +12,7 @@ import { TenantSelectorProvider } from "@/contexts/TenantSelectorContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import { ModuleGuard } from "@/components/auth/ModuleGuard";
+import { MfaVerifyPage } from "@/components/auth/MfaVerifyPage";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
 import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
@@ -200,7 +201,8 @@ const queryClient = new QueryClient({
 });
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, needsMFA } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -210,7 +212,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (needsMFA && location.pathname !== '/mfa-verify') {
+    return <Navigate to="/mfa-verify" replace />;
+  }
+
+  if (!needsMFA && location.pathname === '/mfa-verify') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -263,7 +275,7 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, needsMFA } = useAuth();
 
   if (isLoading) {
     return (
@@ -273,7 +285,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  if (user) {
+    if (needsMFA) return <Navigate to="/mfa-verify" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 // Main App Component
@@ -294,6 +311,11 @@ const App = () => (
                       <PublicRoute>
                         <LoginPage />
                       </PublicRoute>
+                    } />
+                    <Route path="/mfa-verify" element={
+                      <ProtectedRoute>
+                        <MfaVerifyPage />
+                      </ProtectedRoute>
                     } />
                     <Route path="/privacy-portal" element={
                       <Suspense fallback={<PageLoader />}>

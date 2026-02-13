@@ -8,24 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { 
-  Shield, 
-  Key, 
-  Lock, 
-  AlertTriangle, 
-  CheckCircle, 
+  Shield,
+  Key,
+  Lock,
+  AlertTriangle,
   Clock,
   Eye,
-  EyeOff,
-  Info
+  Laptop
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SecuritySettings {
   passwordPolicy: {
@@ -49,6 +41,7 @@ interface SecuritySettings {
     ipWhitelisting: boolean;
     allowedIPs: string[];
     requireDeviceApproval: boolean;
+    allowTrustedDevices: boolean; // Novo campo
   };
   monitoring: {
     logAllActivities: boolean;
@@ -88,7 +81,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
       lockoutDurationMinutes: 15,
       ipWhitelisting: false,
       allowedIPs: [],
-      requireDeviceApproval: false
+      requireDeviceApproval: false,
+      allowTrustedDevices: false
     },
     monitoring: {
       logAllActivities: true,
@@ -103,7 +97,9 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
   const [newIP, setNewIP] = useState('');
 
   useEffect(() => {
-    loadSecuritySettings();
+    if (tenantId) {
+      loadSecuritySettings();
+    }
   }, [tenantId]);
 
   useEffect(() => {
@@ -113,13 +109,25 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
   const loadSecuritySettings = async () => {
     try {
       setIsLoading(true);
-      // Carregar configurações de segurança da tenant
-      // Em produção, isso viria de uma API
-      
-      // Simular carregamento
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // As configurações já estão no estado inicial
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.settings?.security) {
+        // Merge with default to ensure new fields are present
+        setSettings(prev => ({
+          ...prev,
+          ...data.settings.security,
+          accessControl: {
+            ...prev.accessControl,
+            ...data.settings.security.accessControl
+          }
+        }));
+      }
     } catch (error) {
       console.error('Erro ao carregar configurações de segurança:', error);
       toast.error('Erro ao carregar configurações de segurança');
@@ -131,7 +139,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
   const calculateSecurityScore = () => {
     let score = 0;
     const maxScore = 100;
-    
+
     // Política de senhas (30 pontos)
     if (settings.passwordPolicy.minLength >= 8) score += 5;
     if (settings.passwordPolicy.minLength >= 12) score += 5;
@@ -141,36 +149,53 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
     if (settings.passwordPolicy.requireSpecialChars) score += 5;
     if (settings.passwordPolicy.expiresDays <= 90) score += 3;
     if (settings.passwordPolicy.preventReuse >= 5) score += 3;
-    
+
     // Segurança de sessão (25 pontos)
     if (settings.sessionSecurity.timeoutMinutes <= 30) score += 5;
     if (settings.sessionSecurity.maxConcurrentSessions <= 3) score += 5;
     if (settings.sessionSecurity.requireMFA) score += 10;
     if (settings.sessionSecurity.forceLogoutOnPasswordChange) score += 5;
-    
+
     // Controle de acesso (25 pontos)
     if (settings.accessControl.failedLoginLimit <= 5) score += 5;
     if (settings.accessControl.lockoutDurationMinutes >= 15) score += 5;
     if (settings.accessControl.ipWhitelisting && settings.accessControl.allowedIPs.length > 0) score += 10;
     if (settings.accessControl.requireDeviceApproval) score += 5;
-    
+
     // Monitoramento (20 pontos)
     if (settings.monitoring.logAllActivities) score += 5;
     if (settings.monitoring.alertOnSuspicious) score += 5;
     if (settings.monitoring.retentionDays >= 365) score += 5;
     if (settings.monitoring.realTimeAlerts) score += 5;
-    
+
     setSecurityScore(Math.min(score, maxScore));
   };
 
   const handleSaveSettings = async () => {
     try {
       setIsLoading(true);
-      // Salvar configurações de segurança
-      // Em produção, isso seria uma chamada para API
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      // Get current settings first to preserve other sections
+      const { data: currentData } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .single();
+
+      const currentSettings = currentData?.settings || {};
+
+      const updatedSettings = {
+        ...currentSettings,
+        security: settings // Save under 'security' key
+      };
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({ settings: updatedSettings })
+        .eq('id', tenantId);
+
+      if (error) throw error;
+
       onSettingsChange();
       toast.success('Configurações de segurança salvas com sucesso!');
     } catch (error) {
@@ -223,19 +248,19 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
 
   const addAllowedIP = () => {
     if (!newIP.trim()) return;
-    
+
     // Validação básica de IP
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     if (!ipRegex.test(newIP.trim())) {
       toast.error('Formato de IP inválido');
       return;
     }
-    
+
     if (settings.accessControl.allowedIPs.includes(newIP.trim())) {
       toast.error('IP já está na lista');
       return;
     }
-    
+
     updateAccessControl('allowedIPs', [...settings.accessControl.allowedIPs, newIP.trim()]);
     setNewIP('');
     toast.success('IP adicionado à lista branca');
@@ -282,8 +307,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
                   {String(securityScore)}%
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {securityScore >= 80 ? 'Excelente' : 
-                   securityScore >= 60 ? 'Bom' : 'Precisa melhorar'}
+                  {securityScore >= 80 ? 'Excelente' :
+                    securityScore >= 60 ? 'Bom' : 'Precisa melhorar'}
                 </div>
               </div>
             </div>
@@ -292,7 +317,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
             </Button>
           </div>
           <Progress value={Number(securityScore)} className="h-3" />
-          
+
           {securityScore < 80 && (
             <Alert className="mt-4">
               <AlertTriangle className="h-4 w-4" />
@@ -491,7 +516,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-t pt-4">
               <div>
                 <Label htmlFor="requireDeviceApproval">Exigir Aprovação de Dispositivos</Label>
                 <p className="text-xs text-muted-foreground">Novos dispositivos precisam ser aprovados</p>
@@ -503,7 +528,21 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               />
             </div>
 
-            <div className="space-y-3">
+            <div className="flex items-center justify-between border-t pt-4">
+              <div>
+                <Label htmlFor="allowTrustedDevices">Permitir Dispositivos Confiáveis</Label>
+                <p className="text-xs text-muted-foreground">
+                  Usuários podem pular MFA por 90 dias em dispositivos confiáveis
+                </p>
+              </div>
+              <Switch
+                id="allowTrustedDevices"
+                checked={settings.accessControl.allowTrustedDevices}
+                onCheckedChange={(checked) => updateAccessControl('allowTrustedDevices', checked)}
+              />
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="ipWhitelisting">Lista Branca de IPs</Label>
@@ -528,7 +567,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
                       Adicionar
                     </Button>
                   </div>
-                  
+
                   {settings.accessControl.allowedIPs.length > 0 && (
                     <div className="space-y-1">
                       {settings.accessControl.allowedIPs.map((ip, index) => (

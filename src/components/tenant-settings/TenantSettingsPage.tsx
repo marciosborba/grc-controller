@@ -40,7 +40,7 @@ import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 // Importar seções
 import { UserManagementSection } from './sections/UserManagementSection';
 import { GroupManagementSection } from './sections/GroupManagementSection';
-// import { SecurityConfigSection } from './sections/SecurityConfigSection';
+import { SecurityConfigSection } from './sections/SecurityConfigSection';
 import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 // import { SSOConfigSection } from './sections/SSOConfigSection';
 // import { MFAConfigSection } from './sections/MFAConfigSection';
@@ -680,10 +680,15 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="security">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Configurações de Segurança</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+          <SecurityConfigSection
+            tenantId={currentTenantId}
+            onSettingsChange={() => {
+              if (currentTenantId) {
+                loadTenantInfo(currentTenantId);
+                toast.success("Segurança atualizada");
+              }
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="risk-matrix">

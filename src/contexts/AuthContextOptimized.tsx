@@ -46,6 +46,7 @@ export interface AuthUser {
     enable_global_ai?: boolean;
     [key: string]: any;
   };
+  mfaEnabled?: boolean;
 }
 
 // ... (existing code)
@@ -62,6 +63,7 @@ interface AuthContextType {
   refreshUserData: () => Promise<void>;
   refreshUser: () => Promise<void>;
   checkModuleAccess: (moduleKey: string) => boolean;
+  needsMFA: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -154,7 +156,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       roles: ['user'],
       permissions: getPermissionsForRoles(['user'], false),
       isPlatformAdmin: false,
-      enabledModules: []
+      enabledModules: [],
+      mfaEnabled: false
     };
 
     try {
@@ -249,8 +252,22 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             current_users_count: 0,
             subscription_plan: 'free',
             is_active: true
-          } : undefined
+          } : undefined,
+          mfaEnabled: false
         };
+
+        // Check MFA Status
+        try {
+          const { data: factors } = await supabase.auth.mfa.listFactors();
+          if (factors && factors.totp && factors.totp.length > 0) {
+            const hasVerifiedFactor = factors.totp.some(f => f.status === 'verified');
+            if (hasVerifiedFactor) {
+              userData.mfaEnabled = true;
+            }
+          }
+        } catch (mfaError) {
+          console.warn('⚠️ [AUTH] Erro ao verificar MFA:', mfaError);
+        }
 
         // Cache o resultado
         setCachedUser(supabaseUser.id, userData);
@@ -306,7 +323,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           roles: ['user'],
           permissions: getPermissionsForRoles(['user'], false),
           isPlatformAdmin: false,
-          enabledModules: []
+          enabledModules: [],
+          mfaEnabled: false
         };
         setUser(basicUser);
       } finally {
@@ -487,6 +505,11 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     // Limpar cache
     authCache.clear();
 
+    // Clear MFA Bypass Flag
+    try {
+      sessionStorage.removeItem('grc_mfa_completed');
+    } catch (e) { }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Erro no logout:', error);
@@ -601,7 +624,35 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     signup,
     refreshUserData,
     refreshUser,
-    checkModuleAccess
+    checkModuleAccess,
+    needsMFA: (() => {
+      if (!user?.mfaEnabled) return false;
+
+      const currentAal = session?.user?.app_metadata?.aal;
+      if (currentAal === 'aal2') return false;
+
+      const allowTrusted = user?.settings?.security?.accessControl?.allowTrustedDevices;
+
+      try {
+        if (allowTrusted && user?.id && localStorage.getItem(`grc_trusted_device_${user.id}`)) {
+          return false;
+        }
+      } catch (e) { }
+
+      // Emergency Bypass: Check for recently completed MFA in current session
+      try {
+        const mfaCompletedAt = sessionStorage.getItem('grc_mfa_completed');
+        if (mfaCompletedAt) {
+          const timeSince = Date.now() - parseInt(mfaCompletedAt);
+          // If verified within last 2 minutes, let them through
+          if (timeSince < 120000) {
+            return false;
+          }
+        }
+      } catch (e) { }
+
+      return true;
+    })()
   };
 
   return (
