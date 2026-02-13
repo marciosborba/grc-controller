@@ -181,10 +181,10 @@ const TenantSettingsPage: React.FC = () => {
 
       // Carregar dados reais do banco de dados
       const promises = [
-        // 1. Contar usuários totais e ativos
+        // 1. Contar usuários totais e ativos (agora incluindo is_active na query)
         supabase
           .from('profiles')
-          .select('id, user_id, created_at')
+          .select('id, user_id, created_at, is_active')
           .eq('tenant_id', tenantId),
 
         // 2. Contar atividades suspeitas (activity_logs com ações de segurança)
@@ -229,15 +229,12 @@ const TenantSettingsPage: React.FC = () => {
       ] = await Promise.all(promises);
 
       // Processar resultados
-      // Contar apenas usuários ativos (excluir inativos do total)
-      const { data: activeProfilesData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true);
+      // Total = todos os perfis vinculados ao tenant
+      const totalUsers = usersResult.data?.length || 0;
 
-      const totalUsers = activeProfilesData?.length || 0;
-      const activeUsers = activeProfilesData?.length || 0;
+      // Ativos = apenas perfis com is_active = true
+      // Type assertion needed because Promise.all returns union type
+      const activeUsers = (usersResult.data as any[])?.filter(u => u.is_active).length || 0;
 
       // Métricas: total = usuários ativos, activeUsers = usuários ativos (mesmo valor)
 

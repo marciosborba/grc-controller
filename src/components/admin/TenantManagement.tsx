@@ -1,3 +1,9 @@
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useTenantManagement } from '@/hooks/useTenantManagement';
@@ -57,6 +63,32 @@ import {
 import type { Tenant, CreateTenantRequest } from '@/hooks/useTenantManagement';
 import TenantDetailView from './TenantDetailView';
 
+// Local interface for the extended form
+interface TenantFormState {
+  // Principais
+  name: string;
+  slug: string;
+  contact_email: string;
+  contact_phone: string;
+  billing_email: string;
+  max_users: number;
+  subscription_plan: string;
+
+  // Dados Cadastrais
+  corporate_name: string; // Razão Social
+  trading_name: string;   // Nome Fantasia
+  tax_id: string;         // CNPJ
+
+  // Endereço
+  zip_code: string;
+  address: string;
+  number: string;
+  complement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+}
+
 const TenantManagement: React.FC = () => {
   const { user } = useAuth();
   const {
@@ -74,7 +106,8 @@ const TenantManagement: React.FC = () => {
   const [orderedTenants, setOrderedTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<CreateTenantRequest>({
+  // Expanded form state
+  const [formData, setFormData] = useState<TenantFormState>({
     name: '',
     slug: '',
     contact_email: '',
@@ -82,7 +115,20 @@ const TenantManagement: React.FC = () => {
     billing_email: '',
     max_users: 10,
     subscription_plan: 'basic',
+    corporate_name: '',
+    trading_name: '',
+    tax_id: '',
+    zip_code: '',
+    address: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: ''
   });
+
+  // Keep active tab state to validate before switching if needed (optional)
+  const [activeTab, setActiveTab] = useState("identification");
 
   // Configure drag and drop sensors
   const sensors = useSensors(
@@ -155,12 +201,50 @@ const TenantManagement: React.FC = () => {
       billing_email: '',
       max_users: 10,
       subscription_plan: 'basic',
+      corporate_name: '',
+      trading_name: '',
+      tax_id: '',
+      zip_code: '',
+      address: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: ''
     });
+    setActiveTab("identification");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createTenant(formData);
+
+    // Prepare the payload compatible with CreateTenantRequest
+    const payload: CreateTenantRequest = {
+      name: formData.name,
+      slug: formData.slug,
+      contact_email: formData.contact_email,
+      contact_phone: formData.contact_phone,
+      billing_email: formData.billing_email,
+      max_users: formData.max_users,
+      subscription_plan: formData.subscription_plan,
+      settings: {
+        company_data: {
+          corporate_name: formData.corporate_name,
+          trading_name: formData.trading_name,
+          tax_id: formData.tax_id,
+          address: formData.address,
+          number: formData.number,
+          complement: formData.complement,
+          neighborhood: formData.neighborhood,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zip_code,
+          country: 'Brasil' // Default
+        }
+      }
+    };
+
+    createTenant(payload);
     setIsCreateDialogOpen(false);
     resetForm();
   };
@@ -242,7 +326,7 @@ const TenantManagement: React.FC = () => {
                   Novo Tenant
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                 <form onSubmit={handleSubmit}>
                   <DialogHeader>
                     <DialogTitle>Criar Novo Tenant</DialogTitle>
@@ -251,97 +335,226 @@ const TenantManagement: React.FC = () => {
                     </DialogDescription>
                   </DialogHeader>
 
-                  <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Nome da Empresa</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                      />
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="identification">Identificação</TabsTrigger>
+                      <TabsTrigger value="company">Dados Cadastrais</TabsTrigger>
+                      <TabsTrigger value="address">Endereço</TabsTrigger>
+                    </TabsList>
+
+                    <div className="py-4">
+                      {/* ABA: IDENTIFICAÇÃO */}
+                      <TabsContent value="identification" className="space-y-4 mt-0">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Nome (Interno)</Label>
+                          <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="Nome para identificação interna"
+                            required
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="slug">Slug (URL)</Label>
+                          <Input
+                            id="slug"
+                            value={formData.slug}
+                            onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                            placeholder="exemplo-empresa"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">O identificador único usado na URL.</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="max_users">Limite de Usuários</Label>
+                            <Input
+                              id="max_users"
+                              type="number"
+                              min="1"
+                              value={formData.max_users}
+                              onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) })}
+                              required
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="subscription_plan">Plano</Label>
+                            <Select
+                              value={formData.subscription_plan}
+                              onValueChange={(value) => setFormData({ ...formData, subscription_plan: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="trial">Trial</SelectItem>
+                                <SelectItem value="basic">Básico</SelectItem>
+                                <SelectItem value="professional">Profissional</SelectItem>
+                                <SelectItem value="enterprise">Enterprise</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="contact_email">Email do Administrador</Label>
+                          <Input
+                            id="contact_email"
+                            type="email"
+                            value={formData.contact_email}
+                            onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">Este email será usado para o primeiro acesso.</p>
+                        </div>
+                      </TabsContent>
+
+                      {/* ABA: DADOS CADASTRAIS */}
+                      <TabsContent value="company" className="space-y-4 mt-0">
+                        <div className="grid gap-2">
+                          <Label htmlFor="corporate_name">Razão Social</Label>
+                          <Input
+                            id="corporate_name"
+                            value={formData.corporate_name}
+                            onChange={(e) => setFormData({ ...formData, corporate_name: e.target.value })}
+                            placeholder="Empresa Exemplo Ltda"
+                          />
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="trading_name">Nome Fantasia</Label>
+                          <Input
+                            id="trading_name"
+                            value={formData.trading_name}
+                            onChange={(e) => setFormData({ ...formData, trading_name: e.target.value })}
+                            placeholder="Empresa Exemplo"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="tax_id">CNPJ</Label>
+                            <Input
+                              id="tax_id"
+                              value={formData.tax_id}
+                              onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                              placeholder="00.000.000/0000-00"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="contact_phone">Telefone</Label>
+                            <Input
+                              id="contact_phone"
+                              value={formData.contact_phone}
+                              onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                              placeholder="(00) 00000-0000"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <Label htmlFor="billing_email">Email Financeiro</Label>
+                          <Input
+                            id="billing_email"
+                            type="email"
+                            value={formData.billing_email}
+                            onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
+                            placeholder="financeiro@empresa.com"
+                          />
+                        </div>
+                      </TabsContent>
+
+                      {/* ABA: ENDEREÇO */}
+                      <TabsContent value="address" className="space-y-4 mt-0">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="grid gap-2 col-span-1">
+                            <Label htmlFor="zip_code">CEP</Label>
+                            <Input
+                              id="zip_code"
+                              value={formData.zip_code}
+                              onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                              placeholder="00000-000"
+                            />
+                          </div>
+                          <div className="grid gap-2 col-span-2">
+                            {/* Espaço vazio ou botão de busca CEP futuro */}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4">
+                          <div className="grid gap-2 col-span-3">
+                            <Label htmlFor="address">Logradouro</Label>
+                            <Input
+                              id="address"
+                              value={formData.address}
+                              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                              placeholder="Rua, Avenida, etc"
+                            />
+                          </div>
+                          <div className="grid gap-2 col-span-1">
+                            <Label htmlFor="number">Número</Label>
+                            <Input
+                              id="number"
+                              value={formData.number}
+                              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="complement">Complemento</Label>
+                            <Input
+                              id="complement"
+                              value={formData.complement}
+                              onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="neighborhood">Bairro</Label>
+                            <Input
+                              id="neighborhood"
+                              value={formData.neighborhood}
+                              onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="grid gap-2 col-span-2">
+                            <Label htmlFor="city">Cidade</Label>
+                            <Input
+                              id="city"
+                              value={formData.city}
+                              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid gap-2 col-span-1">
+                            <Label htmlFor="state">UF</Label>
+                            <Input
+                              id="state"
+                              value={formData.state}
+                              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                              maxLength={2}
+                              placeholder="SP"
+                            />
+                          </div>
+                        </div>
+                      </TabsContent>
                     </div>
 
-                    <div className="grid gap-2">
-                      <Label htmlFor="slug">Slug (Identificador único)</Label>
-                      <Input
-                        id="slug"
-                        value={formData.slug}
-                        onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                        placeholder="exemplo-empresa"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="contact_email">Email de Contato</Label>
-                      <Input
-                        id="contact_email"
-                        type="email"
-                        value={formData.contact_email}
-                        onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="contact_phone">Telefone de Contato</Label>
-                      <Input
-                        id="contact_phone"
-                        value={formData.contact_phone}
-                        onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="billing_email">Email de Faturamento</Label>
-                      <Input
-                        id="billing_email"
-                        type="email"
-                        value={formData.billing_email}
-                        onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="max_users">Limite de Usuários</Label>
-                      <Input
-                        id="max_users"
-                        type="number"
-                        min="1"
-                        value={formData.max_users}
-                        onChange={(e) => setFormData({ ...formData, max_users: parseInt(e.target.value) })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="subscription_plan">Plano de Assinatura</Label>
-                      <Select
-                        value={formData.subscription_plan}
-                        onValueChange={(value) => setFormData({ ...formData, subscription_plan: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="trial">Trial</SelectItem>
-                          <SelectItem value="basic">Básico</SelectItem>
-                          <SelectItem value="professional">Profissional</SelectItem>
-                          <SelectItem value="enterprise">Enterprise</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={isCreatingTenant}>
-                      {isCreatingTenant ? 'Criando...' : 'Criar Tenant'}
-                    </Button>
-                  </DialogFooter>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={isCreatingTenant}>
+                        {isCreatingTenant ? 'Criando...' : 'Criar Tenant'}
+                      </Button>
+                    </DialogFooter>
+                  </Tabs>
                 </form>
               </DialogContent>
             </Dialog>

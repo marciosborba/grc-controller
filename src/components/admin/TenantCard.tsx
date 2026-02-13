@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import {
   Card,
   CardContent,
@@ -47,13 +47,13 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { 
+import {
   ChevronDown,
   ChevronRight,
-  Building2, 
-  Users, 
-  Mail, 
-  Phone, 
+  Building2,
+  Users,
+  Mail,
+  Phone,
   CreditCard,
   Settings,
   Edit,
@@ -162,33 +162,59 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
   const getStatusBadge = () => {
     if (!tenant.is_active) {
-      return <Badge variant="destructive">Inativo</Badge>;
+      return (
+        <Badge variant="destructive" className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200 shadow-none font-medium">
+          Inativo
+        </Badge>
+      );
     }
-    
+
     switch (tenant.subscription_status) {
       case 'active':
-        return <Badge variant="default">Ativo</Badge>;
+        return (
+          <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200 shadow-none font-medium">
+            Ativo
+          </Badge>
+        );
       case 'trial':
-        return <Badge variant="secondary">Trial</Badge>;
+        return (
+          <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-none font-medium">
+            Trial
+          </Badge>
+        );
       case 'suspended':
-        return <Badge variant="destructive">Suspenso</Badge>;
+        return (
+          <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 shadow-none font-medium">
+            Suspenso
+          </Badge>
+        );
       case 'cancelled':
-        return <Badge variant="outline">Cancelado</Badge>;
+        return (
+          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 font-medium">
+            Cancelado
+          </Badge>
+        );
       default:
-        return <Badge variant="outline">Desconhecido</Badge>;
+        return (
+          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 font-medium">
+            Desconhecido
+          </Badge>
+        );
     }
   };
 
   const getPlanBadge = () => {
-    const planColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      basic: 'default',
-      professional: 'secondary',
-      enterprise: 'destructive',
-      trial: 'outline'
+    const planStyles: Record<string, string> = {
+      basic: 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200',
+      professional: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
+      enterprise: 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+      trial: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
     };
-    
+
+    const style = planStyles[tenant.subscription_plan as keyof typeof planStyles] || 'bg-gray-100 text-gray-700 border-gray-200';
+
     return (
-      <Badge variant={planColors[tenant.subscription_plan as keyof typeof planColors] || 'outline'}>
+      <Badge className={`${style} shadow-none border font-medium px-2.5 py-0.5 rounded-full`}>
         {tenant.subscription_plan.charAt(0).toUpperCase() + tenant.subscription_plan.slice(1)}
       </Badge>
     );
@@ -205,21 +231,21 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   const getDisplayName = () => {
     // Buscar primeiro nos dados salvos da tenant
     const savedCompanyData = tenant.settings?.company_data as TenantCompanyData || {};
-    
+
     // Prioridade: Nome fantasia > Razão social > Nome da tenant
-    return savedCompanyData.trading_name || 
-           savedCompanyData.corporate_name || 
-           companyData.trading_name || 
-           companyData.corporate_name || 
-           tenant.name;
+    return savedCompanyData.trading_name ||
+      savedCompanyData.corporate_name ||
+      companyData.trading_name ||
+      companyData.corporate_name ||
+      tenant.name;
   };
 
   const getUsersUsageColor = () => {
     const currentCount = getCurrentUserCount();
     const percentage = (currentCount / tenant.max_users) * 100;
-    if (percentage >= 90) return 'text-red-600';
-    if (percentage >= 75) return 'text-yellow-600';
-    return 'text-green-600';
+    if (percentage >= 90) return 'text-red-600 bg-red-50 border-red-200';
+    if (percentage >= 75) return 'text-amber-600 bg-amber-50 border-amber-200';
+    return 'text-emerald-600 bg-emerald-50 border-emerald-200';
   };
 
   const saveCompanyData = async (e?: React.MouseEvent) => {
@@ -236,7 +262,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
       // Também atualiza o nome da tenant se houver nome fantasia
       const tenantUpdateData: any = { settings: updatedSettings };
-      
+
       // Se há nome fantasia, atualiza o nome da tenant para facilitar identificação
       if (companyData.trading_name && companyData.trading_name.trim()) {
         tenantUpdateData.name = companyData.trading_name.trim();
@@ -255,10 +281,10 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       toast.success('Dados da empresa atualizados com sucesso');
       setIsEditingCompany(false);
-      
+
       // Não recarregar a página automaticamente - deixar o usuário decidir
-      if (user?.tenantId === tenant.id && 
-          (companyData.trading_name?.trim() || companyData.corporate_name?.trim())) {
+      if (user?.tenantId === tenant.id &&
+        (companyData.trading_name?.trim() || companyData.corporate_name?.trim())) {
         toast.info('Nome da organizacao atualizado. Recarregue a página para ver as mudanças na interface.');
       }
     } catch (error) {
@@ -270,7 +296,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
   };
 
 
-
+  // ... keep saveUserConfig ...
   const saveUserConfig = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -280,7 +306,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     try {
       const { error } = await supabase.rpc('rpc_manage_tenant', {
         action: 'update',
-        tenant_data: { 
+        tenant_data: {
           max_users: userConfig.max_users,
           // Não permitir que current_users_count seja maior que max_users
           current_users_count: Math.min(userConfig.current_users_count, userConfig.max_users)
@@ -331,6 +357,8 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     }
   };
 
+  // ... keep addUserToTenant, removeUserFromTenant, filteredUsers, useEffects ...
+
   // Adicionar usuário à tenant
   const addUserToTenant = async (e?: React.MouseEvent) => {
     if (e) {
@@ -346,11 +374,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
     try {
       // Verificar se o usuário existe
       const { data: existingUser, error: userError } = await supabase.auth.admin.listUsers();
-      
+
       if (userError) throw userError;
 
       const user = existingUser.users?.find(u => u.email === newUserEmail.trim());
-      
+
       if (!user) {
         toast.error('Usuário não encontrado no sistema');
         return;
@@ -479,57 +507,65 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
 
   return (
     <Card className={cn(
-      "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer relative",
-      isExpanded 
-        ? "shadow-lg border-primary/30" 
-        : "hover:bg-muted/50 border-border"
+      "rounded-xl border bg-card text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer relative group",
+      isExpanded
+        ? "shadow-lg border-primary/20 ring-1 ring-primary/5"
+        : "hover:border-primary/30 hover:shadow-md"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 relative z-10 group/header">
-            {/* Hover Effect Gradient for Header */}
-            <div 
-              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
-              style={{
-                background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
-              }}
-            />
-            <div className="flex items-center justify-between gap-4 relative z-10">
-              {/* Left Section */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? 
-                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                }
-                
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                  <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-sm font-semibold truncate">{getDisplayName()}</CardTitle>
-                    {getStatusBadge()}
+          <CardHeader className="p-4 sm:p-5 relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+              {/* Left Section: Icon + Basic Info */}
+              <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                <div className="flex-shrink-0 mt-1 sm:mt-0">
+                  <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                    isExpanded ? "bg-primary text-primary-foreground shadow-md" : "bg-primary/10 text-primary"
+                  )}>
+                    <Building2 className="h-5 w-5" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{tenant.slug}</span>
-                    <span>•</span>
-                    <span className="truncate">{getPlanBadge()}</span>
-                    <span>•</span>
-                    <span className="truncate">{tenant.contact_email}</span>
+                </div>
+
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <h3 className="text-base font-semibold text-foreground truncate">{getDisplayName()}</h3>
+                    {getStatusBadge()}
+                    {getPlanBadge()}
+                  </div>
+
+                  <div className="flex items-center text-sm text-muted-foreground flex-wrap gap-x-3 gap-y-1">
+                    <div className="flex items-center gap-1.5 min-w-[140px]">
+                      <span className="text-xs font-mono bg-muted/50 px-1.5 py-0.5 rounded border border-border/50">
+                        {tenant.slug}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5" />
+                      <span className="truncate max-w-[200px]">{tenant.contact_email}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              
-              {/* Right Section */}
-              <div className="text-right flex-shrink-0">
-                <div className={`flex items-center gap-1 ${getUsersUsageColor()}`}>
-                  <Users className="h-4 w-4" />
-                  <span className="font-medium">{getCurrentUserCount()}</span>
-                  <span className="text-muted-foreground">/ {tenant.max_users}</span>
+
+              {/* Right Section: Metrics + Toggle */}
+              <div className="flex items-center gap-4 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0 pl-14 sm:pl-0">
+                <div className="flex flex-col items-end">
+                  <div className={cn("text-xs font-medium px-2 py-0.5 rounded-full border mb-1", getUsersUsageColor())}>
+                    {getCurrentUserCount()} / {tenant.max_users} usuários
+                  </div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Criado em {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
+
+                <div className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center transition-transform duration-200 bg-muted hover:bg-muted/80 flex-shrink-0",
+                  isExpanded && "rotate-180 bg-primary/10 text-primary"
+                )}>
+                  <ChevronDown className="h-4 w-4" />
                 </div>
               </div>
             </div>
@@ -543,35 +579,32 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <div className="flex space-x-1 bg-muted p-1 rounded-lg">
                 <button
                   onClick={() => setActiveSection('info')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'info' 
-                      ? 'bg-background shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'info'
+                      ? 'bg-background shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Activity className="h-4 w-4" />
                   Informações
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('company')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'company' 
-                      ? 'bg-background shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'company'
+                      ? 'bg-background shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Building2 className="h-4 w-4" />
                   Empresa
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('users')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'users' 
-                      ? 'bg-background shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'users'
+                      ? 'bg-background shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Users className="h-4 w-4" />
                   Usuários
@@ -581,26 +614,24 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                     </Badge>
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('crypto')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'crypto' 
-                      ? 'bg-background shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'crypto'
+                      ? 'bg-background shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Shield className="h-4 w-4" />
                   Criptografia
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('config')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'config' 
-                      ? 'bg-background shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'config'
+                      ? 'bg-background shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Settings className="h-4 w-4" />
                   Configurações
@@ -649,7 +680,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         </div>
                         <div className="text-sm text-muted-foreground">Usuários Ativos</div>
                       </div>
-                      
+
                       <div className="text-center p-4 border rounded-lg">
                         <TrendingUp className="h-8 w-8 mx-auto text-green-500 mb-2" />
                         <div className="text-2xl font-bold text-gray-600">
@@ -657,7 +688,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         </div>
                         <div className="text-sm text-muted-foreground">Limite Máximo</div>
                       </div>
-                      
+
                       <div className="text-center p-4 border rounded-lg">
                         <BarChart3 className="h-8 w-8 mx-auto text-purple-500 mb-2" />
                         <div className="text-2xl font-bold">
@@ -671,13 +702,12 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                           <div
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              (getCurrentUserCount() / tenant.max_users) * 100 >= 90
+                            className={`h-2 rounded-full transition-all duration-300 ${(getCurrentUserCount() / tenant.max_users) * 100 >= 90
                                 ? 'bg-red-500'
                                 : (getCurrentUserCount() / tenant.max_users) * 100 >= 75
-                                ? 'bg-yellow-500'
-                                : 'bg-green-500'
-                            }`}
+                                  ? 'bg-yellow-500'
+                                  : 'bg-green-500'
+                              }`}
                             style={{
                               width: `${Math.min(100, (getCurrentUserCount() / tenant.max_users) * 100)}%`
                             }}
@@ -827,7 +857,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                         {userSearchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário vinculado'}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {userSearchTerm 
+                        {userSearchTerm
                           ? 'Tente ajustar os termos da pesquisa'
                           : 'Clique em "Adicionar Usuário" para vincular usuários a esta tenant'
                         }
@@ -895,9 +925,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                     <p className="text-sm text-muted-foreground">
                       Tenant: {getDisplayName()} ({tenant.id})
                     </p>
-                    <TenantCryptoManagement 
-                      tenantId={tenant.id} 
-                      tenantName={getDisplayName()} 
+                    <TenantCryptoManagement
+                      tenantId={tenant.id}
+                      tenantName={getDisplayName()}
                     />
                   </div>
                 </div>
@@ -961,7 +991,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja excluir o tenant "{tenant.name}"? 
+                              Tem certeza que deseja excluir o tenant "{tenant.name}"?
                               Esta ação não pode ser desfeita.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -1057,9 +1087,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
           </div>
 
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => {
                 setIsAddingUser(false);
                 setNewUserEmail('');
@@ -1068,11 +1098,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
+            <Button
               type="button"
-              onClick={addUserToTenant} 
+              onClick={addUserToTenant}
               disabled={
-                isSaving || 
+                isSaving ||
                 !newUserEmail.trim() ||
                 tenantUsers.length >= tenant.max_users
               }
@@ -1262,9 +1292,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 min="1"
                 max="10000"
                 value={userConfig.max_users}
-                onChange={(e) => setUserConfig({ 
-                  ...userConfig, 
-                  max_users: parseInt(e.target.value) || 0 
+                onChange={(e) => setUserConfig({
+                  ...userConfig,
+                  max_users: parseInt(e.target.value) || 0
                 })}
                 placeholder="Ex: 100"
               />
@@ -1282,9 +1312,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 min="0"
                 max={userConfig.max_users}
                 value={userConfig.current_users_count}
-                onChange={(e) => setUserConfig({ 
-                  ...userConfig, 
-                  current_users_count: parseInt(e.target.value) || 0 
+                onChange={(e) => setUserConfig({
+                  ...userConfig,
+                  current_users_count: parseInt(e.target.value) || 0
                 })}
                 placeholder="Ex: 45"
               />
@@ -1318,13 +1348,12 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 <div className="flex items-center gap-3">
                   <div className="flex-1 bg-gray-300 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        (userConfig.current_users_count / userConfig.max_users) * 100 >= 90
+                      className={`h-2 rounded-full transition-all duration-300 ${(userConfig.current_users_count / userConfig.max_users) * 100 >= 90
                           ? 'bg-red-500'
                           : (userConfig.current_users_count / userConfig.max_users) * 100 >= 75
-                          ? 'bg-yellow-500'
-                          : 'bg-green-500'
-                      }`}
+                            ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                        }`}
                       style={{
                         width: `${Math.min(100, (userConfig.current_users_count / userConfig.max_users) * 100)}%`
                       }}
@@ -1336,7 +1365,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
                 </div>
               </div>
             )}
-            
+
             {/* Validação de Erro */}
             {userConfig.current_users_count > userConfig.max_users && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -1352,9 +1381,9 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
           </div>
 
           <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => {
                 setIsEditingUsers(false);
                 // Resetar para valores originais
@@ -1367,11 +1396,11 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onDelete, isDeleting })
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
-            <Button 
+            <Button
               type="button"
-              onClick={saveUserConfig} 
+              onClick={saveUserConfig}
               disabled={
-                isSaving || 
+                isSaving ||
                 userConfig.current_users_count > userConfig.max_users ||
                 userConfig.max_users < 1
               }

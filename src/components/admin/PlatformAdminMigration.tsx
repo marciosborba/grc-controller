@@ -19,7 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   Shield,
   Users,
   AlertTriangle,
@@ -77,7 +77,7 @@ const PlatformAdminMigration: React.FC = () => {
       const { data: adminRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role')
-        .in('role', ['admin', 'super_admin', 'platform_admin']);
+        .in('role', ['admin', 'super_admin']);
 
       if (rolesError) throw rolesError;
 
@@ -158,8 +158,8 @@ const PlatformAdminMigration: React.FC = () => {
         .insert(
           usersToMigrate.map(user => ({
             user_id: user.user_id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+
+            created_at: new Date().toISOString()
           }))
         );
 
@@ -195,7 +195,7 @@ const PlatformAdminMigration: React.FC = () => {
       const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
-        .in('role', ['admin', 'super_admin', 'platform_admin'])
+        .in('role', ['admin', 'super_admin'])
         .in('user_id', adminUsers.filter(u => u.in_platform_table).map(u => u.user_id));
 
       if (deleteError) throw deleteError;
@@ -210,6 +210,55 @@ const PlatformAdminMigration: React.FC = () => {
       toast.error('Erro na limpeza: ' + error.message);
     } finally {
       setCleaning(false);
+    }
+  };
+
+  // Remover role de super_admin
+  const handleRemoveSuperAdmin = async (userId: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'super_admin');
+
+      if (error) throw error;
+
+      toast.success('Role super_admin removida com sucesso');
+      await loadCurrentState();
+    } catch (error: any) {
+      console.error('Error removing super_admin:', error);
+      toast.error('Erro ao remover super_admin: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remover acesso de platform_admin
+  const handleRemovePlatformAdmin = async (userId: string) => {
+    // Prevenir auto-remoção
+    if (userId === user?.id) {
+      toast.error('Por segurança, você não pode remover seu próprio acesso de administrador por aqui.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('platform_admins')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast.success('Acesso de Platform Admin removido com sucesso');
+      await loadCurrentState();
+    } catch (error: any) {
+      console.error('Error removing platform_admin:', error);
+      toast.error('Erro ao remover acesso: ' + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -262,106 +311,74 @@ const PlatformAdminMigration: React.FC = () => {
       {/* Estatísticas */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Platform Admins</p>
-                  <p className="text-2xl font-bold">{stats.platform_admins_count}</p>
-                </div>
-                <Database className="h-8 w-8 text-blue-500" />
+          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-blue-500">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Database className="h-24 w-24 text-blue-500" />
+            </div>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
+                <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Platform Admins</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.platform_admins_count}</h3>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Admin Roles</p>
-                  <p className="text-2xl font-bold">{stats.admin_roles_count}</p>
-                </div>
-                <Users className="h-8 w-8 text-green-500" />
+          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-green-500">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Users className="h-24 w-24 text-green-500" />
+            </div>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-2xl">
+                <Users className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Admin Roles</p>
+                <h3 className="text-3xl font-bold text-foreground">{stats.admin_roles_count}</h3>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Para Migrar</p>
-                  <p className="text-2xl font-bold text-orange-600">{stats.users_to_migrate}</p>
-                </div>
-                <Upload className="h-8 w-8 text-orange-500" />
+          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-orange-500">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Upload className="h-24 w-24 text-orange-500" />
+            </div>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
+                <Upload className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Para Migrar</p>
+                <h3 className="text-3xl font-bold text-orange-600 dark:text-orange-500">{stats.users_to_migrate}</h3>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Roles Órfãs</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.orphaned_roles}</p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-red-500" />
+          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500">
+            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+              <AlertTriangle className="h-24 w-24 text-red-500" />
+            </div>
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
+                <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Roles Órfãs</p>
+                <h3 className="text-3xl font-bold text-red-600 dark:text-red-500">{stats.orphaned_roles}</h3>
               </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Ações */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ações de Migração</CardTitle>
-          <CardDescription>
-            Execute as ações na ordem recomendada para garantir segurança
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <Button
-              onClick={executeMigration}
-              disabled={migrating || !stats || stats.users_to_migrate === 0}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              {migrating ? 'Migrando...' : `Migrar Usuários (${stats?.users_to_migrate || 0})`}
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={executeCleanup}
-              disabled={cleaning || !stats || stats.orphaned_roles > 0}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              {cleaning ? 'Limpando...' : 'Limpar Roles Redundantes'}
-            </Button>
-          </div>
-
-          {stats && stats.orphaned_roles > 0 && (
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="flex items-center gap-2 text-orange-800">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="font-semibold">Atenção</span>
-              </div>
-              <p className="text-sm text-orange-700 mt-1">
-                Execute primeiro a migração antes de fazer a limpeza das roles.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Lista de Usuários */}
       <Card>
         <CardHeader>
           <CardTitle>Usuários Administrativos</CardTitle>
           <CardDescription>
-            Status atual dos usuários com permissões administrativas
+            Gerencie individualmente a migração e limpeza de cada usuário
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -389,7 +406,7 @@ const PlatformAdminMigration: React.FC = () => {
                         <p className="text-sm text-muted-foreground">{adminUser.email}</p>
                       </div>
                     </div>
-                    
+
                     {adminUser.roles && adminUser.roles.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {adminUser.roles.map((role, index) => (
@@ -402,17 +419,101 @@ const PlatformAdminMigration: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Status Badges */}
                     {adminUser.in_platform_table ? (
-                      <Badge className="bg-green-100 text-green-800">
+                      <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Platform Admin
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-orange-600 border-orange-300">
+                      <Badge variant="outline" className="text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-800">
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Apenas Role
                       </Badge>
                     )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 ml-4 border-l pl-4">
+                      {/* 1. MIGRAR: Se tem role mas não tá na tabela */}
+                      {adminUser.in_roles_table && !adminUser.in_platform_table && (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const { error } = await supabase.from('platform_admins').insert({
+                                user_id: adminUser.user_id,
+                                created_at: new Date().toISOString()
+                              });
+                              if (error) throw error;
+                              toast.success('Usuário migrado com sucesso!');
+                              await loadCurrentState();
+                            } catch (e: any) {
+                              toast.error('Erro ao migrar: ' + e.message);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                        >
+                          <Upload className="h-3 w-3 mr-1" />
+                          Migrar
+                        </Button>
+                      )}
+
+                      {/* 2. LIMPAR: Se tá na tabela, mas ainda tem roles antigas */}
+                      {adminUser.in_platform_table && adminUser.in_roles_table && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const { error } = await supabase.from('user_roles').delete()
+                                .eq('user_id', adminUser.user_id)
+                                .in('role', ['admin', 'super_admin']);
+                              if (error) throw error;
+                              toast.success('Roles legadas removidas!');
+                              await loadCurrentState();
+                            } catch (e: any) {
+                              toast.error('Erro ao limpar: ' + e.message);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Limpar Legacy
+                        </Button>
+                      )}
+
+                      {/* 3. REMOVER SUPER ADMIN */}
+                      {adminUser.roles && adminUser.roles.includes('super_admin') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleRemoveSuperAdmin(adminUser.user_id)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Remover Super
+                        </Button>
+                      )}
+
+                      {/* 4. REMOVER PLATFORM ADMIN */}
+                      {adminUser.in_platform_table && user?.id !== adminUser.user_id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50 border-l border-red-200 ml-2 pl-2"
+                          onClick={() => handleRemovePlatformAdmin(adminUser.user_id)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Remover Admin
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

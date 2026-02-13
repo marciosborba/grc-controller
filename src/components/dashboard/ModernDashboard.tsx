@@ -31,7 +31,7 @@ export default function ModernDashboard() {
     // Force dark mode background for this specific component to ensure consistency
     // regardless of system theme
     return (
-        <div className="min-h-screen bg-background text-foreground p-4 lg:p-8 space-y-8 animate-in fade-in duration-700 font-sans selection:bg-primary/30">
+        <div className="bg-background text-foreground space-y-6 animate-in fade-in duration-700 font-sans selection:bg-primary/30">
 
             {/* Header Section */}
             {/* Header Section */}
