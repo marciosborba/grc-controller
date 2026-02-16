@@ -33,6 +33,7 @@ import {
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantSelector } from '@/contexts/TenantSelectorContext';
+import { defaultSecuritySettings, calculateSecurityScore } from '@/utils/security-score';
 
 // Enhanced Modal removido junto com o módulo Assessment
 // const AlexProcessDesignerEnhancedModal = React.lazy(() => import('../assessments/alex/AlexProcessDesignerEnhancedModal'));
@@ -42,16 +43,18 @@ import { UserManagementSection } from './sections/UserManagementSection';
 import { GroupManagementSection } from './sections/GroupManagementSection';
 import { SecurityConfigSection } from './sections/SecurityConfigSection';
 import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
-// import { SSOConfigSection } from './sections/SSOConfigSection';
+import { SsoConfigSection } from './sections/SSOConfigSection';
+import { ApiTokensSection } from './sections/ApiTokensSection';
+import { DataManagementSection } from './sections/DataManagementSection';
 // import { MFAConfigSection } from './sections/MFAConfigSection';
 // import { EmailDomainSection } from './sections/EmailDomainSection';
 // import { ImpossibleTravelSection } from './sections/ImpossibleTravelSection';
 // import { SessionManagementSection } from './sections/SessionManagementSection';
-// import { ActivityLogsSection } from './sections/ActivityLogsSection';
+import { ActivityLogsSection } from './sections/ActivityLogsSection';
 // import { BackupDataSection } from './sections/BackupDataSection';
 // import { DataExportSection } from './sections/DataExportSection';
-// import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
-// import { CryptoKeysSection } from './sections/CryptoKeysSection';
+import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
+import { CryptoKeysSection } from './sections/CryptoKeysSection';
 import { AISettingsTab } from './tabs/AISettingsTab';
 
 
@@ -217,7 +220,17 @@ const TenantSettingsPage: React.FC = () => {
           .select('user_id')
           .eq('tenant_id', tenantId)
           .eq('action', 'login')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+
+        // 6. Buscar estatísticas reais de armazenamento
+        supabase.rpc('get_tenant_storage_stats', { p_tenant_id: tenantId }),
+
+        // 7. Buscar configurações de segurança (MFA, Logs)
+        supabase
+          .from('tenants')
+          .select('settings')
+          .eq('id', tenantId)
+          .single()
       ];
 
       const [
@@ -225,7 +238,9 @@ const TenantSettingsPage: React.FC = () => {
         suspiciousResult,
         backupResult,
         frameworksResult,
-        sessionsResult
+        sessionsResult,
+        storageResult,
+        settingsResult
       ] = await Promise.all(promises);
 
       // Processar resultados
@@ -246,13 +261,37 @@ const TenantSettingsPage: React.FC = () => {
       const uniqueUserSessions = new Set(sessionsResult.data?.map(s => s.user_id) || []);
       const activeSessions = uniqueUserSessions.size;
 
-      // Calcular score de segurança baseado em dados reais
-      let securityScore = 50; // Base
-      if (frameworksCount > 0) securityScore += 20; // +20 por ter frameworks
-      if (suspiciousActivities === 0) securityScore += 15; // +15 por não ter atividades suspeitas
-      if (totalUsers > 0) securityScore += 10; // +10 por ter usuários
-      if (activeSessions > 0) securityScore += 5; // +5 por ter sessões ativas
-      securityScore = Math.min(securityScore, 100); // Máximo 100
+      // Processar Storage (RPC retorna total_size_mb)
+      const storageStats = storageResult.data as any;
+      // Se storageResult.data for array ou objeto direto
+      const totalSizeMB = (storageStats?.total_size_mb || storageStats?.[0]?.total_size_mb) || 0;
+      const totalSizeGB = totalSizeMB / 1024;
+
+      // Obter configurações de segurança
+      const fetchedSettings = settingsResult.data?.settings?.security || {};
+
+      // Defaults para evitar crash e garantir consistência com SecurityConfigSection
+      const securitySettings = {
+        passwordPolicy: {
+          ...defaultSecuritySettings.passwordPolicy,
+          ...fetchedSettings.passwordPolicy
+        },
+        sessionSecurity: {
+          ...defaultSecuritySettings.sessionSecurity,
+          ...fetchedSettings.sessionSecurity
+        },
+        accessControl: {
+          ...defaultSecuritySettings.accessControl,
+          ...fetchedSettings.accessControl
+        },
+        monitoring: {
+          ...defaultSecuritySettings.monitoring,
+          ...fetchedSettings.monitoring
+        }
+      };
+
+      // Calcular score de segurança DETALHADO usando a utility
+      const securityScore = calculateSecurityScore(securitySettings);
 
       const realMetrics: SettingsMetrics = {
         totalUsers,
@@ -260,7 +299,8 @@ const TenantSettingsPage: React.FC = () => {
         pendingInvitations: 0, // TODO: Implementar convites quando houver tabela
         securityScore,
         lastBackup,
-        storageUsed: Math.round((totalUsers * 0.1 + frameworksCount * 0.05) * 10) / 10, // Estimativa baseada em dados
+        // Usar valor real, mantendo precisão para formatação no front
+        storageUsed: totalSizeGB,
         storageLimit: 10, // GB - padrão
         activeSessions,
         suspiciousActivities
@@ -392,7 +432,7 @@ const TenantSettingsPage: React.FC = () => {
               <p className="text-muted-foreground font-medium text-sm leading-relaxed">
                 {metrics.securityScore >= 80
                   ? 'Sua organização está seguindo as melhores práticas de segurança.'
-                  : 'Sugerimos ativar mais recursos de segurança (MFA, Logs) para aumentar sua pontuação.'}
+                  : `Sugerimos ativar mais recursos (como MFA e Logs) para atingir 100%.`}
               </p>
               <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.securityScore >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
                 {metrics.securityScore >= 80 ? 'Ambiente Protegido' : 'Requer Atenção'}
@@ -450,8 +490,14 @@ const TenantSettingsPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{metrics.storageUsed}</span>
-                <span className="text-sm text-muted-foreground">GB utilizados</span>
+                <span className="text-3xl font-bold text-foreground">
+                  {metrics.storageUsed < 1
+                    ? (metrics.storageUsed * 1024).toFixed(2)
+                    : metrics.storageUsed.toFixed(2)}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {metrics.storageUsed < 1 ? 'MB utilizados' : 'GB utilizados'}
+                </span>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 Limite do plano: {metrics.storageLimit} GB
@@ -462,65 +508,71 @@ const TenantSettingsPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      )
+      }
 
       {/* Alertas de Segurança */}
-      {metrics && metrics.suspiciousActivities > 0 && (
-        <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
-          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          <AlertDescription className="text-orange-800 dark:text-orange-200">
-            <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
-            <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
-              Ver detalhes
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+      {
+        metrics && metrics.suspiciousActivities > 0 && (
+          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
+            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <AlertDescription className="text-orange-800 dark:text-orange-200">
+              <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
+              <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
+                Ver detalhes
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )
+      }
 
       {/* Tabs de Configuração */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10">
-          <TabsTrigger value="overview" className="flex items-center space-x-1">
-            <Eye className="h-4 w-4" />
-            <span className="hidden sm:inline">Visão Geral</span>
+        <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 bg-muted/50 p-1">
+          <TabsTrigger value="overview" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Eye className="h-3.5 w-3.5 mr-1.5" />
+            Visão Geral
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-1">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Usuários</span>
+          <TabsTrigger value="users" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            Usuários
           </TabsTrigger>
-          <TabsTrigger value="groups" className="flex items-center space-x-1">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Grupos</span>
+          <TabsTrigger value="groups" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Users className="h-3.5 w-3.5 mr-1.5" />
+            Grupos
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center space-x-1">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Segurança</span>
+          <TabsTrigger value="security" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Shield className="h-3.5 w-3.5 mr-1.5" />
+            Segurança
           </TabsTrigger>
-          <TabsTrigger value="risk-matrix" className="flex items-center space-x-1">
-            <Activity className="h-4 w-4" />
-            <span className="hidden sm:inline">Matriz</span>
+          <TabsTrigger value="risk-matrix" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Activity className="h-3.5 w-3.5 mr-1.5" />
+            Matriz
           </TabsTrigger>
-          <TabsTrigger value="sso" className="flex items-center space-x-1">
-            <Key className="h-4 w-4" />
-            <span className="hidden sm:inline">SSO</span>
+          <TabsTrigger value="sso" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Key className="h-3.5 w-3.5 mr-1.5" />
+            SSO
           </TabsTrigger>
-          <TabsTrigger value="data" className="flex items-center space-x-1">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Dados</span>
+          <TabsTrigger value="data" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Database className="h-3.5 w-3.5 mr-1.5" />
+            Dados
           </TabsTrigger>
-          <TabsTrigger value="encryption" className="flex items-center space-x-1">
-            <Lock className="h-4 w-4" />
-            <span className="hidden sm:inline">Criptografia</span>
+          <TabsTrigger value="encryption" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Lock className="h-3.5 w-3.5 mr-1.5" />
+            Criptografia
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center space-x-1">
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Logs</span>
+          <TabsTrigger value="logs" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5 mr-1.5" />
+            Logs
           </TabsTrigger>
-          <TabsTrigger value="ai-config" className="flex items-center space-x-1">
-            <Zap className="h-4 w-4" />
-            <span className="hidden sm:inline">IA</span>
+          <TabsTrigger value="api-tokens" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Key className="h-3.5 w-3.5 mr-1.5" />
+            API
           </TabsTrigger>
-          {/* Aba Enhanced Designer removida junto com o módulo Assessment */}
+          <TabsTrigger value="ai-config" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
+            <Zap className="h-3.5 w-3.5 mr-1.5" />
+            IA
+          </TabsTrigger>
         </TabsList>
 
         {/* Visão Geral */}
@@ -641,7 +693,11 @@ const TenantSettingsPage: React.FC = () => {
                   <div className="text-sm text-muted-foreground">Score de Segurança</div>
                 </div>
                 <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{String(metrics?.storageUsed || 0)}GB</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {(metrics?.storageUsed || 0) < 1
+                      ? `${((metrics?.storageUsed || 0) * 1024).toFixed(2)}MB`
+                      : `${(metrics?.storageUsed || 0).toFixed(2)}GB`}
+                  </div>
                   <div className="text-sm text-muted-foreground">Armazenamento Usado</div>
                 </div>
               </div>
@@ -702,32 +758,39 @@ const TenantSettingsPage: React.FC = () => {
           />
         </TabsContent>
 
+
+
         <TabsContent value="sso">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">SSO</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+          <SsoConfigSection tenantId={currentTenantId} />
         </TabsContent>
 
         <TabsContent value="data">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Backup e Dados</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+          <DataManagementSection tenantId={currentTenantId} />
         </TabsContent>
 
-        <TabsContent value="encryption">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Criptografia</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+        <TabsContent value="encryption" className="space-y-6">
+          <EncryptionConfigSection
+            tenantId={currentTenantId}
+            onSettingsChange={() => {
+              if (currentTenantId) {
+                toast.success("Configurações de criptografia atualizadas");
+              }
+            }}
+          />
+          <CryptoKeysSection
+            tenantId={currentTenantId}
+            onSettingsChange={() => {
+              // Refresh logic if needed
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="logs">
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Logs de Atividade</h3>
-            <p>Seção temporáriamente desabilitada para debug.</p>
-          </div>
+          <ActivityLogsSection tenantId={currentTenantId} />
+        </TabsContent>
+
+        <TabsContent value="api-tokens">
+          <ApiTokensSection />
         </TabsContent>
 
         <TabsContent value="ai-config">
@@ -738,7 +801,7 @@ const TenantSettingsPage: React.FC = () => {
       </Tabs>
 
       {/* Modal do Enhanced Designer removido junto com o módulo Assessment */}
-    </div>
+    </div >
   );
 };
 

@@ -19,32 +19,39 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  FileText, 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  AlertTriangle, 
+import {
+  FileText,
+  Search,
+  Filter,
+  Download,
+  Eye,
+  AlertTriangle,
   CheckCircle,
   Clock,
   User,
   Activity,
-  Shield
+  Shield,
+  Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ActivityLog {
   id: string;
-  timestamp: string;
-  userId: string;
-  userEmail: string;
+  created_at: string;
+  user_id: string;
+  // Join fields
+  profiles?: {
+    email: string;
+    full_name: string;
+  };
   action: string;
-  resource: string;
-  details: string;
-  ipAddress: string;
-  userAgent: string;
-  status: 'success' | 'failed' | 'warning';
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  resource_type: string;
+  details: any; // jsonb
+  ip_address: string;
+  user_agent: string;
+  status: 'success' | 'failed' | 'warning'; // If this column exists, else default to success
+  severity: 'low' | 'medium' | 'high' | 'critical'; // If this column exists
 }
 
 interface ActivityLogsSectionProps {
@@ -58,8 +65,11 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAction, setSelectedAction] = useState('all');
-  const [selectedSeverity, setSelectedSeverity] = useState('all');
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+
+  // Loading limits/pagination could be added here
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     loadActivityLogs();
@@ -68,142 +78,105 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
   const loadActivityLogs = async () => {
     try {
       setIsLoading(true);
-      // Simular carregamento de logs
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockLogs: ActivityLog[] = [
-        {
-          id: '1',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          userId: '1',
-          userEmail: 'admin@empresa.com',
-          action: 'LOGIN',
-          resource: 'Authentication',
-          details: 'Usuário fez login com sucesso',
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          status: 'success',
-          severity: 'low'
-        },
-        {
-          id: '2',
-          timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-          userId: '2',
-          userEmail: 'maria@empresa.com',
-          action: 'CREATE_RISK',
-          resource: 'Risk Management',
-          details: 'Novo risco criado: "Falha no sistema de backup"',
-          ipAddress: '10.0.0.50',
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          status: 'success',
-          severity: 'medium'
-        },
-        {
-          id: '3',
-          timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-          userId: '3',
-          userEmail: 'carlos@empresa.com',
-          action: 'LOGIN_FAILED',
-          resource: 'Authentication',
-          details: 'Tentativa de login falhada - senha incorreta',
-          ipAddress: '203.0.113.1',
-          userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
-          status: 'failed',
-          severity: 'high'
-        },
-        {
-          id: '4',
-          timestamp: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-          userId: '1',
-          userEmail: 'admin@empresa.com',
-          action: 'UPDATE_SETTINGS',
-          resource: 'Tenant Settings',
-          details: 'Configurações de segurança atualizadas',
-          ipAddress: '192.168.1.100',
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          status: 'success',
-          severity: 'medium'
-        },
-        {
-          id: '5',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          userId: '4',
-          userEmail: 'ana@empresa.com',
-          action: 'EXPORT_DATA',
-          resource: 'Data Management',
-          details: 'Exportação de dados de usuários iniciada',
-          ipAddress: '172.16.0.10',
-          userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-          status: 'success',
-          severity: 'high'
-        }
-      ];
-      
-      setLogs(mockLogs);
-    } catch (error) {
-      console.error('Erro ao carregar logs:', error);
+
+      let query = supabase
+        .from('activity_logs')
+        // Now that FK is on the PK, Supabase should auto-detect it.
+        // We use the table name 'profiles' which matches the alias we want.
+        .select('*, profiles (email, full_name)')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit initially for performance
+
+      // Apply Time Range Filter
+      const now = new Date();
+      let startTime = new Date();
+
+      if (selectedTimeRange === '1h') startTime.setHours(now.getHours() - 1);
+      if (selectedTimeRange === '24h') startTime.setHours(now.getHours() - 24);
+      if (selectedTimeRange === '7d') startTime.setDate(now.getDate() - 7);
+      if (selectedTimeRange === '30d') startTime.setDate(now.getDate() - 30);
+
+      if (selectedTimeRange !== 'all') {
+        query = query.gte('created_at', startTime.toISOString());
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Supabase Query Error:', error);
+        throw error;
+      }
+
+      setLogs(data as any[] || []);
+    } catch (error: any) {
+      console.error('Erro detalhado ao carregar logs:', error);
+      toast.error(`Erro ao carregar logs: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = !searchTerm || 
-      log.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.ipAddress.includes(searchTerm);
-    
+    const userEmail = log.profiles?.email || 'Sistema';
+    const userAction = log.action || '';
+    const userDetails = typeof log.details === 'string' ? log.details : JSON.stringify(log.details || '');
+    const userIp = log.ip_address || '';
+
+    const matchesSearch = !searchTerm ||
+      userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userAction.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userDetails.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userIp.includes(searchTerm);
+
+    // Simple mapping to group actions if needed, or exact match
     const matchesAction = selectedAction === 'all' || log.action === selectedAction;
-    const matchesSeverity = selectedSeverity === 'all' || log.severity === selectedSeverity;
-    
-    return matchesSearch && matchesAction && matchesSeverity;
+
+    return matchesSearch && matchesAction;
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    // Default to success if undefined (legacy logs)
+    const s = status || 'success';
+    switch (s) {
       case 'success':
-        return <Badge className="bg-green-100 text-green-800">Sucesso</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200">Sucesso</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Falha</Badge>;
+      case 'error': // handle variance
+        return <Badge className="bg-red-100 text-red-800 border-red-200">Falha</Badge>;
       case 'warning':
-        return <Badge className="bg-yellow-100 text-yellow-800">Aviso</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Aviso</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return <Badge className="bg-red-100 text-red-800">Crítico</Badge>;
-      case 'high':
-        return <Badge className="bg-orange-100 text-orange-800">Alto</Badge>;
-      case 'medium':
-        return <Badge className="bg-yellow-100 text-yellow-800">Médio</Badge>;
-      case 'low':
-        return <Badge className="bg-blue-100 text-blue-800">Baixo</Badge>;
-      default:
-        return <Badge variant="outline">{severity}</Badge>;
+        return <Badge variant="outline">{s}</Badge>;
     }
   };
 
   const getActionIcon = (action: string) => {
-    if (action.includes('LOGIN')) return <User className="h-4 w-4" />;
-    if (action.includes('CREATE') || action.includes('UPDATE') || action.includes('DELETE')) return <Activity className="h-4 w-4" />;
-    if (action.includes('SECURITY') || action.includes('SETTINGS')) return <Shield className="h-4 w-4" />;
+    const a = (action || '').toUpperCase();
+    if (a.includes('LOGIN')) return <User className="h-4 w-4" />;
+    if (a.includes('CREATE') || a.includes('UPDATE') || a.includes('DELETE')) return <Activity className="h-4 w-4" />;
+    if (a.includes('SECURITY') || a.includes('SETTINGS') || a.includes('BACKUP')) return <Shield className="h-4 w-4" />;
     return <FileText className="h-4 w-4" />;
   };
 
+  const formatDetails = (details: any) => {
+    if (!details) return '-';
+    if (typeof details === 'string') return details;
+    try {
+      return JSON.stringify(details);
+    } catch (e) {
+      return String(details);
+    }
+  }
+
   const handleExportLogs = () => {
-    // Simular exportação de logs
     const csvContent = [
-      'Timestamp,User,Action,Resource,Status,Severity,IP Address,Details',
-      ...filteredLogs.map(log => 
-        `${log.timestamp},${log.userEmail},${log.action},${log.resource},${log.status},${log.severity},${log.ipAddress},"${log.details}"`
+      'Timestamp,User,Action,Resource,IP Address,Details',
+      ...filteredLogs.map(log =>
+        `${log.created_at},${log.profiles?.email || 'System'},${log.action},${log.resource_type || ''},${log.ip_address || ''},"${(JSON.stringify(log.details || '')).replace(/"/g, '""')}"`
       )
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -213,15 +186,14 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    toast.success("Download iniciado");
   };
 
-  if (isLoading) {
+  if (isLoading && logs.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">Carregando logs de atividade...</div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
@@ -239,9 +211,9 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
                 Visualize todas as atividades realizadas na organização
               </CardDescription>
             </div>
-            <Button onClick={handleExportLogs} variant="outline">
+            <Button onClick={handleExportLogs} variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
-              Exportar Logs
+              Exportar (CSV)
             </Button>
           </div>
         </CardHeader>
@@ -259,7 +231,7 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
                 />
               </div>
             </div>
-            
+
             <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
               <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue />
@@ -271,59 +243,21 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
                 <SelectItem value="30d">Últimos 30 dias</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select value={selectedAction} onValueChange={setSelectedAction}>
-              <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Ação" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as ações</SelectItem>
-                <SelectItem value="LOGIN">Login</SelectItem>
-                <SelectItem value="LOGIN_FAILED">Login falhado</SelectItem>
-                <SelectItem value="CREATE_RISK">Criar risco</SelectItem>
-                <SelectItem value="UPDATE_SETTINGS">Atualizar config</SelectItem>
-                <SelectItem value="EXPORT_DATA">Exportar dados</SelectItem>
+                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="failed_login">Login falhado</SelectItem>
+                <SelectItem value="suspicious_activity">Atividade Suspeita</SelectItem>
+                <SelectItem value="security_violation">Violação de Segurança</SelectItem>
+                <SelectItem value="backup_created">Backup</SelectItem>
+                <SelectItem value="export_data">Exportação</SelectItem>
               </SelectContent>
             </Select>
-            
-            <Select value={selectedSeverity} onValueChange={setSelectedSeverity}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Severidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="critical">Crítico</SelectItem>
-                <SelectItem value="high">Alto</SelectItem>
-                <SelectItem value="medium">Médio</SelectItem>
-                <SelectItem value="low">Baixo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Estatísticas Rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-3 border rounded-lg">
-              <div className="text-lg font-bold text-blue-600">{logs.length}</div>
-              <div className="text-xs text-muted-foreground">Total de logs</div>
-            </div>
-            <div className="text-center p-3 border rounded-lg">
-              <div className="text-lg font-bold text-green-600">
-                {logs.filter(l => l.status === 'success').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Sucessos</div>
-            </div>
-            <div className="text-center p-3 border rounded-lg">
-              <div className="text-lg font-bold text-red-600">
-                {logs.filter(l => l.status === 'failed').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Falhas</div>
-            </div>
-            <div className="text-center p-3 border rounded-lg">
-              <div className="text-lg font-bold text-orange-600">
-                {logs.filter(l => l.severity === 'high' || l.severity === 'critical').length}
-              </div>
-              <div className="text-xs text-muted-foreground">Alta severidade</div>
-            </div>
           </div>
 
           {/* Tabela de Logs */}
@@ -335,7 +269,6 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
                   <TableHead>Usuário</TableHead>
                   <TableHead>Ação</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Severidade</TableHead>
                   <TableHead>IP</TableHead>
                   <TableHead>Detalhes</TableHead>
                 </TableRow>
@@ -345,34 +278,38 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
                   <TableRow key={log.id}>
                     <TableCell>
                       <div className="text-sm">
-                        {new Date(log.timestamp).toLocaleDateString('pt-BR')}
+                        {new Date(log.created_at).toLocaleDateString('pt-BR')}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {new Date(log.timestamp).toLocaleTimeString('pt-BR')}
+                        {new Date(log.created_at).toLocaleTimeString('pt-BR')}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium text-sm">{log.userEmail}</div>
+                      <div className="font-medium text-sm">
+                        {log.profiles?.full_name || 'Sistema'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {log.profiles?.email || 'N/A'}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getActionIcon(log.action)}
-                        <span className="text-sm">{log.action}</span>
+                        <span className="text-sm capitalize">{log.action?.replace(/_/g, ' ')}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">{log.resource}</div>
+                      {log.resource_type && (
+                        <div className="text-xs text-muted-foreground">{log.resource_type}</div>
+                      )}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(log.status)}
                     </TableCell>
                     <TableCell>
-                      {getSeverityBadge(log.severity)}
+                      <div className="text-sm font-mono">{log.ip_address || '-'}</div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm font-mono">{log.ipAddress}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm max-w-xs truncate" title={log.details}>
-                        {log.details}
+                      <div className="text-sm max-w-xs truncate" title={formatDetails(log.details)}>
+                        {formatDetails(log.details)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -381,11 +318,11 @@ export const ActivityLogsSection: React.FC<ActivityLogsSectionProps> = ({
             </Table>
           </div>
 
-          {filteredLogs.length === 0 && (
+          {filteredLogs.length === 0 && !isLoading && (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm || selectedAction !== 'all' || selectedSeverity !== 'all'
+              {searchTerm || selectedAction !== 'all'
                 ? 'Nenhum log encontrado com os filtros aplicados.'
-                : 'Nenhum log de atividade encontrado.'
+                : 'Nenhum log de atividade registrado neste período.'
               }
             </div>
           )}

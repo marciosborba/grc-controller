@@ -303,12 +303,12 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         setIsLoading(true);
 
         // Timeout para carregamento de dados do usuário
-        const timeoutPromise = new Promise((_, reject) => {
+        const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), USER_DATA_TIMEOUT);
         });
 
         const userDataPromise = loadUserData(session.user);
-        const userData = await Promise.race([userDataPromise, timeoutPromise]);
+        const userData = await Promise.race([userDataPromise, timeoutPromise]) as AuthUser;
 
         console.log('👤 [AUTH] User data loaded:', { id: userData?.id, name: userData?.name });
         setUser(userData);
@@ -352,12 +352,14 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         }, STARTUP_TIMEOUT);
 
         const sessionPromise = supabase.auth.getSession();
-        const { data: { session: currentSession }, error } = await Promise.race([
+        const result = await Promise.race([
           sessionPromise,
-          new Promise((_, reject) =>
+          new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), STARTUP_TIMEOUT - 1000)
           )
-        ]);
+        ]) as { data: { session: any }, error: any };
+
+        const { data: { session: currentSession }, error } = result;
 
         if (timeoutId) clearTimeout(timeoutId);
 
@@ -423,6 +425,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     return () => clearInterval(heartbeatInterval);
   }, [user]);
 
+
+
   // Login otimizado
   const login = useCallback(async (email: string, password: string) => {
     console.log('🔐 [AUTH] Iniciando login para:', email);
@@ -453,6 +457,44 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     try {
       console.log('🔐 [AUTH] Chamando supabase.auth.signInWithPassword...');
 
+      // 0. IP Enforcement (Dynamic from Tenant Settings)
+      const domain = cleanEmail.split('@')[1];
+      if (domain) {
+        // Fetch security settings for the domain
+        const { data: securitySettings } = await supabase.rpc('get_tenant_security_settings', {
+          domain_name: domain
+        });
+
+        // Check if IP whitelisting is enabled
+        if (securitySettings?.accessControl?.ipWhitelisting) {
+          const allowedIPs = securitySettings.accessControl.allowedIPs || [];
+
+          console.log('🛡️ [SECURITY] IP Whitelist checking enabled for domain:', domain);
+          console.log('Allowed IPs:', allowedIPs);
+
+          // Note: In a real production scenario, IP enforcement should be done:
+          // 1. Via Supabase Edge Functions (server-side)
+          // 2. Or by checking a reliable external service for the client's public IP
+          // We are currently logging the check to demonstrate the integration.
+          // 
+          // Example blocking logic if IP was available:
+          // const clientIP = await fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => d.ip);
+          // if (!allowedIPs.includes(clientIP)) throw new Error('Acesso negado: Seu endereço IP não está autorizado.');
+        }
+      }
+
+      // 1. Check for Account Lockout (Brute Force Protection)
+      const { data: lockoutStatus, error: lockoutError } = await supabase.rpc('check_account_lockout', {
+        user_email: cleanEmail
+      });
+
+      if (lockoutStatus && lockoutStatus.locked) {
+        console.error('🚫 [AUTH] Conta bloqueada temporariamente:', lockoutStatus.until);
+        const until = new Date(lockoutStatus.until).toLocaleTimeString();
+        await logAuthEvent('account_locked', { email: cleanEmail, until, severity: 'warning' });
+        throw new Error(`Sua conta está bloqueada temporariamente até às ${until} devido a múltiplas tentativas falhas.`);
+      }
+
       // Timeout para autenticação
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout na autenticação. Verifique sua conexão.')), AUTH_TIMEOUT);
@@ -470,11 +512,20 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
       if (error) {
         console.error('❌ [AUTH] Erro do Supabase:', error);
+
+        // 2. Increment Failed Attempts on Error
+        if (error.message === 'Invalid login credentials') {
+          await supabase.rpc('increment_failed_login', { user_email: cleanEmail });
+        }
+
         // O log será feito no bloco catch quando o erro for lançado para evitar duplicidade
         throw new Error(error.message);
       }
 
       console.log('✅ [AUTH] Login bem-sucedido!');
+
+      // 3. Clear Failures on Success
+      await supabase.rpc('clear_login_failures', { user_email: cleanEmail });
 
       // Log sucesso de login
       if (data.user) {
@@ -615,6 +666,43 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     };
   }, [user, logout]);
 
+  // IDLE TIMEOUT LOGIC (Moved here to be after logout definition)
+  useEffect(() => {
+    if (!user) return;
+
+    const securitySettings = user.settings?.security?.sessionSecurity;
+    const timeoutMinutes = securitySettings?.timeoutMinutes || 30;
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+
+    let idleTimer: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        console.warn(`⚠️ [AUTH] Sessão expirou por inatividade (${timeoutMinutes} min)`);
+        logout(); // Now logout is defined
+      }, timeoutMs);
+    };
+
+    // Events to track activity
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keypress', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+    window.addEventListener('touchstart', resetTimer);
+
+    resetTimer(); // Initialize
+
+    return () => {
+      clearTimeout(idleTimer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keypress', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('scroll', resetTimer);
+      window.removeEventListener('touchstart', resetTimer);
+    };
+  }, [user, logout]);
+
   const contextValue: AuthContextType = {
     user,
     session,
@@ -632,6 +720,16 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       if (currentAal === 'aal2') return false;
 
       const allowTrusted = user?.settings?.security?.accessControl?.allowTrustedDevices;
+      const ipWhitelist = user?.settings?.security?.accessControl?.ipWhitelist;
+
+      // IP Whitelist Check (Client-side simulation)
+      // In a real scenario, this matches the IP from the request. 
+      // We can't easily get the real IP here without an external service, 
+      // but we can check if the list is defined and enforce logic if we had the IP.
+      if (ipWhitelist && ipWhitelist.length > 0) {
+        // Placeholder: logic would go here. 
+        // For now, we don't block to avoid locking the user out without a real IP content.
+      }
 
       try {
         if (allowTrusted && user?.id && localStorage.getItem(`grc_trusted_device_${user.id}`)) {
@@ -653,6 +751,21 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
       return true;
     })()
+  };
+
+  // Wrap logAuthEvent to respect settings
+  const secureLogAuthEvent = async (event: string, details: any) => {
+    // Always log failures or critical events
+    if (details.severity === 'error' || details.severity === 'warning') {
+      await logAuthEvent(event, details);
+      return;
+    }
+
+    // For info events, check settings
+    const logAll = user?.settings?.security?.monitoring?.logAllActivities !== false; // Default to true
+    if (logAll) {
+      await logAuthEvent(event, details);
+    }
   };
 
   return (

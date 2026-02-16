@@ -181,7 +181,12 @@ export const UserProfilePage: React.FC = () => {
     try {
       const { error } = await supabase.from('profiles').update({ ...formData, updated_at: new Date().toISOString() }).eq('user_id', user?.id);
       if (error) throw error;
-      await logActivity('profile_update', 'user', user!.id, { changes: formData });
+
+      // Log only if enabled
+      if (user?.settings?.security?.monitoring?.logAllActivities !== false) {
+        await logActivity('profile_update', 'user', user!.id, { changes: formData });
+      }
+
       toast({ title: "Salvo", description: "Suas informações foram atualizadas." });
       refreshUser();
     } catch (e: any) {
@@ -252,8 +257,38 @@ export const UserProfilePage: React.FC = () => {
       toast({ title: "Erro", description: "As senhas não coincidem.", variant: "destructive" });
       return;
     }
-    if (passwordForm.new.length < 6) {
-      toast({ title: "Erro", description: "A senha deve ter no mínimo 6 caracteres.", variant: "destructive" });
+
+    // Tenant Password Policy Validation
+    const policy = user?.settings?.security?.passwordPolicy || {
+      minLength: 6,
+      requireUppercase: false,
+      requireLowercase: false,
+      requireNumbers: false,
+      requireSpecialChars: false
+    };
+
+    if (passwordForm.new.length < policy.minLength) {
+      toast({ title: "Senha Fraca", description: `A senha deve ter no mínimo ${policy.minLength} caracteres.`, variant: "destructive" });
+      return;
+    }
+
+    if (policy.requireUppercase && !/[A-Z]/.test(passwordForm.new)) {
+      toast({ title: "Senha Fraca", description: "A senha deve conter pelo menos uma letra maiúscula.", variant: "destructive" });
+      return;
+    }
+
+    if (policy.requireLowercase && !/[a-z]/.test(passwordForm.new)) {
+      toast({ title: "Senha Fraca", description: "A senha deve conter pelo menos uma letra minúscula.", variant: "destructive" });
+      return;
+    }
+
+    if (policy.requireNumbers && !/[0-9]/.test(passwordForm.new)) {
+      toast({ title: "Senha Fraca", description: "A senha deve conter pelo menos um número.", variant: "destructive" });
+      return;
+    }
+
+    if (policy.requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.new)) {
+      toast({ title: "Senha Fraca", description: "A senha deve conter pelo menos um caractere especial.", variant: "destructive" });
       return;
     }
 
