@@ -1,44 +1,36 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-// Select components removidos - não mais necessários
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   Settings,
   Users,
   Shield,
   Key,
-  Mail,
-  Globe,
   Activity,
   Database,
-  Download,
   Lock,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
   Eye,
   FileText,
-  Server,
   Zap,
-  Bell,
   Crown,
-  Building2,
-  ArrowRight
-  // Rocket, Edit, Loader2 removidos junto com o Enhanced Designer
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 import { defaultSecuritySettings, calculateSecurityScore } from '@/utils/security-score';
 
-// Enhanced Modal removido junto com o módulo Assessment
-// const AlexProcessDesignerEnhancedModal = React.lazy(() => import('../assessments/alex/AlexProcessDesignerEnhancedModal'));
-
-// Importar seções
 import { UserManagementSection } from './sections/UserManagementSection';
 import { GroupManagementSection } from './sections/GroupManagementSection';
 import { SecurityConfigSection } from './sections/SecurityConfigSection';
@@ -46,19 +38,10 @@ import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 import { SsoConfigSection } from './sections/SSOConfigSection';
 import { ApiTokensSection } from './sections/ApiTokensSection';
 import { DataManagementSection } from './sections/DataManagementSection';
-// import { MFAConfigSection } from './sections/MFAConfigSection';
-// import { EmailDomainSection } from './sections/EmailDomainSection';
-// import { ImpossibleTravelSection } from './sections/ImpossibleTravelSection';
-// import { SessionManagementSection } from './sections/SessionManagementSection';
 import { ActivityLogsSection } from './sections/ActivityLogsSection';
-// import { BackupDataSection } from './sections/BackupDataSection';
-// import { DataExportSection } from './sections/DataExportSection';
 import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
 import { CryptoKeysSection } from './sections/CryptoKeysSection';
 import { AISettingsTab } from './tabs/AISettingsTab';
-
-
-// Componentes compartilhados removidos temporariamente
 
 interface TenantInfo {
   id: string;
@@ -84,10 +67,9 @@ interface SettingsMetrics {
   storageUsed: number;
   storageLimit: number;
   activeSessions: number;
+  activeUsersList: string[]; // List of active user names/emails
   suspiciousActivities: number;
 }
-
-// Interface movida para TenantSelectorContext
 
 const TenantSettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -95,38 +77,20 @@ const TenantSettingsPage: React.FC = () => {
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [metrics, setMetrics] = useState<SettingsMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Estados do Enhanced Modal removidos junto com o módulo Assessment
-  // const [showEnhancedModal, setShowEnhancedModal] = useState(false);
-  // const [enhancedModalMode, setEnhancedModalMode] = useState<'create' | 'edit'>('create');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Usar contexto global de seleção de tenant
-  const {
-    selectedTenantId,
-    isGlobalTenantSelection
-  } = useTenantSelector();
+  const { selectedTenantId } = useTenantSelector();
 
-  // Verificar permissões
   const isPlatformAdmin = user?.isPlatformAdmin || user?.roles?.includes('platform_admin');
   const isTenantAdmin = user?.roles?.includes('tenant_admin') || user?.roles?.includes('admin');
   const hasAccess = isPlatformAdmin || isTenantAdmin;
 
-  // Debug de permissões removido para evitar erros
-
-  // O contexto já gerencia isso automaticamente
-  const currentTenantId = selectedTenantId;
-
-  // O contexto global já carrega os tenants automaticamente
-
   useEffect(() => {
-    if (currentTenantId) {
-      loadTenantInfo(currentTenantId);
-      loadMetrics(currentTenantId);
+    if (selectedTenantId) {
+      loadTenantInfo(selectedTenantId);
+      loadMetrics(selectedTenantId);
     }
-  }, [currentTenantId]);
-
-  // Função removida - agora gerenciada pelo TenantSelectorContext
+  }, [selectedTenantId]);
 
   const loadTenantInfo = async (tenantId: string) => {
     if (!tenantId) return;
@@ -134,7 +98,6 @@ const TenantSettingsPage: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Buscar informações reais da tenant no banco
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('id, name, slug, subscription_plan, max_users, current_users_count, created_at, settings')
@@ -151,7 +114,6 @@ const TenantSettingsPage: React.FC = () => {
         return;
       }
 
-      // Montar informações da tenant com dados reais
       const realTenantInfo: TenantInfo = {
         id: tenantData.id,
         name: tenantData.name,
@@ -161,12 +123,11 @@ const TenantSettingsPage: React.FC = () => {
         current_users: tenantData.current_users_count || 0,
         created_at: tenantData.created_at || new Date().toISOString(),
         settings: {
-          security_level: (tenantData.settings?.security_level as 'basic' | 'standard' | 'advanced') || 'standard',
-          features_enabled: Array.isArray(tenantData.settings?.features_enabled) ? tenantData.settings.features_enabled : ['audit_logs'],
-          compliance_frameworks: Array.isArray(tenantData.settings?.compliance_frameworks) ? tenantData.settings.compliance_frameworks : []
+          security_level: (tenantData.settings as any)?.security_level || 'standard',
+          features_enabled: Array.isArray((tenantData.settings as any)?.features_enabled) ? (tenantData.settings as any).features_enabled : ['audit_logs'],
+          compliance_frameworks: Array.isArray((tenantData.settings as any)?.compliance_frameworks) ? (tenantData.settings as any).compliance_frameworks : []
         }
       };
-
 
       setTenantInfo(realTenantInfo);
     } catch (error) {
@@ -180,17 +141,14 @@ const TenantSettingsPage: React.FC = () => {
     if (!tenantId) return;
 
     try {
-
-
-      // Carregar dados reais do banco de dados
       const promises = [
-        // 1. Contar usuários totais e ativos (agora incluindo is_active na query)
+        // 1. Contar usuários totais e ativos
         supabase
           .from('profiles')
           .select('id, user_id, created_at, is_active')
           .eq('tenant_id', tenantId),
 
-        // 2. Contar atividades suspeitas (activity_logs com ações de segurança)
+        // 2. Contar atividades suspeitas
         supabase
           .from('activity_logs')
           .select('id')
@@ -198,7 +156,7 @@ const TenantSettingsPage: React.FC = () => {
           .in('action', ['failed_login', 'suspicious_activity', 'security_violation'])
           .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
 
-        // 3. Buscar último backup (activity_logs com ação de backup)
+        // 3. Buscar último backup
         supabase
           .from('activity_logs')
           .select('created_at')
@@ -214,18 +172,18 @@ const TenantSettingsPage: React.FC = () => {
           .eq('tenant_id', tenantId)
           .eq('is_active', true),
 
-        // 5. Contar sessões ativas (activity_logs de login nas últimas 24h)
+        // 5. Contar sessões ativas (activity_logs recentes)
         supabase
           .from('activity_logs')
           .select('user_id')
           .eq('tenant_id', tenantId)
-          .eq('action', 'login')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .limit(100),
 
         // 6. Buscar estatísticas reais de armazenamento
         supabase.rpc('get_tenant_storage_stats', { p_tenant_id: tenantId }),
 
-        // 7. Buscar configurações de segurança (MFA, Logs)
+        // 7. Buscar configurações de segurança
         supabase
           .from('tenants')
           .select('settings')
@@ -243,98 +201,80 @@ const TenantSettingsPage: React.FC = () => {
         settingsResult
       ] = await Promise.all(promises);
 
-      // Processar resultados
-      // Total = todos os perfis vinculados ao tenant
       const totalUsers = usersResult.data?.length || 0;
-
-      // Ativos = apenas perfis com is_active = true
-      // Type assertion needed because Promise.all returns union type
       const activeUsers = (usersResult.data as any[])?.filter(u => u.is_active).length || 0;
-
-      // Métricas: total = usuários ativos, activeUsers = usuários ativos (mesmo valor)
-
       const suspiciousActivities = suspiciousResult.data?.length || 0;
       const lastBackup = (backupResult.data?.[0] as any)?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const frameworksCount = frameworksResult.data?.length || 0;
 
-      // Contar sessões únicas (por user_id)
-      const uniqueUserSessions = new Set(sessionsResult.data?.map(s => s.user_id) || []);
-      const activeSessions = uniqueUserSessions.size;
+      // Contar sessões únicas e buscar nomes
+      // Robust filtering removing null/undefined IDs
+      const uniqueUserSessions = [...new Set(
+        sessionsResult.data
+          ?.map(s => s.user_id)
+          .filter((id): id is string => !!id && typeof id === 'string') || []
+      )];
 
-      // Processar Storage (RPC retorna total_size_mb)
+      const activeSessions = uniqueUserSessions.length;
+
+      let activeUsersList: string[] = [];
+
+      if (uniqueUserSessions.length > 0) {
+        try {
+          const { data: activeProfiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .in('user_id', uniqueUserSessions);
+
+          if (profilesError) {
+            console.error('Error fetching active profiles:', profilesError);
+          } else if (activeProfiles) {
+            activeUsersList = activeProfiles.map(p => {
+              const name = p.full_name || 'Usuário';
+              const email = p.email ? `(${p.email})` : '';
+              return `${name} ${email}`.trim();
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch profiles:', err);
+        }
+      }
+
+      // Storage
       const storageStats = storageResult.data as any;
-      // Se storageResult.data for array ou objeto direto
       const totalSizeMB = (storageStats?.total_size_mb || storageStats?.[0]?.total_size_mb) || 0;
       const totalSizeGB = totalSizeMB / 1024;
 
-      // Obter configurações de segurança
+      // Security Settings & Score
       const fetchedSettings = settingsResult.data?.settings?.security || {};
-
-      // Defaults para evitar crash e garantir consistência com SecurityConfigSection
       const securitySettings = {
-        passwordPolicy: {
-          ...defaultSecuritySettings.passwordPolicy,
-          ...fetchedSettings.passwordPolicy
-        },
-        sessionSecurity: {
-          ...defaultSecuritySettings.sessionSecurity,
-          ...fetchedSettings.sessionSecurity
-        },
-        accessControl: {
-          ...defaultSecuritySettings.accessControl,
-          ...fetchedSettings.accessControl
-        },
-        monitoring: {
-          ...defaultSecuritySettings.monitoring,
-          ...fetchedSettings.monitoring
-        }
+        passwordPolicy: { ...defaultSecuritySettings.passwordPolicy, ...fetchedSettings.passwordPolicy },
+        sessionSecurity: { ...defaultSecuritySettings.sessionSecurity, ...fetchedSettings.sessionSecurity },
+        accessControl: { ...defaultSecuritySettings.accessControl, ...fetchedSettings.accessControl },
+        monitoring: { ...defaultSecuritySettings.monitoring, ...fetchedSettings.monitoring }
       };
-
-      // Calcular score de segurança DETALHADO usando a utility
       const securityScore = calculateSecurityScore(securitySettings);
 
-      const realMetrics: SettingsMetrics = {
+      setMetrics({
         totalUsers,
         activeUsers,
-        pendingInvitations: 0, // TODO: Implementar convites quando houver tabela
+        pendingInvitations: 0,
         securityScore,
         lastBackup,
-        // Usar valor real, mantendo precisão para formatação no front
         storageUsed: totalSizeGB,
-        storageLimit: 10, // GB - padrão
+        storageLimit: 10,
         activeSessions,
+        activeUsersList,
         suspiciousActivities
-      };
+      });
 
-
-      setMetrics(realMetrics);
-
-      // Atualizar também o current_users no tenantInfo para manter consistência
       if (tenantInfo) {
-        setTenantInfo(prev => prev ? {
-          ...prev,
-          current_users: totalUsers
-        } : prev);
+        setTenantInfo(prev => prev ? { ...prev, current_users: totalUsers } : prev);
       }
     } catch (error) {
-
-      // Fallback com dados mínimos em caso de erro
-      const fallbackMetrics: SettingsMetrics = {
-        totalUsers: 0,
-        activeUsers: 0,
-        pendingInvitations: 0,
-        securityScore: 50,
-        lastBackup: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        storageUsed: 0,
-        storageLimit: 10,
-        activeSessions: 0,
-        suspiciousActivities: 0
-      };
-
-      setMetrics(fallbackMetrics);
+      console.error('Error loading metrics:', error);
+      // Fallback handled by initial null state or could set defaults here
     }
   };
-
 
   if (!hasAccess) {
     return (
@@ -349,7 +289,7 @@ const TenantSettingsPage: React.FC = () => {
     );
   }
 
-  if (isLoading) {
+  if (isLoading && !tenantInfo) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -368,29 +308,19 @@ const TenantSettingsPage: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
             <Settings className="h-8 w-8 text-primary" />
             <span>Configurações da Organização</span>
-            {isPlatformAdmin && (
-              <Crown className="h-6 w-6 text-orange-500" />
-            )}
+            {isPlatformAdmin && <Crown className="h-6 w-6 text-orange-500" />}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            {isPlatformAdmin
-              ? 'Gerencie configurações de todas as organizações da plataforma'
-              : 'Gerencie todas as configurações e políticas da sua organização'
-            }
+            {isPlatformAdmin ? 'Gerencie configurações de todas as organizações da plataforma' : 'Gerencie todas as configurações e políticas da sua organização'}
           </p>
 
-
-          {/* Info da Tenant */}
           {tenantInfo && (
             <div className="flex items-center space-x-4 text-sm mt-2">
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                 <span className="text-green-600 font-medium">{tenantInfo.name}</span>
               </div>
-              <Badge
-                variant="secondary"
-                className="text-xs bg-muted text-muted-foreground border-muted-foreground/20"
-              >
+              <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground border-muted-foreground/20">
                 {tenantInfo.subscription_plan}
               </Badge>
               <span className="text-muted-foreground">
@@ -405,18 +335,13 @@ const TenantSettingsPage: React.FC = () => {
             </div>
           )}
         </div>
-
-        {/* Botão "Salvar Alterações" removido - não tinha funcionalidade */}
       </div>
 
-      {/* Métricas Rápidas */}
-      {/* Premium Storytelling Metrics */}
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
-          {/* Card 1: Security Score Storytelling */}
+          {/* Card 1: Security Score */}
           <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
-            <div className={`absolute top-0 right-0 p-3 opacity-10`}>
+            <div className="absolute top-0 right-0 p-3 opacity-10">
               {metrics.securityScore >= 80 ? <Shield className="h-24 w-24" /> : <AlertTriangle className="h-24 w-24" />}
             </div>
             <CardHeader className="pb-2">
@@ -430,9 +355,7 @@ const TenantSettingsPage: React.FC = () => {
                 <span className="text-sm text-muted-foreground">de proteção</span>
               </div>
               <p className="text-muted-foreground font-medium text-sm leading-relaxed">
-                {metrics.securityScore >= 80
-                  ? 'Sua organização está seguindo as melhores práticas de segurança.'
-                  : `Sugerimos ativar mais recursos (como MFA e Logs) para atingir 100%.`}
+                {metrics.securityScore >= 80 ? 'Sua organização está seguindo as melhores práticas de segurança.' : 'Sugerimos ativar mais recursos (como MFA e Logs) para atingir 100%.'}
               </p>
               <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.securityScore >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
                 {metrics.securityScore >= 80 ? 'Ambiente Protegido' : 'Requer Atenção'}
@@ -440,7 +363,7 @@ const TenantSettingsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Card 2: Users (Reliable Data) */}
+          {/* Card 2: Users */}
           <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
               <Users className="h-24 w-24 text-blue-500" />
@@ -459,7 +382,7 @@ const TenantSettingsPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Card 3: Active Sessions */}
+          {/* Card 3: Active Sessions with Tooltip */}
           <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
               <Activity className="h-24 w-24 text-purple-500" />
@@ -470,119 +393,113 @@ const TenantSettingsPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Sessões Ativas</p>
-                <h3 className="text-3xl font-bold text-foreground">{metrics.activeSessions}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-3xl font-bold text-foreground">{metrics.activeSessions}</h3>
+                  {metrics.activeUsersList.length > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help p-1 hover:bg-muted rounded-full transition-colors">
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-[200px]">
+                          <p className="font-semibold mb-1">Usuários Ativos:</p>
+                          <ul className="text-xs space-y-1 list-disc pl-4">
+                            {metrics.activeUsersList.map((user, i) => (
+                              <li key={i}>{user}</li>
+                            ))}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Dispositivos conectados
+                  Usuários ativos (24h)
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Card 4: Storage Usage */}
+          {/* Card 4: Storage */}
           <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
             <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
               <Database className="h-24 w-24 text-orange-500" />
             </div>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold text-foreground">
-                Armazenamento
-              </CardTitle>
+              <CardTitle className="text-lg font-bold text-foreground">Armazenamento</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-foreground">
-                  {metrics.storageUsed < 1
-                    ? (metrics.storageUsed * 1024).toFixed(2)
-                    : metrics.storageUsed.toFixed(2)}
+                  {metrics.storageUsed < 1 ? (metrics.storageUsed * 1024).toFixed(2) : metrics.storageUsed.toFixed(2)}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {metrics.storageUsed < 1 ? 'MB utilizados' : 'GB utilizados'}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Limite do plano: {metrics.storageLimit} GB
-              </p>
+              <p className="text-sm text-muted-foreground mt-2">Limite do plano: {metrics.storageLimit} GB</p>
               <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
                 <div className="bg-orange-500 h-full rounded-full" style={{ width: `${Math.min((metrics.storageUsed / metrics.storageLimit) * 100, 100)}%` }}></div>
               </div>
             </CardContent>
           </Card>
         </div>
-      )
-      }
+      )}
 
-      {/* Alertas de Segurança */}
-      {
-        metrics && metrics.suspiciousActivities > 0 && (
-          <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
-            <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            <AlertDescription className="text-orange-800 dark:text-orange-200">
-              <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
-              <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
-                Ver detalhes
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )
-      }
+      {metrics && metrics.suspiciousActivities > 0 && (
+        <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
+          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
+            <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
+              Ver detalhes
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
-      {/* Tabs de Configuração */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 bg-muted/50 p-1">
           <TabsTrigger value="overview" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Visão Geral
+            <Eye className="h-3.5 w-3.5 mr-1.5" /> Visão Geral
           </TabsTrigger>
           <TabsTrigger value="users" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Users className="h-3.5 w-3.5 mr-1.5" />
-            Usuários
+            <Users className="h-3.5 w-3.5 mr-1.5" /> Usuários
           </TabsTrigger>
           <TabsTrigger value="groups" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Users className="h-3.5 w-3.5 mr-1.5" />
-            Grupos
+            <Users className="h-3.5 w-3.5 mr-1.5" /> Grupos
           </TabsTrigger>
           <TabsTrigger value="security" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Shield className="h-3.5 w-3.5 mr-1.5" />
-            Segurança
+            <Shield className="h-3.5 w-3.5 mr-1.5" /> Segurança
           </TabsTrigger>
           <TabsTrigger value="risk-matrix" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Activity className="h-3.5 w-3.5 mr-1.5" />
-            Matriz
+            <Activity className="h-3.5 w-3.5 mr-1.5" /> Matriz
           </TabsTrigger>
           <TabsTrigger value="sso" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Key className="h-3.5 w-3.5 mr-1.5" />
-            SSO
+            <Key className="h-3.5 w-3.5 mr-1.5" /> SSO
           </TabsTrigger>
           <TabsTrigger value="data" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Database className="h-3.5 w-3.5 mr-1.5" />
-            Dados
+            <Database className="h-3.5 w-3.5 mr-1.5" /> Dados
           </TabsTrigger>
           <TabsTrigger value="encryption" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Lock className="h-3.5 w-3.5 mr-1.5" />
-            Criptografia
+            <Lock className="h-3.5 w-3.5 mr-1.5" /> Criptografia
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5 mr-1.5" />
-            Logs
+            <FileText className="h-3.5 w-3.5 mr-1.5" /> Logs
           </TabsTrigger>
           <TabsTrigger value="api-tokens" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Key className="h-3.5 w-3.5 mr-1.5" />
-            API
+            <Key className="h-3.5 w-3.5 mr-1.5" /> API
           </TabsTrigger>
           <TabsTrigger value="ai-config" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Zap className="h-3.5 w-3.5 mr-1.5" />
-            IA
+            <Zap className="h-3.5 w-3.5 mr-1.5" /> IA
           </TabsTrigger>
         </TabsList>
 
-        {/* Visão Geral */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Premium Navigation Cards */}
-            <Card
-              className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-blue-500"
-              onClick={() => setActiveTab('users')}
-            >
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-blue-500" onClick={() => setActiveTab('users')}>
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Users className="h-24 w-24 text-blue-500" />
               </div>
@@ -595,24 +512,17 @@ const TenantSettingsPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Adicione novos membros, gerencie permissões baseadas em função e controle convites pendentes.
-                </p>
+                <p className="text-muted-foreground mb-4">Adicione novos membros, gerencie permissões baseadas em função e controle convites pendentes.</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm font-medium text-blue-600 group-hover:translate-x-1 transition-transform">
                     Gerenciar Acessos <ArrowRight className="h-4 w-4 ml-1" />
                   </div>
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">
-                    {metrics?.totalUsers || 0} ativos
-                  </Badge>
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">{metrics?.totalUsers || 0} ativos</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card
-              className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-green-500"
-              onClick={() => setActiveTab('security')}
-            >
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-green-500" onClick={() => setActiveTab('security')}>
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Shield className="h-24 w-24 text-green-500" />
               </div>
@@ -625,24 +535,17 @@ const TenantSettingsPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Configure autenticação Multi-Fator (MFA), políticas de senha e restrições de IP.
-                </p>
+                <p className="text-muted-foreground mb-4">Configure autenticação Multi-Fator (MFA), políticas de senha e restrições de IP.</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm font-medium text-green-600 group-hover:translate-x-1 transition-transform">
                     Ver Configurações <ArrowRight className="h-4 w-4 ml-1" />
                   </div>
-                  <Badge variant="secondary" className="bg-green-50 text-green-700">
-                    Score: {metrics?.securityScore || 0}%
-                  </Badge>
+                  <Badge variant="secondary" className="bg-green-50 text-green-700">Score: {metrics?.securityScore || 0}%</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            <Card
-              className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-purple-500"
-              onClick={() => setActiveTab('data')}
-            >
+            <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-purple-500" onClick={() => setActiveTab('data')}>
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Database className="h-24 w-24 text-purple-500" />
               </div>
@@ -655,22 +558,17 @@ const TenantSettingsPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Gerencie o armazenamento, agende backups automáticos e solicite exportação de dados.
-                </p>
+                <p className="text-muted-foreground mb-4">Gerencie o armazenamento, agende backups automáticos e solicite exportação de dados.</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center text-sm font-medium text-purple-600 group-hover:translate-x-1 transition-transform">
                     Gerenciar Dados <ArrowRight className="h-4 w-4 ml-1" />
                   </div>
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">
-                    {metrics?.storageUsed || 0}GB usado
-                  </Badge>
+                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">{metrics?.storageUsed || 0}GB usado</Badge>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Status da Organização */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -694,9 +592,7 @@ const TenantSettingsPage: React.FC = () => {
                 </div>
                 <div className="text-center p-4 border rounded-lg">
                   <div className="text-2xl font-bold text-orange-600">
-                    {(metrics?.storageUsed || 0) < 1
-                      ? `${((metrics?.storageUsed || 0) * 1024).toFixed(2)}MB`
-                      : `${(metrics?.storageUsed || 0).toFixed(2)}GB`}
+                    {(metrics?.storageUsed || 0) < 1 ? `${((metrics?.storageUsed || 0) * 1024).toFixed(2)}MB` : `${(metrics?.storageUsed || 0).toFixed(2)}GB`}
                   </div>
                   <div className="text-sm text-muted-foreground">Armazenamento Usado</div>
                 </div>
@@ -705,42 +601,30 @@ const TenantSettingsPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Placeholder para outras tabs - COMENTADOS PARA DEBUG */}
-        {/* Gerenciamento de Usuários */}
         <TabsContent value="users">
           <UserManagementSection
-            tenantId={currentTenantId}
+            tenantId={selectedTenantId}
             onMetricsUpdate={(userMetrics) => {
               if (metrics) {
-                setMetrics(prev => prev ? {
-                  ...prev,
-                  totalUsers: userMetrics.totalUsers,
-                  activeUsers: userMetrics.activeUsers
-                } : prev);
+                setMetrics(prev => prev ? { ...prev, totalUsers: userMetrics.totalUsers, activeUsers: userMetrics.activeUsers } : prev);
               }
-
-              // Atualizar também o tenantInfo para manter consistência
               if (tenantInfo) {
-                setTenantInfo(prev => prev ? {
-                  ...prev,
-                  current_users: userMetrics.totalUsers
-                } : prev);
+                setTenantInfo(prev => prev ? { ...prev, current_users: userMetrics.totalUsers } : prev);
               }
             }}
           />
         </TabsContent>
 
-        {/* Gerenciamento de Grupos */}
         <TabsContent value="groups">
-          <GroupManagementSection tenantId={currentTenantId} />
+          <GroupManagementSection tenantId={selectedTenantId} />
         </TabsContent>
 
         <TabsContent value="security">
           <SecurityConfigSection
-            tenantId={currentTenantId}
+            tenantId={selectedTenantId}
             onSettingsChange={() => {
-              if (currentTenantId) {
-                loadTenantInfo(currentTenantId);
+              if (selectedTenantId) {
+                loadTenantInfo(selectedTenantId);
                 toast.success("Segurança atualizada");
               }
             }}
@@ -748,37 +632,33 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="risk-matrix">
-          {/* console.log('🎯 RENDERIZANDO ABA MATRIZ DE RISCO NO TENANT SETTINGS!') */}
           <RiskMatrixConfigSection
-            tenantId={currentTenantId}
+            tenantId={selectedTenantId}
             onSettingsChange={() => {
-              console.log('🎯 Configurações da matriz de risco alteradas');
               setHasUnsavedChanges(true);
             }}
           />
         </TabsContent>
 
-
-
         <TabsContent value="sso">
-          <SsoConfigSection tenantId={currentTenantId} />
+          <SsoConfigSection tenantId={selectedTenantId} />
         </TabsContent>
 
         <TabsContent value="data">
-          <DataManagementSection tenantId={currentTenantId} />
+          <DataManagementSection tenantId={selectedTenantId} />
         </TabsContent>
 
         <TabsContent value="encryption" className="space-y-6">
           <EncryptionConfigSection
-            tenantId={currentTenantId}
+            tenantId={selectedTenantId}
             onSettingsChange={() => {
-              if (currentTenantId) {
+              if (selectedTenantId) {
                 toast.success("Configurações de criptografia atualizadas");
               }
             }}
           />
           <CryptoKeysSection
-            tenantId={currentTenantId}
+            tenantId={selectedTenantId}
             onSettingsChange={() => {
               // Refresh logic if needed
             }}
@@ -786,7 +666,7 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="logs">
-          <ActivityLogsSection tenantId={currentTenantId} />
+          <ActivityLogsSection tenantId={selectedTenantId} />
         </TabsContent>
 
         <TabsContent value="api-tokens">
@@ -794,14 +674,10 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="ai-config">
-          <AISettingsTab tenantId={currentTenantId} />
+          <AISettingsTab tenantId={selectedTenantId} />
         </TabsContent>
-
-        {/* Aba Enhanced Designer removida junto com o módulo Assessment */}
       </Tabs>
-
-      {/* Modal do Enhanced Designer removido junto com o módulo Assessment */}
-    </div >
+    </div>
   );
 };
 
