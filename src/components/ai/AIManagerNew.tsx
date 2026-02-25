@@ -1,1 +1,494 @@
-import React, { useState, useEffect } from 'react';\nimport { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';\nimport { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';\nimport { Badge } from '@/components/ui/badge';\nimport { Button } from '@/components/ui/button';\nimport { supabase } from '@/integrations/supabase/client';\nimport {\n  Brain,\n  Settings,\n  Cpu,\n  MessageSquare,\n  Workflow,\n  BarChart3,\n  Plus,\n  Zap,\n  Database,\n  Lock,\n  Globe,\n  Shield as ShieldIcon\n} from 'lucide-react';\nimport { useAuth} from '@/contexts/AuthContextOptimized';\nimport { Navigate } from 'react-router-dom';\n\ninterface AIProvider {\n  id: string;\n  name: string;\n  provider_type: string;\n  model_name: string;\n  is_active: boolean;\n  is_primary: boolean;\n  total_requests: number;\n  successful_requests: number;\n  failed_requests: number;\n  tokens_used_today: number;\n  cost_usd_today: number;\n}\n\ninterface AIPromptTemplate {\n  id: string;\n  name: string;\n  is_active: boolean;\n  category: string;\n}\n\ninterface AIWorkflow {\n  id: string;\n  name: string;\n  is_active: boolean;\n  status: string;\n}\n\ninterface AIUsageLog {\n  id: string;\n  created_at: string;\n  tokens_input: number;\n  tokens_output: number;\n  cost_usd: number;\n}\n\nconst AIManagerNew: React.FC = () => {\n  console.log('🎆 [AI MANAGER NEW] === COMPONENTE NOVO SENDO CARREGADO ===');\n  console.log('🕰️ [AI MANAGER NEW] Timestamp:', new Date().toISOString());\n  console.log('🗺️ [AI MANAGER NEW] URL atual:', window.location.pathname);\n  console.log('🔍 [AI MANAGER NEW] Componente AIManagerNew iniciando...');\n  \n  const { user } = useAuth();\n  const [activeTab, setActiveTab] = useState('overview');\n  const [providers, setProviders] = useState<AIProvider[]>([]);\n  const [prompts, setPrompts] = useState<AIPromptTemplate[]>([]);\n  const [workflows, setWorkflows] = useState<AIWorkflow[]>([]);\n  const [usageLogs, setUsageLogs] = useState<AIUsageLog[]>([]);\n  const [loading, setLoading] = useState(true);\n\n  // Debug: Log dados do usuário\n  console.log('🤖 [AI MANAGER NEW] Dados do usuário:', {\n    user,\n    isPlatformAdmin: user?.isPlatformAdmin,\n    roles: user?.roles,\n    permissions: user?.permissions,\n    tenantId: user?.tenantId\n  });\n\n  // Verificar se o usuário é platform admin\n  if (!user?.isPlatformAdmin) {\n    console.log('❌ [AI MANAGER NEW] Usuário não é Platform Admin, redirecionando para dashboard');\n    return <Navigate to=\"/dashboard\" replace />;\n  }\n  \n  console.log('✅ [AI MANAGER NEW] Usuário é Platform Admin, carregando componente');\n\n  // Carregar todos os dados da IA\n  const loadAIData = async () => {\n    try {\n      console.log('📊 [AI MANAGER NEW] Iniciando carregamento de dados...');\n      \n      // Carregar provedores\n      const { data: providersData, error: providersError } = await supabase\n        .from('ai_grc_providers')\n        .select('*')\n        .eq('tenant_id', user?.tenantId)\n        .order('priority', { ascending: true });\n\n      if (providersError) {\n        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar provedores:', providersError);\n      } else {\n        console.log('✅ [AI MANAGER NEW] Provedores carregados:', providersData?.length || 0);\n        setProviders(providersData || []);\n      }\n\n      // Carregar prompts (globais e do usuário)\n      const { data: promptsData, error: promptsError } = await supabase\n        .from('ai_grc_prompt_templates')\n        .select('id, name, is_active, category')\n        .order('created_at', { ascending: false });\n\n      if (promptsError) {\n        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar prompts:', promptsError);\n      } else {\n        console.log('✅ [AI MANAGER NEW] Prompts carregados:', promptsData?.length || 0);\n        setPrompts(promptsData || []);\n      }\n\n      // Carregar workflows\n      const { data: workflowsData, error: workflowsError } = await supabase\n        .from('ai_workflows')\n        .select('id, name, is_active, status')\n        .eq('tenant_id', user?.tenantId)\n        .order('created_at', { ascending: false });\n\n      if (workflowsError) {\n        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar workflows:', workflowsError);\n      } else {\n        console.log('✅ [AI MANAGER NEW] Workflows carregados:', workflowsData?.length || 0);\n        setWorkflows(workflowsData || []);\n      }\n\n      // Carregar logs de uso (hoje)\n      const today = new Date().toISOString().split('T')[0];\n      const { data: usageData, error: usageError } = await supabase\n        .from('ai_usage_logs')\n        .select('id, created_at, tokens_input, tokens_output, cost_usd')\n        .eq('tenant_id', user?.tenantId)\n        .gte('created_at', today)\n        .order('created_at', { ascending: false });\n\n      if (usageError) {\n        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar logs de uso:', usageError);\n      } else {\n        console.log('✅ [AI MANAGER NEW] Logs de uso carregados:', usageData?.length || 0);\n        setUsageLogs(usageData || []);\n      }\n\n      console.log('🎉 [AI MANAGER NEW] Carregamento de dados concluído!');\n    } catch (error) {\n      console.error('❌ [AI MANAGER NEW] Erro inesperado ao carregar dados:', error);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  useEffect(() => {\n    if (user?.tenantId) {\n      loadAIData();\n    }\n  }, [user?.tenantId]);\n\n  // Calcular estatísticas reais\n  const activeProviders = providers.filter(p => p.is_active);\n  const activePrompts = prompts.filter(p => p.is_active);\n  const activeWorkflows = workflows.filter(w => w.is_active && w.status === 'active');\n  \n  // Estatísticas de uso\n  const totalRequests = usageLogs.length;\n  const totalTokens = usageLogs.reduce((sum, log) => sum + ((log.tokens_input || 0) + (log.tokens_output || 0)), 0);\n  const totalCost = usageLogs.reduce((sum, log) => sum + (log.cost_usd || 0), 0);\n  \n  const statsCards = [\n    {\n      title: 'Provedores Ativos',\n      value: activeProviders.length.toString(),\n      description: `${providers.length} total | ${activeProviders.length} ativos`,\n      icon: Cpu,\n      color: 'text-blue-500',\n      bgColor: 'bg-blue-50 dark:bg-blue-950'\n    },\n    {\n      title: 'Prompts Personalizados',\n      value: activePrompts.length.toString(),\n      description: `${prompts.length} total | ${activePrompts.length} ativos`,\n      icon: MessageSquare,\n      color: 'text-purple-500',\n      bgColor: 'bg-purple-50 dark:bg-purple-950'\n    },\n    {\n      title: 'Workflows Ativos',\n      value: activeWorkflows.length.toString(),\n      description: `${workflows.length} total | ${activeWorkflows.length} em execução`,\n      icon: Workflow,\n      color: 'text-green-500',\n      bgColor: 'bg-green-50 dark:bg-green-950'\n    },\n    {\n      title: 'Requisições Hoje',\n      value: totalRequests.toString(),\n      description: `${usageLogs.length} logs | Tokens: ${totalTokens.toLocaleString()} | Custo: $${totalCost.toFixed(2)}`,\n      icon: BarChart3,\n      color: 'text-orange-500',\n      bgColor: 'bg-orange-50 dark:bg-orange-950'\n    }\n  ];\n\n  const quickActions = [\n    {\n      title: 'Configurar Novo Provedor',\n      description: 'Adicionar Claude, OpenAI, ou provedor customizado',\n      icon: Plus,\n      action: () => setActiveTab('providers'),\n      color: 'text-blue-500'\n    },\n    {\n      title: 'Criar Template de Prompt',\n      description: 'Criar prompt especializado para módulos GRC',\n      icon: MessageSquare,\n      action: () => setActiveTab('prompts'),\n      color: 'text-purple-500'\n    },\n    {\n      title: 'Configurar Workflow',\n      description: 'Automatizar análises e relatórios com IA',\n      icon: Zap,\n      action: () => setActiveTab('workflows'),\n      color: 'text-green-500'\n    },\n    {\n      title: 'Ver Estatísticas',\n      description: 'Monitorar uso, custos e performance',\n      icon: BarChart3,\n      action: () => setActiveTab('usage'),\n      color: 'text-orange-500'\n    }\n  ];\n\n  return (\n    <div className=\"flex-1 space-y-6 p-6\">\n      {console.log('🎨 [AI MANAGER NEW] Renderizando interface...')}\n      \n      {/* Header */}\n      <div className=\"flex items-center justify-between\">\n        <div className=\"space-y-1\">\n          <div className=\"flex items-center space-x-3\">\n            <div className=\"p-2 bg-primary/10 rounded-lg\">\n              <Brain className=\"h-6 w-6 text-primary\" />\n            </div>\n            <div>\n              <h1 className=\"text-2xl font-semibold text-foreground\">\n                Gestão de IA (Novo)\n              </h1>\n              <p className=\"text-sm text-muted-foreground\">\n                Configuração e gerenciamento de assistentes IA especializados em GRC\n              </p>\n            </div>\n          </div>\n        </div>\n        \n        <div className=\"flex items-center space-x-2\">\n          <Badge variant=\"outline\" className=\"bg-orange-50 text-orange-700 border-orange-200\">\n            <ShieldIcon className=\"h-3 w-3 mr-1\" />\n            Platform Admin\n          </Badge>\n          <Badge variant=\"outline\" className=\"bg-green-50 text-green-700 border-green-200\">\n            <Globe className=\"h-3 w-3 mr-1\" />\n            Sistema Ativo\n          </Badge>\n          <Badge variant=\"outline\" className=\"bg-blue-50 text-blue-700 border-blue-200\">\n            <Lock className=\"h-3 w-3 mr-1\" />\n            Seguro\n          </Badge>\n        </div>\n      </div>\n\n      {/* Tabs */}\n      <Tabs value={activeTab} onValueChange={setActiveTab} className=\"space-y-6\">\n        <TabsList className=\"grid w-full grid-cols-6 lg:w-fit\">\n          <TabsTrigger value=\"overview\" className=\"flex items-center space-x-2\">\n            <BarChart3 className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Visão Geral</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"configuration\" className=\"flex items-center space-x-2\">\n            <Settings className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Configurações</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"providers\" className=\"flex items-center space-x-2\">\n            <Cpu className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Provedores</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"prompts\" className=\"flex items-center space-x-2\">\n            <MessageSquare className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Prompts</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"workflows\" className=\"flex items-center space-x-2\">\n            <Workflow className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Workflows</span>\n          </TabsTrigger>\n          <TabsTrigger value=\"usage\" className=\"flex items-center space-x-2\">\n            <Database className=\"h-4 w-4\" />\n            <span className=\"hidden sm:inline\">Uso</span>\n          </TabsTrigger>\n        </TabsList>\n\n        {/* Overview Tab */}\n        <TabsContent value=\"overview\" className=\"space-y-6\">\n          {console.log('📊 [AI MANAGER NEW] Renderizando tab Overview...')}\n          \n          {/* Stats Cards */}\n          <div className=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6\">\n            {statsCards.map((stat) => (\n              <Card key={stat.title} className=\"grc-card\">\n                <CardContent className=\"p-6\">\n                  <div className=\"flex items-center justify-between\">\n                    <div className=\"space-y-2\">\n                      <p className=\"text-sm font-medium text-muted-foreground\">\n                        {stat.title}\n                      </p>\n                      <p className=\"text-2xl font-bold text-foreground\">\n                        {stat.value}\n                      </p>\n                      <p className=\"text-xs text-muted-foreground\">\n                        {stat.description}\n                      </p>\n                    </div>\n                    <div className={`p-3 rounded-full ${stat.bgColor}`}>\n                      <stat.icon className={`h-6 w-6 ${stat.color}`} />\n                    </div>\n                  </div>\n                </CardContent>\n              </Card>\n            ))}\n          </div>\n\n          {/* Quick Actions */}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle className=\"flex items-center space-x-2\">\n                <Zap className=\"h-5 w-5 text-primary\" />\n                <span>Ações Rápidas</span>\n              </CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"grid grid-cols-1 md:grid-cols-2 gap-4\">\n                {quickActions.map((action) => (\n                  <div\n                    key={action.title}\n                    className=\"flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors\"\n                    onClick={action.action}\n                  >\n                    <div className=\"p-2 bg-muted rounded-lg\">\n                      <action.icon className={`h-5 w-5 ${action.color}`} />\n                    </div>\n                    <div className=\"flex-1\">\n                      <h4 className=\"font-medium text-foreground\">{action.title}</h4>\n                      <p className=\"text-sm text-muted-foreground\">{action.description}</p>\n                    </div>\n                  </div>\n                ))}\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Configuration Tab */}\n        <TabsContent value=\"configuration\">\n          {console.log('⚙️ [AI MANAGER NEW] Renderizando tab Configurações...')}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle>Configurações do Sistema</CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"p-8 text-center\">\n                <Settings className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground\" />\n                <h3 className=\"text-lg font-medium mb-2\">Configurações</h3>\n                <p className=\"text-muted-foreground\">Seção em desenvolvimento</p>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Providers Tab */}\n        <TabsContent value=\"providers\">\n          {console.log('🖥️ [AI MANAGER NEW] Renderizando tab Provedores...')}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle>Provedores de IA</CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"p-8 text-center\">\n                <Cpu className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground\" />\n                <h3 className=\"text-lg font-medium mb-2\">Provedores</h3>\n                <p className=\"text-muted-foreground\">Seção em desenvolvimento</p>\n                <p className=\"text-sm text-muted-foreground mt-2\">\n                  {providers.length} provedores configurados | {activeProviders.length} ativos\n                </p>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Prompts Tab */}\n        <TabsContent value=\"prompts\">\n          {console.log('💬 [AI MANAGER NEW] Renderizando tab Prompts...')}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle>Templates de Prompts</CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"p-8 text-center\">\n                <MessageSquare className=\"h-12 w-12 mx-auto mb-4 text-purple-500\" />\n                <h3 className=\"text-lg font-medium mb-2\">Prompts Personalizados</h3>\n                <p className=\"text-muted-foreground\">Gerencie templates de prompts especializados para GRC</p>\n                <p className=\"text-sm text-muted-foreground mt-2\">\n                  {prompts.length} prompts configurados | {activePrompts.length} ativos\n                </p>\n                <div className=\"mt-6\">\n                  <Button className=\"mr-2\">\n                    <Plus className=\"h-4 w-4 mr-2\" />\n                    Novo Prompt\n                  </Button>\n                  <Button variant=\"outline\">\n                    <MessageSquare className=\"h-4 w-4 mr-2\" />\n                    Importar Templates\n                  </Button>\n                </div>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Workflows Tab */}\n        <TabsContent value=\"workflows\">\n          {console.log('🔄 [AI MANAGER NEW] Renderizando tab Workflows...')}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle>Workflows de Automação</CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"p-8 text-center\">\n                <Workflow className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground\" />\n                <h3 className=\"text-lg font-medium mb-2\">Workflows</h3>\n                <p className=\"text-muted-foreground\">Seção em desenvolvimento</p>\n                <p className=\"text-sm text-muted-foreground mt-2\">\n                  {workflows.length} workflows configurados | {activeWorkflows.length} ativos\n                </p>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n\n        {/* Usage Tab */}\n        <TabsContent value=\"usage\">\n          {console.log('📈 [AI MANAGER NEW] Renderizando tab Uso...')}\n          <Card className=\"grc-card\">\n            <CardHeader>\n              <CardTitle>Estatísticas de Uso</CardTitle>\n            </CardHeader>\n            <CardContent>\n              <div className=\"p-8 text-center\">\n                <Database className=\"h-12 w-12 mx-auto mb-4 text-muted-foreground\" />\n                <h3 className=\"text-lg font-medium mb-2\">Uso e Estatísticas</h3>\n                <p className=\"text-muted-foreground\">Monitoramento de uso e custos</p>\n                <div className=\"grid grid-cols-3 gap-4 mt-6\">\n                  <div className=\"text-center\">\n                    <p className=\"text-2xl font-bold text-foreground\">{totalRequests}</p>\n                    <p className=\"text-sm text-muted-foreground\">Requisições</p>\n                  </div>\n                  <div className=\"text-center\">\n                    <p className=\"text-2xl font-bold text-foreground\">{totalTokens.toLocaleString()}</p>\n                    <p className=\"text-sm text-muted-foreground\">Tokens</p>\n                  </div>\n                  <div className=\"text-center\">\n                    <p className=\"text-2xl font-bold text-foreground\">${totalCost.toFixed(2)}</p>\n                    <p className=\"text-sm text-muted-foreground\">Custo</p>\n                  </div>\n                </div>\n              </div>\n            </CardContent>\n          </Card>\n        </TabsContent>\n      </Tabs>\n      \n      {console.log('✅ [AI MANAGER NEW] Interface renderizada com sucesso!')}\n    </div>\n  );\n};\n\nexport default AIManagerNew;
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Brain,
+  Settings,
+  Cpu,
+  MessageSquare,
+  Workflow,
+  BarChart3,
+  Plus,
+  Zap,
+  Database,
+  Lock,
+  Globe,
+  Shield as ShieldIcon
+} from 'lucide-react';
+import { useAuth} from '@/contexts/AuthContextOptimized';
+import { Navigate } from 'react-router-dom';
+
+interface AIProvider {
+  id: string;
+  name: string;
+  provider_type: string;
+  model_name: string;
+  is_active: boolean;
+  is_primary: boolean;
+  total_requests: number;
+  successful_requests: number;
+  failed_requests: number;
+  tokens_used_today: number;
+  cost_usd_today: number;
+}
+
+interface AIPromptTemplate {
+  id: string;
+  name: string;
+  is_active: boolean;
+  category: string;
+}
+
+interface AIWorkflow {
+  id: string;
+  name: string;
+  is_active: boolean;
+  status: string;
+}
+
+interface AIUsageLog {
+  id: string;
+  created_at: string;
+  tokens_input: number;
+  tokens_output: number;
+  cost_usd: number;
+}
+
+const AIManagerNew: React.FC = () => {
+  console.log('🎆 [AI MANAGER NEW] === COMPONENTE NOVO SENDO CARREGADO ===');
+  console.log('🕰️ [AI MANAGER NEW] Timestamp:', new Date().toISOString());
+  console.log('🗺️ [AI MANAGER NEW] URL atual:', window.location.pathname);
+  console.log('🔍 [AI MANAGER NEW] Componente AIManagerNew iniciando...');
+  
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [providers, setProviders] = useState<AIProvider[]>([]);
+  const [prompts, setPrompts] = useState<AIPromptTemplate[]>([]);
+  const [workflows, setWorkflows] = useState<AIWorkflow[]>([]);
+  const [usageLogs, setUsageLogs] = useState<AIUsageLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Debug: Log dados do usuário
+  console.log('🤖 [AI MANAGER NEW] Dados do usuário:', {
+    user,
+    isPlatformAdmin: user?.isPlatformAdmin,
+    roles: user?.roles,
+    permissions: user?.permissions,
+    tenantId: user?.tenantId
+  });
+
+  // Verificar se o usuário é platform admin
+  if (!user?.isPlatformAdmin) {
+    console.log('❌ [AI MANAGER NEW] Usuário não é Platform Admin, redirecionando para dashboard');
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  console.log('✅ [AI MANAGER NEW] Usuário é Platform Admin, carregando componente');
+
+  // Carregar todos os dados da IA
+  const loadAIData = async () => {
+    try {
+      console.log('📊 [AI MANAGER NEW] Iniciando carregamento de dados...');
+      
+      // Carregar provedores
+      const { data: providersData, error: providersError } = await supabase
+        .from('ai_grc_providers')
+        .select('*')
+        .eq('tenant_id', user?.tenantId)
+        .order('priority', { ascending: true });
+
+      if (providersError) {
+        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar provedores:', providersError);
+      } else {
+        console.log('✅ [AI MANAGER NEW] Provedores carregados:', providersData?.length || 0);
+        setProviders(providersData || []);
+      }
+
+      // Carregar prompts (globais e do usuário)
+      const { data: promptsData, error: promptsError } = await supabase
+        .from('ai_grc_prompt_templates')
+        .select('id, name, is_active, category')
+        .order('created_at', { ascending: false });
+
+      if (promptsError) {
+        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar prompts:', promptsError);
+      } else {
+        console.log('✅ [AI MANAGER NEW] Prompts carregados:', promptsData?.length || 0);
+        setPrompts(promptsData || []);
+      }
+
+      // Carregar workflows
+      const { data: workflowsData, error: workflowsError } = await supabase
+        .from('ai_workflows')
+        .select('id, name, is_active, status')
+        .eq('tenant_id', user?.tenantId)
+        .order('created_at', { ascending: false });
+
+      if (workflowsError) {
+        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar workflows:', workflowsError);
+      } else {
+        console.log('✅ [AI MANAGER NEW] Workflows carregados:', workflowsData?.length || 0);
+        setWorkflows(workflowsData || []);
+      }
+
+      // Carregar logs de uso (hoje)
+      const today = new Date().toISOString().split('T')[0];
+      const { data: usageData, error: usageError } = await supabase
+        .from('ai_usage_logs')
+        .select('id, created_at, tokens_input, tokens_output, cost_usd')
+        .eq('tenant_id', user?.tenantId)
+        .gte('created_at', today)
+        .order('created_at', { ascending: false });
+
+      if (usageError) {
+        console.warn('⚠️ [AI MANAGER NEW] Erro ao carregar logs de uso:', usageError);
+      } else {
+        console.log('✅ [AI MANAGER NEW] Logs de uso carregados:', usageData?.length || 0);
+        setUsageLogs(usageData || []);
+      }
+
+      console.log('🎉 [AI MANAGER NEW] Carregamento de dados concluído!');
+    } catch (error) {
+      console.error('❌ [AI MANAGER NEW] Erro inesperado ao carregar dados:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.tenantId) {
+      loadAIData();
+    }
+  }, [user?.tenantId]);
+
+  // Calcular estatísticas reais
+  const activeProviders = providers.filter(p => p.is_active);
+  const activePrompts = prompts.filter(p => p.is_active);
+  const activeWorkflows = workflows.filter(w => w.is_active && w.status === 'active');
+  
+  // Estatísticas de uso
+  const totalRequests = usageLogs.length;
+  const totalTokens = usageLogs.reduce((sum, log) => sum + ((log.tokens_input || 0) + (log.tokens_output || 0)), 0);
+  const totalCost = usageLogs.reduce((sum, log) => sum + (log.cost_usd || 0), 0);
+  
+  const statsCards = [
+    {
+      title: 'Provedores Ativos',
+      value: activeProviders.length.toString(),
+      description: `${providers.length} total | ${activeProviders.length} ativos`,
+      icon: Cpu,
+      color: 'text-blue-500',
+      bgColor: 'bg-blue-50 dark:bg-blue-950'
+    },
+    {
+      title: 'Prompts Personalizados',
+      value: activePrompts.length.toString(),
+      description: `${prompts.length} total | ${activePrompts.length} ativos`,
+      icon: MessageSquare,
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-950'
+    },
+    {
+      title: 'Workflows Ativos',
+      value: activeWorkflows.length.toString(),
+      description: `${workflows.length} total | ${activeWorkflows.length} em execução`,
+      icon: Workflow,
+      color: 'text-green-500',
+      bgColor: 'bg-green-50 dark:bg-green-950'
+    },
+    {
+      title: 'Requisições Hoje',
+      value: totalRequests.toString(),
+      description: `${usageLogs.length} logs | Tokens: ${totalTokens.toLocaleString()} | Custo: $${totalCost.toFixed(2)}`,
+      icon: BarChart3,
+      color: 'text-orange-500',
+      bgColor: 'bg-orange-50 dark:bg-orange-950'
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: 'Configurar Novo Provedor',
+      description: 'Adicionar Claude, OpenAI, ou provedor customizado',
+      icon: Plus,
+      action: () => setActiveTab('providers'),
+      color: 'text-blue-500'
+    },
+    {
+      title: 'Criar Template de Prompt',
+      description: 'Criar prompt especializado para módulos GRC',
+      icon: MessageSquare,
+      action: () => setActiveTab('prompts'),
+      color: 'text-purple-500'
+    },
+    {
+      title: 'Configurar Workflow',
+      description: 'Automatizar análises e relatórios com IA',
+      icon: Zap,
+      action: () => setActiveTab('workflows'),
+      color: 'text-green-500'
+    },
+    {
+      title: 'Ver Estatísticas',
+      description: 'Monitorar uso, custos e performance',
+      icon: BarChart3,
+      action: () => setActiveTab('usage'),
+      color: 'text-orange-500'
+    }
+  ];
+
+  return (
+    <div className="flex-1 space-y-6 p-6">
+      {console.log('🎨 [AI MANAGER NEW] Renderizando interface...')}
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Brain className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-foreground">
+                Gestão de IA (Novo)
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Configuração e gerenciamento de assistentes IA especializados em GRC
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+            <ShieldIcon className="h-3 w-3 mr-1" />
+            Platform Admin
+          </Badge>
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Globe className="h-3 w-3 mr-1" />
+            Sistema Ativo
+          </Badge>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Lock className="h-3 w-3 mr-1" />
+            Seguro
+          </Badge>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6 lg:w-fit">
+          <TabsTrigger value="overview" className="flex items-center space-x-2">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">Visão Geral</span>
+          </TabsTrigger>
+          <TabsTrigger value="configuration" className="flex items-center space-x-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Configurações</span>
+          </TabsTrigger>
+          <TabsTrigger value="providers" className="flex items-center space-x-2">
+            <Cpu className="h-4 w-4" />
+            <span className="hidden sm:inline">Provedores</span>
+          </TabsTrigger>
+          <TabsTrigger value="prompts" className="flex items-center space-x-2">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">Prompts</span>
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center space-x-2">
+            <Workflow className="h-4 w-4" />
+            <span className="hidden sm:inline">Workflows</span>
+          </TabsTrigger>
+          <TabsTrigger value="usage" className="flex items-center space-x-2">
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Uso</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          {console.log('📊 [AI MANAGER NEW] Renderizando tab Overview...')}
+          
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statsCards.map((stat) => (
+              <Card key={stat.title} className="grc-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {stat.title}
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {stat.value}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {stat.description}
+                      </p>
+                    </div>
+                    <div className={`p-3 rounded-full ${stat.bgColor}`}>
+                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Zap className="h-5 w-5 text-primary" />
+                <span>Ações Rápidas</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {quickActions.map((action) => (
+                  <div
+                    key={action.title}
+                    className="flex items-center space-x-4 p-4 border border-border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={action.action}
+                  >
+                    <div className="p-2 bg-muted rounded-lg">
+                      <action.icon className={`h-5 w-5 ${action.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground">{action.title}</h4>
+                      <p className="text-sm text-muted-foreground">{action.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Configuration Tab */}
+        <TabsContent value="configuration">
+          {console.log('⚙️ [AI MANAGER NEW] Renderizando tab Configurações...')}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle>Configurações do Sistema</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-8 text-center">
+                <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Configurações</h3>
+                <p className="text-muted-foreground">Seção em desenvolvimento</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Providers Tab */}
+        <TabsContent value="providers">
+          {console.log('🖥️ [AI MANAGER NEW] Renderizando tab Provedores...')}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle>Provedores de IA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-8 text-center">
+                <Cpu className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Provedores</h3>
+                <p className="text-muted-foreground">Seção em desenvolvimento</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {providers.length} provedores configurados | {activeProviders.length} ativos
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Prompts Tab */}
+        <TabsContent value="prompts">
+          {console.log('💬 [AI MANAGER NEW] Renderizando tab Prompts...')}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle>Templates de Prompts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-8 text-center">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-purple-500" />
+                <h3 className="text-lg font-medium mb-2">Prompts Personalizados</h3>
+                <p className="text-muted-foreground">Gerencie templates de prompts especializados para GRC</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {prompts.length} prompts configurados | {activePrompts.length} ativos
+                </p>
+                <div className="mt-6">
+                  <Button className="mr-2">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Prompt
+                  </Button>
+                  <Button variant="outline">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Importar Templates
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Workflows Tab */}
+        <TabsContent value="workflows">
+          {console.log('🔄 [AI MANAGER NEW] Renderizando tab Workflows...')}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle>Workflows de Automação</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-8 text-center">
+                <Workflow className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Workflows</h3>
+                <p className="text-muted-foreground">Seção em desenvolvimento</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {workflows.length} workflows configurados | {activeWorkflows.length} ativos
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Usage Tab */}
+        <TabsContent value="usage">
+          {console.log('📈 [AI MANAGER NEW] Renderizando tab Uso...')}
+          <Card className="grc-card">
+            <CardHeader>
+              <CardTitle>Estatísticas de Uso</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-8 text-center">
+                <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-medium mb-2">Uso e Estatísticas</h3>
+                <p className="text-muted-foreground">Monitoramento de uso e custos</p>
+                <div className="grid grid-cols-3 gap-4 mt-6">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-foreground">{totalRequests}</p>
+                    <p className="text-sm text-muted-foreground">Requisições</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-foreground">{totalTokens.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">Tokens</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-foreground">${totalCost.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Custo</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      
+      {console.log('✅ [AI MANAGER NEW] Interface renderizada com sucesso!')}
+    </div>
+  );
+};
+
+export default AIManagerNew;
