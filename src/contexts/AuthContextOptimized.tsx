@@ -714,12 +714,17 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     refreshUser,
     checkModuleAccess,
     needsMFA: (() => {
+      // 1. O Platform Admin obriga a Tenant a usar MFA? (Admin -> Gestão de Tenants)
+      const platformForcedMFA = user?.settings?.security?.mfa_required;
+      // 2. O Admin da própria Tenant obriga o uso de MFA? (Configurações da Empresa -> Segurança)
       const tenantRequiresMFA = user?.settings?.security?.sessionSecurity?.requireMFA;
 
-      // Se a tenant explicitamente desabilitou o MFA, não exija a verificação
-      if (tenantRequiresMFA === false) return false;
+      // Se NENHUM dos dois exige MFA, o MFA não é necessário (mesmo que o usuário tenha um registered).
+      // Regra de negócio: o usuário comum só usa MFA se o ADM da empresa ou o Platform Admin habilitarem.
+      if (!platformForcedMFA && !tenantRequiresMFA) return false;
 
-      if (!user?.mfaEnabled) return false;
+      // Se chegamos aqui, o MFA é exigido por PELO MENOS um dos administradores.
+      // Vamos checar os bypasses válidos (AAL2, Dispositivo Confiável, Sessão Recente).
 
       const currentAal = session?.user?.app_metadata?.aal;
       if (currentAal === 'aal2') return false;
@@ -727,33 +732,40 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       const allowTrusted = user?.settings?.security?.accessControl?.allowTrustedDevices;
       const ipWhitelist = user?.settings?.security?.accessControl?.ipWhitelist;
 
-      // IP Whitelist Check (Client-side simulation)
-      // In a real scenario, this matches the IP from the request. 
-      // We can't easily get the real IP here without an external service, 
-      // but we can check if the list is defined and enforce logic if we had the IP.
       if (ipWhitelist && ipWhitelist.length > 0) {
-        // Placeholder: logic would go here. 
-        // For now, we don't block to avoid locking the user out without a real IP content.
+        // Placeholder IP check
       }
 
+      // Bypass 1: Dispositivo confiável (por 90 dias)
       try {
-        if (allowTrusted && user?.id && localStorage.getItem(`grc_trusted_device_${user.id}`)) {
-          return false;
+        if (allowTrusted && user?.id) {
+          const trustedToken = localStorage.getItem(`grc_trusted_device_${user.id}`);
+          const expiryStr = localStorage.getItem(`grc_trusted_device_${user.id}_expiry`);
+          if (trustedToken && expiryStr) {
+            const expiryDate = new Date(expiryStr);
+            if (expiryDate > new Date()) {
+              return false; // Dispositivo ainda é confiável
+            } else {
+              // Expirou, limpar
+              localStorage.removeItem(`grc_trusted_device_${user.id}`);
+              localStorage.removeItem(`grc_trusted_device_${user.id}_expiry`);
+            }
+          }
         }
       } catch (e) { }
 
-      // Emergency Bypass: Check for recently completed MFA in current session
+      // Bypass 2: MFA já confirmado recentemente nesta sessão (2 minutos)
       try {
         const mfaCompletedAt = sessionStorage.getItem('grc_mfa_completed');
         if (mfaCompletedAt) {
           const timeSince = Date.now() - parseInt(mfaCompletedAt);
-          // If verified within last 2 minutes, let them through
           if (timeSince < 120000) {
             return false;
           }
         }
       } catch (e) { }
 
+      // Se exige MFA e não caiu em nenhum bypass aprovado, então precisa de MFA.
       return true;
     })()
   };

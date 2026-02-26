@@ -42,15 +42,18 @@ import {
   Search,
   UserCheck,
   UserX,
-  MoreHorizontal
+  MoreHorizontal,
+  UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionsInfo } from './PermissionsInfo';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 interface User {
   id: string;
+  user_id: string; // auth.users UUID — necessário para impersonação
   email: string;
   full_name: string;
   role: 'user' | 'admin' | 'tenant_admin';
@@ -95,6 +98,71 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   // Hook de permissões
   const permissions = usePermissions();
+  const { user: currentUser } = useAuth();
+
+  // Verificar se é Super Admin Global diretamente no banco (evita problema de cache de auth)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  useEffect(() => {
+    const checkPlatformAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      const { data } = await supabase
+        .from('platform_admins')
+        .select('user_id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      setIsPlatformAdmin(!!data);
+    };
+    checkPlatformAdmin();
+  }, []);
+
+  // Estado de impersonação
+  const [isImpersonating, setIsImpersonating] = useState<string | null>(null);
+
+  const handleImpersonateUser = async (targetUser: User) => {
+    if (!isPlatformAdmin) {
+      toast.error('Apenas Super Admins podem impersonar usuários');
+      return;
+    }
+    if (!targetUser.user_id || !targetUser.email) {
+      toast.error('Usuário não possui email ou ID de autenticação configurado.');
+      return;
+    }
+
+    try {
+      setIsImpersonating(targetUser.id);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Sessão inválida');
+
+      // Montar redirect URL com params para o banner detectar a sessão
+      const redirectUrl = new URL(window.location.origin);
+      redirectUrl.searchParams.set('impersonated', 'true');
+      redirectUrl.searchParams.set('impersonated_by', currentUser?.email || '');
+      redirectUrl.searchParams.set('impersonated_user', targetUser.email);
+
+      const { data, error } = await supabase.functions.invoke('impersonate-user', {
+        body: {
+          target_user_id: targetUser.user_id,
+          reason: 'Teste via painel Super Admin',
+          redirect_url: redirectUrl.toString()
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Falha ao gerar link de impersonação');
+
+      // Abrir em nova aba
+      window.open(data.impersonation_url, '_blank', 'noopener,noreferrer');
+      toast.success(`🎭 Sessão de impersonação aberta para ${targetUser.email}`);
+    } catch (err: any) {
+      toast.error(`Erro ao impersonar usuário: ${err.message}`);
+    } finally {
+      setIsImpersonating(null);
+    }
+  };
 
   useEffect(() => {
     loadUsers();
@@ -205,6 +273,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
         const processedUser = {
           id: profile.id || `unknown_${index}`,
+          user_id: profile.user_id || '', // auth.users UUID para impersonação
           email: profile.email || '',
           full_name: profile.full_name || 'Usuário sem nome',
           role,
@@ -915,8 +984,28 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             ) : (
-                              // Para usuários ativos/inativos: toggle status + inativar
+                              // Para usuários ativos/inativos: toggle status + botão impersonar
                               <>
+                                {/* 🎭 Botão Assumir - apenas Super Admin Global */}
+                                {isPlatformAdmin && user.email && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleImpersonateUser(user);
+                                    }}
+                                    disabled={isImpersonating === user.id}
+                                    title="Assumir identidade deste usuário para testes (Super Admin)"
+                                    className="text-orange-500 hover:text-orange-600"
+                                  >
+                                    {isImpersonating === user.id ? (
+                                      <span className="text-xs animate-pulse">...</span>
+                                    ) : (
+                                      <UserCog className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"

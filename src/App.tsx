@@ -112,6 +112,7 @@ const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPa
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
 const PlatformAdminMigration = lazy(() => import("@/components/admin/PlatformAdminMigration"));
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 
 // AI Manager - New modular structure
 const AIManagerDashboard = lazy(() => import("@/components/ai/AIManagerDashboard"));
@@ -338,6 +339,7 @@ const App = () => (
                     {/* Protected Routes */}
                     <Route path="/" element={
                       <ProtectedRoute>
+                        <ImpersonationBanner />
                         <AppLayout />
                       </ProtectedRoute>
                     }>

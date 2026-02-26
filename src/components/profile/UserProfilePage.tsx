@@ -318,7 +318,7 @@ export const UserProfilePage: React.FC = () => {
       // 2. Remove unfinished/unverified factors to avoid collision or limit reach
       if (factors && factors.totp) {
         for (const factor of factors.totp) {
-          if (factor.status === 'unverified') {
+          if ((factor.status as string) === 'unverified') {
             await supabase.auth.mfa.unenroll({ factorId: factor.id });
           }
         }
@@ -701,17 +701,27 @@ export const UserProfilePage: React.FC = () => {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="border-border/50">
-                    <CardContent className="p-6 flex items-center gap-4">
-                      <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
-                        <Smartphone className="h-8 w-8" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">MFA</p>
-                        <p className="text-sm font-bold text-foreground">Não Ativado</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Conditionally render MFA card if required by admins */}
+                  {(() => {
+                    const adminRequiresMFA = user?.settings?.security?.mfa_required || user?.settings?.security?.sessionSecurity?.requireMFA;
+                    if (!adminRequiresMFA) return null;
+
+                    return (
+                      <Card className="border-border/50">
+                        <CardContent className="p-6 flex items-center gap-4">
+                          <div className="p-3 rounded-full bg-blue-500/10 text-blue-500">
+                            <Smartphone className="h-8 w-8" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">MFA</p>
+                            <p className="text-sm font-bold text-foreground">
+                              {user?.mfaEnabled ? 'Ativado' : 'Não Ativado'}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -758,19 +768,27 @@ export const UserProfilePage: React.FC = () => {
                     </CardContent>
                   </Card>
 
-                  <MfaSection
-                    user={user}
-                    initMFA={initMFA}
-                    verifyMFA={verifyMFA}
-                    mfaInitiated={mfaInitiated}
-                    showMfaSetup={showMfaSetup}
-                    setShowMfaSetup={setShowMfaSetup}
-                    mfaSecret={mfaSecret}
-                    mfaQr={mfaQr}
-                    mfaCode={mfaCode}
-                    setMfaCode={setMfaCode}
-                    saving={saving}
-                  />
+                  {/* Conditionally render MfaSection component */}
+                  {(() => {
+                    const adminRequiresMFA = user?.settings?.security?.mfa_required || user?.settings?.security?.sessionSecurity?.requireMFA;
+                    if (!adminRequiresMFA) return null;
+
+                    return (
+                      <MfaSection
+                        user={user}
+                        initMFA={initMFA}
+                        verifyMFA={verifyMFA}
+                        mfaInitiated={mfaInitiated}
+                        showMfaSetup={showMfaSetup}
+                        setShowMfaSetup={setShowMfaSetup}
+                        mfaSecret={mfaSecret}
+                        mfaQr={mfaQr}
+                        mfaCode={mfaCode}
+                        setMfaCode={setMfaCode}
+                        saving={saving}
+                      />
+                    );
+                  })()}
                 </div>
 
                 {/* Device Management */}
