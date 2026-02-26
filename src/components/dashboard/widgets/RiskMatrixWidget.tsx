@@ -174,14 +174,14 @@ export const RiskMatrixWidget = () => {
     return (
         <Card className="h-full flex flex-col bg-card border-border shadow-sm overflow-hidden relative group">
             <div className="flex flex-col h-full w-full bg-transparent">
-                <CardHeader className="px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex flex-row items-center justify-between space-y-0">
+                <CardHeader className="px-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex flex-row items-center justify-between space-y-0 h-14">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-primary/10 rounded-md border border-primary/20">
-                            <AlertTriangle className="w-4 h-4 text-primary" />
+                        <div className="p-1 sm:p-1.5 bg-primary/10 rounded-md border border-primary/20">
+                            <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-foreground">Matriz de Riscos</h3>
-                            <p className="text-[10px] text-muted-foreground font-medium">Distribuição de probabilidade e impacto</p>
+                            <h3 className="text-xs sm:text-sm font-bold text-foreground leading-tight">Matriz de Riscos</h3>
+                            <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium hidden sm:block">Distribuição de probabilidade e impacto</p>
                         </div>
                     </div>
                 </CardHeader>
@@ -243,7 +243,7 @@ export const RiskMatrixWidget = () => {
                                                                     <span className={cn(
                                                                         "font-black drop-shadow-sm text-white",
                                                                         // Dynamic sizing based on grid to prevent overflow
-                                                                        gridSize === 5 ? "text-sm sm:text-lg md:text-xl" : "text-base sm:text-xl md:text-2xl",
+                                                                        gridSize === 5 ? "text-[10px] sm:text-lg md:text-xl" : "text-sm sm:text-xl md:text-2xl",
                                                                         cell.count === 0 && "opacity-90 scale-90"
                                                                     )}>
                                                                         {cell.count > 0 ? cell.count : cell.score}
@@ -251,9 +251,9 @@ export const RiskMatrixWidget = () => {
 
                                                                     {/* Compact Label */}
                                                                     <span className={cn(
-                                                                        "uppercase font-bold text-white/90 leading-tight mt-0.5 drop-shadow-sm text-center px-1 break-words w-full",
+                                                                        "uppercase font-bold text-white/90 leading-[1.1] sm:leading-tight mt-0.5 drop-shadow-sm text-center px-0.5 sm:px-1 break-words w-full",
                                                                         // Smaller text for larger grids to fit
-                                                                        gridSize === 5 ? "text-[6px] sm:text-[8px]" : "text-[8px] sm:text-[10px]"
+                                                                        gridSize === 5 ? "text-[5px] sm:text-[8px]" : "text-[8px] sm:text-[10px]"
                                                                     )}>
                                                                         {cell.name}
                                                                     </span>

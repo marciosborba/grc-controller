@@ -275,9 +275,9 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
 
   return (
     <Card className="hover:shadow-lg hover:shadow-primary/20 hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 ease-in-out cursor-pointer group">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <CardHeader className="pb-2 p-3 sm:p-6 sm:pb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+          <div className="flex items-center gap-3 justify-between sm:justify-start">
             <div className="flex items-center gap-2">
               {report.is_anonymous ? (
                 <UserX className="h-4 w-4 text-gray-500" />
@@ -362,18 +362,20 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
       {isExpanded && (
         <CardContent className="pt-2">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="details">Detalhes</TabsTrigger>
-              <TabsTrigger value="investigation">Investigação</TabsTrigger>
-              <TabsTrigger value="evidence">Evidências</TabsTrigger>
-              <TabsTrigger value="actions">Ações</TabsTrigger>
-              <TabsTrigger value="regulatory">Regulatório</TabsTrigger>
-              <TabsTrigger value="resolution">Resolução</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="info">Info</TabsTrigger>
-            </TabsList>
+            <div className="w-full overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
+              <TabsList className="flex w-max min-w-full">
+                <TabsTrigger value="details">Detalhes</TabsTrigger>
+                <TabsTrigger value="investigation">Investigação</TabsTrigger>
+                <TabsTrigger value="evidence">Evidências</TabsTrigger>
+                <TabsTrigger value="actions">Ações</TabsTrigger>
+                <TabsTrigger value="regulatory">Regulatório</TabsTrigger>
+                <TabsTrigger value="resolution">Resolução</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <TabsContent value="details" className="space-y-4">
+            <TabsContent value="details" className="space-y-4 pt-2">
               {/* Classification Results */}
               {classification && (
                 <div className="border border-primary/20 rounded-lg p-4 bg-primary/5">
@@ -385,7 +387,7 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-3">
                     <div className="text-center">
                       <div className="text-xs text-gray-500 mb-1">Compliance</div>
                       <Badge className={`text-xs px-2 py-0.5 ${classification.compliance_impact === 'critical' ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' :

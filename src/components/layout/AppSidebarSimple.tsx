@@ -68,18 +68,18 @@ const navigationItems = [
 ];
 
 export function AppSidebarSimple() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const { user } = useAuth();
 
   const collapsed = state === "collapsed";
   const currentPath = location.pathname;
-  
+
   const isActive = (path: string) => {
     return currentPath === path || currentPath.startsWith(path + '/');
   };
-  
-  const getNavCls = (isActiveItem: boolean) => 
+
+  const getNavCls = (isActiveItem: boolean) =>
     isActiveItem ? "text-primary font-medium bg-muted" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
 
   return (
@@ -107,10 +107,15 @@ export function AppSidebarSimple() {
               {navigationItems.map(item => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`} 
+                    <NavLink
+                      to={item.url}
+                      className={`${getNavCls(isActive(item.url))} flex items-center w-full px-2 sm:px-3 py-4 sm:py-6 rounded-lg transition-all duration-200 group mb-1 sm:mb-2`}
                       title={collapsed ? item.title : ''}
+                      onClick={() => {
+                        if (isMobile) {
+                          setOpenMobile(false);
+                        }
+                      }}
                     >
                       <item.icon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                       {!collapsed && (

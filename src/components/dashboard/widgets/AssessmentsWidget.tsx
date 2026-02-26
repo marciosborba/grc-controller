@@ -33,20 +33,20 @@ export const AssessmentsWidget = () => {
             <CardHeader className="pb-2 pt-6 px-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
-                            <ClipboardList className="h-4 w-4 text-indigo-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
+                            <ClipboardList className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-500" />
                         </div>
-                        <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">Assessments</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-indigo-500 uppercase tracking-widest">Assessments</span>
                     </div>
-                    <div className="bg-indigo-500/10 px-2 py-1 rounded text-[10px] font-bold text-indigo-500 border border-indigo-500/20">
+                    <div className="bg-indigo-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-indigo-500 border border-indigo-500/20">
                         {activeCampaigns} Ativos
                     </div>
                 </div>
 
                 <div className="mt-4">
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-foreground tracking-tighter">{participationRate}%</span>
-                        <span className="text-sm font-medium text-muted-foreground">Taxa de Resposta</span>
+                        <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tighter">{participationRate}%</span>
+                        <span className="text-xs sm:text-sm font-medium text-muted-foreground">Taxa de Resposta</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                         Campanhas de maturidade em andamento.
@@ -54,9 +54,9 @@ export const AssessmentsWidget = () => {
                 </div>
             </CardHeader>
 
-            <CardContent className="px-6 pb-4 relative z-10 flex-1 flex flex-col min-h-0">
-                <div className="flex-1 w-full min-h-0 relative">
-                    <ResponsiveContainer width="100%" height="100%">
+            <CardContent className="px-2 sm:px-4 sm:px-6 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0 relative">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={100}>
                         <RadialBarChart
                             cx="50%"
                             cy="50%"
@@ -78,9 +78,9 @@ export const AssessmentsWidget = () => {
                             />
                         </RadialBarChart>
                     </ResponsiveContainer>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
-                        <span className="text-2xl font-bold text-indigo-500">89</span>
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Respondidos</span>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col mt-4 sm:mt-0">
+                        <span className="text-xl sm:text-2xl font-bold text-indigo-500">89</span>
+                        <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">Respondidos</span>
                     </div>
                 </div>
 

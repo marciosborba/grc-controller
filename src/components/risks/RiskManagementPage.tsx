@@ -312,9 +312,9 @@ const RiskManagementPage = React.memo(() => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Monitore e avalie riscos corporativos</p>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">Gestão de Riscos</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm md:text-base mt-1">Monitore e avalie riscos corporativos</p>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -792,12 +792,12 @@ const RiskManagementPage = React.memo(() => {
       </Card>
 
       {/* Risk Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-              <div className="ml-4">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left space-y-2 sm:space-y-0 sm:space-x-4">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500" />
+              <div>
                 <p className="text-sm font-medium text-muted-foreground">Muito Alto</p>
                 <p className="text-2xl font-bold">
                   {risks.filter(r => r.risk_level === 'Muito Alto').length}
@@ -808,12 +808,12 @@ const RiskManagementPage = React.memo(() => {
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-orange-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Alto</p>
-                <p className="text-2xl font-bold">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left space-y-2 sm:space-y-0 sm:space-x-4">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
+              <div>
+                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Alto</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {risks.filter(r => r.risk_level === 'Alto').length}
                 </p>
               </div>
@@ -822,12 +822,12 @@ const RiskManagementPage = React.memo(() => {
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-blue-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Em Progresso</p>
-                <p className="text-2xl font-bold">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left space-y-2 sm:space-y-0 sm:space-x-4">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              <div>
+                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Em Progresso</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {risks.filter(r => r.status === 'in_progress').length}
                 </p>
               </div>
@@ -836,12 +836,12 @@ const RiskManagementPage = React.memo(() => {
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-gray-500" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{risks.length}</p>
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left space-y-2 sm:space-y-0 sm:space-x-4">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />
+              <div>
+                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Total</p>
+                <p className="text-xl sm:text-2xl font-bold">{risks.length}</p>
               </div>
             </div>
           </CardContent>

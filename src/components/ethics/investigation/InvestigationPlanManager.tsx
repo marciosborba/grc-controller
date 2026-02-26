@@ -110,7 +110,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
         .select('*, ethics_reports(title, protocol_number)');
 
       if (reportId) {
-        query = query.eq('ethics_report_id', reportId);
+        query = query.eq('id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
@@ -137,7 +137,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
       const planData = {
         ...formData,
         ethics_report_id: reportId,
-        tenant_id: user?.tenant_id,
+        tenant_id: user?.tenantId,
         created_by: user?.id,
         updated_at: new Date().toISOString()
       };
@@ -513,24 +513,27 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
         <div className="space-y-4">
           {plans.map((plan) => (
             <Card key={plan.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="p-4 sm:p-6 pb-2">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sm:items-start">
                   <div className="flex items-center gap-3">
-                    {getTypeIcon(plan.investigation_type)}
+                    <div className="hidden sm:block">
+                      {getTypeIcon(plan.investigation_type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        <span className="sm:hidden">{getTypeIcon(plan.investigation_type)}</span>
                         {plan.investigation_type === 'preliminary' ? 'Investigação Preliminar' :
                           plan.investigation_type === 'full' ? 'Investigação Completa' :
                             plan.investigation_type === 'external' ? 'Investigação Externa' :
                               plan.investigation_type === 'legal' ? 'Investigação Legal' :
                                 plan.investigation_type}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         Criado em {format(new Date(plan.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(plan.status)}`}>
                       {plan.status === 'planning' ? 'Planejamento' :
                         plan.status === 'approved' ? 'Aprovado' :
@@ -540,20 +543,20 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                                 plan.status === 'cancelled' ? 'Cancelado' :
                                   plan.status}
                     </Badge>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)} className="h-8 w-8 p-0">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(plan.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(plan.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 p-0">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 bg-muted/30 p-3 rounded-md">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">
+                    <Calendar className="h-4 w-4 text-gray-500 shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">
                       {plan.planned_start_date ?
                         format(new Date(plan.planned_start_date), 'dd/MM/yyyy', { locale: ptBR }) :
                         'Não definida'
@@ -561,39 +564,37 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{plan.estimated_duration_days || 0} dias</span>
+                    <Clock className="h-4 w-4 text-gray-500 shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">{plan.estimated_duration_days || 0} dias</span>
                   </div>
                   {plan.budget_allocated && (
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">R$ {plan.budget_allocated.toLocaleString('pt-BR')}</span>
+                      <DollarSign className="h-4 w-4 text-gray-500 shrink-0" />
+                      <span className="text-xs sm:text-sm truncate">R$ {plan.budget_allocated.toLocaleString('pt-BR')}</span>
                     </div>
                   )}
                 </div>
 
-                <Separator className="my-4" />
-
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Escopo da Investigação:</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <h4 className="font-semibold text-xs sm:text-sm mb-1">Escopo da Investigação:</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {plan.investigation_scope}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Objetivos:</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <h4 className="font-semibold text-xs sm:text-sm mb-1">Objetivos:</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {plan.investigation_objectives}
                     </p>
                   </div>
                   {plan.risk_assessment && (
                     <div>
-                      <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                      <h4 className="font-semibold text-xs sm:text-sm mb-1 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-yellow-600 shrink-0" />
                         Avaliação de Riscos:
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                         {plan.risk_assessment}
                       </p>
                     </div>

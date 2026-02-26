@@ -57,7 +57,7 @@ export const AppHeader = () => {
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border bg-card shadow-sm">
-      <div className="flex h-16 items-center px-6 gap-4">
+      <div className="flex h-14 sm:h-16 items-center px-3 sm:px-6 gap-2 sm:gap-4">
 
         {/* Left Side: Mobile Trigger, Breadcrumbs & Search */}
         <div className="flex items-center gap-4 flex-1">

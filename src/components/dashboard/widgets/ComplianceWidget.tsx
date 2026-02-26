@@ -30,23 +30,23 @@ export const ComplianceWidget = () => {
             {/* Watermark Icon - Subtle Expert Style */}
             <FileCheck className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-6 px-6 relative z-10">
+            <CardHeader className="pb-2 pt-4 sm:pt-6 px-4 sm:px-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                            <FileCheck className="h-4 w-4 text-emerald-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                            <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                         </div>
-                        <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Compliance</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-emerald-500 uppercase tracking-widest">Compliance</span>
                     </div>
-                    <div className="bg-emerald-500/10 px-2 py-1 rounded text-[10px] font-bold text-emerald-500 border border-emerald-500/20">
+                    <div className="bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-emerald-500 border border-emerald-500/20">
                         NIST CSF 2.0
                     </div>
                 </div>
 
-                <div className="mt-4">
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-foreground tracking-tighter">{maturity}%</span>
-                        <span className="text-sm font-medium text-muted-foreground">Maturidade Global</span>
+                <div className="mt-2 sm:mt-4">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tighter">{maturity}%</span>
+                        <span className="text-xs sm:text-sm font-medium text-muted-foreground shrink-0">Maturidade Global</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1" title="Gap de conformidade identificado em: Aspectos Legais">
                         Gap identificado: <span className="text-orange-500 font-bold">Aspectos Legais</span>
@@ -54,10 +54,10 @@ export const ComplianceWidget = () => {
                 </div>
             </CardHeader>
 
-            <CardContent className="px-1 pb-4 relative z-10 flex-1 flex flex-col min-h-0">
-                <div className="flex-1 w-full min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="65%" data={domainData}>
+            <CardContent className="px-1 sm:px-2 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+                        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={domainData}>
                             <PolarGrid stroke="hsl(var(--border))" />
                             <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 'bold' }} />
                             <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
@@ -78,7 +78,7 @@ export const ComplianceWidget = () => {
                 </div>
 
                 {/* Expert Insight Footer */}
-                <div className="mx-6 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
+                <div className="mx-4 sm:mx-6 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground group-hover:text-foreground transition-colors shrink-0">
                     <span>Ver análise de gaps detalhada</span>
                     <ChevronRight className="h-3 w-3" />
                 </div>

@@ -714,6 +714,11 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     refreshUser,
     checkModuleAccess,
     needsMFA: (() => {
+      const tenantRequiresMFA = user?.settings?.security?.sessionSecurity?.requireMFA;
+
+      // Se a tenant explicitamente desabilitou o MFA, não exija a verificação
+      if (tenantRequiresMFA === false) return false;
+
       if (!user?.mfaEnabled) return false;
 
       const currentAal = session?.user?.app_metadata?.aal;

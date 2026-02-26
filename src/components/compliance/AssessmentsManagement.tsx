@@ -745,104 +745,111 @@ const AssessmentsManagement: React.FC = () => {
       </div>
 
       {/* Lista de Avaliações */}
-      <div className="grid gap-4">
+      <div className="grid gap-2 sm:gap-4">
         {filteredAssessments.map((assessment) => {
           const daysToPlanned = calculateDaysToPlanned(assessment.data_planejada);
           const conformityPercentage = assessment.score_conformidade || 0;
 
           return (
             <Card key={assessment.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CardTitle className="text-lg">{assessment.codigo}</CardTitle>
-                      <Badge className={getStatusColor(assessment.status || '')}>
+              <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-2">
+                      <CardTitle className="text-sm sm:text-lg">{assessment.codigo}</CardTitle>
+                      <Badge className={`text-[10px] sm:text-xs px-1.5 py-0 ${getStatusColor(assessment.status || '')}`}>
                         <div className="flex items-center gap-1">
                           {getStatusIcon(assessment.status || '')}
-                          {assessment.status?.replace('_', ' ').toUpperCase()}
+                          <span className="hidden sm:inline">{assessment.status?.replace('_', ' ').toUpperCase()}</span>
                         </div>
                       </Badge>
-                      <Badge className={getTypeColor(assessment.tipo_avaliacao || '')} variant="outline">
+                      <Badge className={`text-[10px] sm:text-xs px-1.5 py-0 hidden sm:inline-flex ${getTypeColor(assessment.tipo_avaliacao || '')}`} variant="outline">
                         {assessment.tipo_avaliacao?.replace('_', ' ').toUpperCase()}
                       </Badge>
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">{assessment.titulo}</h3>
-                    <CardDescription className="text-sm">
+                    <h3 className="font-semibold text-sm sm:text-lg mb-1 sm:mb-2 truncate">{assessment.titulo}</h3>
+                    <CardDescription className="text-xs sm:text-sm line-clamp-2">
                       {assessment.framework_nome} - {assessment.requisito_titulo}
                     </CardDescription>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-row sm:flex-col gap-1.5 sm:gap-2 shrink-0">
                     {assessment.status === 'planejada' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 text-xs px-2 sm:px-3"
                         onClick={() => handleStartAssessment(assessment.id)}
                       >
-                        <PlayCircle className="h-4 w-4 mr-2" />
-                        Iniciar
+                        <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Iniciar</span>
                       </Button>
                     )}
                     {assessment.status === 'em_andamento' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 text-xs px-2 sm:px-3"
                         onClick={() => handleCompleteAssessment(assessment.id)}
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Concluir
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Concluir</span>
                       </Button>
                     )}
                     {assessment.status === 'concluida' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-8 text-xs px-2 sm:px-3"
                         onClick={() => handleReopenAssessment(assessment.id)}
                       >
-                        <Activity className="h-4 w-4 mr-2" />
-                        Reabrir
+                        <Activity className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Reabrir</span>
                       </Button>
                     )}
                     <Button
                       variant="default"
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-purple-600 hover:bg-purple-700 h-8 text-xs px-2 sm:px-3"
                       onClick={() => handleExecuteClick(assessment)}
                     >
-                      <CheckSquare className="h-4 w-4 mr-2" />
-                      Auditar
+                      <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Auditar</span><span className="sm:hidden ml-1">Auditar</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8 w-8 sm:w-auto px-0 sm:px-3"
                       onClick={() => setSelectedAssessment(assessment)}
+                      title="Visualizar"
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Visualizar
+                      <Eye className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Visualizar</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8 w-8 sm:w-auto px-0 sm:px-3"
                       onClick={() => handleEditClick(assessment)}
+                      title="Editar"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
+                      <Edit className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Editar</span>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avaliador</p>
-                    <p className="text-sm">{assessment.avaliador_nome}</p>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Avaliador</p>
+                    <p className="text-xs sm:text-sm truncate mt-0.5" title={assessment.avaliador_nome}>{assessment.avaliador_nome || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data Planejada</p>
-                    <p className={`text-sm ${daysToPlanned < 0 ? 'text-red-600' : daysToPlanned < 7 ? 'text-orange-600' : ''}`}>
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Data Planejada</p>
+                    <p className={`text-xs sm:text-sm mt-0.5 ${daysToPlanned < 0 ? 'text-red-600' : daysToPlanned < 7 ? 'text-orange-600' : ''}`}>
                       {format(new Date(assessment.data_planejada), 'dd/MM/yyyy')}
                       {daysToPlanned !== null && (
-                        <span className="block text-xs">
+                        <span className="block text-[9px] sm:text-xs text-muted-foreground mt-0.5">
                           {daysToPlanned < 0 ? `${Math.abs(daysToPlanned)} dias atrasado` :
                             daysToPlanned === 0 ? 'Hoje' :
                               `Em ${daysToPlanned} dias`}
@@ -850,16 +857,16 @@ const AssessmentsManagement: React.FC = () => {
                       )}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Metodologia</p>
-                    <p className="text-sm capitalize">{assessment.metodologia?.replace('_', ' ')}</p>
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Metodologia</p>
+                    <p className="text-xs sm:text-sm capitalize mt-0.5">{assessment.metodologia?.replace('_', ' ')}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Amostra</p>
-                    <p className="text-sm">
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Amostra</p>
+                    <p className="text-xs sm:text-sm mt-0.5">
                       {assessment.amostra_testada}/{assessment.populacao_total}
                       {assessment.populacao_total && (
-                        <span className="text-xs text-muted-foreground ml-1">
+                        <span className="text-[9px] sm:text-xs text-muted-foreground ml-1">
                           ({((assessment.amostra_testada || 0) / assessment.populacao_total * 100).toFixed(1)}%)
                         </span>
                       )}

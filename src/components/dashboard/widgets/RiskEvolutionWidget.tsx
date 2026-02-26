@@ -139,8 +139,8 @@ export const RiskEvolutionWidget = () => {
                     cy={cy}
                     startAngle={startAngle}
                     endAngle={endAngle}
-                    innerRadius={innerRadius - 8}
-                    outerRadius={innerRadius - 4}
+                    innerRadius={innerRadius - 4}
+                    outerRadius={innerRadius - 2}
                     fill={fill}
                     fillOpacity={0.4}
                 />
@@ -176,7 +176,7 @@ export const RiskEvolutionWidget = () => {
                 {/* Re-implementing the 'RiskEvolutionContent' structure directly here */}
                 <div className="flex flex-col h-full w-full bg-transparent">
                     {/* Premium Header */}
-                    <div className="px-6 py-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex justify-between items-center">
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-white/5 backdrop-blur-sm flex justify-between items-center">
                         <div>
                             <h4 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Activity className="h-4 w-4 text-primary animate-pulse" />
@@ -192,7 +192,7 @@ export const RiskEvolutionWidget = () => {
                     <div className="flex-1 p-0 flex flex-col min-h-0">
 
                         {/* TOP: EVOLUTION AREA CHART (50%) */}
-                        <div className="flex-1 p-4 lg:p-5 border-b border-white/5 relative group flex flex-col min-h-0">
+                        <div className="flex-1 p-3 sm:p-4 lg:p-5 border-b border-white/5 relative group flex flex-col min-h-[220px] sm:min-h-[200px]">
                             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
                             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2 relative z-10 shrink-0">
@@ -200,7 +200,7 @@ export const RiskEvolutionWidget = () => {
                             </h4>
                             <div className="flex-1 w-full relative z-10 min-h-0">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <AreaChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                                         <defs>
                                             {riskLevels.map((level) => (
                                                 <linearGradient key={`grad-${level.id}`} id={`color-${level.id.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
@@ -248,8 +248,8 @@ export const RiskEvolutionWidget = () => {
                         </div>
 
                         {/* BOTTOM: TREATMENT STATUS DONUT (50%) */}
-                        <div className="flex-1 p-0 flex flex-col min-h-0 border-l border-border/5 dark:border-white/5 dark:bg-gradient-to-t dark:from-black/20 to-transparent">
-                            <div className="p-5 pb-0 flex items-center justify-between">
+                        <div className="flex-1 p-0 flex flex-col min-h-[200px] sm:min-h-0 border-l border-border/5 dark:border-white/5 dark:bg-gradient-to-t dark:from-black/20 to-transparent">
+                            <div className="p-3 sm:p-5 pb-0 flex items-center justify-between">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0">
                                     <PieChartIcon className="w-3 h-3 text-blue-500" /> Status de Resposta
                                 </h4>
@@ -264,8 +264,8 @@ export const RiskEvolutionWidget = () => {
                                             data={treatmentData}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={90}
+                                            innerRadius={50}
+                                            outerRadius={75}
                                             paddingAngle={2}
                                             dataKey="value"
                                             onMouseEnter={(_, index) => setActiveIndex(index)}
@@ -305,17 +305,17 @@ export const RiskEvolutionWidget = () => {
 
                             {/* Bottom Stats Row */}
                             <div className="grid grid-cols-2 divide-x divide-border/10 border-t border-border/10 bg-muted/20 backdrop-blur-sm">
-                                <div className="p-4 flex flex-col items-center justify-center text-center gap-1">
+                                <div className="p-2 sm:p-4 flex flex-col items-center justify-center text-center gap-1">
                                     <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Total Riscos</span>
-                                    <div className="text-2xl font-black text-foreground flex items-center gap-2">
+                                    <div className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2">
                                         142
                                         <AlertCircle className="w-3 h-3 text-slate-500" />
                                     </div>
                                 </div>
-                                <div className="p-4 flex flex-col items-center justify-center text-center gap-1">
+                                <div className="p-2 sm:p-4 flex flex-col items-center justify-center text-center gap-1">
                                     <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Eficácia</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl font-black text-emerald-500">78%</span>
+                                        <span className="text-xl sm:text-2xl font-black text-emerald-500">78%</span>
                                         <div className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center border border-emerald-500/20">
                                             <ArrowUpRight className="w-2 h-2 mr-0.5" /> 12%
                                         </div>

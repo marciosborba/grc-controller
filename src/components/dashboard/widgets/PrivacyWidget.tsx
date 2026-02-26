@@ -25,32 +25,32 @@ export const PrivacyWidget = () => {
             {/* Watermark Icon */}
             <Fingerprint className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-6 px-6 relative z-10">
+            <CardHeader className="pb-2 pt-4 sm:pt-6 px-4 sm:px-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-purple-500/10 border border-purple-500/20">
-                            <Eye className="h-4 w-4 text-purple-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-purple-500/10 border border-purple-500/20">
+                            <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
                         </div>
-                        <span className="text-xs font-bold text-purple-500 uppercase tracking-widest">Privacidade & LGPD</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-purple-500 uppercase tracking-widest">Privacidade & LGPD</span>
                     </div>
-                    <div className={`flex items-center gap-1 bg-purple-500/10 px-2 py-1 rounded text-[10px] font-bold text-purple-500 border border-purple-500/20`}>
-                        <Clock className="h-3 w-3" />
+                    <div className={`flex items-center gap-1 bg-purple-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-purple-500 border border-purple-500/20`}>
+                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         <span>SLA: {slaCompliance}%</span>
                     </div>
                 </div>
 
                 <div className="mt-4 flex items-end gap-3">
                     <div>
-                        <span className="text-4xl font-bold text-foreground tracking-tighter">{totalRequests}</span>
+                        <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tighter">{totalRequests}</span>
                         <p className="text-xs text-muted-foreground mt-1 font-semibold uppercase">Solicitações (DSAR)</p>
                     </div>
                 </div>
             </CardHeader>
 
-            <CardContent className="px-6 pb-4 relative z-10 flex-1 min-h-[160px] flex flex-col justify-end">
+            <CardContent className="px-2 sm:px-4 sm:px-6 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
 
-                <div className="h-[120px] w-full mt-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0 -ml-2">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={100}>
                         <BarChart data={dsarData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }} barCategoryGap={2}>
                             <XAxis type="number" hide />
                             <YAxis dataKey="status" type="category" width={60} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />

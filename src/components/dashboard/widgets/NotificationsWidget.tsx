@@ -23,34 +23,34 @@ export const NotificationsWidget = () => {
             {/* Watermark Icon */}
             <Bell className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-6 px-6 relative z-10">
+            <CardHeader className="pb-2 pt-4 sm:pt-6 px-4 sm:px-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20">
-                            <Bell className="h-4 w-4 text-amber-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20">
+                            <Bell className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500" />
                         </div>
-                        <span className="text-xs font-bold text-amber-500 uppercase tracking-widest">Notificações</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-amber-500 uppercase tracking-widest">Notificações</span>
                     </div>
-                    <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-1 rounded text-[10px] font-bold text-amber-500 border border-amber-500/20 animate-pulse">
-                        <AlertCircle className="h-3 w-3" />
+                    <div className="flex items-center gap-1 bg-amber-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-amber-500 border border-amber-500/20 animate-pulse">
+                        <AlertCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         <span>{pendingAlerts} Pendentes</span>
                     </div>
                 </div>
 
-                <div className="mt-4">
-                    <h3 className="text-xl font-bold text-foreground tracking-tight">Feed de Alertas</h3>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                <div className="mt-2 sm:mt-4">
+                    <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground tracking-tight">Feed de Alertas</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1">
                         Atenção necessária para itens críticos.
                     </p>
                 </div>
             </CardHeader>
 
-            <CardContent className="px-6 pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+            <CardContent className="px-2 sm:px-4 sm:px-6 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
                 <div className="flex-1 w-full min-h-0 mt-2 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
                     {alerts.map((alert) => (
                         <div key={alert.id} className="flex items-start gap-3 p-2 rounded-lg bg-background/50 border border-border/50 hover:bg-background transition-colors cursor-pointer group/item">
                             <div className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${alert.type === 'critical' ? 'bg-red-500' :
-                                    alert.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                                alert.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
                                 }`} />
                             <div className="flex-1 min-w-0">
                                 <p className="text-xs font-medium text-foreground line-clamp-2 leading-tight group-hover/item:text-primary transition-colors">

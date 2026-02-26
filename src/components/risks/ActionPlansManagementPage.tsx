@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { 
+import {
   ArrowLeft,
   Search,
   Filter,
@@ -38,7 +38,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
 
 interface ActionPlan {
@@ -81,7 +81,7 @@ const PRIORITY_COLORS = {
 
 const PRIORITY_ICONS = {
   low: '🟢',
-  medium: '🟡', 
+  medium: '🟡',
   high: '🟠',
   critical: '🔴'
 };
@@ -95,7 +95,7 @@ const STATUS_COLORS = {
 
 const RISK_LEVEL_COLORS = {
   'Muito Baixo': 'bg-green-100 text-green-800',
-  'Baixo': 'bg-green-100 text-green-800', 
+  'Baixo': 'bg-green-100 text-green-800',
   'Médio': 'bg-yellow-100 text-yellow-800',
   'Alto': 'bg-orange-100 text-orange-800',
   'Muito Alto': 'bg-red-100 text-red-800',
@@ -126,7 +126,7 @@ export const ActionPlansManagementPage: React.FC = () => {
 
   const loadActionPlans = async () => {
     if (!userTenantId) return;
-    
+
     setIsLoading(true);
     try {
       // Buscar dados dos registros de risco e seus planos de ação
@@ -155,7 +155,7 @@ export const ActionPlansManagementPage: React.FC = () => {
 
       // Buscar atividades para cada risco
       const actionPlansData: ActionPlan[] = [];
-      
+
       for (const risk of riskData) {
         const { data: activities, error: activitiesError } = await supabase
           .from('risk_registration_action_plans')
@@ -173,7 +173,7 @@ export const ActionPlansManagementPage: React.FC = () => {
           const dueDate = new Date(activity.due_date);
           const timeDiff = dueDate.getTime() - now.getTime();
           const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-          
+
           return {
             id: activity.id,
             activity_name: activity.activity_name,
@@ -249,11 +249,11 @@ export const ActionPlansManagementPage: React.FC = () => {
   };
 
   const filteredActionPlans = actionPlans.filter(plan => {
-    const matchesSearch = 
+    const matchesSearch =
       plan.risk_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       plan.risk_category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       plan.responsible_persons.some(person => person.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      plan.activities.some(activity => 
+      plan.activities.some(activity =>
         activity.activity_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         activity.responsible_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -310,8 +310,8 @@ export const ActionPlansManagementPage: React.FC = () => {
         totalActivities: filteredActionPlans.reduce((sum, plan) => sum + plan.total_activities, 0),
         completedActivities: filteredActionPlans.reduce((sum, plan) => sum + plan.completed_activities, 0),
         overdueActivities: filteredActionPlans.reduce((sum, plan) => sum + plan.overdue_activities, 0),
-        averageProgress: filteredActionPlans.length > 0 
-          ? filteredActionPlans.reduce((sum, plan) => sum + calculateProgress(plan), 0) / filteredActionPlans.length 
+        averageProgress: filteredActionPlans.length > 0
+          ? filteredActionPlans.reduce((sum, plan) => sum + calculateProgress(plan), 0) / filteredActionPlans.length
           : 0
       },
       actionPlans: filteredActionPlans
@@ -355,28 +355,28 @@ export const ActionPlansManagementPage: React.FC = () => {
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/risks')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+        <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/risks')} className="shrink-0">
+            <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Voltar</span>
           </Button>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600">
-                <Target className="h-6 w-6 text-white" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 shrink-0">
+                <Target className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
                   Gestão de Planos de Ação
                 </h1>
-                <p className="text-muted-foreground text-sm lg:text-base">
+                <p className="text-muted-foreground text-[10px] sm:text-xs lg:text-base hidden sm:block truncate">
                   Acompanhamento centralizado de todas as atividades de tratamento de riscos
                 </p>
               </div>
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={generateReport} size="sm">
             <Download className="h-4 w-4 mr-2" />
@@ -390,50 +390,50 @@ export const ActionPlansManagementPage: React.FC = () => {
       </div>
 
       {/* Métricas Gerais */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Planos</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium">Total de Planos</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{actionPlans.length}</div>
-            <p className="text-xs text-muted-foreground">planos ativos</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{actionPlans.length}</div>
+            <p className="text-[9px] sm:text-xs text-muted-foreground">planos ativos</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atividades Vencidas</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium">Atividades Vencidas</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalOverdueActivities > 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className={`text-xl sm:text-2xl font-bold ${totalOverdueActivities > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {totalOverdueActivities}
             </div>
-            <p className="text-xs text-muted-foreground">requerem atenção</p>
+            <p className="text-[9px] sm:text-xs text-muted-foreground">requerem atenção</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Progresso Geral</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium">Progresso Geral</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{globalProgress}%</div>
-            <Progress value={globalProgress} className="mt-2" />
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{globalProgress}%</div>
+            <Progress value={globalProgress} className="mt-1 sm:mt-2 h-1.5 sm:h-2" />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Atividades</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6">
+            <CardTitle className="text-[10px] sm:text-sm font-medium">Total Atividades</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalActivities}</div>
-            <p className="text-xs text-muted-foreground">{totalCompleted} concluídas</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{totalActivities}</div>
+            <p className="text-[9px] sm:text-xs text-muted-foreground">{totalCompleted} concluídas</p>
           </CardContent>
         </Card>
       </div>
@@ -539,7 +539,7 @@ export const ActionPlansManagementPage: React.FC = () => {
             const isExpanded = expandedCards.has(plan.id);
             const progress = calculateProgress(plan);
             const progressColor = getProgressColor(progress, plan.overdue_activities > 0);
-            
+
             return (
               <Card key={plan.id} className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
                 <CardHeader className="pb-4">
@@ -560,30 +560,30 @@ export const ActionPlansManagementPage: React.FC = () => {
                           </Badge>
                         )}
                       </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-                        <div className="flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-muted-foreground" />
-                          <span>{plan.total_activities} atividades</span>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-[10px] sm:text-sm mb-2 sm:mb-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                          <span>{plan.total_activities} ativ.</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                          <span>{plan.completed_activities} concluídas</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 shrink-0" />
+                          <span>{plan.completed_activities} concl.</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{plan.responsible_persons.length} responsáveis</span>
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                          <span>{plan.responsible_persons.length} resp.</span>
                         </div>
                         {plan.next_deadline && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-xs">
+                          <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="truncate">
                               Próximo: {new Date(plan.next_deadline).toLocaleDateString('pt-BR')}
                             </span>
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span>Progresso Geral</span>
@@ -592,13 +592,13 @@ export const ActionPlansManagementPage: React.FC = () => {
                         <Progress value={progress} className="h-2" />
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/risks?highlight=${plan.risk_id}`)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost" 
+                        variant="ghost"
                         size="sm"
                         onClick={() => toggleCardExpanded(plan.id)}
                       >
@@ -620,7 +620,7 @@ export const ActionPlansManagementPage: React.FC = () => {
                           <Zap className="h-4 w-4 text-blue-500" />
                           Atividades ({plan.activities.length})
                         </h4>
-                        
+
                         {plan.activities.length === 0 ? (
                           <div className="text-center py-6 text-muted-foreground">
                             <FileText className="mx-auto h-8 w-8 mb-2" />
@@ -630,32 +630,31 @@ export const ActionPlansManagementPage: React.FC = () => {
                           <div className="grid gap-3">
                             {plan.activities.map(activity => {
                               const dueInfo = formatDaysUntilDue(activity.days_until_due);
-                              
+
                               return (
-                                <Card key={activity.id} className={`border-l-4 ${
-                                  activity.is_overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' :
+                                <Card key={activity.id} className={`border-l-4 ${activity.is_overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' :
                                   activity.status === 'completed' ? 'border-l-green-500 bg-green-50 dark:bg-green-950/20' :
-                                  'border-l-blue-500'
-                                }`}>
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start justify-between gap-4">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <h5 className="font-medium truncate">{activity.activity_name}</h5>
-                                          <Badge className={`text-xs border ${PRIORITY_COLORS[activity.priority]}`}>
-                                            {PRIORITY_ICONS[activity.priority]} {activity.priority}
+                                    'border-l-blue-500'
+                                  }`}>
+                                  <CardContent className="p-3 sm:p-4">
+                                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
+                                      <div className="flex-1 min-w-0 w-full">
+                                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+                                          <h5 className="font-medium text-xs sm:text-sm truncate mr-2">{activity.activity_name}</h5>
+                                          <Badge className={`text-[9px] sm:text-xs border px-1.5 py-0 ${PRIORITY_COLORS[activity.priority]}`}>
+                                            {PRIORITY_ICONS[activity.priority]} <span className="hidden sm:inline ml-1">{activity.priority}</span>
                                           </Badge>
-                                          <Badge className={STATUS_COLORS[activity.status]}>
+                                          <Badge className={`text-[9px] sm:text-xs px-1.5 py-0 ${STATUS_COLORS[activity.status]}`}>
                                             {activity.status}
                                           </Badge>
                                         </div>
-                                        
+
                                         {activity.activity_description && (
                                           <p className="text-sm text-muted-foreground mb-3">
                                             {activity.activity_description}
                                           </p>
                                         )}
-                                        
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                                           <div className="flex items-center gap-2">
                                             <Avatar className="h-6 w-6">
@@ -668,7 +667,7 @@ export const ActionPlansManagementPage: React.FC = () => {
                                               <div className="text-xs text-muted-foreground">{activity.responsible_email}</div>
                                             </div>
                                           </div>
-                                          
+
                                           <div className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4 text-muted-foreground" />
                                             <div>
@@ -680,7 +679,7 @@ export const ActionPlansManagementPage: React.FC = () => {
                                               </div>
                                             </div>
                                           </div>
-                                          
+
                                           {activity.evidence_description && (
                                             <div className="flex items-center gap-2">
                                               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -691,7 +690,7 @@ export const ActionPlansManagementPage: React.FC = () => {
                                           )}
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-1">
                                         {activity.is_overdue && (
                                           <AlertTriangle className="h-4 w-4 text-red-500" />
@@ -707,7 +706,7 @@ export const ActionPlansManagementPage: React.FC = () => {
                             })}
                           </div>
                         )}
-                        
+
                         {plan.responsible_persons.length > 0 && (
                           <div className="pt-4 border-t">
                             <h5 className="text-sm font-medium mb-2">Responsáveis Envolvidos:</h5>

@@ -41,7 +41,8 @@ import {
   Bell,
   Mail,
   Phone,
-  BookOpen
+  BookOpen,
+  EyeOff
 } from 'lucide-react';
 import { format, isAfter, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,6 +57,7 @@ import {
   EthicsReportStatus,
   EthicsReportSeverity,
   EthicsReportPriority,
+  EthicsReport,
   ETHICS_STATUS_LABELS,
   ETHICS_SEVERITY_LABELS,
   ETHICS_PRIORITY_LABELS,
@@ -420,7 +422,7 @@ const EthicsManagementDashboard: React.FC = () => {
     }
   };
 
-  const handleReportUpdate = async (report: EthicsReportWithDetails, newData: any) => {
+  const handleReportUpdate = async (report: EthicsReportWithDetails, newData: Record<string, unknown>) => {
     try {
       const { error } = await supabase
         .from('ethics_reports')
@@ -451,7 +453,7 @@ const EthicsManagementDashboard: React.FC = () => {
       setSelectedReport(null);
       loadDashboardData();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao atualizar caso:', error);
       toast.error('Erro ao atualizar caso');
     }
@@ -514,14 +516,14 @@ const EthicsManagementDashboard: React.FC = () => {
     };
 
     // Função para adicionar caixa colorida
-    const addColorBox = (color: number[], height = 5) => {
+    const addColorBox = (color: [number, number, number], height = 5) => {
       doc.setFillColor(...color);
       doc.rect(margin, yPosition, contentWidth, height, 'F');
       yPosition += height + 5;
     };
 
     // Função para adicionar texto compacto e otimizado
-    const addText = (text: string, fontSize = 9, isBold = false, color = [0, 0, 0], indent = 0) => {
+    const addText = (text: string, fontSize = 9, isBold = false, color: [number, number, number] = [0, 0, 0], indent = 0) => {
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
       if (isBold) {
@@ -538,7 +540,7 @@ const EthicsManagementDashboard: React.FC = () => {
     };
 
     // Função para adicionar título compacto
-    const addTitle = (text: string, color = primaryColor) => {
+    const addTitle = (text: string, color: [number, number, number] = primaryColor) => {
       addPageIfNeeded(20);
       yPosition += 4; // Menos espaço antes
       addColorBox(color, 1.5);
@@ -550,7 +552,7 @@ const EthicsManagementDashboard: React.FC = () => {
     };
 
     // Função para adicionar subtítulo compacto
-    const addSubTitle = (text: string, color = accentColor) => {
+    const addSubTitle = (text: string, color: [number, number, number] = accentColor) => {
       addPageIfNeeded(15);
       yPosition += 3; // Muito menos espaço
       doc.setFontSize(10);
@@ -561,7 +563,7 @@ const EthicsManagementDashboard: React.FC = () => {
     };
 
     // Função para adicionar caixa de destaque compacta
-    const addHighlightBox = (title: string, content: string, bgColor = [248, 250, 252]) => {
+    const addHighlightBox = (title: string, content: string, bgColor: [number, number, number] = [248, 250, 252]) => {
       const titleLines = doc.splitTextToSize(title, contentWidth - 10);
       const contentLines = doc.splitTextToSize(content, contentWidth - 10);
       const boxHeight = (titleLines.length * 4) + (contentLines.length * 3.5) + 12;
@@ -614,7 +616,7 @@ const EthicsManagementDashboard: React.FC = () => {
     // === CAPA DO DOCUMENTO ===
 
     // Cabeçalho compacto azul
-    doc.setFillColor(...primaryColor);
+    doc.setFillColor(...primaryColor as [number, number, number]);
     doc.rect(0, 0, pageWidth, 50, 'F'); // Reduzido de 80 para 50
 
     // Título principal compacto
@@ -1565,20 +1567,22 @@ const EthicsManagementDashboard: React.FC = () => {
           </Card>
         </div>
 
+
+
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Denúncias por Categoria</CardTitle>
+            <CardHeader className="p-4 sm:p-6 pb-2">
+              <CardTitle className="text-sm sm:text-lg">Denúncias por Categoria</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <div className="space-y-3">
                 {metrics?.reports_by_category && Object.keys(metrics.reports_by_category).length > 0 ? (
                   Object.entries(metrics.reports_by_category).map(([category, count]) => (
-                    <div key={category} className="flex justify-between items-center">
-                      <span className="text-sm capitalize">{category.replace('_', ' ')}</span>
+                    <div key={category} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                      <span className="text-[10px] sm:text-sm capitalize truncate pr-2">{category.replace('_', ' ')}</span>
                       <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="flex-1 sm:w-20 h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-blue-500"
                             style={{
@@ -1586,14 +1590,14 @@ const EthicsManagementDashboard: React.FC = () => {
                             }}
                           />
                         </div>
-                        <span className="text-sm font-semibold w-8 text-right">{count}</span>
+                        <span className="text-[10px] sm:text-sm font-semibold w-6 sm:w-8 text-right shrink-0">{count as React.ReactNode}</span>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4" />
-                    <p>Sem dados de categoria disponíveis</p>
+                    <BarChart3 className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-4 opacity-50" />
+                    <p className="text-xs sm:text-sm">Sem dados disponíveis</p>
                   </div>
                 )}
               </div>
@@ -1601,21 +1605,21 @@ const EthicsManagementDashboard: React.FC = () => {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Denúncias por Severidade</CardTitle>
+            <CardHeader className="p-4 sm:p-6 pb-2">
+              <CardTitle className="text-sm sm:text-lg">Denúncias por Severidade</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <div className="space-y-3">
                 {metrics?.reports_by_severity && Object.keys(metrics.reports_by_severity).length > 0 ? (
                   Object.entries(metrics.reports_by_severity).map(([severity, count]) => (
-                    <div key={severity} className="flex justify-between items-center">
-                      <span className="text-sm capitalize">
+                    <div key={severity} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                      <span className="text-[10px] sm:text-sm capitalize truncate pr-2">
                         {severity === 'critical' ? 'Crítico' :
                           severity === 'high' ? 'Alto' :
                             severity === 'medium' ? 'Médio' : 'Baixo'}
                       </span>
                       <div className="flex items-center space-x-2">
-                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="flex-1 sm:w-20 h-1.5 sm:h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full"
                             style={{
@@ -1624,14 +1628,14 @@ const EthicsManagementDashboard: React.FC = () => {
                             }}
                           />
                         </div>
-                        <span className="text-sm font-semibold w-8 text-right">{count}</span>
+                        <span className="text-[10px] sm:text-sm font-semibold w-6 sm:w-8 text-right shrink-0">{count as React.ReactNode}</span>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4" />
-                    <p>Sem dados de severidade disponíveis</p>
+                    <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-4 opacity-50" />
+                    <p className="text-xs sm:text-sm">Sem dados disponíveis</p>
                   </div>
                 )}
               </div>
@@ -1640,35 +1644,35 @@ const EthicsManagementDashboard: React.FC = () => {
         </div>
 
         {/* Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-500">{metrics?.resolution_rate?.toFixed(1) || 0}%</div>
-                <p className="text-sm text-muted-foreground">Taxa de Resolução</p>
+                <div className="text-lg sm:text-2xl font-bold text-green-500">{metrics?.resolution_rate?.toFixed(1) || 0}%</div>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Taxa de Resolução</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-500">{metrics?.sla_compliance_rate?.toFixed(1) || 0}%</div>
-                <p className="text-sm text-muted-foreground">Conformidade SLA</p>
+                <div className="text-lg sm:text-2xl font-bold text-blue-500">{metrics?.sla_compliance_rate?.toFixed(1) || 0}%</div>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Conformidade SLA</p>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-500">{metrics?.sla_breach_reports || 0}</div>
-                <p className="text-sm text-muted-foreground">Violações SLA</p>
+                <div className="text-lg sm:text-2xl font-bold text-red-500">{metrics?.sla_breach_reports || 0}</div>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Violações SLA</p>
               </div>
             </CardContent>
           </Card>
         </div>
-      </div>
+      </div >
     );
   };
 
@@ -1684,8 +1688,8 @@ const EthicsManagementDashboard: React.FC = () => {
               Filtros
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <Label htmlFor="search">Buscar</Label>
                 <Input
@@ -1704,7 +1708,7 @@ const EthicsManagementDashboard: React.FC = () => {
                   value={filters.statuses?.[0] || undefined}
                   onValueChange={(value) => setFilters(prev => ({
                     ...prev,
-                    statuses: value ? [value] : undefined
+                    statuses: value ? [value as EthicsReportStatus] : undefined
                   }))}
                 >
                   <SelectTrigger>
@@ -1726,7 +1730,7 @@ const EthicsManagementDashboard: React.FC = () => {
                   value={filters.severities?.[0] || undefined}
                   onValueChange={(value) => setFilters(prev => ({
                     ...prev,
-                    severities: value ? [value] : undefined
+                    severities: value ? [value as EthicsReportSeverity] : undefined
                   }))}
                 >
                   <SelectTrigger>
@@ -1740,7 +1744,7 @@ const EthicsManagementDashboard: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col sm:flex-row lg:flex-col gap-2 justify-end sm:col-span-2 lg:col-span-1">
                 <Button onClick={loadDashboardData} className="w-full">
                   Atualizar
                 </Button>
@@ -1753,7 +1757,7 @@ const EthicsManagementDashboard: React.FC = () => {
                   })}
                   className="w-full"
                 >
-                  Limpar Filtros
+                  Limpar
                 </Button>
               </div>
             </div>
@@ -1775,10 +1779,8 @@ const EthicsManagementDashboard: React.FC = () => {
                 return (
                   <EthicsExpandableCard
                     key={report.id}
-                    report={report}
-                    onUpdate={openUpdateDialog}
-                    getStatusColor={getStatusColor}
-                    getSeverityColor={getSeverityColor}
+                    report={report as unknown as EthicsReport}
+                    onUpdate={() => openUpdateDialog(report as unknown as EthicsReportWithDetails)}
                   />
                 );
               } catch (error) {
@@ -1821,10 +1823,7 @@ const EthicsManagementDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <InvestigationPlanManager
-                investigationPlans={investigationPlans || []}
-                onUpdate={loadEnterpriseData}
-              />
+              <InvestigationPlanManager />
             </CardContent>
           </Card>
         </div>
@@ -1854,10 +1853,7 @@ const EthicsManagementDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <EvidenceManager
-                evidenceItems={evidenceItems || []}
-                onUpdate={loadEnterpriseData}
-              />
+              <EvidenceManager />
             </CardContent>
           </Card>
         </div>
@@ -1887,10 +1883,7 @@ const EthicsManagementDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CorrectiveActionManager
-                correctiveActions={correctiveActions || []}
-                onUpdate={loadEnterpriseData}
-              />
+              <CorrectiveActionManager />
             </CardContent>
           </Card>
         </div>
@@ -1920,10 +1913,7 @@ const EthicsManagementDashboard: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <RegulatoryNotificationManager
-                notifications={regulatoryNotifications || []}
-                onUpdate={loadEnterpriseData}
-              />
+              <RegulatoryNotificationManager />
             </CardContent>
           </Card>
         </div>

@@ -29,13 +29,13 @@ export const EthicsWidget = () => {
             <CardHeader className="pb-2 pt-6 px-6 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-rose-500/10 border border-rose-500/20">
-                            <Scale className="h-4 w-4 text-rose-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-rose-500/10 border border-rose-500/20">
+                            <Scale className="h-3 w-3 sm:h-4 sm:w-4 text-rose-500" />
                         </div>
-                        <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">Ética & Conduta</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-rose-500 uppercase tracking-widest">Ética & Conduta</span>
                     </div>
-                    <div className="flex items-center gap-1 bg-rose-500/10 px-2 py-1 rounded text-[10px] font-bold text-rose-500 border border-rose-500/20">
-                        <MessageSquare className="h-3 w-3" />
+                    <div className="flex items-center gap-1 bg-rose-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-rose-500 border border-rose-500/20">
+                        <MessageSquare className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         <span>{avgResolutionDays} dias (médio)</span>
                     </div>
                 </div>
@@ -51,9 +51,9 @@ export const EthicsWidget = () => {
                 </div>
             </CardHeader>
 
-            <CardContent className="px-6 pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+            <CardContent className="px-2 sm:px-4 sm:px-6 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
                 <div className="flex-1 w-full min-h-0 mt-2">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={100}>
                         <BarChart data={reportsData} barSize={24}>
                             <XAxis
                                 dataKey="category"

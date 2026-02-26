@@ -171,40 +171,40 @@ export const TPRMWidget = () => {
             {/* Watermark Icon */}
             <Globe2 className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-6 px-6 relative z-10">
-                <div className="flex items-center justify-between">
+            <CardHeader className="pb-2 pt-4 sm:pt-6 px-4 sm:px-6 relative z-10">
+                <div className="flex flex-wrap items-center justify-between gap-1 sm:gap-2">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-orange-500/10 border border-orange-500/20">
-                            <Building2 className="h-4 w-4 text-orange-500" />
+                        <div className="p-1 sm:p-1.5 rounded-md bg-orange-500/10 border border-orange-500/20">
+                            <Building2 className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />
                         </div>
-                        <span className="text-xs font-bold text-orange-500 uppercase tracking-widest">TPRM / Vendors</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-orange-500 uppercase tracking-widest">TPRM / Vendors</span>
                     </div>
                     {criticalVendors > 0 && (
-                        <div className="flex items-center gap-1 bg-red-500/10 px-2 py-1 rounded text-[10px] font-bold text-red-500 border border-red-500/20 animate-pulse">
-                            <AlertTriangle className="h-3 w-3" />
+                        <div className="flex items-center gap-1 bg-red-500/10 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[8px] sm:text-[10px] font-bold text-red-500 border border-red-500/20 animate-pulse">
+                            <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                             <span>{criticalVendors} Críticos</span>
                         </div>
                     )}
                 </div>
 
-                <div className="mt-4">
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-foreground tracking-tighter">{totalVendors}</span>
-                        <span className="text-sm font-medium text-muted-foreground">Fornecedores Ativos</span>
+                <div className="mt-2 sm:mt-4">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tighter">{totalVendors}</span>
+                        <span className="text-xs sm:text-sm font-medium text-muted-foreground shrink-0">Fornecedores Ativos</span>
                     </div>
                 </div>
             </CardHeader>
 
-            <CardContent className="px-1 pb-4 relative z-10 flex-1 min-h-[160px] flex flex-col">
-                <div className="flex-1 w-full min-h-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
+            <CardContent className="px-1 sm:px-2 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+                        <PieChart margin={{ top: 10, right: 0, bottom: 10, left: -10 }}>
                             <Pie
                                 data={vendorData}
                                 activeIndex={activeIndex}
                                 activeShape={renderActiveShape}
                                 onMouseEnter={onPieEnter}
-                                cx="50%"
+                                cx="35%"
                                 cy="50%"
                                 innerRadius={45}
                                 outerRadius={65}
@@ -241,7 +241,7 @@ export const TPRMWidget = () => {
                 </div>
 
                 {/* Expert Insight Footer */}
-                <div className="mx-6 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground group-hover:text-foreground transition-colors mt-auto">
+                <div className="mx-4 sm:mx-6 pt-2 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground group-hover:text-foreground transition-colors mt-auto shrink-0">
                     <span>Revisar assessments pendentes</span>
                     <ChevronRight className="h-3 w-3" />
                 </div>

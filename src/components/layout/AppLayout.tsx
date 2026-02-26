@@ -56,7 +56,7 @@ const AppLayoutContent = () => {
       <AppSidebar />
       <div className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 w-full md:w-auto`}>
         <AppHeader />
-        <main className="flex-1 w-full p-4 sm:p-6 lg:p-8 overflow-auto bg-background">
+        <main className="flex-1 w-full p-3 sm:p-4 md:p-6 lg:p-8 overflow-auto bg-background">
           <ErrorBoundary>
             <React.Suspense fallback={
               <div className="flex items-center justify-center min-h-[200px]">

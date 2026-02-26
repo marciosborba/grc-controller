@@ -9,7 +9,7 @@ import { DevelopmentSecurityHelper } from "./src/utils/securityHeaders";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "0.0.0.0",
-    port: 8080,
+    port: 3001,
     // Headers de segurança para desenvolvimento (Forçando para passar no scan OWASP)
     // Headers removidos para debug
     // 'Content-Security-Policy': "default-src 'self' * 'unsafe-inline' 'unsafe-eval'; script-src 'self' * 'unsafe-inline' 'unsafe-eval'; connect-src 'self' * ws: wss:;"
@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
   },
   // Configuração para SPA routing
   preview: {
-    port: 8080,
+    port: 3001,
   },
   plugins: [
     react(),

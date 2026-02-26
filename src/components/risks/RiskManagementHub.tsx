@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Shield, 
-  Brain, 
-  Library, 
-  FileText, 
+import {
+  Shield,
+  Brain,
+  Library,
+  FileText,
   BarChart3,
   AlertTriangle,
   TrendingUp,
@@ -28,7 +28,7 @@ import {
   Search
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { ImprovedAIChatDialog } from '@/components/ai/ImprovedAIChatDialog';
 import { RiskLibrary } from './RiskLibrary';
@@ -95,7 +95,7 @@ export const RiskManagementHub: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Buscar riscos
       const { data: risks, error: risksError } = await supabase
         .from('risk_assessments')
@@ -112,11 +112,11 @@ export const RiskManagementHub: React.FC = () => {
 
       // Calcular métricas
       const totalRisks = risks?.length || 0;
-      const highPriorityRisks = risks?.filter(r => 
+      const highPriorityRisks = risks?.filter(r =>
         r.risk_level === 'Alto' || r.risk_level === 'Muito Alto'
       ).length || 0;
-      
-      const overdueActions = actions?.filter(a => 
+
+      const overdueActions = actions?.filter(a =>
         new Date(a.deadline) < new Date() && a.status !== 'Concluída'
       ).length || 0;
 
@@ -124,7 +124,7 @@ export const RiskManagementHub: React.FC = () => {
       const complianceScore = 85;
 
       // Atividades recentes (últimos 7 dias)
-      const recentActivities = risks?.filter(r => 
+      const recentActivities = risks?.filter(r =>
         new Date(r.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       ).slice(0, 5) || [];
 
@@ -304,24 +304,24 @@ export const RiskManagementHub: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
-            <Shield className="h-8 w-8 text-primary" />
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate flex items-center justify-center sm:justify-start space-x-2">
+            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             <span>Centro de Gestão de Riscos</span>
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
+          <p className="text-muted-foreground text-xs sm:text-sm md:text-base mt-1">
             Plataforma completa para identificação, análise, tratamento e monitoramento de riscos corporativos
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="sm">
             <Search className="h-4 w-4 mr-2" />
             Buscar
           </Button>
-          <ImprovedAIChatDialog 
+          <ImprovedAIChatDialog
             type="risk"
-            context={{ 
+            context={{
               totalRisks: metrics?.total_risks || 0,
               highRisks: metrics?.high_priority_risks || 0,
               overdueActions: metrics?.overdue_actions || 0,
@@ -339,7 +339,7 @@ export const RiskManagementHub: React.FC = () => {
               </Button>
             }
           />
-          
+
           <Button variant="outline">
             <Settings className="h-4 w-4 mr-2" />
             Configurações
@@ -390,50 +390,50 @@ export const RiskManagementHub: React.FC = () => {
         <TabsContent value="dashboard" className="space-y-6">
           {/* Key Metrics */}
           {metrics && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-8 w-8 text-blue-500" />
+                <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Total de Riscos</p>
-                      <p className="text-2xl font-bold">{metrics.total_risks}</p>
+                      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Total de Riscos</p>
+                      <p className="text-xl sm:text-2xl font-bold">{metrics.total_risks}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <XCircle className="h-8 w-8 text-red-500" />
+                <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <XCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-500" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Alta Prioridade</p>
-                      <p className="text-2xl font-bold">{metrics.high_priority_risks}</p>
+                      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Alta Prioridade</p>
+                      <p className="text-xl sm:text-2xl font-bold">{metrics.high_priority_risks}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-8 w-8 text-orange-500" />
+                <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Ações Atrasadas</p>
-                      <p className="text-2xl font-bold">{metrics.overdue_actions}</p>
+                      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Ações Atrasadas</p>
+                      <p className="text-xl sm:text-2xl font-bold">{metrics.overdue_actions}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-8 w-8 text-green-500" />
+                <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Compliance</p>
-                      <p className="text-2xl font-bold">{formatPercentage(metrics.compliance_score)}</p>
+                      <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">Compliance</p>
+                      <p className="text-xl sm:text-2xl font-bold">{formatPercentage(metrics.compliance_score)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -505,7 +505,7 @@ export const RiskManagementHub: React.FC = () => {
                       </Badge>
                     </div>
                   ))}
-                  
+
                   {(!metrics?.recent_activities || metrics.recent_activities.length === 0) && (
                     <div className="text-center py-4">
                       <p className="text-sm text-muted-foreground">Nenhuma atividade recente</p>
@@ -533,15 +533,14 @@ export const RiskManagementHub: React.FC = () => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm font-bold">{category.count}</span>
-                        <TrendingUp className={`h-4 w-4 ${
-                          category.trend === 'up' ? 'text-red-500' :
-                          category.trend === 'down' ? 'text-green-500' :
-                          'text-gray-500'
-                        }`} />
+                        <TrendingUp className={`h-4 w-4 ${category.trend === 'up' ? 'text-red-500' :
+                            category.trend === 'down' ? 'text-green-500' :
+                              'text-gray-500'
+                          }`} />
                       </div>
                     </div>
                   ))}
-                  
+
                   {(!metrics?.top_categories || metrics.top_categories.length === 0) && (
                     <div className="text-center py-4">
                       <p className="text-sm text-muted-foreground">Nenhuma categoria encontrada</p>
@@ -627,7 +626,7 @@ export const RiskManagementHub: React.FC = () => {
           <RiskReports />
         </TabsContent>
       </Tabs>
-      
+
       {/* Modal Alex Risk Guided Process */}
       {showAlexRiskProcess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

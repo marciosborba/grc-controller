@@ -245,7 +245,8 @@ const TEST_ROLES = [
 
 export function AppSidebarFixed() {
   // AppSidebarFixed carregado - Versão otimizada
-  const { state } = useSidebar();
+  // AppSidebarFixed carregado - Versão otimizada
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, checkModuleAccess } = useAuth();
@@ -276,7 +277,7 @@ export function AppSidebarFixed() {
       // Carregando roles do banco de dados
 
       // Timeout para evitar travamento
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<{ data: any[] | null, error: any }>((_, reject) =>
         setTimeout(() => reject(new Error('Timeout ao carregar roles')), 5000)
       );
 
@@ -287,7 +288,7 @@ export function AppSidebarFixed() {
         .order('is_system', { ascending: false })
         .order('created_at', { ascending: true });
 
-      const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]);
+      const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]) as { data: DatabaseRole[] | null, error: any };
 
       if (error) {
         console.warn('⚠️ Erro ao carregar roles do banco:', error.message);
@@ -603,6 +604,11 @@ export function AppSidebarFixed() {
                               url: item.url,
                               timestamp: new Date().toISOString()
                             });
+
+                            // Auto-close na versão mobile
+                            if (isMobile) {
+                              setOpenMobile(false);
+                            }
 
                             if (item.title === 'IA Manager') {
                               console.log('🤖 [IA MANAGER CLICK] Clique no IA Manager detectado!');
