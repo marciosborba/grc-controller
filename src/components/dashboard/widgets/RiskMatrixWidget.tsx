@@ -188,11 +188,11 @@ export const RiskMatrixWidget = () => {
 
                 <CardContent className="flex-1 p-6 flex flex-col items-center justify-center min-h-0 overflow-hidden">
                     {loading ? <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /> : (
-                        <div className="aspect-square h-full max-h-full w-auto max-w-full relative grid grid-cols-[auto_1fr] grid-rows-[1fr_auto] gap-2">
+                        <div className="w-full aspect-square max-w-[500px] max-h-[500px] mx-auto relative grid grid-cols-[auto_1fr] grid-rows-[1fr_auto] gap-1 sm:gap-2">
 
                             {/* Y-Axis Label */}
                             <div className="flex items-center justify-center">
-                                <span className="transform -rotate-90 text-sm font-bold text-muted-foreground whitespace-nowrap tracking-widest uppercase">
+                                <span className="transform -rotate-90 text-[10px] sm:text-sm font-bold text-muted-foreground whitespace-nowrap tracking-widest uppercase">
                                     IMPACTO
                                 </span>
                             </div>
@@ -202,7 +202,7 @@ export const RiskMatrixWidget = () => {
                                 {/* Y-Axis Numbers */}
                                 <div className="flex flex-col justify-between py-6 h-full">
                                     {Array.from({ length: gridSize }, (_, i) => gridSize - i).map(val => (
-                                        <div key={val} className="flex-1 flex items-center justify-end pr-3 text-base font-bold text-muted-foreground">
+                                        <div key={val} className="flex-1 flex items-center justify-end pr-1 sm:pr-3 text-xs sm:text-base font-bold text-muted-foreground">
                                             {val}
                                         </div>
                                     ))}
@@ -243,7 +243,7 @@ export const RiskMatrixWidget = () => {
                                                                     <span className={cn(
                                                                         "font-black drop-shadow-sm text-white",
                                                                         // Dynamic sizing based on grid to prevent overflow
-                                                                        gridSize === 5 ? "text-xl" : "text-2xl",
+                                                                        gridSize === 5 ? "text-sm sm:text-lg md:text-xl" : "text-base sm:text-xl md:text-2xl",
                                                                         cell.count === 0 && "opacity-90 scale-90"
                                                                     )}>
                                                                         {cell.count > 0 ? cell.count : cell.score}
@@ -253,7 +253,7 @@ export const RiskMatrixWidget = () => {
                                                                     <span className={cn(
                                                                         "uppercase font-bold text-white/90 leading-tight mt-0.5 drop-shadow-sm text-center px-1 break-words w-full",
                                                                         // Smaller text for larger grids to fit
-                                                                        gridSize === 5 ? "text-[8px]" : "text-[10px]"
+                                                                        gridSize === 5 ? "text-[6px] sm:text-[8px]" : "text-[8px] sm:text-[10px]"
                                                                     )}>
                                                                         {cell.name}
                                                                     </span>
@@ -292,7 +292,7 @@ export const RiskMatrixWidget = () => {
                                 {/* X-Axis Numbers */}
                                 <div className="grid w-full" style={{ gridTemplateColumns: `repeat(${gridSize}, 1fr)` }}>
                                     {Array.from({ length: gridSize }, (_, i) => i + 1).map(val => (
-                                        <div key={val} className="flex justify-center text-base font-bold text-muted-foreground">
+                                        <div key={val} className="flex justify-center text-xs sm:text-base font-bold text-muted-foreground">
                                             {val}
                                         </div>
                                     ))}
@@ -300,7 +300,7 @@ export const RiskMatrixWidget = () => {
 
                                 {/* X-Axis Label */}
                                 <div className="flex justify-center pt-2">
-                                    <span className="text-sm font-bold text-muted-foreground tracking-widest uppercase">
+                                    <span className="text-[10px] sm:text-sm font-bold text-muted-foreground tracking-widest uppercase">
                                         PROBABILIDADE
                                     </span>
                                 </div>
@@ -311,72 +311,74 @@ export const RiskMatrixWidget = () => {
                 </CardContent>
 
                 {/* LEGEND SECTION */}
-                {!loading && (
-                    <div className="px-6 pb-6 pt-4 border-t border-white/5 bg-transparent mt-auto">
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-4">Legenda dos Níveis de Risco:</h4>
-                        <div className="flex flex-wrap gap-3 justify-center mb-4">
-                            {(() => {
-                                // Helper to Generate Legend Items
-                                let legendItems: { name: string; color: string; min: number; max: number }[] = [];
+                {
+                    !loading && (
+                        <div className="px-6 pb-6 pt-4 border-t border-white/5 bg-transparent mt-auto">
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-4">Legenda dos Níveis de Risco:</h4>
+                            <div className="flex flex-wrap gap-3 justify-center mb-4">
+                                {(() => {
+                                    // Helper to Generate Legend Items
+                                    let legendItems: { name: string; color: string; min: number; max: number }[] = [];
 
-                                if (matrixConfig.risk_levels_custom?.length) {
-                                    legendItems = matrixConfig.risk_levels_custom.map(l => ({
-                                        name: l.name,
-                                        color: l.color,
-                                        min: l.minValue,
-                                        max: l.maxValue
-                                    }));
-                                } else {
-                                    // Default Levels Generation (Reverse Engineering from Logic)
-                                    // This is a bit manual but necessary if we don't store the "Ranges" explicitly in default mode.
-                                    // Standard 5x5: MB(1-2), B(3-4), M(5-8), A(9-16), MA(17-25)
-                                    // Standard 4x4: B(1-2), M(3-6), A(7-9), MA(10-16)
-                                    // Standard 3x3: B(1-2), M(3-4), A(5-9) (Adjusted to typical 3x3)
-
-                                    const gridSize = parseInt(matrixConfig.type.charAt(0));
-                                    if (gridSize === 5) {
-                                        legendItems = [
-                                            { name: 'Muito Baixo', color: '#3b82f6', min: 1, max: 2 },
-                                            { name: 'Baixo', color: '#22c55e', min: 3, max: 4 },
-                                            { name: 'Médio', color: '#eab308', min: 5, max: 8 },
-                                            { name: 'Alto', color: '#f97316', min: 9, max: 16 },
-                                            { name: 'Muito Alto', color: '#ef4444', min: 17, max: 25 },
-                                        ];
-                                    } else if (gridSize === 4) {
-                                        legendItems = [
-                                            { name: 'Baixo', color: '#22c55e', min: 1, max: 2 },
-                                            { name: 'Médio', color: '#eab308', min: 3, max: 6 },
-                                            { name: 'Alto', color: '#f97316', min: 7, max: 9 },
-                                            { name: 'Muito Alto', color: '#ef4444', min: 10, max: 16 },
-                                        ];
+                                    if (matrixConfig.risk_levels_custom?.length) {
+                                        legendItems = matrixConfig.risk_levels_custom.map(l => ({
+                                            name: l.name,
+                                            color: l.color,
+                                            min: l.minValue,
+                                            max: l.maxValue
+                                        }));
                                     } else {
-                                        legendItems = [
-                                            { name: 'Baixo', color: '#22c55e', min: 1, max: 2 },
-                                            { name: 'Médio', color: '#eab308', min: 3, max: 4 },
-                                            { name: 'Alto', color: '#ef4444', min: 5, max: 9 },
-                                        ];
+                                        // Default Levels Generation (Reverse Engineering from Logic)
+                                        // This is a bit manual but necessary if we don't store the "Ranges" explicitly in default mode.
+                                        // Standard 5x5: MB(1-2), B(3-4), M(5-8), A(9-16), MA(17-25)
+                                        // Standard 4x4: B(1-2), M(3-6), A(7-9), MA(10-16)
+                                        // Standard 3x3: B(1-2), M(3-4), A(5-9) (Adjusted to typical 3x3)
+
+                                        const gridSize = parseInt(matrixConfig.type.charAt(0));
+                                        if (gridSize === 5) {
+                                            legendItems = [
+                                                { name: 'Muito Baixo', color: '#3b82f6', min: 1, max: 2 },
+                                                { name: 'Baixo', color: '#22c55e', min: 3, max: 4 },
+                                                { name: 'Médio', color: '#eab308', min: 5, max: 8 },
+                                                { name: 'Alto', color: '#f97316', min: 9, max: 16 },
+                                                { name: 'Muito Alto', color: '#ef4444', min: 17, max: 25 },
+                                            ];
+                                        } else if (gridSize === 4) {
+                                            legendItems = [
+                                                { name: 'Baixo', color: '#22c55e', min: 1, max: 2 },
+                                                { name: 'Médio', color: '#eab308', min: 3, max: 6 },
+                                                { name: 'Alto', color: '#f97316', min: 7, max: 9 },
+                                                { name: 'Muito Alto', color: '#ef4444', min: 10, max: 16 },
+                                            ];
+                                        } else {
+                                            legendItems = [
+                                                { name: 'Baixo', color: '#22c55e', min: 1, max: 2 },
+                                                { name: 'Médio', color: '#eab308', min: 3, max: 4 },
+                                                { name: 'Alto', color: '#ef4444', min: 5, max: 9 },
+                                            ];
+                                        }
                                     }
-                                }
 
-                                return legendItems.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2.5 px-3 py-1.5 bg-background border border-border rounded-md shadow-sm">
-                                        <div className="w-4 h-4 rounded-sm shadow-sm" style={{ backgroundColor: item.color }} />
-                                        <span className="text-xs font-semibold whitespace-nowrap text-foreground">
-                                            {item.name} <span className="text-muted-foreground ml-1">({item.min === item.max ? item.min : `${item.min}-${item.max}`})</span>
-                                        </span>
-                                    </div>
-                                ));
-                            })()}
-                        </div>
+                                    return legendItems.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2.5 px-3 py-1.5 bg-background border border-border rounded-md shadow-sm">
+                                            <div className="w-4 h-4 rounded-sm shadow-sm" style={{ backgroundColor: item.color }} />
+                                            <span className="text-xs font-semibold whitespace-nowrap text-foreground">
+                                                {item.name} <span className="text-muted-foreground ml-1">({item.min === item.max ? item.min : `${item.min}-${item.max}`})</span>
+                                            </span>
+                                        </div>
+                                    ));
+                                })()}
+                            </div>
 
-                        <div className="text-center space-y-1">
-                            <p className="text-xs text-muted-foreground font-medium">
-                                Matriz {matrixConfig.type} - {parseInt(matrixConfig.type.charAt(0)) ** 2} combinações possíveis
-                            </p>
+                            <div className="text-center space-y-1">
+                                <p className="text-xs text-muted-foreground font-medium">
+                                    Matriz {matrixConfig.type} - {parseInt(matrixConfig.type.charAt(0)) ** 2} combinações possíveis
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </Card>
+                    )
+                }
+            </div >
+        </Card >
     );
 };

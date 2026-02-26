@@ -91,66 +91,66 @@ export default function ModernDashboard() {
             {/* Main Grid - Ultimate 12 Modules (4x3) for Expert GRC Coverage */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Row 1: Strategic & High Level */}
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <RiskWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <ComplianceWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <PrivacyWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <TPRMWidget />
                     </Suspense>
                 </div>
 
                 {/* Row 2: Operational & Tactical */}
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <VulnerabilityWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <IncidentsWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <AuditWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <PolicyWidget />
                     </Suspense>
                 </div>
 
                 {/* Row 3: Human & Process */}
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <EthicsWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <AssessmentsWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <NotificationsWidget />
                     </Suspense>
                 </div>
-                <div className="h-[350px]">
+                <div className="min-h-[290px] lg:min-h-[350px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <ActionPlanWidget />
                     </Suspense>
@@ -161,7 +161,7 @@ export default function ModernDashboard() {
 
             {/* Secondary Grid - Risk Matrix & Evolution (Side-by-Side) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="h-[900px]">
+                <div className="min-h-[450px] lg:min-h-[800px] h-auto w-full">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <RiskMatrixWidget />
                     </Suspense>
