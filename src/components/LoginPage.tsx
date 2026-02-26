@@ -214,15 +214,16 @@ const LoginPage = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Senha</Label>
-                      <div className="relative">
+                      <div className="relative flex items-center">
                         <Input
                           id="password"
                           type={showPassword ? 'text' : 'password'}
                           value={passwordInput.value}
                           onChange={e => passwordInput.onChange(e.target.value)}
                           autoFocus
+                          className="pr-10"
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 text-muted-foreground hover:text-foreground">
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>

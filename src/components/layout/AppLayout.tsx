@@ -52,11 +52,11 @@ const AppLayoutContent = () => {
   }, [location]);
 
   return (
-    <div className="relative min-h-screen w-full bg-background">
+    <div className="relative min-h-screen w-full bg-background flex flex-col md:flex-row">
       <AppSidebar />
-      <div className={`absolute inset-y-0 right-0 flex flex-col transition-all duration-300 ${isCollapsed ? 'left-[3rem]' : 'left-[16rem]'}`}>
+      <div className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 w-full md:w-auto`}>
         <AppHeader />
-        <main className="flex-1 pl-6 sm:pl-8 lg:pl-10 pr-4 sm:pr-6 lg:pr-8 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6 lg:pb-8 overflow-auto bg-background">
+        <main className="flex-1 w-full p-4 sm:p-6 lg:p-8 overflow-auto bg-background">
           <ErrorBoundary>
             <React.Suspense fallback={
               <div className="flex items-center justify-center min-h-[200px]">

@@ -20,6 +20,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
 import { SecuritySettings, defaultSecuritySettings, calculateSecurityScore } from '@/utils/security-score';
+import { CryptoKeysSection } from './CryptoKeysSection';
+import { EncryptionConfigSection } from './EncryptionConfigSection';
+
 
 interface SecurityConfigSectionProps {
   tenantId: string;
@@ -235,6 +238,11 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <EncryptionConfigSection />
+          <CryptoKeysSection />
+        </div>
+
         {/* Política de Senhas */}
         <Card>
           <CardHeader>

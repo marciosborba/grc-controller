@@ -192,10 +192,19 @@
     line-height: 1.5;
   }
 
-  /* Improve card rendering for all cards */
-  .card {
+  /* Improve card rendering for all cards and fix mobile overflow */
+  .card, 
+  [className*="rounded-xl border bg-card"] /* shadcn Card generic selector */ {
     transform: translateZ(0);
     backface-visibility: hidden;
+    max-width: 100%;
+  }
+
+  /* Force responsive tables inside cards */
+  .card .overflow-x-auto,
+  [className*="rounded-xl border bg-card"] .overflow-x-auto {
+    width: 100%;
+    max-width: 100vw; /* Prevent breaking the viewport */
   }
 
   /* Risk level indicators */

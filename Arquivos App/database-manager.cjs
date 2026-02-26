@@ -260,6 +260,27 @@ async function main() {
         await db.executeSQL(sql, 'SQL customizado');
         break;
 
+      case 'execute-file':
+        const fs = require('fs');
+        const path = require('path');
+        const filePath = args[1];
+        if (!filePath) {
+          console.error('❌ Uso: execute-file <arquivo.sql>');
+          process.exit(1);
+        }
+        // Resolve path relative to current execution directory
+        const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+
+        if (!fs.existsSync(absolutePath)) {
+          console.error(`❌ Arquivo não encontrado: ${absolutePath}`);
+          process.exit(1);
+        }
+
+        console.log(`📂 Lendo arquivo: ${absolutePath}`);
+        const fileContent = fs.readFileSync(absolutePath, 'utf8');
+        await db.executeSQL(fileContent, `Arquivo ${path.basename(filePath)}`);
+        break;
+
       case 'show-structure':
         const tableName = args[1];
         if (!tableName) {
