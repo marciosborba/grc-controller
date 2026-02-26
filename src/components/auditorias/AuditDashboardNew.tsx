@@ -42,6 +42,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
 import { AuditProjectCard } from './AuditProjectCard';
+import { NewAuditProjectDialog } from './NewAuditProjectDialog';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -110,7 +111,8 @@ export function AuditDashboardNew() {
     priorityFilter,
     setPriorityFilter,
     searchTerm,
-    setSearchTerm
+    setSearchTerm,
+    refresh // Get the refresh function to reload the list after creation
   } = useAuditIntegration();
 
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -159,10 +161,7 @@ export function AuditDashboardNew() {
             </Select>
           </div>
 
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Projeto
-          </Button>
+          <NewAuditProjectDialog onProjectCreated={refresh} />
         </div>
       </div>
 
@@ -199,16 +198,16 @@ export function AuditDashboardNew() {
         {/* Card 2: Total Projects (Reliable Data) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Target className="h-24 w-24 text-blue-500" />
+            <Target className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-              <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl shrink-0">
+              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total de Projetos</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics?.total_projetos || 0}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Projetos</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics?.total_projetos || 0}</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 {metrics?.projetos_concluidos || 0} concluídos
               </p>
             </div>
@@ -218,16 +217,16 @@ export function AuditDashboardNew() {
         {/* Card 3: Active Execution */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <PlayCircle className="h-24 w-24 text-purple-500" />
+            <PlayCircle className="h-16 w-16 sm:h-24 sm:w-24 text-purple-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-              <PlayCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl sm:rounded-2xl shrink-0">
+              <PlayCircle className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Em Execução</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics?.projetos_ativos || 0}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Em Execução</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics?.projetos_ativos || 0}</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 Atividades em andamento
               </p>
             </div>
@@ -237,22 +236,22 @@ export function AuditDashboardNew() {
         {/* Card 4: Compliance Rate */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <CheckCircle className="h-24 w-24 text-green-500" />
+            <CheckCircle className="h-16 w-16 sm:h-24 sm:w-24 text-green-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-foreground">
+          <CardHeader className="pb-1 sm:pb-2 pt-4 sm:pt-6 px-4 sm:px-6">
+            <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
               Taxa de Conclusão
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
-              <span className="text-sm text-muted-foreground">geral</span>
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <div className="flex items-baseline gap-1 sm:gap-2">
+              <span className="text-2xl sm:text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground">geral</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2">
               Percentual médio de avanço dos projetos.
             </p>
-            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+            <div className="mt-3 sm:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
               <div className="bg-green-500 h-full rounded-full" style={{ width: `${Math.round(metrics?.taxa_conclusao || 0)}%` }}></div>
             </div>
           </CardContent>
@@ -279,8 +278,9 @@ export function AuditDashboardNew() {
                   p.prioridade === 'alta' ? 'Alto' :
                     p.prioridade === 'media' ? 'Médio' : 'Baixo'
               }))}
-              size="md"
-              responsive={true}
+              size="sm"
+              responsive={false}
+              className="overflow-x-auto pb-2"
             />
           </CardContent>
         </Card>
@@ -291,27 +291,27 @@ export function AuditDashboardNew() {
             <CardTitle>Filtros e Pesquisa</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por título, código ou área..."
+                    placeholder="Buscar projeto..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-8 text-xs sm:text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap pb-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filtros Avançados
+                    <Button variant="outline" size="sm" className="h-8 text-xs">
+                      <Filter className="h-3.5 w-3.5 mr-1.5" />
+                      Filtros
                       {(statusFilter !== 'all' || priorityFilter !== 'all') && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                        <Badge variant="secondary" className="ml-1.5 h-4 px-1 py-0 text-[9px]">
                           {(statusFilter !== 'all' ? 1 : 0) + (priorityFilter !== 'all' ? 1 : 0)}
                         </Badge>
                       )}
@@ -371,6 +371,7 @@ export function AuditDashboardNew() {
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
+                  className="h-8 text-xs px-2.5"
                   onClick={() => setViewMode('grid')}
                 >
                   Grid
@@ -378,6 +379,7 @@ export function AuditDashboardNew() {
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'outline'}
                   size="sm"
+                  className="h-8 text-xs px-2.5"
                   onClick={() => setViewMode('list')}
                 >
                   Lista
@@ -401,10 +403,15 @@ export function AuditDashboardNew() {
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
               <p className="text-muted-foreground">Tente ajustar seus filtros ou crie um novo projeto.</p>
-              <Button className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Projeto
-              </Button>
+              <NewAuditProjectDialog
+                onProjectCreated={refresh}
+                trigger={
+                  <Button className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Projeto
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         ) : (

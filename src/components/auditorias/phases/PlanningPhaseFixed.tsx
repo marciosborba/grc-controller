@@ -7,11 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { 
-  Target, 
-  Calendar, 
-  Users, 
-  FileText, 
+import {
+  Target,
+  Calendar,
+  Users,
+  FileText,
   AlertTriangle,
   CheckCircle,
   Plus,
@@ -74,7 +74,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
+
   // Hook para completude da fase de planejamento
   const {
     interfaceCompleteness,
@@ -109,7 +109,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
   // Função para calcular orçamento total
   const calculateTotalBudget = useCallback(() => {
-    const resourcesCost = planningData.recursos_humanos.reduce((sum, r) => 
+    const resourcesCost = planningData.recursos_humanos.reduce((sum, r) =>
       sum + (r.horas_alocadas * r.custo_hora), 0
     );
     return resourcesCost + planningData.orcamento;
@@ -122,19 +122,19 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
     // 1. Objetivos (pelo menos 1 objetivo)
     if (planningData.objetivos.length > 0) filledCount++;
-    
+
     // 2. Escopo (pelo menos 50 caracteres)
     if (planningData.escopo.trim().length >= 50) filledCount++;
-    
+
     // 3. Metodologia (pelo menos 50 caracteres)
     if (planningData.metodologia.trim().length >= 50) filledCount++;
-    
+
     // 4. Critérios de auditoria (pelo menos 1 critério)
     if (planningData.criterios_auditoria.length > 0) filledCount++;
-    
+
     // 5. Recursos humanos (pelo menos 1 recurso além do líder)
     if (planningData.recursos_humanos.length > 0) filledCount++;
-    
+
     // 6. Cronograma (pelo menos 1 atividade)
     if (planningData.cronograma.length > 0) filledCount++;
 
@@ -160,14 +160,14 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   useEffect(() => {
     // Não configurar auto-save durante carregamento inicial
     if (loading) return;
-    
-    const hasData = planningData.objetivos.length > 0 || 
-                   planningData.escopo.length > 0 || 
-                   planningData.metodologia.length > 0 || 
-                   planningData.criterios_auditoria.length > 0;
-    
+
+    const hasData = planningData.objetivos.length > 0 ||
+      planningData.escopo.length > 0 ||
+      planningData.metodologia.length > 0 ||
+      planningData.criterios_auditoria.length > 0;
+
     if (!hasData) return;
-    
+
     const interval = setInterval(() => {
       if (!saving && !autoSaving) {
         autoSavePlanningData();
@@ -184,17 +184,17 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     autoSaving,
     loading
   ]);
-  
+
   // Atualizar completude da interface quando dados mudam
   useEffect(() => {
     // Evitar atualização durante carregamento inicial
     if (loading) return;
-    
+
     const { filledCount, totalCount } = calculateInterfaceCompleteness();
-    
+
     // Atualizar completude da interface no contexto
     updateInterface(filledCount, totalCount);
-    
+
     console.log('PlanningPhaseFixed - Interface completeness updated:', {
       project_id: project.id,
       filledCount,
@@ -220,9 +220,9 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const loadPlanningData = async () => {
     try {
       setLoading(true);
-      
+
       console.log('PlanningPhaseFixed - Loading data for project:', project.id);
-      
+
       // Carregar dados de planejamento do projeto
       const { data, error } = await supabase
         .from('projetos_auditoria')
@@ -235,9 +235,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
           orcamento_estimado,
           completude_planejamento,
           data_inicio,
-          data_fim_planejada,
-          auditor_lider,
-          chefe_auditoria
+          data_fim_planejada
         `)
         .eq('id', project.id)
         .single();
@@ -260,15 +258,15 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
           metodologia: data.metodologia || '',
           criterios_auditoria: Array.isArray(data.criterios_auditoria) ? data.criterios_auditoria : []
         };
-        
+
         console.log('PlanningPhaseFixed - Setting planning data:', newPlanningData);
         setPlanningData(newPlanningData);
-        
+
         // Forçar atualização da completude após carregar dados
         setTimeout(() => {
           const { filledCount, totalCount } = calculateInterfaceCompleteness();
           updateInterface(filledCount, totalCount);
-          
+
           // Se houver dados salvos no banco, também atualizar
           if (data.completude_planejamento && data.completude_planejamento > 0) {
             saveToDatabase(project.id, effectiveTenantId || '', data.completude_planejamento);
@@ -278,7 +276,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     } catch (error) {
       console.error('Erro ao carregar dados de planejamento:', error);
       toast.error(`Erro ao carregar dados de planejamento: ${error.message || 'Erro desconhecido'}`);
-      
+
       // Inicializar com dados vazios em caso de erro
       setPlanningData({
         objetivos: [],
@@ -301,7 +299,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const autoSavePlanningData = async () => {
     try {
       setAutoSaving(true);
-      
+
       const { error: projectError } = await supabase
         .from('projetos_auditoria')
         .update({
@@ -322,9 +320,9 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
       }
 
       setLastSaved(new Date());
-      secureLog('info', 'Auto-save do planejamento realizado', { 
-        projectId: project.id, 
-        interfaceCompleteness 
+      secureLog('info', 'Auto-save do planejamento realizado', {
+        projectId: project.id,
+        interfaceCompleteness
       });
     } catch (error) {
       secureLog('error', 'Erro no auto-save do planejamento', error);
@@ -337,7 +335,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
   const savePlanningData = async () => {
     try {
       setSaving(true);
-      
+
       // Salvar dados do projeto
       const { error: projectError } = await supabase
         .from('projetos_auditoria')
@@ -358,9 +356,9 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
       setLastSaved(new Date());
       toast.success(`Dados salvos! Interface: ${interfaceCompleteness}% | Botão: ${databaseCompleteness}%`);
-      
-      secureLog('info', 'Planejamento salvo manualmente', { 
-        projectId: project.id, 
+
+      secureLog('info', 'Planejamento salvo manualmente', {
+        projectId: project.id,
         interfaceCompleteness,
         databaseCompleteness
       });
@@ -415,12 +413,12 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
         horas_alocadas: newResource.horas_alocadas,
         custo_hora: newResource.custo_hora
       };
-      
+
       setPlanningData(prev => ({
         ...prev,
         recursos_humanos: [...prev.recursos_humanos, resource]
       }));
-      
+
       setNewResource({ nome: '', funcao: '', horas_alocadas: 0, custo_hora: 0 });
       setShowResourceDialog(false);
     }
@@ -443,12 +441,12 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
         responsavel: newTimelineItem.responsavel.trim(),
         status: 'pendente'
       };
-      
+
       setPlanningData(prev => ({
         ...prev,
         cronograma: [...prev.cronograma, timelineItem]
       }));
-      
+
       setNewTimelineItem({ atividade: '', data_inicio: '', data_fim: '', responsavel: '' });
       setShowScheduleDialog(false);
     }
@@ -473,7 +471,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
   // Usar completude da interface para exibição nas abas
   const displayCompleteness = interfaceCompleteness;
-  
+
   console.log('PlanningPhaseFixed - Completeness display:', {
     project_id: project.id,
     interfaceCompleteness, // Baseado no preenchimento da interface
@@ -495,32 +493,39 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
     <div className="space-y-6">
       {/* Header com Progresso MELHORADO */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 px-4 sm:pb-6 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg tracking-tight">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5" />
                 Planejamento da Auditoria
-                {autoSaving && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
+                {autoSaving && <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm mt-1">
                 Defina objetivos, escopo, recursos e metodologia
                 {lastSaved && (
-                  <span className="block text-xs text-green-600 mt-1">
+                  <span className="block text-[10px] sm:text-xs text-green-600 mt-1">
                     Último salvamento: {lastSaved.toLocaleTimeString('pt-BR')}
                   </span>
                 )}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Completude</p>
-                <p className="text-lg font-bold">{displayCompleteness}%</p>
-                <Badge variant={displayCompleteness >= 80 ? 'default' : displayCompleteness >= 50 ? 'secondary' : 'outline'}>
-                  {displayCompleteness >= 80 ? 'Excelente' : displayCompleteness >= 50 ? 'Bom' : 'Em progresso'}
-                </Badge>
+
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <div className="flex flex-col sm:items-end w-full sm:w-auto">
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mb-1 sm:mb-0">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wider">Completude</p>
+                </div>
+                <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm sm:text-lg font-bold leading-none">{displayCompleteness}%</p>
+                    <Badge className="text-[9px] px-1.5 py-0 h-4 rounded" variant={displayCompleteness >= 80 ? 'default' : displayCompleteness >= 50 ? 'secondary' : 'outline'}>
+                      {displayCompleteness >= 80 ? 'Excelente' : displayCompleteness >= 50 ? 'Bom' : 'Em progresso'}
+                    </Badge>
+                  </div>
+                  <Progress value={displayCompleteness} className="w-20 sm:w-24 h-2 sm:h-3 ml-auto sm:ml-2" />
+                </div>
               </div>
-              <Progress value={displayCompleteness} className="w-24 h-3" />
             </div>
           </div>
         </CardHeader>
@@ -528,41 +533,41 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
       {/* Indicadores de Progresso por Seção */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Progresso por Seção</CardTitle>
+        <CardHeader className="pb-2 sm:pb-4 pt-4 sm:pt-6">
+          <CardTitle className="text-sm sm:text-base">Progresso por Seção</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
+        <CardContent className="pb-4 sm:pb-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="text-center p-2 sm:p-3 bg-muted/20 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">
                 {planningData.objetivos.length}
               </div>
-              <div className="text-sm text-muted-foreground">Objetivos</div>
-              <Progress value={Math.min(100, planningData.objetivos.length * 25)} className="h-2 mt-1" />
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Objetivos</div>
+              <Progress value={Math.min(100, planningData.objetivos.length * 25)} className="h-1 sm:h-1.5 mt-2" />
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
+
+            <div className="text-center p-2 sm:p-3 bg-muted/20 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
                 {planningData.criterios_auditoria.length}
               </div>
-              <div className="text-sm text-muted-foreground">Critérios</div>
-              <Progress value={Math.min(100, planningData.criterios_auditoria.length * 20)} className="h-2 mt-1" />
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Critérios</div>
+              <Progress value={Math.min(100, planningData.criterios_auditoria.length * 20)} className="h-1 sm:h-1.5 mt-2" />
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
+
+            <div className="text-center p-2 sm:p-3 bg-muted/20 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-purple-600">
                 {planningData.recursos_humanos.length}
               </div>
-              <div className="text-sm text-muted-foreground">Recursos</div>
-              <Progress value={Math.min(100, planningData.recursos_humanos.length * 33)} className="h-2 mt-1" />
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Recursos</div>
+              <Progress value={Math.min(100, planningData.recursos_humanos.length * 33)} className="h-1 sm:h-1.5 mt-2" />
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
+
+            <div className="text-center p-2 sm:p-3 bg-muted/20 rounded-lg">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {planningData.cronograma.length}
               </div>
-              <div className="text-sm text-muted-foreground">Atividades</div>
-              <Progress value={Math.min(100, planningData.cronograma.length * 20)} className="h-2 mt-1" />
+              <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Atividades</div>
+              <Progress value={Math.min(100, planningData.cronograma.length * 20)} className="h-1 sm:h-1.5 mt-2" />
             </div>
           </div>
         </CardContent>
@@ -593,7 +598,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {planningData.objetivos.map((objetivo, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -608,7 +613,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 </div>
               ))}
             </div>
-            
+
             {planningData.objetivos.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nenhum objetivo definido ainda
@@ -695,7 +700,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {planningData.criterios_auditoria.map((criterio, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
@@ -710,7 +715,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 </div>
               ))}
             </div>
-            
+
             {planningData.criterios_auditoria.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nenhum critério definido ainda
@@ -742,7 +747,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 </div>
                 <Badge variant="default">Líder</Badge>
               </div>
-              
+
               {planningData.recursos_humanos.map((resource) => (
                 <div key={resource.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
@@ -761,9 +766,9 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                   </Button>
                 </div>
               ))}
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => setShowResourceDialog(true)}
               >
@@ -791,14 +796,14 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                 <Input
                   type="number"
                   value={planningData.orcamento}
-                  onChange={(e) => setPlanningData(prev => ({ 
-                    ...prev, 
-                    orcamento: parseFloat(e.target.value) || 0 
+                  onChange={(e) => setPlanningData(prev => ({
+                    ...prev,
+                    orcamento: parseFloat(e.target.value) || 0
                   }))}
                   placeholder="0,00"
                 />
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Recursos Humanos:</span>
@@ -813,7 +818,7 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                   <span>R$ {calculateTotalBudget().toFixed(2)}</span>
                 </div>
               </div>
-              
+
               <div className="text-xs text-muted-foreground">
                 <p>Recursos: {planningData.recursos_humanos.length + 1}</p>
                 <p>Horas totais: {planningData.recursos_humanos.reduce((sum, r) => sum + r.horas_alocadas, 0)}h</p>
@@ -823,23 +828,23 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+              <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Cronograma
-              <Badge variant="outline">{planningData.cronograma.length}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{planningData.cronograma.length}</Badge>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-[10px] sm:text-xs">
               {planningData.cronograma.length} atividades planejadas
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="text-sm p-3 bg-muted rounded-lg">
-                <p><strong>Início:</strong> {new Date(project.data_inicio).toLocaleDateString('pt-BR')}</p>
-                <p><strong>Fim Previsto:</strong> {new Date(project.data_fim_prevista).toLocaleDateString('pt-BR')}</p>
+              <div className="text-[10px] sm:text-xs p-2 sm:p-3 bg-muted rounded-lg">
+                <p><strong className="font-semibold">Início:</strong> {new Date(project.data_inicio).toLocaleDateString('pt-BR')}</p>
+                <p><strong className="font-semibold">Fim Previsto:</strong> {new Date(project.data_fim_prevista).toLocaleDateString('pt-BR')}</p>
               </div>
-              
+
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {planningData.cronograma.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -867,13 +872,13 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
                   </div>
                 ))}
               </div>
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
+
+              <Button
+                variant="outline"
+                className="w-full text-xs h-8"
                 onClick={() => setShowScheduleDialog(true)}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Adicionar Atividade
               </Button>
             </div>
@@ -883,31 +888,31 @@ export function PlanningPhaseFixed({ project }: PlanningPhaseProps) {
 
       {/* Ações MELHORADAS */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className={`h-4 w-4 ${displayCompleteness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
-              <span className="text-sm text-muted-foreground">
-                {displayCompleteness >= 80 ? 'Planejamento completo - Pronto para próxima fase' : 
-                 displayCompleteness >= 50 ? `${displayCompleteness}% completo - Bom progresso` :
-                 `${displayCompleteness}% completo - Continue preenchendo`}
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <CheckCircle className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${displayCompleteness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
+              <span className="text-[10px] sm:text-xs text-muted-foreground flex-1 sm:flex-none">
+                {displayCompleteness >= 80 ? 'Planejamento completo' :
+                  displayCompleteness >= 50 ? `${displayCompleteness}% completo - Bom progresso` :
+                    `${displayCompleteness}% completo - Continue`}
               </span>
               {autoSaving && (
-                <Badge variant="outline" className="ml-2">
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                  Auto-salvando...
+                <Badge variant="outline" className="hidden sm:inline-flex ml-2 text-[9px] px-1 py-0 h-4">
+                  <RefreshCw className="h-2.5 w-2.5 mr-1 animate-spin" />
+                  Auto-salvando
                 </Badge>
               )}
             </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={loadPlanningData}>
-                <RefreshCw className="h-4 w-4 mr-1" />
+
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <Button variant="outline" size="sm" onClick={loadPlanningData} className="text-xs h-8">
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                 Recarregar
               </Button>
-              <Button onClick={savePlanningData} disabled={saving}>
-                <Save className="h-4 w-4 mr-1" />
-                {saving ? 'Salvando...' : 'Salvar Agora'}
+              <Button size="sm" onClick={savePlanningData} disabled={saving} className="text-xs h-8">
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </div>

@@ -19,20 +19,20 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
 }) => {
   const { tenantSettings, getRiskLevels, isLoading, refetch } = useTenantSettings();
   const queryClient = useQueryClient();
-  
+
   // Forçar atualização quando o componente for montado
   useEffect(() => {
     const handleStorageChange = () => {
       console.log('🔄 Storage change detected, refetching tenant settings...');
       refetch();
     };
-    
+
     // Escutar mudanças no localStorage (caso outras abas atualizem)
     window.addEventListener('storage', handleStorageChange);
-    
+
     // Escutar evento customizado para atualizações da matriz
     window.addEventListener('risk-matrix-updated', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('risk-matrix-updated', handleStorageChange);
@@ -56,7 +56,7 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
   }
 
   const matrixConfig = tenantSettings?.risk_matrix;
-  
+
   const getRiskLevelColor = (levelName: string) => {
     if (matrixConfig?.risk_levels_custom) {
       const customLevel = matrixConfig.risk_levels_custom.find(level => level.name === levelName);
@@ -83,7 +83,7 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
 
   const countRisksByLevel = (levelName: string) => {
     if (showOnlyLevels) return 0;
-    
+
     return risks.filter(risk => {
       const riskLevel = risk.risk_level || risk.riskLevel;
       return riskLevel === levelName;
@@ -91,12 +91,12 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
   };
 
   const configuredLevels = getRiskLevels();
-  
+
   const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
   const isMatrix3x3 = tenantSettings?.risk_matrix?.type === '3x3';
-  
+
   let levelsToShow = configuredLevels;
-  
+
   if (isMatrix3x3) {
     levelsToShow = ['Baixo', 'Médio', 'Alto'];
   } else if (isMatrix4x4) {
@@ -127,17 +127,17 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
   // Determinar classes de grid baseado no número de níveis
   const getGridClasses = () => {
     const numLevels = levelsToShow.length;
-    
+
     if (responsive) {
       // Layout responsivo baseado no número de níveis
       switch (numLevels) {
         case 3:
-          return 'grid grid-cols-3 gap-2';
+          return 'grid grid-cols-1 xs:grid-cols-3 gap-2';
         case 4:
-          return 'grid grid-cols-2 md:grid-cols-4 gap-2';
+          return 'grid grid-cols-2 sm:grid-cols-4 gap-2';
         case 5:
         default:
-          return 'grid grid-cols-2 md:grid-cols-5 gap-2';
+          return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2';
       }
     } else {
       // Layout fixo baseado no número de níveis
@@ -158,10 +158,10 @@ export const RiskLevelDisplay: React.FC<RiskLevelDisplayProps> = ({
       {levelsToShow.map((levelName, index) => {
         const colors = getRiskLevelColor(levelName);
         const count = countRisksByLevel(levelName);
-        
+
         return (
           <div key={levelName} className="text-center">
-            <div 
+            <div
               className={`
                 ${sizeClasses.container} rounded flex items-center justify-center font-bold ${sizeClasses.text}
                 ${colors.customStyle ? '' : `${colors.bg} ${colors.text} ${colors.dark}`}
