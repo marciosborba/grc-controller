@@ -334,23 +334,33 @@ export default function CMDB() {
   };
 
   const getStatusBadgeColor = (status: string) => {
+    const defaultColor = 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
     const colors = {
-      'Ativo': 'bg-green-600 text-white border border-green-700',
-      'Inativo': 'bg-gray-600 text-white border border-gray-700',
-      'Manutenção': 'bg-yellow-600 text-white border border-yellow-700',
-      'Descomissionado': 'bg-red-600 text-white border border-red-700',
+      'Ativo': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+      'Inativo': 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+      'Em Implementação': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+      'Desenvolvimento': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Teste': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+      'Manutenção': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+      'Descomissionado': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+      'Descontinuado': 'bg-red-600 text-white border border-red-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
     };
-    return colors[status as keyof typeof colors] || colors['Ativo'];
+    return colors[status as keyof typeof colors] || defaultColor;
   };
 
   const getRiskBadgeColor = (risk: string) => {
+    const defaultColor = 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
     const colors = {
-      'Crítico': 'bg-red-600 text-white border border-red-700',
-      'Alto': 'bg-orange-600 text-white border border-orange-700',
-      'Médio': 'bg-yellow-600 text-white border border-yellow-700',
-      'Baixo': 'bg-green-600 text-white border border-green-700',
+      'Crítica': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+      'Alta': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+      'Média': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Baixa': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+      'Crítico': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+      'Alto': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+      'Médio': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
+      'Baixo': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
     };
-    return colors[risk as keyof typeof colors] || colors['Baixo'];
+    return colors[risk as keyof typeof colors] || defaultColor;
   };
 
   // Real API integration functions
@@ -1206,7 +1216,71 @@ export default function CMDB() {
           </div>
         </CardHeader>
         <CardContent className="px-2 pb-2 pt-2">
-          <div className="overflow-x-auto">
+          {/* Mobile card list - hidden on sm+ */}
+          <div className="flex flex-col divide-y sm:hidden">
+            {filteredAssets.map((asset) => (
+              <div key={asset.id} className="py-2.5 px-2 flex items-center gap-2">
+                {/* Icon */}
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {getTypeIcon(asset.type)}
+                </div>
+                {/* Main info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate">{asset.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{asset.os || 'N/A'} • {asset.ip_address}</p>
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <Badge className={`${getStatusBadgeColor(asset.status)} text-[9px] px-1.5 py-0`}>
+                      {asset.status}
+                    </Badge>
+                    <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-[9px] px-1.5 py-0`}>
+                      {asset.risk_level}
+                    </Badge>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                      {asset.vulnerabilities}v
+                    </Badge>
+                  </div>
+                </div>
+                {/* Action */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => handleViewAsset(asset)}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-2" />
+                      Visualizar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => navigate(`/vulnerabilities/cmdb/edit/${asset.id}`)}
+                      className="cursor-pointer text-xs"
+                    >
+                      <Edit className="h-3.5 w-3.5 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleDeleteAsset(asset.id)}
+                      className="cursor-pointer text-xs text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+            {filteredAssets.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">Nenhum ativo encontrado</p>
+            )}
+          </div>
+
+          {/* Desktop table - hidden on mobile */}
+          <div className="hidden sm:block overflow-x-auto">
             <Table className="text-xs">
               <TableHeader>
                 <TableRow>

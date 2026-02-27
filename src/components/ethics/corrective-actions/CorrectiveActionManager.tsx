@@ -298,12 +298,12 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Ações Corretivas</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Ações Corretivas</h3>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {actions.length > 0 && (
             <div className="flex items-center gap-2 text-sm">
               <span>Progresso:</span>
@@ -320,7 +320,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 Nova Ação
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingAction ? 'Editar Ação Corretiva' : 'Nova Ação Corretiva'}
@@ -328,15 +328,15 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
               </DialogHeader>
 
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="basic">Básico</TabsTrigger>
-                  <TabsTrigger value="planning">Planejamento</TabsTrigger>
-                  <TabsTrigger value="execution">Execução</TabsTrigger>
-                  <TabsTrigger value="verification">Verificação</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                  <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                  <TabsTrigger value="planning" className="text-xs sm:text-sm">Planejamento</TabsTrigger>
+                  <TabsTrigger value="execution" className="text-xs sm:text-sm">Execução</TabsTrigger>
+                  <TabsTrigger value="verification" className="text-xs sm:text-sm">Verificação</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="action_type">Tipo de Ação</Label>
                       <Select
@@ -433,7 +433,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="target_individual">Indivíduo Alvo</Label>
                       <Input
@@ -467,7 +467,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="planning" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="due_date">Data de Vencimento</Label>
                       <Input
@@ -488,7 +488,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="estimated_cost">Custo Estimado (R$)</Label>
                       <Input
@@ -536,7 +536,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="execution" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="started_date">Data de Início</Label>
                       <Input
@@ -582,7 +582,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="verification" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="verification_date">Data de Verificação</Label>
                       <Input
@@ -648,12 +648,12 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
               </Tabs>
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button onClick={handleSave}>
+                <Button className="w-full sm:w-auto" onClick={handleSave}>
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Ação
                 </Button>

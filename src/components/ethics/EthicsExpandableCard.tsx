@@ -339,20 +339,20 @@ const EthicsExpandableCard: React.FC<EthicsExpandableCardProps> = ({ report, onU
                       report.severity.toUpperCase()}
             </Badge>
           </div>
-          <CardTitle className="text-lg group-hover:text-primary transition-colors duration-200">{report.title}</CardTitle>
+          <CardTitle className="text-sm sm:text-base group-hover:text-primary transition-colors duration-200 leading-snug">{report.title}</CardTitle>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-600 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200 mt-2">
+        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200 mt-1.5">
           <div className="flex items-center gap-1">
-            <Calendar className="h-4 w-4 group-hover:text-primary transition-colors duration-200" />
+            <Calendar className="h-3 w-3 group-hover:text-primary transition-colors duration-200" />
             {format(new Date(report.created_at), 'dd/MM/yyyy', { locale: ptBR })}
           </div>
           <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4 group-hover:text-primary transition-colors duration-200" />
+            <Clock className="h-3 w-3 group-hover:text-primary transition-colors duration-200" />
             {report.days_since_created} dias
           </div>
           {report.is_sla_breach && (
-            <Badge variant="destructive" className="text-xs px-2 py-0.5">
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
               SLA Vencido
             </Badge>
           )}

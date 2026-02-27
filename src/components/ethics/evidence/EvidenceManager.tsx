@@ -281,10 +281,10 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Gestão de Evidências</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Gestão de Evidências</h3>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -293,7 +293,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               Nova Evidência
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingEvidence ? 'Editar Evidência' : 'Registrar Nova Evidência'}
@@ -301,15 +301,15 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="preservation">Preservação</TabsTrigger>
-                <TabsTrigger value="legal">Legal</TabsTrigger>
-                <TabsTrigger value="custody">Custódia</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                <TabsTrigger value="preservation" className="text-xs sm:text-sm">Preservação</TabsTrigger>
+                <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal</TabsTrigger>
+                <TabsTrigger value="custody" className="text-xs sm:text-sm">Custódia</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="evidence_type">Tipo de Evidência</Label>
                     <Select
@@ -382,7 +382,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="file_hash">Hash do Arquivo</Label>
                     <Input
@@ -406,7 +406,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               </TabsContent>
 
               <TabsContent value="preservation" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="preservation_status">Status de Preservação</Label>
                     <Select
@@ -556,12 +556,12 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button className="w-full sm:w-auto" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Evidência
               </Button>

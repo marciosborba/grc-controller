@@ -184,36 +184,36 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ te
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                        <div className="p-4 border rounded-lg flex items-center gap-4 bg-muted/50">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                                <Server className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                        <div className="p-3 sm:p-4 border rounded-lg flex items-center gap-3 bg-muted/50">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full shrink-0">
+                                <Server className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium">Banco de Dados</p>
-                                <p className="text-2xl font-bold">{stats?.database_size_mb || 0} MB</p>
+                                <p className="text-xs sm:text-sm font-medium">Banco de Dados</p>
+                                <p className="text-lg sm:text-2xl font-bold">{stats?.database_size_mb || 0} MB</p>
                                 <p className="text-xs text-muted-foreground">{stats?.details?.users_count || 0} usuários, {stats?.details?.logs_count || 0} logs</p>
                             </div>
                         </div>
 
-                        <div className="p-4 border rounded-lg flex items-center gap-4 bg-muted/50">
-                            <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-full">
-                                <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        <div className="p-3 sm:p-4 border rounded-lg flex items-center gap-3 bg-muted/50">
+                            <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-full shrink-0">
+                                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 dark:text-amber-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium">Arquivos</p>
-                                <p className="text-2xl font-bold">{stats?.files_size_mb || 0} MB</p>
+                                <p className="text-xs sm:text-sm font-medium">Arquivos</p>
+                                <p className="text-lg sm:text-2xl font-bold">{stats?.files_size_mb || 0} MB</p>
                                 <p className="text-xs text-muted-foreground">Documentos e anexos</p>
                             </div>
                         </div>
 
-                        <div className="p-4 border rounded-lg flex items-center gap-4 bg-muted/50">
-                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                                <Cloud className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div className="p-3 sm:p-4 border rounded-lg flex items-center gap-3 bg-muted/50">
+                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full shrink-0">
+                                <Cloud className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium">Plano Atual</p>
-                                <p className="text-2xl font-bold">Standard</p>
+                                <p className="text-xs sm:text-sm font-medium">Plano Atual</p>
+                                <p className="text-lg sm:text-2xl font-bold">Standard</p>
                                 <p className="text-xs text-muted-foreground">Até 10 GB de armazenamento</p>
                             </div>
                         </div>
@@ -248,7 +248,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({ te
                             Gera um arquivo ZIP contendo JSONs com usuários, logs, políticas, riscos, incidentes e todos os dados dos módulos.
                         </div>
 
-                        <Button onClick={handleExportData} disabled={isExporting} className="min-w-[150px]">
+                        <Button onClick={handleExportData} disabled={isExporting} className="w-full sm:w-auto min-w-[150px]">
                             {isExporting ? (
                                 <>Gerando...</>
                             ) : (

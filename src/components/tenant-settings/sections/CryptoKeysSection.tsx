@@ -127,49 +127,46 @@ export function CryptoKeysSection() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Key className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               Encryption Keys
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm mt-1">
               Manage your tenant's encryption keys. Regular rotation is recommended for security.
             </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Upload className="h-4 w-4" />
+                <Button variant="outline" size="sm" className="gap-2 text-xs">
+                  <Upload className="h-3.5 w-3.5" />
                   Import Key
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[95vw] max-w-[450px]">
                 <DialogHeader>
-                  <DialogTitle>Import Custom Key (BYOK)</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-sm sm:text-base">Import Custom Key (BYOK)</DialogTitle>
+                  <DialogDescription className="text-xs">
                     Provide a custom AES-256 key (Base64 encoded) to use for encryption.
                     <br />
                     <span className="text-destructive font-bold">Warning: ensuring you have a backup of this key is your responsibility.</span>
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="key" className="text-right">
-                      Key (Base64)
-                    </Label>
+                  <div className="grid gap-2">
+                    <Label htmlFor="key" className="text-sm">Key (Base64)</Label>
                     <Input
                       id="key"
                       value={customKey}
                       onChange={(e) => setCustomKey(e.target.value)}
-                      className="col-span-3"
                       placeholder="e.g. aS3...=="
                       type="password"
                     />
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button onClick={() => executeKeyRotation(customKey)} disabled={!customKey || rotating}>
                     {rotating ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -187,9 +184,10 @@ export function CryptoKeysSection() {
               }}
               disabled={rotating || loading}
               variant="outline"
-              className="gap-2"
+              size="sm"
+              className="gap-2 text-xs"
             >
-              <RefreshCw className={`h-4 w-4 ${rotating && !isDialogOpen ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${rotating && !isDialogOpen ? 'animate-spin' : ''}`} />
               Rotate Key
             </Button>
           </div>
@@ -203,42 +201,44 @@ export function CryptoKeysSection() {
             No encryption keys found. Click "Rotate Key" to generate your first key.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Algorithm</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Rotated At</TableHead>
-                <TableHead>Next Rotation</TableHead>
-                <TableHead>Key ID</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {keys.map((key) => (
-                <TableRow key={key.key_id}>
-                  <TableCell>
-                    <Badge variant={key.status === 'active' ? 'default' : 'secondary'}>
-                      {key.status.toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{key.algorithm}</TableCell>
-                  <TableCell>{new Date(key.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{key.rotated_at ? new Date(key.rotated_at).toLocaleDateString() : '-'}</TableCell>
-                  <TableCell>
-                    {key.next_rotation ? (
-                      <span className={new Date(key.next_rotation) < new Date() ? 'text-destructive font-bold' : ''}>
-                        {new Date(key.next_rotation).toLocaleDateString()}
-                      </span>
-                    ) : '-'}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {key.key_id.substring(0, 8)}...
-                  </TableCell>
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Algorithm</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Rotated At</TableHead>
+                  <TableHead>Next Rotation</TableHead>
+                  <TableHead>Key ID</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {keys.map((key) => (
+                  <TableRow key={key.key_id}>
+                    <TableCell>
+                      <Badge variant={key.status === 'active' ? 'default' : 'secondary'}>
+                        {key.status.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{key.algorithm}</TableCell>
+                    <TableCell>{new Date(key.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{key.rotated_at ? new Date(key.rotated_at).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell>
+                      {key.next_rotation ? (
+                        <span className={new Date(key.next_rotation) < new Date() ? 'text-destructive font-bold' : ''}>
+                          {new Date(key.next_rotation).toLocaleDateString()}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {key.key_id.substring(0, 8)}...
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

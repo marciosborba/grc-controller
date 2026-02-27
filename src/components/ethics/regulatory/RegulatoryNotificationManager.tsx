@@ -341,10 +341,10 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Notificações Regulatórias</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Notificações Regulatórias</h3>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -353,7 +353,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               Nova Notificação
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingNotification ? 'Editar Notificação Regulatória' : 'Nova Notificação Regulatória'}
@@ -361,15 +361,15 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="submission">Submissão</TabsTrigger>
-                <TabsTrigger value="legal">Legal</TabsTrigger>
-                <TabsTrigger value="impact">Impacto</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                <TabsTrigger value="submission" className="text-xs sm:text-sm">Submissão</TabsTrigger>
+                <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal</TabsTrigger>
+                <TabsTrigger value="impact" className="text-xs sm:text-sm">Impacto</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="regulatory_body">Órgão Regulador</Label>
                     <Select
@@ -470,7 +470,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               </TabsContent>
 
               <TabsContent value="submission" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="submission_method">Método de Submissão</Label>
                     <Select
@@ -631,12 +631,12 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button className="w-full sm:w-auto" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Notificação
               </Button>

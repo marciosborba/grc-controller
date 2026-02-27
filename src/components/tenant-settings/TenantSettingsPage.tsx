@@ -301,301 +301,267 @@ const TenantSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate flex items-center space-x-2">
-            <Settings className="h-8 w-8 text-primary" />
-            <span>Configurações da Organização</span>
-            {isPlatformAdmin && <Crown className="h-6 w-6 text-orange-500" />}
+    <div className="space-y-4 sm:space-y-6">
+      {/* ── Header ──────────────────────────────────────────── */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
+            <Settings className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          </div>
+          <h1 className="text-lg sm:text-2xl font-bold leading-tight">
+            Configurações da Organização
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base mt-1">
-            {isPlatformAdmin ? 'Gerencie configurações de todas as organizações da plataforma' : 'Gerencie todas as configurações e políticas da sua organização'}
-          </p>
-
-          {tenantInfo && (
-            <div className="flex items-center space-x-4 text-sm mt-2">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span className="text-green-600 font-medium">{tenantInfo.name}</span>
-              </div>
-              <Badge variant="secondary" className="text-xs bg-muted text-muted-foreground border-muted-foreground/20">
-                {tenantInfo.subscription_plan}
-              </Badge>
-              <span className="text-muted-foreground">
-                {String(metrics?.totalUsers || 0)}/{String(tenantInfo.max_users)} usuários
-              </span>
-              {isPlatformAdmin && (
-                <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs border border-orange-200 dark:border-orange-700">
-                  <Crown className="h-3 w-3 mr-1" />
-                  Modo Super Admin
-                </Badge>
-              )}
-            </div>
-          )}
+          {isPlatformAdmin && <Crown className="h-4 w-4 text-orange-500 shrink-0" />}
         </div>
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          {isPlatformAdmin ? 'Gerencie configurações de todas as organizações da plataforma' : 'Gerencie todas as configurações e políticas da sua organização'}
+        </p>
+
+        {tenantInfo && (
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-xs sm:text-sm font-semibold text-green-600">{tenantInfo.name}</span>
+            </div>
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-2 py-0.5 capitalize">
+              {tenantInfo.subscription_plan}
+            </Badge>
+            <span className="text-[10px] sm:text-xs text-muted-foreground">
+              {String(metrics?.totalUsers || 0)}/{String(tenantInfo.max_users)} usuários
+            </span>
+            {isPlatformAdmin && (
+              <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 text-[10px] sm:text-xs px-2 py-0.5 border border-orange-200 dark:border-orange-700">
+                <Crown className="h-2.5 w-2.5 mr-1" />
+                Super Admin
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* ── KPI Cards ─────────────────────────────────────────── */}
       {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Card 1: Security Score */}
-          <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
-            <div className="absolute top-0 right-0 p-3 opacity-10">
-              {metrics.securityScore >= 80 ? <Shield className="h-24 w-24" /> : <AlertTriangle className="h-24 w-24" />}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Security Score */}
+          <div className={`rounded-xl border p-3 sm:p-4 relative overflow-hidden ${metrics.securityScore >= 80 ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/10' : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/10'}`}>
+            <div className="absolute -right-3 -top-3 opacity-[0.07]">
+              {metrics.securityScore >= 80 ? <Shield className="h-20 w-20" /> : <AlertTriangle className="h-20 w-20" />}
             </div>
-            <CardHeader className="pb-2">
-              <CardTitle className={`text-lg font-bold flex items-center gap-2 ${metrics.securityScore >= 80 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                {metrics.securityScore >= 80 ? 'Alta Segurança' : 'Melhorias Possíveis'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className={`text-3xl font-bold ${metrics.securityScore >= 80 ? 'text-emerald-600' : 'text-orange-600'}`}>{metrics.securityScore}%</span>
-                <span className="text-sm text-muted-foreground">de proteção</span>
-              </div>
-              <p className="text-muted-foreground font-medium text-sm leading-relaxed">
-                {metrics.securityScore >= 80 ? 'Sua organização está seguindo as melhores práticas de segurança.' : 'Sugerimos ativar mais recursos (como MFA e Logs) para atingir 100%.'}
-              </p>
-              <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.securityScore >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
-                {metrics.securityScore >= 80 ? 'Ambiente Protegido' : 'Requer Atenção'}
-              </div>
-            </CardContent>
-          </Card>
+            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1">Score de Segurança</p>
+            <p className={`text-xl sm:text-3xl font-bold ${metrics.securityScore >= 80 ? 'text-emerald-600' : 'text-orange-600'}`}>{metrics.securityScore}%</p>
+            <div className="mt-2 w-full bg-muted/50 h-1 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full ${metrics.securityScore >= 80 ? 'bg-emerald-500' : 'bg-orange-500'}`}
+                style={{ width: `${metrics.securityScore}%` }}
+              />
+            </div>
+            <p className={`text-[10px] sm:text-xs mt-1 font-medium ${metrics.securityScore >= 80 ? 'text-emerald-600' : 'text-orange-600'}`}>
+              {metrics.securityScore >= 80 ? 'Protegido' : 'Requer atenção'}
+            </p>
+          </div>
 
-          {/* Card 2: Users */}
-          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Users className="h-24 w-24 text-blue-500" />
+          {/* Usuários */}
+          <div className="rounded-xl border p-3 sm:p-4 relative overflow-hidden bg-card">
+            <div className="absolute -right-3 -top-3 opacity-[0.05]"><Users className="h-20 w-20 text-blue-500" /></div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Users className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">Usuários</p>
             </div>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-                <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Usuários Totais</p>
-                <h3 className="text-3xl font-bold text-foreground">{metrics.totalUsers}</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {metrics.activeUsers} credenciais ativas
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.totalUsers}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{metrics.activeUsers} ativos</p>
+          </div>
 
-          {/* Card 3: Active Sessions with Tooltip */}
-          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Activity className="h-24 w-24 text-purple-500" />
+          {/* Sessões */}
+          <div className="rounded-xl border p-3 sm:p-4 relative overflow-hidden bg-card">
+            <div className="absolute -right-3 -top-3 opacity-[0.05]"><Activity className="h-20 w-20 text-purple-500" /></div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">Sessões</p>
             </div>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-                <Activity className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Sessões Ativas</p>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-3xl font-bold text-foreground">{metrics.activeSessions}</h3>
-                  {metrics.activeUsersList.length > 0 && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help p-1 hover:bg-muted rounded-full transition-colors">
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right" className="max-w-[200px]">
-                          <p className="font-semibold mb-1">Usuários Ativos:</p>
-                          <ul className="text-xs space-y-1 list-disc pl-4">
-                            {metrics.activeUsersList.map((user, i) => (
-                              <li key={i}>{user}</li>
-                            ))}
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Usuários ativos (24h)
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.activeSessions}</p>
+              {metrics.activeUsersList.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-[200px]">
+                      <p className="font-semibold mb-1 text-xs">Usuários Ativos:</p>
+                      <ul className="text-xs space-y-1 list-disc pl-4">
+                        {metrics.activeUsersList.map((u, i) => <li key={i}>{u}</li>)}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Últimas 24h</p>
+          </div>
 
-          {/* Card 4: Storage */}
-          <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
-            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Database className="h-24 w-24 text-orange-500" />
+          {/* Armazenamento */}
+          <div className="rounded-xl border p-3 sm:p-4 relative overflow-hidden bg-card">
+            <div className="absolute -right-3 -top-3 opacity-[0.05]"><Database className="h-20 w-20 text-orange-500" /></div>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="p-1.5 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Database className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">Armazenamento</p>
             </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold text-foreground">Armazenamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">
-                  {metrics.storageUsed < 1 ? (metrics.storageUsed * 1024).toFixed(2) : metrics.storageUsed.toFixed(2)}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {metrics.storageUsed < 1 ? 'MB utilizados' : 'GB utilizados'}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">Limite do plano: {metrics.storageLimit} GB</p>
-              <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-                <div className="bg-orange-500 h-full rounded-full" style={{ width: `${Math.min((metrics.storageUsed / metrics.storageLimit) * 100, 100)}%` }}></div>
-              </div>
-            </CardContent>
-          </Card>
+            <p className="text-xl sm:text-3xl font-bold text-foreground">
+              {metrics.storageUsed < 1
+                ? `${(metrics.storageUsed * 1024).toFixed(0)}MB`
+                : `${metrics.storageUsed.toFixed(1)}GB`}
+            </p>
+            <div className="mt-2 w-full bg-muted/50 h-1 rounded-full overflow-hidden">
+              <div className="bg-orange-500 h-full rounded-full" style={{ width: `${Math.min((metrics.storageUsed / metrics.storageLimit) * 100, 100)}%` }} />
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">de {metrics.storageLimit}GB</p>
+          </div>
         </div>
       )}
 
+      {/* ── Alerta ─────────────────────────────────────────────── */}
       {metrics && metrics.suspiciousActivities > 0 && (
-        <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50">
+        <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/50 py-2">
           <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          <AlertDescription className="text-orange-800 dark:text-orange-200">
-            <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24 horas.
-            <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300">
-              Ver detalhes
-            </Button>
+          <AlertDescription className="text-orange-800 dark:text-orange-200 text-xs sm:text-sm">
+            <strong>Atenção:</strong> {String(metrics.suspiciousActivities)} atividade(s) suspeita(s) detectada(s) nas últimas 24h.
+            <Button variant="link" className="p-0 h-auto ml-2 text-orange-600 dark:text-orange-400 text-xs sm:text-sm">Ver detalhes</Button>
           </AlertDescription>
         </Alert>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Eye className="h-3.5 w-3.5 mr-1.5" /> Visão Geral
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Users className="h-3.5 w-3.5 mr-1.5" /> Usuários
-          </TabsTrigger>
-          <TabsTrigger value="groups" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Users className="h-3.5 w-3.5 mr-1.5" /> Grupos
-          </TabsTrigger>
-          <TabsTrigger value="security" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Shield className="h-3.5 w-3.5 mr-1.5" /> Segurança
-          </TabsTrigger>
-          <TabsTrigger value="risk-matrix" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Activity className="h-3.5 w-3.5 mr-1.5" /> Matriz
-          </TabsTrigger>
-          <TabsTrigger value="sso" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Key className="h-3.5 w-3.5 mr-1.5" /> SSO
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Database className="h-3.5 w-3.5 mr-1.5" /> Dados
-          </TabsTrigger>
-          <TabsTrigger value="encryption" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Lock className="h-3.5 w-3.5 mr-1.5" /> Criptografia
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <FileText className="h-3.5 w-3.5 mr-1.5" /> Logs
-          </TabsTrigger>
-          <TabsTrigger value="api-tokens" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Key className="h-3.5 w-3.5 mr-1.5" /> API
-          </TabsTrigger>
-          <TabsTrigger value="ai-config" className="flex-1 min-w-fit data-[state=active]:bg-background px-3 py-1.5 text-xs">
-            <Zap className="h-3.5 w-3.5 mr-1.5" /> IA
-          </TabsTrigger>
-        </TabsList>
+      {/* ── Tabs ───────────────────────────────────────────────── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <div className="w-full overflow-x-auto -mx-1 px-1 pb-1">
+          <TabsList className="flex w-max min-w-full h-auto bg-muted/50 p-1 gap-0.5">
+            {[
+              { value: 'overview', icon: Eye, label: 'Visão Geral' },
+              { value: 'users', icon: Users, label: 'Usuários' },
+              { value: 'groups', icon: Users, label: 'Grupos' },
+              { value: 'security', icon: Shield, label: 'Segurança' },
+              { value: 'risk-matrix', icon: Activity, label: 'Matriz' },
+              { value: 'sso', icon: Key, label: 'SSO' },
+              { value: 'data', icon: Database, label: 'Dados' },
+              { value: 'encryption', icon: Lock, label: 'Criptografia' },
+              { value: 'logs', icon: FileText, label: 'Logs' },
+              { value: 'api-tokens', icon: Key, label: 'API' },
+              { value: 'ai-config', icon: Zap, label: 'IA' },
+            ].map(({ value, icon: Icon, label }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] sm:text-xs whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+              >
+                <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <TabsContent value="overview" className="space-y-4 sm:space-y-6 mt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-blue-500" onClick={() => setActiveTab('users')}>
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Users className="h-24 w-24 text-blue-500" />
+              <div className="absolute top-0 right-0 p-4 opacity-[0.07] group-hover:opacity-[0.14] transition-opacity">
+                <Users className="h-20 w-20 text-blue-500" />
               </div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                    <Users className="h-6 w-6 text-blue-600" />
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   Gerenciar Usuários
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Adicione novos membros, gerencie permissões baseadas em função e controle convites pendentes.</p>
+              <CardContent className="px-4 pb-4">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-3">Adicione membros, gerencie permissões e controle convites pendentes.</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm font-medium text-blue-600 group-hover:translate-x-1 transition-transform">
-                    Gerenciar Acessos <ArrowRight className="h-4 w-4 ml-1" />
-                  </div>
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700">{metrics?.totalUsers || 0} ativos</Badge>
+                  <span className="flex items-center text-xs font-medium text-blue-600 group-hover:translate-x-1 transition-transform">
+                    Gerenciar Acessos <ArrowRight className="h-3 w-3 ml-1" />
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{metrics?.totalUsers || 0} ativos</Badge>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-green-500" onClick={() => setActiveTab('security')}>
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Shield className="h-24 w-24 text-green-500" />
+              <div className="absolute top-0 right-0 p-4 opacity-[0.07] group-hover:opacity-[0.14] transition-opacity">
+                <Shield className="h-20 w-20 text-green-500" />
               </div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                    <Shield className="h-6 w-6 text-green-600" />
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Shield className="h-4 w-4 text-green-600 dark:text-green-400" />
                   </div>
                   Políticas de Segurança
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Configure autenticação Multi-Fator (MFA), políticas de senha e restrições de IP.</p>
+              <CardContent className="px-4 pb-4">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-3">Configure MFA, políticas de senha e restrições de acesso.</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm font-medium text-green-600 group-hover:translate-x-1 transition-transform">
-                    Ver Configurações <ArrowRight className="h-4 w-4 ml-1" />
-                  </div>
-                  <Badge variant="secondary" className="bg-green-50 text-green-700">Score: {metrics?.securityScore || 0}%</Badge>
+                  <span className="flex items-center text-xs font-medium text-green-600 group-hover:translate-x-1 transition-transform">
+                    Ver Configurações <ArrowRight className="h-3 w-3 ml-1" />
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">Score: {metrics?.securityScore || 0}%</Badge>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-purple-500" onClick={() => setActiveTab('data')}>
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Database className="h-24 w-24 text-purple-500" />
+              <div className="absolute top-0 right-0 p-4 opacity-[0.07] group-hover:opacity-[0.14] transition-opacity">
+                <Database className="h-20 w-20 text-purple-500" />
               </div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                    <Database className="h-6 w-6 text-purple-600" />
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   </div>
                   Dados e Backup
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Gerencie o armazenamento, agende backups automáticos e solicite exportação de dados.</p>
+              <CardContent className="px-4 pb-4">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-3">Gerencie armazenamento, backups automáticos e exportação.</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm font-medium text-purple-600 group-hover:translate-x-1 transition-transform">
-                    Gerenciar Dados <ArrowRight className="h-4 w-4 ml-1" />
-                  </div>
-                  <Badge variant="secondary" className="bg-purple-50 text-purple-700">{metrics?.storageUsed || 0}GB usado</Badge>
+                  <span className="flex items-center text-xs font-medium text-purple-600 group-hover:translate-x-1 transition-transform">
+                    Gerenciar Dados <ArrowRight className="h-3 w-3 ml-1" />
+                  </span>
+                  <Badge variant="secondary" className="text-[10px]">{(metrics?.storageUsed || 0).toFixed(1)}GB</Badge>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Activity className="h-5 w-5" />
-                <span>Status da Organização</span>
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Activity className="h-4 w-4" />
+                Status da Organização
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{String(metrics?.activeUsers || 0)}</div>
-                  <div className="text-sm text-muted-foreground">Usuários Ativos</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{String(metrics?.activeSessions || 0)}</div>
-                  <div className="text-sm text-muted-foreground">Sessões Ativas</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600">{String(metrics?.securityScore || 0)}%</div>
-                  <div className="text-sm text-muted-foreground">Score de Segurança</div>
-                </div>
-                <div className="text-center p-4 border rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {(metrics?.storageUsed || 0) < 1 ? `${((metrics?.storageUsed || 0) * 1024).toFixed(2)}MB` : `${(metrics?.storageUsed || 0).toFixed(2)}GB`}
+            <CardContent className="px-4 pb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: 'Usuários Ativos', value: String(metrics?.activeUsers || 0), color: 'text-green-600' },
+                  { label: 'Sessões Ativas', value: String(metrics?.activeSessions || 0), color: 'text-blue-600' },
+                  { label: 'Score Segurança', value: `${metrics?.securityScore || 0}%`, color: 'text-purple-600' },
+                  {
+                    label: 'Armazenamento', color: 'text-orange-600',
+                    value: (metrics?.storageUsed || 0) < 1
+                      ? `${((metrics?.storageUsed || 0) * 1024).toFixed(0)}MB`
+                      : `${(metrics?.storageUsed || 0).toFixed(1)}GB`
+                  },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="text-center p-3 border rounded-lg bg-muted/20">
+                    <div className={`text-lg sm:text-2xl font-bold ${color}`}>{value}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{label}</div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Armazenamento Usado</div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>

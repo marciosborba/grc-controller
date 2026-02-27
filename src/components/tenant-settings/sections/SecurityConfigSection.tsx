@@ -196,8 +196,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
       {/* Score de Segurança */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
             Score de Segurança da Organização
           </CardTitle>
           <CardDescription>
@@ -205,22 +205,22 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className={`p-4 rounded-full ${getSecurityScoreBg(securityScore)}`}>
-                <Shield className={`h-8 w-8 ${getSecurityScoreColor(securityScore)}`} />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-3 sm:p-4 rounded-full ${getSecurityScoreBg(securityScore)}`}>
+                <Shield className={`h-6 w-6 sm:h-8 sm:w-8 ${getSecurityScoreColor(securityScore)}`} />
               </div>
               <div>
-                <div className={`text-3xl font-bold ${getSecurityScoreColor(securityScore)}`}>
+                <div className={`text-xl sm:text-3xl font-bold ${getSecurityScoreColor(securityScore)}`}>
                   {String(securityScore)}%
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {securityScore >= 80 ? 'Excelente' :
                     securityScore >= 60 ? 'Bom' : 'Precisa melhorar'}
                 </div>
               </div>
             </div>
-            <Button onClick={handleSaveSettings} disabled={isLoading}>
+            <Button onClick={handleSaveSettings} disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? 'Salvando...' : 'Salvar Configurações'}
             </Button>
           </div>
@@ -237,8 +237,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 space-y-4">
           <EncryptionConfigSection />
           <CryptoKeysSection />
         </div>
@@ -246,8 +246,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Política de Senhas */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Key className="h-4 w-4 sm:h-5 sm:w-5" />
               Política de Senhas
             </CardTitle>
             <CardDescription>
@@ -334,8 +334,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Segurança de Sessão */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               Segurança de Sessão
             </CardTitle>
             <CardDescription>
@@ -396,8 +396,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Controle de Acesso */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
               Controle de Acesso
             </CardTitle>
             <CardDescription>
@@ -507,8 +507,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Monitoramento */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
               Monitoramento e Logs
             </CardTitle>
             <CardDescription>

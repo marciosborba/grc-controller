@@ -179,7 +179,7 @@ const getSeverityColor = (severity: string) => {
 const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onResolve, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeSection, setActiveSection] = useState<'general' | 'investigation' | 'communication' | 'analysis' | 'actions' | 'monitoring'>('general');
-  
+
   // Estados para os dados expandidos (simulados - em produção viriam do backend)
   const [investigations, setInvestigations] = useState<Investigation[]>([
     {
@@ -220,7 +220,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
   ]);
 
   const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
-  
+
   const [analysis, setAnalysis] = useState<Analysis>({
     risk_level: 'medium',
     business_impact: 'Impacto moderado na moral da equipe e produtividade',
@@ -259,22 +259,21 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
   });
 
   return (
-    <Card className={`rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer ${
-      isExpanded
+    <Card className={`rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer ${isExpanded
         ? 'shadow-lg border-primary/30'
         : 'hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border'
-    }`}>
+      }`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 relative z-10 group/header" title={isExpanded ? 'Clique para recolher' : 'Clique para expandir'}>
             {/* Hover Effect Gradient for Header */}
-            <div 
-              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+            <div
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none"
               style={{
                 background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
               }}
             />
-            <div className="flex items-center justify-between gap-4 relative z-10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 relative z-10">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {isExpanded ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -282,14 +281,14 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                   <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 )}
 
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                  <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-sm font-semibold truncate">{report.title}</CardTitle>
-                    <Badge className={`${getStatusColor(report.status)} border`}> 
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                    <CardTitle className="text-xs sm:text-sm font-semibold truncate">{report.title}</CardTitle>
+                    <Badge className={`${getStatusColor(report.status)} border text-[10px] sm:text-xs`}>
                       <div className="flex items-center gap-1">
                         {getStatusIcon(report.status)}
                         <span className="capitalize">{report.status.replace('_', ' ')}</span>
@@ -297,28 +296,26 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
                     <span className="truncate">{report.category}</span>
                     <span>•</span>
                     <span className={`truncate ${getSeverityColor(report.severity)}`}>{report.severity}</span>
                     <span>•</span>
                     <span className="truncate flex items-center gap-1">
-                      {report.is_anonymous ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {report.is_anonymous ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                       {report.is_anonymous ? 'Anônima' : 'Identificada'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="text-right flex-shrink-0">
-                <div className="text-xs text-muted-foreground">
-                  <div>Registrado:</div>
-                  <div className="font-medium">
-                    {format(new Date(report.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                  </div>
+              <div className="text-right flex-shrink-0 text-[10px] sm:text-xs text-muted-foreground">
+                <div>Registrado:</div>
+                <div className="font-medium">
+                  {format(new Date(report.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                 </div>
                 {report.resolved_at && (
-                  <div className="text-xs mt-1 text-green-600 dark:text-green-300">
+                  <div className="mt-1 text-green-600 dark:text-green-300">
                     <div>Resolvido:</div>
                     <div className="font-medium">
                       {format(new Date(report.resolved_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
@@ -334,76 +331,72 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
           <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs - 6 Abas Robustas */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto">
+              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setActiveSection('general')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'general'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <FileText className="h-4 w-4" />
-                  Informações Gerais
+                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Informações Gerais</span>
+                  <span className="xs:hidden">Geral</span>
                 </button>
 
                 <button
                   onClick={() => setActiveSection('investigation')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'investigation' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'investigation'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Investigação
                 </button>
 
                 <button
                   onClick={() => setActiveSection('communication')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'communication' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'communication'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <MessageSquare className="h-4 w-4" />
+                  <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Comunicação
                 </button>
 
                 <button
                   onClick={() => setActiveSection('analysis')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'analysis' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'analysis'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <BarChart3 className="h-4 w-4" />
+                  <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Análise
                 </button>
 
                 <button
                   onClick={() => setActiveSection('actions')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'actions' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'actions'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <Target className="h-4 w-4" />
-                  Plano de Ação
+                  <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Plano de Ação</span>
+                  <span className="xs:hidden">Ações</span>
                 </button>
 
                 <button
                   onClick={() => setActiveSection('monitoring')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    activeSection === 'monitoring' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md text-[10px] sm:text-sm transition-colors whitespace-nowrap ${activeSection === 'monitoring'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
-                  <TrendingUp className="h-4 w-4" />
+                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Monitoramento
                 </button>
               </div>
@@ -415,7 +408,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                     {/* Detalhes do Caso */}
                     <div className="space-y-4">
                       <h4 className="text-lg font-medium text-muted-foreground">DETALHES DO CASO</h4>
-                      
+
                       <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="space-y-3">
                           <div className="flex justify-between">
@@ -466,7 +459,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                     {/* Informações do Denunciante */}
                     <div className="space-y-4">
                       <h4 className="text-lg font-medium text-muted-foreground">INFORMAÇÕES DO DENUNCIANTE</h4>
-                      
+
                       {!report.is_anonymous ? (
                         <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
                           <div className="space-y-3">
@@ -540,27 +533,27 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
 
                   {/* Ações */}
                   <Separator />
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <History className="h-4 w-4 mr-2" />
-                        Ver Histórico Completo
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:items-center">
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" className="text-xs">
+                        <History className="h-3.5 w-3.5 mr-1.5" />
+                        Ver Histórico
                       </Button>
-                      <Button variant="outline" size="sm">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Gerar Relatório PDF
+                      <Button variant="outline" size="sm" className="text-xs">
+                        <FileText className="h-3.5 w-3.5 mr-1.5" />
+                        Gerar PDF
                       </Button>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {onEdit && (
-                        <Button size="sm" variant="outline" onClick={() => onEdit(report)}>
-                          <Edit className="h-4 w-4 mr-2" />
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => onEdit(report)}>
+                          <Edit className="h-3.5 w-3.5 mr-1.5" />
                           Editar
                         </Button>
                       )}
                       {onResolve && (
-                        <Button size="sm" onClick={() => onResolve(report)}>
-                          <CheckCircle className="h-4 w-4 mr-2" />
+                        <Button size="sm" className="text-xs" onClick={() => onResolve(report)}>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                           Atualizar Status
                         </Button>
                       )}
@@ -625,16 +618,15 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                investigation.status === 'completed' ? 'bg-green-100 text-green-600' :
-                                investigation.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
-                                'bg-gray-100 text-gray-600'
-                              }`}>
-                                {investigation.status === 'completed' ? 
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${investigation.status === 'completed' ? 'bg-green-100 text-green-600' :
+                                  investigation.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
+                                    'bg-gray-100 text-gray-600'
+                                }`}>
+                                {investigation.status === 'completed' ?
                                   <CheckCircle className="h-4 w-4" /> :
                                   investigation.status === 'in_progress' ?
-                                  <Clock className="h-4 w-4" /> :
-                                  <Target className="h-4 w-4" />
+                                    <Clock className="h-4 w-4" /> :
+                                    <Target className="h-4 w-4" />
                                 }
                               </div>
                               <div>
@@ -642,18 +634,17 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                                 <p className="text-xs text-muted-foreground">Etapa {index + 1}</p>
                               </div>
                             </div>
-                            <Badge variant="outline" className={`${
-                              investigation.status === 'completed' ? 'text-green-700 border-green-300' :
-                              investigation.status === 'in_progress' ? 'text-blue-700 border-blue-300' :
-                              'text-gray-700 border-gray-300'
-                            }`}>
+                            <Badge variant="outline" className={`${investigation.status === 'completed' ? 'text-green-700 border-green-300' :
+                                investigation.status === 'in_progress' ? 'text-blue-700 border-blue-300' :
+                                  'text-gray-700 border-gray-300'
+                              }`}>
                               {investigation.status === 'completed' ? 'Concluída' :
-                               investigation.status === 'in_progress' ? 'Em Andamento' : 'Pendente'}
+                                investigation.status === 'in_progress' ? 'Em Andamento' : 'Pendente'}
                             </Badge>
                           </div>
-                          
+
                           <p className="text-sm text-muted-foreground mb-3">{investigation.description}</p>
-                          
+
                           <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Responsável:</span>
@@ -745,14 +736,13 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                comm.type === 'internal' ? 'bg-blue-100 text-blue-600' :
-                                comm.type === 'external' ? 'bg-green-100 text-green-600' :
-                                'bg-orange-100 text-orange-600'
-                              }`}>
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${comm.type === 'internal' ? 'bg-blue-100 text-blue-600' :
+                                  comm.type === 'external' ? 'bg-green-100 text-green-600' :
+                                    'bg-orange-100 text-orange-600'
+                                }`}>
                                 {comm.method === 'email' ? <Mail className="h-4 w-4" /> :
-                                 comm.method === 'phone' ? <Phone className="h-4 w-4" /> :
-                                 <MessageSquare className="h-4 w-4" />}
+                                  comm.method === 'phone' ? <Phone className="h-4 w-4" /> :
+                                    <MessageSquare className="h-4 w-4" />}
                               </div>
                               <div>
                                 <h6 className="font-medium text-sm">{comm.subject}</h6>
@@ -768,16 +758,16 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                               </p>
                             </div>
                           </div>
-                          
+
                           <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-md">
                             <p className="text-sm">{comm.message}</p>
                           </div>
-                          
+
                           <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground">
-                            <span>Tipo: {comm.type === 'internal' ? 'Comunicação Interna' : 
-                                      comm.type === 'external' ? 'Comunicação Externa' : 'Legal'}</span>
-                            <span>Via: {comm.method === 'email' ? 'E-mail' : 
-                                      comm.method === 'phone' ? 'Telefone' : 'Reunião'}</span>
+                            <span>Tipo: {comm.type === 'internal' ? 'Comunicação Interna' :
+                              comm.type === 'external' ? 'Comunicação Externa' : 'Legal'}</span>
+                            <span>Via: {comm.method === 'email' ? 'E-mail' :
+                              comm.method === 'phone' ? 'Telefone' : 'Reunião'}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -801,24 +791,22 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                     {/* Avaliação de Riscos */}
                     <div className="space-y-4">
                       <h5 className="font-medium">Avaliação de Riscos</h5>
-                      
-                      <Card className={`border-2 ${
-                        analysis.risk_level === 'critical' ? 'border-red-200 bg-red-50 dark:bg-red-950/20' :
-                        analysis.risk_level === 'high' ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' :
-                        analysis.risk_level === 'medium' ? 'border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20' :
-                        'border-green-200 bg-green-50 dark:bg-green-950/20'
-                      }`}>
+
+                      <Card className={`border-2 ${analysis.risk_level === 'critical' ? 'border-red-200 bg-red-50 dark:bg-red-950/20' :
+                          analysis.risk_level === 'high' ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/20' :
+                            analysis.risk_level === 'medium' ? 'border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20' :
+                              'border-green-200 bg-green-50 dark:bg-green-950/20'
+                        }`}>
                         <CardContent className="p-4">
                           <div className="text-center">
-                            <div className={`text-3xl font-bold mb-2 ${
-                              analysis.risk_level === 'critical' ? 'text-red-600' :
-                              analysis.risk_level === 'high' ? 'text-orange-600' :
-                              analysis.risk_level === 'medium' ? 'text-yellow-600' :
-                              'text-green-600'
-                            }`}>
+                            <div className={`text-3xl font-bold mb-2 ${analysis.risk_level === 'critical' ? 'text-red-600' :
+                                analysis.risk_level === 'high' ? 'text-orange-600' :
+                                  analysis.risk_level === 'medium' ? 'text-yellow-600' :
+                                    'text-green-600'
+                              }`}>
                               {analysis.risk_level === 'critical' ? 'CRÍTICO' :
-                               analysis.risk_level === 'high' ? 'ALTO' :
-                               analysis.risk_level === 'medium' ? 'MÉDIO' : 'BAIXO'}
+                                analysis.risk_level === 'high' ? 'ALTO' :
+                                  analysis.risk_level === 'medium' ? 'MÉDIO' : 'BAIXO'}
                             </div>
                             <p className="text-sm text-muted-foreground">Nível de Risco</p>
                           </div>
@@ -830,7 +818,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                           <Label className="text-sm font-medium">Causa Raiz:</Label>
                           <p className="text-sm text-muted-foreground mt-1">{analysis.root_cause}</p>
                         </div>
-                        
+
                         <div className="bg-white dark:bg-gray-900/50 p-3 rounded-lg border">
                           <Label className="text-sm font-medium">Incidentes Similares:</Label>
                           <div className="flex items-center gap-2 mt-1">
@@ -844,7 +832,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                     {/* Análise de Impactos */}
                     <div className="space-y-4">
                       <h5 className="font-medium">Análise de Impactos</h5>
-                      
+
                       <div className="space-y-3">
                         <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200">
                           <div className="flex justify-between items-center mb-2">
@@ -853,7 +841,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                           </div>
                           <p className="text-sm text-muted-foreground">{analysis.business_impact}</p>
                         </div>
-                        
+
                         <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200">
                           <div className="flex justify-between items-center mb-2">
                             <Label className="text-sm font-medium">Impacto Financeiro</Label>
@@ -861,7 +849,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                           </div>
                           <p className="text-sm text-muted-foreground">Estimativa de custos diretos e indiretos</p>
                         </div>
-                        
+
                         <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200">
                           <div className="flex justify-between items-center mb-2">
                             <Label className="text-sm font-medium">Risco Reputacional</Label>
@@ -869,7 +857,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                           </div>
                           <p className="text-sm text-muted-foreground">{analysis.reputational_risk}</p>
                         </div>
-                        
+
                         <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200">
                           <div className="flex justify-between items-center mb-2">
                             <Label className="text-sm font-medium">Implicações Legais</Label>
@@ -953,43 +941,40 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                       </Card>
                     ) : (
                       actionPlans.map((action) => (
-                        <Card key={action.id} className={`border-l-4 ${
-                          action.type === 'corrective' ? 'border-l-blue-500' :
-                          action.type === 'preventive' ? 'border-l-green-500' :
-                          'border-l-orange-500'
-                        }`}>
+                        <Card key={action.id} className={`border-l-4 ${action.type === 'corrective' ? 'border-l-blue-500' :
+                            action.type === 'preventive' ? 'border-l-green-500' :
+                              'border-l-orange-500'
+                          }`}>
                           <CardContent className="p-4">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                  action.type === 'corrective' ? 'bg-blue-100 text-blue-600' :
-                                  action.type === 'preventive' ? 'bg-green-100 text-green-600' :
-                                  'bg-orange-100 text-orange-600'
-                                }`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${action.type === 'corrective' ? 'bg-blue-100 text-blue-600' :
+                                    action.type === 'preventive' ? 'bg-green-100 text-green-600' :
+                                      'bg-orange-100 text-orange-600'
+                                  }`}>
                                   {action.type === 'corrective' ? <Target className="h-4 w-4" /> :
-                                   action.type === 'preventive' ? <Shield className="h-4 w-4" /> :
-                                   <Gavel className="h-4 w-4" />}
+                                    action.type === 'preventive' ? <Shield className="h-4 w-4" /> :
+                                      <Gavel className="h-4 w-4" />}
                                 </div>
                                 <div>
                                   <h6 className="font-medium text-sm">{action.action}</h6>
                                   <p className="text-xs text-muted-foreground capitalize">
                                     {action.type === 'corrective' ? 'Ação Corretiva' :
-                                     action.type === 'preventive' ? 'Ação Preventiva' : 'Ação Disciplinar'}
+                                      action.type === 'preventive' ? 'Ação Preventiva' : 'Ação Disciplinar'}
                                   </p>
                                 </div>
                               </div>
-                              <Badge variant="outline" className={`${
-                                action.status === 'completed' ? 'text-green-700 border-green-300' :
-                                action.status === 'in_progress' ? 'text-blue-700 border-blue-300' :
-                                action.status === 'delayed' ? 'text-red-700 border-red-300' :
-                                'text-gray-700 border-gray-300'
-                              }`}>
+                              <Badge variant="outline" className={`${action.status === 'completed' ? 'text-green-700 border-green-300' :
+                                  action.status === 'in_progress' ? 'text-blue-700 border-blue-300' :
+                                    action.status === 'delayed' ? 'text-red-700 border-red-300' :
+                                      'text-gray-700 border-gray-300'
+                                }`}>
                                 {action.status === 'completed' ? 'Concluída' :
-                                 action.status === 'in_progress' ? 'Em Andamento' :
-                                 action.status === 'delayed' ? 'Atrasada' : 'Planejada'}
+                                  action.status === 'in_progress' ? 'Em Andamento' :
+                                    action.status === 'delayed' ? 'Atrasada' : 'Planejada'}
                               </Badge>
                             </div>
-                            
+
                             <div className="grid grid-cols-2 gap-4 text-sm mb-3">
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Responsável:</span>
@@ -1087,7 +1072,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                               <p className="text-xs text-muted-foreground">12/08/2024 09:00</p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -1097,7 +1082,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                               <p className="text-xs text-muted-foreground">14/08/2024 16:30</p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                               <Clock className="h-4 w-4 text-blue-600" />
@@ -1107,7 +1092,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                               <p className="text-xs text-muted-foreground">Em progresso</p>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                               <Clock className="h-4 w-4 text-gray-600" />
@@ -1154,7 +1139,7 @@ const EthicsReportCard: React.FC<EthicsReportCardProps> = ({ report, onEdit, onR
                         </CardContent>
                       </Card>
                     </div>
-                    
+
                     <div className="space-y-4">
                       <h5 className="font-medium">Próximas Revisões</h5>
                       <Card>

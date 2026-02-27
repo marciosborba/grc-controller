@@ -306,7 +306,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
                                     Novo Grupo
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="w-[95vw] max-w-[500px]">
                                 <DialogHeader>
                                     <DialogTitle>Criar Novo Grupo</DialogTitle>
                                     <DialogDescription>
@@ -333,7 +333,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
                                         />
                                     </div>
                                 </div>
-                                <DialogFooter>
+                                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancelar</Button>
                                     <Button onClick={handleCreateGroup} disabled={isCreating}>
                                         {isCreating ? 'Criando...' : 'Criar Grupo'}
@@ -354,7 +354,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
                         />
                     </div>
 
-                    <div className="rounded-md border">
+                    <div className="rounded-md border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -401,7 +401,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
             </Card>
 
             <Dialog open={isManageMembersOpen} onOpenChange={setIsManageMembersOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="w-[95vw] max-w-3xl overflow-y-auto max-h-[90vh]">
                     <DialogHeader>
                         <DialogTitle>Gerenciar Membros: {selectedGroup?.name}</DialogTitle>
                         <DialogDescription>
@@ -409,7 +409,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="flex gap-4 items-end mb-6">
+                    <div className="flex flex-col sm:flex-row gap-3 items-end mb-6">
                         <div className="flex-1 space-y-2">
                             <Label>Adicionar Usuário</Label>
                             <select
@@ -430,7 +430,7 @@ export const GroupManagementSection: React.FC<GroupManagementSectionProps> = ({
                         </Button>
                     </div>
 
-                    <div className="rounded-md border max-h-[400px] overflow-y-auto">
+                    <div className="rounded-md border overflow-x-auto max-h-[300px] sm:max-h-[400px] overflow-y-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>

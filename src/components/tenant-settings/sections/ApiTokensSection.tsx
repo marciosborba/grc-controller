@@ -87,7 +87,7 @@ export const ApiTokensSection = () => {
                         </div>
                     )}
 
-                    <div className="flex gap-4 mb-6">
+                    <div className="flex flex-col sm:flex-row gap-3 mb-6">
                         <div className="flex-1">
                             <Label htmlFor="tokenName" className="sr-only">Nome do Token</Label>
                             <Input
@@ -97,13 +97,43 @@ export const ApiTokensSection = () => {
                                 onChange={e => setNewTokenName(e.target.value)}
                             />
                         </div>
-                        <Button onClick={createToken} disabled={!newTokenName}>
+                        <Button onClick={createToken} disabled={!newTokenName} className="w-full sm:w-auto">
                             <Plus className="h-4 w-4 mr-2" />
                             Gerar Novo Token
                         </Button>
                     </div>
 
-                    <div className="border rounded-md">
+                    {/* ── MOBILE: cards ── */}
+                    <div className="sm:hidden space-y-2">
+                        {tokens.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground text-sm">Nenhum token ativo.</div>
+                        ) : tokens.map(token => (
+                            <div key={token.id} className="rounded-lg border p-3 bg-card">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <div className="font-medium text-sm truncate">{token.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-0.5">
+                                            Criado: {new Date(token.created_at).toLocaleDateString('pt-BR')}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Último uso: {token.last_used_at ? new Date(token.last_used_at).toLocaleDateString('pt-BR') : 'Nunca'}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <Badge variant={token.is_active ? 'default' : 'secondary'} className={token.is_active ? 'bg-green-500 hover:bg-green-600 text-xs' : 'text-xs'}>
+                                            {token.is_active ? 'Ativo' : 'Revogado'}
+                                        </Badge>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700" onClick={() => deleteToken(token.id)}>
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── DESKTOP: tabela ── */}
+                    <div className="hidden sm:block border rounded-md overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
