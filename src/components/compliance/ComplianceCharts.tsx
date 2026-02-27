@@ -71,7 +71,7 @@ export function ComplianceCharts({ trendData, frameworkData }: ComplianceChartsP
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[300px] w-full">
+                    <div className="h-[220px] sm:h-[300px] w-full">
                         {trendData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={trendData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -123,17 +123,17 @@ export function ComplianceCharts({ trendData, frameworkData }: ComplianceChartsP
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="h-[300px] w-full">
+                    <div className="h-[220px] sm:h-[300px] w-full">
                         {sortedFrameworks.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={sortedFrameworks} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                                <BarChart data={sortedFrameworks} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-muted" />
                                     <XAxis type="number" domain={[0, 100]} hide />
                                     <YAxis
                                         dataKey="name"
                                         type="category"
-                                        width={100}
-                                        className="text-xs text-muted-foreground font-medium"
+                                        width={85}
+                                        className="text-[10px] sm:text-xs text-muted-foreground font-medium"
                                         tick={{ fill: 'currentColor' }}
                                         axisLine={false}
                                         tickLine={false}

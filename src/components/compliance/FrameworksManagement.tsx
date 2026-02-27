@@ -334,12 +334,12 @@ export default function FrameworksManagement() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
+        <div className="w-full">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
             Gestão de Frameworks
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -378,16 +378,16 @@ export default function FrameworksManagement() {
             Gerencie biblioteca padrão e conformidades da sua organização.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {activeTab === 'custom' && (
             <>
-              <Button variant="outline" onClick={() => setIsImportModalOpen(true)}>
+              <Button variant="outline" onClick={() => setIsImportModalOpen(true)} className="w-full sm:w-auto">
                 <Upload className="h-4 w-4 mr-2" /> Importar
               </Button>
-              <Button variant="outline" onClick={handleExport} disabled={selectedFrameworks.length === 0}>
+              <Button variant="outline" onClick={handleExport} disabled={selectedFrameworks.length === 0} className="w-full sm:w-auto">
                 <Download className="h-4 w-4 mr-2" /> Exportar
               </Button>
-              <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Button onClick={() => setIsCreateModalOpen(true)} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" /> Novo Framework
               </Button>
             </>
@@ -396,10 +396,10 @@ export default function FrameworksManagement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
-          <TabsTrigger value="custom">Meus Frameworks</TabsTrigger>
-          <TabsTrigger value="standard">Biblioteca de Frameworks</TabsTrigger>
-          <TabsTrigger value="sox-library">Biblioteca SOX</TabsTrigger>
+        <TabsList className="flex flex-row w-full overflow-x-auto justify-start sm:justify-center p-1 gap-1 h-auto no-scrollbar">
+          <TabsTrigger value="custom" className="whitespace-nowrap flex-shrink-0">Meus Frameworks</TabsTrigger>
+          <TabsTrigger value="standard" className="whitespace-nowrap flex-shrink-0">Biblioteca de Frameworks</TabsTrigger>
+          <TabsTrigger value="sox-library" className="whitespace-nowrap flex-shrink-0">Biblioteca SOX</TabsTrigger>
         </TabsList>
 
         {activeTab === 'sox-library' ? (
@@ -409,18 +409,18 @@ export default function FrameworksManagement() {
         ) : (
           <div className="mt-4">
             <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 relative">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                  <div className="flex-1 relative w-full">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Buscar frameworks..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-10 w-full"
                     />
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-muted-foreground w-full sm:w-auto text-left sm:text-right">
                     {filteredFrameworks.length} de {frameworks.length} frameworks
                   </div>
                 </div>
@@ -453,103 +453,105 @@ export default function FrameworksManagement() {
                     {activeTab === 'custom' && <Button variant="link" onClick={() => setIsCreateModalOpen(true)}>Criar meu primeiro framework</Button>}
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {activeTab === 'custom' && (
-                          <TableHead className="w-12">
-                            <Checkbox checked={selectedFrameworks.length === filteredFrameworks.length} onCheckedChange={toggleSelectAll} />
-                          </TableHead>
-                        )}
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Versão</TableHead>
-                        {activeTab === 'custom' && <TableHead>Status</TableHead>}
-                        <TableHead>Requisitos</TableHead>
-                        <TableHead className="w-32">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredFrameworks.map((framework) => {
-                        const Icon = getFrameworkIcon(framework.tipo);
-                        return (
-                          <TableRow key={framework.id}>
-                            {activeTab === 'custom' && (
-                              <TableCell>
-                                <Checkbox checked={selectedFrameworks.includes(framework.id)} onCheckedChange={() => toggleFrameworkSelection(framework.id)} />
-                              </TableCell>
-                            )}
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Icon className="h-4 w-4 text-muted-foreground" />
-                                <div>
-                                  <div className="font-medium">{framework.nome}</div>
-                                  {framework.descricao && <div className="text-sm text-muted-foreground line-clamp-1">{framework.descricao}</div>}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell><Badge variant="outline">{framework.tipo}</Badge></TableCell>
-                            <TableCell>{framework.versao}</TableCell>
-                            {activeTab === 'custom' && (
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {framework.is_active ? <CheckCircle className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
-                                  <span className={framework.is_active ? 'text-green-600' : 'text-red-600'}>{framework.is_active ? 'Ativo' : 'Inativo'}</span>
-                                </div>
-                              </TableCell>
-                            )}
-                            <TableCell><Badge variant="secondary">{framework.requirements_count || 0}</Badge></TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                {activeTab === 'standard' ? (
-                                  <div className="flex items-center gap-1">
-                                    <Button variant="ghost" size="sm" title="Clonar para Meus Frameworks" onClick={() => handleCloneFramework(framework)} disabled={isProcess}>
-                                      <Copy className="h-4 w-4 mr-2" /> Clonar
-                                    </Button>
-                                    {user?.isPlatformAdmin && (
-                                      <>
-                                        <div className="w-px h-4 bg-border mx-1" />
-                                        <Button variant="ghost" size="icon" title="Gerenciar Requisitos (Admin)" onClick={() => { setSelectedFrameworkForRequirements(framework); setRequirementsDialogOpen(true); }}>
-                                          <FileText className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" title="Editar Metadados (Admin)" onClick={() => openEditModal(framework)}>
-                                          <Edit className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    )}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {activeTab === 'custom' && (
+                            <TableHead className="w-12">
+                              <Checkbox checked={selectedFrameworks.length === filteredFrameworks.length} onCheckedChange={toggleSelectAll} />
+                            </TableHead>
+                          )}
+                          <TableHead className="whitespace-nowrap">Nome</TableHead>
+                          <TableHead className="whitespace-nowrap">Tipo</TableHead>
+                          <TableHead className="whitespace-nowrap">Versão</TableHead>
+                          {activeTab === 'custom' && <TableHead className="whitespace-nowrap">Status</TableHead>}
+                          <TableHead className="whitespace-nowrap">Requisitos</TableHead>
+                          <TableHead className="w-32 whitespace-nowrap">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredFrameworks.map((framework) => {
+                          const Icon = getFrameworkIcon(framework.tipo);
+                          return (
+                            <TableRow key={framework.id}>
+                              {activeTab === 'custom' && (
+                                <TableCell>
+                                  <Checkbox checked={selectedFrameworks.includes(framework.id)} onCheckedChange={() => toggleFrameworkSelection(framework.id)} />
+                                </TableCell>
+                              )}
+                              <TableCell className="min-w-[200px]">
+                                <div className="flex items-center gap-3">
+                                  <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                                  <div>
+                                    <div className="font-medium">{framework.nome}</div>
+                                    {framework.descricao && <div className="text-sm text-muted-foreground line-clamp-1">{framework.descricao}</div>}
                                   </div>
-                                ) : (
-                                  <>
-                                    <Button variant="ghost" size="icon" title="Gerenciar Requisitos" onClick={() => { setSelectedFrameworkForRequirements(framework); setRequirementsDialogOpen(true); }}>
-                                      <FileText className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => openEditModal(framework)}>
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Excluir Framework?</AlertDialogTitle>
-                                          <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteFramework(framework.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                </div>
+                              </TableCell>
+                              <TableCell><Badge variant="outline" className="whitespace-nowrap">{framework.tipo}</Badge></TableCell>
+                              <TableCell className="whitespace-nowrap">{framework.versao}</TableCell>
+                              {activeTab === 'custom' && (
+                                <TableCell>
+                                  <div className="flex items-center gap-2 whitespace-nowrap">
+                                    {framework.is_active ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0" /> : <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                                    <span className={framework.is_active ? 'text-green-600' : 'text-red-600'}>{framework.is_active ? 'Ativo' : 'Inativo'}</span>
+                                  </div>
+                                </TableCell>
+                              )}
+                              <TableCell><Badge variant="secondary">{framework.requirements_count || 0}</Badge></TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {activeTab === 'standard' ? (
+                                    <div className="flex items-center gap-1">
+                                      <Button variant="ghost" size="sm" title="Clonar para Meus Frameworks" onClick={() => handleCloneFramework(framework)} disabled={isProcess} className="whitespace-nowrap">
+                                        <Copy className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Clonar</span>
+                                      </Button>
+                                      {user?.isPlatformAdmin && (
+                                        <>
+                                          <div className="w-px h-4 bg-border mx-1" />
+                                          <Button variant="ghost" size="icon" title="Gerenciar Requisitos (Admin)" onClick={() => { setSelectedFrameworkForRequirements(framework); setRequirementsDialogOpen(true); }}>
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                          <Button variant="ghost" size="icon" title="Editar Metadados (Admin)" onClick={() => openEditModal(framework)}>
+                                            <Edit className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <Button variant="ghost" size="icon" title="Gerenciar Requisitos" onClick={() => { setSelectedFrameworkForRequirements(framework); setRequirementsDialogOpen(true); }}>
+                                        <FileText className="h-4 w-4" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => openEditModal(framework)}>
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Excluir Framework?</AlertDialogTitle>
+                                            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteFramework(framework.id)} className="bg-destructive hover:bg-destructive/90">Excluir</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>

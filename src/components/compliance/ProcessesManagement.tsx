@@ -319,8 +319,8 @@ export default function ProcessesManagement() {
         <Card className="w-full">
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
+                    <div className="w-full">
+                        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
                             <FileText className="h-5 w-5 text-blue-600" />
                             Gestão de Processos
                             <Dialog>
@@ -364,11 +364,11 @@ export default function ProcessesManagement() {
                             Mapeamento e cadastro de processos de negócio
                         </CardDescription>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                         <Button onClick={() => {
                             setEditingProcess(null);
                             setIsDialogOpen(true);
-                        }}>
+                        }} className="w-full sm:w-auto">
                             <Plus className="h-4 w-4 mr-2" />
                             Novo Processo
                         </Button>
@@ -488,7 +488,7 @@ export default function ProcessesManagement() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                 <Tabs defaultValue="geral" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-3">
+                                    <TabsList className="flex flex-col sm:grid sm:grid-cols-3 w-full h-auto gap-1 p-1 mb-2">
                                         <TabsTrigger value="geral" className="flex items-center gap-2">
                                             <LayoutDashboard className="h-4 w-4" />
                                             Visão Geral

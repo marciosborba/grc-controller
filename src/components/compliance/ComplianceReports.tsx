@@ -690,12 +690,12 @@ export function ComplianceReports() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-3">
+        <div className="w-full">
+          <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
             Central de Relatórios
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -735,7 +735,7 @@ export function ComplianceReports() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
+            <Button onClick={resetForm} className="w-full sm:w-auto mt-2 sm:mt-0">
               <Plus className="h-4 w-4 mr-2" />
               Novo Relatório
             </Button>
@@ -753,7 +753,7 @@ export function ComplianceReports() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="flex flex-col sm:grid sm:grid-cols-3 w-full h-auto p-1 gap-1">
                   <TabsTrigger value="basic">Básico</TabsTrigger>
                   <TabsTrigger value="content">Conteúdo</TabsTrigger>
                   <TabsTrigger value="distribution">Distribuição</TabsTrigger>

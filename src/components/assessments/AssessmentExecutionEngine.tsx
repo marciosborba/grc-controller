@@ -51,6 +51,19 @@ export default function AssessmentExecutionEngine() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Auto-close sidebar on mobile devices when component mounts
+    useEffect(() => {
+        const checkMobile = () => {
+            if (window.innerWidth < 768) {
+                setSidebarOpen(false);
+            }
+        };
+        checkMobile();
+        // Optional: listen for resize if needed
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     // Load Data
     useEffect(() => {
         if (!id) return;
@@ -263,44 +276,57 @@ export default function AssessmentExecutionEngine() {
     return (
         <div className="flex flex-col h-screen bg-background text-foreground">
             {/* Header */}
-            <header className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0 shadow-sm z-20">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')}>
+            <header className="h-16 border-b flex items-center justify-between px-3 sm:px-6 bg-card shrink-0 shadow-sm z-20">
+                <div className="flex items-center gap-2 sm:gap-4 flex-1 overflow-hidden">
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')} className="shrink-0">
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
-                    <div>
-                        <h1 className="font-semibold text-lg leading-none truncate max-w-[300px] text-foreground">{assessment.titulo}</h1>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] h-5">{framework?.nome}</Badge>
-                            <span>v{framework?.versao}</span>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="md:hidden shrink-0 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                    >
+                        <Menu className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1 min-w-0 ml-1 sm:ml-0">
+                        <h1 className="font-semibold text-base sm:text-lg leading-tight truncate sm:max-w-[300px] text-foreground">{assessment.titulo}</h1>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 sm:gap-2 truncate">
+                            <Badge variant="outline" className="text-[10px] h-5 truncate max-w-[80px] sm:max-w-none">{framework?.nome}</Badge>
+                            <span className="shrink-0">v{framework?.versao}</span>
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-end w-48 hidden sm:flex">
+                <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                    <div className="flex flex-col items-end w-32 sm:w-48 hidden md:flex">
                         <div className="flex justify-between w-full text-xs mb-1">
                             <span className="text-muted-foreground">Progresso Geral</span>
                             <span className="font-medium text-foreground">{assessment.percentual_conclusao || 0}%</span>
                         </div>
                         <Progress value={assessment.percentual_conclusao || 0} className="h-2" />
                     </div>
-                    <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Finalizar Assessment
+                    <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm px-2 sm:px-4">
+                        <CheckCircle className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Finalizar Assessment</span>
                     </Button>
                 </div>
             </header>
 
             <div className="flex-1 flex overflow-hidden">
                 {/* Sidebar */}
-                <aside className={cn("border-r bg-card/30 flex flex-col transition-all duration-300", sidebarOpen ? 'w-96' : 'w-0 overflow-hidden')}>
-                    <div className="p-4 border-b bg-card/50 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
-                        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <LayoutDashboard className="h-4 w-4" /> Navegação
-                        </h3>
-                        <div className="text-xs text-muted-foreground">
-                            {allQuestions.length} questões
+                <aside className={cn("border-r bg-background/95 backdrop-blur md:bg-card/30 flex flex-col transition-all duration-300 absolute md:relative z-30 h-full shadow-2xl md:shadow-none", sidebarOpen ? 'w-full md:w-96' : 'w-0 overflow-hidden')}>
+                    <div className="p-4 border-b bg-card/50 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <LayoutDashboard className="h-4 w-4" /> Navegação
+                            </h3>
+                            <span className="text-[10px] bg-muted px-2 py-0.5 rounded text-muted-foreground ml-2 hidden sm:inline-block">
+                                {allQuestions.length} questões
+                            </span>
                         </div>
+                        <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0" onClick={() => setSidebarOpen(false)}>
+                            <X className="h-5 w-5" />
+                        </Button>
                     </div>
                     <ScrollArea className="flex-1">
                         <div className="p-4 space-y-4 pb-20">
@@ -319,7 +345,10 @@ export default function AssessmentExecutionEngine() {
                                                     type="button"
                                                     onClick={() => {
                                                         const firstQ = ctrl.questions?.[0];
-                                                        if (firstQ) setActiveQuestionId(firstQ.id);
+                                                        if (firstQ) {
+                                                            setActiveQuestionId(firstQ.id);
+                                                            if (window.innerWidth < 768) setSidebarOpen(false);
+                                                        }
                                                     }}
                                                     className={cn(
                                                         "w-full text-left group flex flex-col gap-1 p-2 rounded transition-all duration-200 border border-transparent",
@@ -364,19 +393,16 @@ export default function AssessmentExecutionEngine() {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col min-w-0 bg-muted/10 relative overflow-hidden">
-                    <Button variant="ghost" size="sm" className={cn("absolute top-4 left-4 z-10 h-8 w-8 p-0 bg-background shadow-sm border opacity-0 hover:opacity-100 transition-opacity", !sidebarOpen && "left-4 opacity-100", sidebarOpen && "hidden")} onClick={() => setSidebarOpen(!sidebarOpen)}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <div className="flex-1 overflow-auto p-4 md:p-8">
-                        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+                <main className="flex-1 flex flex-col min-w-0 bg-muted/10 relative overflow-x-hidden overflow-y-auto">
+                    <div className="p-4 md:p-8">
+                        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
                             {/* Dashboard Header */}
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 sm:pb-6 border-b">
                                 <div>
-                                    <h2 className="text-3xl font-bold tracking-tight mb-2 text-foreground">{assessment.titulo}</h2>
-                                    <p className="text-muted-foreground text-lg max-w-2xl text-balance">{assessment.descricao || 'Execute sua avaliação de conformidade verificando os requisitos abaixo.'}</p>
+                                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-foreground leading-tight">{assessment.titulo}</h2>
+                                    <p className="text-muted-foreground text-sm sm:text-lg max-w-2xl text-balance">{assessment.descricao || 'Execute sua avaliação de conformidade verificando os requisitos abaixo.'}</p>
                                 </div>
-                                <Badge className="text-sm px-4 py-1.5 shadow-sm uppercase tracking-wide" variant={assessment.status === 'concluido' ? 'default' : 'secondary'}>
+                                <Badge className="text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-1.5 shadow-sm uppercase tracking-wide" variant={assessment.status === 'concluido' ? 'default' : 'secondary'}>
                                     {assessment.status ? assessment.status.replace('_', ' ') : 'Planejado'}
                                 </Badge>
                             </div>
@@ -453,31 +479,31 @@ export default function AssessmentExecutionEngine() {
             {/* MAIN INTERACTION MODAL */}
             {activeQuestionObj && (
                 <Dialog open={!!activeQuestionId} onOpenChange={(open) => !open && setActiveQuestionId(null)}>
-                    <DialogContent className="max-w-5xl w-[90vw] h-[90vh] max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-xl border-border/60 shadow-2xl">
+                    <DialogContent className="max-w-5xl w-full h-full max-h-none rounded-none sm:w-[90vw] sm:h-[90vh] sm:max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-xl border-0 sm:border border-border/60 shadow-none sm:shadow-2xl">
                         {/* Modal Header - Professional Style */}
-                        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-8 py-6 flex items-start justify-between shrink-0 sticky top-0 z-20">
-                            <div className="space-y-3 pr-8 flex-1">
-                                <div className="flex items-center gap-2.5 text-xs text-muted-foreground font-medium">
-                                    <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-md border border-primary/10 transition-colors hover:bg-primary/20 cursor-default">
+                        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 sm:px-8 py-4 sm:py-6 flex flex-col sm:flex-row items-start sm:justify-between shrink-0 sticky top-0 z-20 gap-4 sm:gap-0">
+                            <div className="space-y-2 sm:space-y-3 sm:pr-8 flex-1 w-full">
+                                <div className="flex items-center gap-2 sm:gap-2.5 text-[10px] sm:text-xs text-muted-foreground font-medium flex-wrap">
+                                    <span className="bg-primary/10 text-primary px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md border border-primary/10 transition-colors hover:bg-primary/20 cursor-default">
                                         {activeQuestionObj.domain.nome}
                                     </span>
-                                    <ChevronRight className="h-3.5 w-3.5 opacity-50" />
-                                    <span className="font-mono bg-muted px-2 py-0.5 rounded text-[11px]">{activeQuestionObj.control.codigo}</span>
+                                    <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 opacity-50" />
+                                    <span className="font-mono bg-muted px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px]">{activeQuestionObj.control.codigo}</span>
                                 </div>
-                                <DialogTitle className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight text-foreground/90">
+                                <DialogTitle className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight text-foreground/90">
                                     {activeQuestionObj.question.pergunta}
                                 </DialogTitle>
                             </div>
-                            <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
+                            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-3 shrink-0 sm:ml-4 border-t sm:border-0 pt-3 sm:pt-0">
                                 <Badge variant="outline" className={cn(
-                                    "px-3 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm",
+                                    "px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold uppercase tracking-wider shadow-sm",
                                     activeQuestionObj.control.criticidade === 'critica' ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-800' :
                                         activeQuestionObj.control.criticidade === 'alta' ? 'border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800' :
                                             'border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800'
                                 )}>
                                     {activeQuestionObj.control.criticidade}
                                 </Badge>
-                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium border-t pt-1 mt-1">
+                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium sm:border-t sm:pt-1 sm:mt-1">
                                     Peso {activeQuestionObj.question.peso}
                                 </span>
                             </div>
@@ -485,10 +511,10 @@ export default function AssessmentExecutionEngine() {
 
                         {/* Modal Scrollable Content */}
                         <ScrollArea className="flex-1">
-                            <div className="p-6 md:p-10 space-y-10 max-w-4xl mx-auto">
+                            <div className="p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-10 max-w-4xl mx-auto">
 
-                                <div className="space-y-8">
-                                    <div className="border rounded-xl p-8 shadow-sm bg-card/50">
+                                <div className="space-y-6 sm:space-y-8">
+                                    <div className="border rounded-xl p-4 sm:p-8 shadow-sm bg-card/50">
                                         <Label className="text-lg font-semibold mb-6 flex items-center gap-2">
                                             <MessageSquare className="h-5 w-5 text-primary" /> Sua Resposta
                                             {(!['sim_nao', 'escala_1_5', 'escala_1_10', 'texto_livre'].includes(activeQuestionObj.question.tipo_resposta) && activeQuestionObj.question.tipo_resposta) &&
@@ -611,29 +637,28 @@ export default function AssessmentExecutionEngine() {
                         </ScrollArea>
 
                         {/* Modal Footer */}
-                        <div className="border-t p-4 bg-muted/30 flex items-center justify-between shrink-0">
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => handleNavigation('prev')}
-                                    disabled={!hasPrev}
-                                    className="gap-2 pl-4 pr-6"
-                                >
-                                    <ArrowLeft className="h-4 w-4" /> Anterior
-                                </Button>
-                            </div>
+                        <div className="border-t p-4 sm:p-6 bg-muted/30 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => handleNavigation('prev')}
+                                disabled={!hasPrev}
+                                className="w-full sm:w-auto gap-2 pl-4 pr-6"
+                            >
+                                <ArrowLeft className="h-4 w-4" /> Anterior
+                            </Button>
 
-                            <div className="flex gap-4">
+                            <div className="flex flex-col sm:flex-row gap-3">
                                 <Button
                                     variant="ghost"
                                     onClick={() => setActiveQuestionId(null)}
+                                    className="w-full sm:w-auto"
                                 >
                                     Cancelar
                                 </Button>
                                 <Button
                                     onClick={() => handleNavigation('next')}
                                     disabled={saving}
-                                    className="gap-2 pl-6 pr-4 min-w-[140px]"
+                                    className="w-full sm:w-auto gap-2 sm:pl-6 sm:pr-4 min-w-[140px]"
                                 >
                                     {saving ? 'Salvando...' : (hasNext ? 'Salvar e Próxima' : 'Finalizar Assessment')}
                                     {!saving && <ArrowRight className="h-4 w-4" />}

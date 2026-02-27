@@ -218,7 +218,7 @@ export function ActionPlansManagement() {
         </div>
         <Dialog open={showNewPlanDialog} onOpenChange={setShowNewPlanDialog}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Novo Plano</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Novo Plano</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>

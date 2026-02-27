@@ -290,13 +290,13 @@ export default function SystemsManagement() {
         <Card className="w-full">
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
-                            <Server className="h-5 w-5 text-indigo-600" />
+                    <div className="w-full">
+                        <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                            <Server className="h-5 w-5 text-indigo-600 shrink-0" />
                             Inventário de Sistemas
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                                         <HelpCircle className="h-4 w-4" />
                                     </Button>
                                 </DialogTrigger>
@@ -338,7 +338,7 @@ export default function SystemsManagement() {
                     <Button onClick={() => {
                         setEditingSystem(null);
                         setIsDialogOpen(true);
-                    }}>
+                    }} className="w-full sm:w-auto mt-2 sm:mt-0">
                         <Plus className="h-4 w-4 mr-2" />
                         Novo Sistema
                     </Button>
@@ -458,7 +458,7 @@ export default function SystemsManagement() {
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                 <Tabs defaultValue="geral" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-3">
+                                    <TabsList className="flex flex-col sm:grid sm:grid-cols-3 w-full h-auto gap-1 p-1">
                                         <TabsTrigger value="geral" className="flex items-center gap-2">
                                             <LayoutDashboard className="h-4 w-4" />
                                             Visão Geral

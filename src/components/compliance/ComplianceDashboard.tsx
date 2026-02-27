@@ -116,6 +116,13 @@ export default function ComplianceDashboard() {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [isAssessmentWizardOpen, setIsAssessmentWizardOpen] = useState(false);
 
+  const handleTabNavigation = (tab: string) => {
+    setSelectedTab(tab);
+    setTimeout(() => {
+      document.getElementById('compliance-tabs-start')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
   useEffect(() => {
     if (effectiveTenantId) {
       loadComplianceData();
@@ -360,7 +367,7 @@ export default function ComplianceDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3 tracking-tight">
             Gestão de Conformidade
             <Dialog>
               <DialogTrigger asChild>
@@ -387,9 +394,9 @@ export default function ComplianceDashboard() {
               </DialogContent>
             </Dialog>
           </h1>
-          <p className="text-muted-foreground">Central de Compliance e Gestão Regulatória</p>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Central de Compliance e Gestão Regulatória</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button onClick={() => setIsAssessmentWizardOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Avaliação
@@ -398,25 +405,25 @@ export default function ComplianceDashboard() {
       </div>
 
       {/* Premium Storytelling Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
 
         {/* Card 1: Dynamic Narrative Card - Conformity Status */}
         <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-            {metrics.conformityRate >= 80 ? <Shield className="h-24 w-24" /> : <AlertTriangle className="h-24 w-24" />}
+            {metrics.conformityRate >= 80 ? <Shield className="h-16 w-16 sm:h-24 sm:w-24" /> : <AlertTriangle className="h-16 w-16 sm:h-24 sm:w-24" />}
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${metrics.conformityRate >= 80 ? 'text-emerald-500' : 'text-orange-500'}`}>
+          <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+            <CardTitle className={`text-base sm:text-lg font-bold flex items-center gap-2 ${metrics.conformityRate >= 80 ? 'text-emerald-500' : 'text-orange-500'}`}>
               {metrics.conformityRate >= 80 ? 'Ambiente Conforme' : 'Atenção Necessária'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+            <p className="text-muted-foreground font-medium text-[13px] sm:text-sm leading-relaxed">
               {metrics.conformityRate >= 80
                 ? 'Nível de conformidade excelente. Mantenha as políticas atualizadas.'
                 : 'Índice de conformidade abaixo do ideal. Verifique os planos de ação.'}
             </p>
-            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.conformityRate >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
+            <div className={`mt-3 sm:mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${metrics.conformityRate >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-orange-500/10 text-orange-500'}`}>
               {metrics.conformityRate}% Conformidade
             </div>
           </CardContent>
@@ -425,16 +432,16 @@ export default function ComplianceDashboard() {
         {/* Card 2: Frameworks (Reliable Data) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <BookOpen className="h-24 w-24 text-blue-500" />
+            <BookOpen className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-              <BookOpen className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl shrink-0">
+              <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Frameworks Ativos</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics.totalFrameworks}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full">Frameworks Ativos</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics.totalFrameworks}</h3>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 {metrics.activeRequirements} requisitos monitorados
               </p>
             </div>
@@ -444,16 +451,16 @@ export default function ComplianceDashboard() {
         {/* Card 3: Non Conformities (Alert) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <AlertTriangle className="h-24 w-24 text-red-500" />
+            <AlertTriangle className="h-16 w-16 sm:h-24 sm:w-24 text-red-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
-              <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
+          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/30 rounded-xl sm:rounded-2xl shrink-0">
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Não Conformidades</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics.openNonConformities}</h3>
-              <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-medium">
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full">Não Conformidades</p>
+              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics.openNonConformities}</h3>
+              <p className="text-[9px] sm:text-xs text-red-600 dark:text-red-400 mt-0.5 sm:mt-1 font-medium">
                 {metrics.criticalNonConformities} críticas
               </p>
             </div>
@@ -463,20 +470,20 @@ export default function ComplianceDashboard() {
         {/* Card 4: Action Plans (Status) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Activity className="h-24 w-24 text-purple-500" />
+            <Activity className="h-16 w-16 sm:h-24 sm:w-24 text-purple-500" />
           </div>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Planos de Ação</span>
-              <Badge variant={metrics.overduePlans > 0 ? "destructive" : "secondary"} className={metrics.overduePlans > 0 ? "" : "bg-green-100 text-green-800 hover:bg-green-200"}>
+          <CardContent className="p-4 sm:p-6 pb-4 sm:pb-6">
+            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+              <span className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full">Planos de Ação</span>
+              <Badge variant={metrics.overduePlans > 0 ? "destructive" : "secondary"} className={`text-[10px] sm:text-xs shrink-0 ${metrics.overduePlans > 0 ? "" : "bg-green-100 text-green-800 hover:bg-green-200"}`}>
                 {metrics.overduePlans > 0 ? `${metrics.overduePlans} atrasados` : "Em dia"}
               </Badge>
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-foreground">{activePlans}</span>
-              <span className="text-sm text-muted-foreground">ativos</span>
+              <span className="text-2xl sm:text-3xl font-bold text-foreground">{activePlans}</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground">ativos</span>
             </div>
-            <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden mt-4">
+            <div className="w-full bg-secondary h-1 sm:h-1.5 rounded-full overflow-hidden mt-3 sm:mt-4">
               <div className="bg-purple-500 h-full rounded-full" style={{ width: '70%' }}></div>
             </div>
           </CardContent>
@@ -486,7 +493,7 @@ export default function ComplianceDashboard() {
       <ComplianceCharts trendData={trendData} frameworkData={frameworks.map(f => ({ name: f.nome, score: f.conformityScore, total: f.totalRequirements }))} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('frameworks')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => handleTabNavigation('frameworks')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <Shield className="h-8 w-8 text-blue-600" />
@@ -497,7 +504,7 @@ export default function ComplianceDashboard() {
           </CardContent>
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('assessments')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => handleTabNavigation('assessments')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
@@ -508,7 +515,7 @@ export default function ComplianceDashboard() {
           </CardContent>
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('nonconformities')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => handleTabNavigation('nonconformities')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -519,7 +526,7 @@ export default function ComplianceDashboard() {
           </CardContent>
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)' }}></div>
         </Card>
-        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => setSelectedTab('reports')}>
+        <Card className="hover:shadow-md transition-all duration-300 cursor-pointer group relative overflow-hidden" onClick={() => handleTabNavigation('reports')}>
           <CardContent className="p-6 relative z-10">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-8 w-8 text-purple-600" />
@@ -532,171 +539,173 @@ export default function ComplianceDashboard() {
         </Card>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="flex flex-wrap w-full h-auto gap-2 bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="flex-1 min-w-[120px]">Visão Geral</TabsTrigger>
-          <TabsTrigger value="frameworks" className="flex-1 min-w-[120px]">Frameworks</TabsTrigger>
-          <TabsTrigger value="mappings" className="flex-1 min-w-[120px]">Conectividade</TabsTrigger>
-          <TabsTrigger value="assessments" className="flex-1 min-w-[120px]">Avaliações</TabsTrigger>
-          <TabsTrigger value="nonconformities" className="flex-1 min-w-[120px]">Não Conformidades</TabsTrigger>
-          <TabsTrigger value="action-plans" className="flex-1 min-w-[120px]">Planos de Ação</TabsTrigger>
-          <TabsTrigger value="monitoring" className="flex-1 min-w-[120px]">Monitoramento</TabsTrigger>
-          <TabsTrigger value="reports" className="flex-1 min-w-[120px]">Relatórios</TabsTrigger>
-          <TabsTrigger value="processos" className="flex-1 min-w-[120px]">Processos</TabsTrigger>
-          <TabsTrigger value="sistemas" className="flex-1 min-w-[120px]">Sistemas</TabsTrigger>
-          <TabsTrigger value="internal-controls" className="flex-1 min-w-[120px]">Controles Internos</TabsTrigger>
-        </TabsList>
+      <div id="compliance-tabs-start" className="scroll-mt-20">
+        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+          <TabsList className="w-full justify-start h-auto bg-transparent p-0 mb-4 border-b border-border overflow-x-auto overflow-y-hidden flex-nowrap flex-row pb-px ::-webkit-scrollbar-none [scrollbar-width:none]">
+            <TabsTrigger value="overview" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Visão Geral</TabsTrigger>
+            <TabsTrigger value="frameworks" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Frameworks</TabsTrigger>
+            <TabsTrigger value="mappings" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Conectividade</TabsTrigger>
+            <TabsTrigger value="assessments" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Avaliações</TabsTrigger>
+            <TabsTrigger value="nonconformities" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Não Conformidades</TabsTrigger>
+            <TabsTrigger value="action-plans" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Planos de Ação</TabsTrigger>
+            <TabsTrigger value="monitoring" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Monitoramento</TabsTrigger>
+            <TabsTrigger value="reports" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Relatórios</TabsTrigger>
+            <TabsTrigger value="processos" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Processos</TabsTrigger>
+            <TabsTrigger value="sistemas" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Sistemas</TabsTrigger>
+            <TabsTrigger value="internal-controls" className="shrink-0 relative h-10 px-4 rounded-none border-b-2 border-transparent bg-transparent hover:bg-transparent hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-primary font-medium transition-none">Controles Internos</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <Card className="border-orange-200 dark:border-orange-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('frameworks')}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <Card className="border-orange-200 dark:border-orange-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleTabNavigation('frameworks')}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">Frameworks Regulatórios</h3>
-                <p className="text-sm text-muted-foreground mb-2">SOX, LGPD, BACEN e outros requisitos obrigatórios</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'regulatorio').length} frameworks ativos</span>
-                  <Badge variant="destructive" className="text-xs">Crítico</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('frameworks')}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-lg mb-1">Frameworks Regulatórios</h3>
+                  <p className="text-sm text-muted-foreground mb-2">SOX, LGPD, BACEN e outros requisitos obrigatórios</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'regulatorio').length} frameworks ativos</span>
+                    <Badge variant="destructive" className="text-xs">Crítico</Badge>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">Padrões Normativos</h3>
-                <p className="text-sm text-muted-foreground mb-2">ISO 27001, NIST, COBIT e boas práticas</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'normativo').length} frameworks ativos</span>
-                  <Badge className="bg-blue-100 text-blue-800 text-xs">Estratégico</Badge>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card className="border-green-200 dark:border-green-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedTab('action-plans')}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                    <Target className="h-5 w-5 text-green-600" />
+              <Card className="border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleTabNavigation('frameworks')}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold text-lg mb-1">Planos de Ação</h3>
-                <p className="text-sm text-muted-foreground mb-2">Não conformidades e melhorias em andamento</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{activePlans} planos ativos</span>
-                  <Badge className="bg-green-100 text-green-800 text-xs">{metrics.overduePlans} atrasados</Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  <h3 className="font-semibold text-lg mb-1">Padrões Normativos</h3>
+                  <p className="text-sm text-muted-foreground mb-2">ISO 27001, NIST, COBIT e boas práticas</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{frameworks.filter(f => f.tipo === 'normativo').length} frameworks ativos</span>
+                    <Badge className="bg-blue-100 text-blue-800 text-xs">Estratégico</Badge>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Status dos Frameworks</CardTitle>
-                <CardDescription>Níveis de conformidade por framework</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {frameworks.slice(0, 4).map(framework => (
-                    <div key={framework.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium">{framework.nome}</p>
-                          <span className={`text-sm font-bold ${getConformityColor(framework.conformityScore)}`}>{framework.conformityScore}%</span>
-                        </div>
-                        <Progress value={framework.conformityScore} className="h-2 mb-2" />
-                        <div className="flex justify-between text-sm text-muted-foreground">
-                          <span>{framework.origem}</span>
-                          <span>{framework.conformeRequirements}/{framework.totalRequirements} requisitos</span>
+              <Card className="border-green-200 dark:border-green-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleTabNavigation('action-plans')}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                      <Target className="h-5 w-5 text-green-600" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-1">Planos de Ação</h3>
+                  <p className="text-sm text-muted-foreground mb-2">Não conformidades e melhorias em andamento</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">{activePlans} planos ativos</span>
+                    <Badge className="bg-green-100 text-green-800 text-xs">{metrics.overduePlans} atrasados</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" />Status dos Frameworks</CardTitle>
+                  <CardDescription>Níveis de conformidade por framework</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {frameworks.slice(0, 4).map(framework => (
+                      <div key={framework.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-medium">{framework.nome}</p>
+                            <span className={`text-sm font-bold ${getConformityColor(framework.conformityScore)}`}>{framework.conformityScore}%</span>
+                          </div>
+                          <Progress value={framework.conformityScore} className="h-2 mb-2" />
+                          <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>{framework.origem}</span>
+                            <span>{framework.conformeRequirements}/{framework.totalRequirements} requisitos</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" />Não Conformidades Prioritárias</CardTitle>
-                <CardDescription>Gaps que requerem atenção imediata</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {nonConformities.slice(0, 5).map(nc => (
-                    <div key={nc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-sm">{nc.titulo}</p>
-                          <Badge className={getCriticalityColor(nc.criticidade)}>{nc.criticidade}</Badge>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{nc.responsavel}</span>
-                          <span className={nc.diasVencimento < 0 ? 'text-red-600' : nc.diasVencimento < 7 ? 'text-orange-600' : ''}>
-                            {nc.diasVencimento < 0 ? `${Math.abs(nc.diasVencimento)} dias atrasado` : nc.diasVencimento === 0 ? 'Vence hoje' : `${nc.diasVencimento} dias restantes`}
-                          </span>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5" />Não Conformidades Prioritárias</CardTitle>
+                  <CardDescription>Gaps que requerem atenção imediata</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {nonConformities.slice(0, 5).map(nc => (
+                      <div key={nc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm">{nc.titulo}</p>
+                            <Badge className={getCriticalityColor(nc.criticidade)}>{nc.criticidade}</Badge>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>{nc.responsavel}</span>
+                            <span className={nc.diasVencimento < 0 ? 'text-red-600' : nc.diasVencimento < 7 ? 'text-orange-600' : ''}>
+                              {nc.diasVencimento < 0 ? `${Math.abs(nc.diasVencimento)} dias atrasado` : nc.diasVencimento === 0 ? 'Vence hoje' : `${nc.diasVencimento} dias restantes`}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
-        <TabsContent value="frameworks">
-          <FrameworksManagement />
-        </TabsContent>
+          <TabsContent value="frameworks">
+            <FrameworksManagement />
+          </TabsContent>
 
-        <TabsContent value="mappings">
-          <ComplianceMappings />
-        </TabsContent>
+          <TabsContent value="mappings">
+            <ComplianceMappings />
+          </TabsContent>
 
-        <TabsContent value="assessments">
-          <AssessmentsManagement />
-        </TabsContent>
+          <TabsContent value="assessments">
+            <AssessmentsManagement />
+          </TabsContent>
 
-        <TabsContent value="nonconformities">
-          <NonConformitiesManagement />
-        </TabsContent>
+          <TabsContent value="nonconformities">
+            <NonConformitiesManagement />
+          </TabsContent>
 
-        <TabsContent value="action-plans">
-          <ActionPlansManagement />
-        </TabsContent>
+          <TabsContent value="action-plans">
+            <ActionPlansManagement />
+          </TabsContent>
 
-        <TabsContent value="monitoring">
-          <MonitoramentoManagement />
-        </TabsContent>
+          <TabsContent value="monitoring">
+            <MonitoramentoManagement />
+          </TabsContent>
 
-        <TabsContent value="reports">
-          <ComplianceReports />
-        </TabsContent>
+          <TabsContent value="reports">
+            <ComplianceReports />
+          </TabsContent>
 
-        <TabsContent value="processos">
-          <ProcessesManagement />
-        </TabsContent>
+          <TabsContent value="processos">
+            <ProcessesManagement />
+          </TabsContent>
 
-        <TabsContent value="sistemas">
-          <SystemsManagement />
-        </TabsContent>
+          <TabsContent value="sistemas">
+            <SystemsManagement />
+          </TabsContent>
 
-        <TabsContent value="internal-controls">
-          <InternalControlsManagement />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="internal-controls">
+            <InternalControlsManagement />
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {isAssessmentWizardOpen && (
         <NewAssessmentWizard open={isAssessmentWizardOpen} onOpenChange={setIsAssessmentWizardOpen} onSuccess={() => { setIsAssessmentWizardOpen(false); loadComplianceData(); }} />
