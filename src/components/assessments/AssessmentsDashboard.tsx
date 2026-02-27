@@ -415,7 +415,7 @@ export default function AssessmentsDashboard() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex-1 w-full">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                    <h3 className="font-semibold text-base sm:text-lg leading-tight">{assessment.titulo}</h3>
+                    <h3 className="font-semibold text-sm sm:text-base leading-tight">{assessment.titulo}</h3>
                     <Badge variant="outline" className={`w-fit text-[10px] sm:text-xs px-2 py-0 h-5 ${getStatusColor(assessment.status)}`}>
                       {assessment.status.replace('_', ' ')}
                     </Badge>
@@ -501,33 +501,33 @@ export default function AssessmentsDashboard() {
 
       {/* Paginação */}
       {totalItems > 0 && (
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {((page - 1) * perPage) + 1} a {Math.min(page * perPage, totalItems)} de {totalItems} assessments
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-3 gap-2">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {((page - 1) * perPage) + 1}–{Math.min(page * perPage, totalItems)} de {totalItems} assessments
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
+              className="h-7 px-2 text-xs"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Anterior
             </Button>
-            <div className="flex items-center gap-1">
-              <span className="text-sm font-medium">
-                Página {page} de {totalPages}
-              </span>
-            </div>
+            <span className="text-xs font-medium px-2 py-1 bg-muted rounded">
+              {page} / {totalPages}
+            </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              className="h-7 px-2 text-xs"
             >
               Próxima
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
             </Button>
           </div>
         </div>

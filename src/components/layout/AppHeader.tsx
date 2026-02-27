@@ -113,7 +113,7 @@ export const AppHeader = () => {
         <div className="flex items-center gap-2 md:gap-4">
 
           {/* Tenant Selector (Admin Only) */}
-          <div className="hidden xl:block">
+          <div className="hidden sm:block">
             <TenantSelector />
           </div>
 

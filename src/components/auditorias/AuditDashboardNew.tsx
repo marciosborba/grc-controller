@@ -393,8 +393,8 @@ export function AuditDashboardNew() {
       {/* Lista de Projetos */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Projetos de Auditoria</h2>
-          <Badge variant="secondary">{totalItems} projetos encontrados</Badge>
+          <h2 className="text-base sm:text-lg font-semibold">Projetos de Auditoria</h2>
+          <Badge variant="secondary" className="text-xs">{totalItems} projetos</Badge>
         </div>
 
         {projects.length === 0 ? (
@@ -431,37 +431,34 @@ export function AuditDashboardNew() {
 
       {/* Paginação */}
       {totalItems > 0 && (
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {((page - 1) * perPage) + 1} a {Math.min(page * perPage, totalItems)} de {totalItems} projetos
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-3 gap-2">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {((page - 1) * perPage) + 1}–{Math.min(page * perPage, totalItems)} de {totalItems} projetos
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
+              className="h-7 px-2 text-xs"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Anterior
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let p = i + 1;
-                // Simple logic to show current page surroundings if totalPages > 5
-                // enhancing this would require a complex pagination component
-                // For now, simple logic: if page > 3, shift window
                 if (totalPages > 5 && page > 3) {
                   p = page - 3 + i;
                   if (p > totalPages) p = totalPages - (4 - i);
                 }
-
                 return (
                   <Button
                     key={p}
                     variant={page === p ? "default" : "outline"}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7 text-xs"
                     onClick={() => setPage(p)}
                   >
                     {p}
@@ -474,9 +471,10 @@ export function AuditDashboardNew() {
               size="sm"
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              className="h-7 px-2 text-xs"
             >
               Próxima
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
             </Button>
           </div>
         </div>
